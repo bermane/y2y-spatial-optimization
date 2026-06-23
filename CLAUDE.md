@@ -52,13 +52,20 @@ Datasets in scope (one inventory row each):
 - `transboundary_connectivity` — Pither et al. omnidirectional connectivity
 - `climate_corridors` — Carroll et al. 2018 current-flow centrality (**was a `.zip`**)
 - `climate_type_macrorefugia` — Carroll 2023 / AdaptWest backward climatic velocity
-- `irrecoverable_carbon` — Berman/McDowell irrecoverable carbon (3 pools)
-- `iucn_efg` — IUCN GET EFG Level 3 (~109 GeoTIFFs, already extracted)
+- `irrecoverable_carbon` — Berman/McDowell irrecoverable carbon, **3 pools each its own
+  feature** (`biomass`, `m_soc` mineral soil, `sl_soc` subsoil; all `t_ha` density)
+- `iucn_efg` — IUCN GET EFG Level 3 (~109 GeoTIFFs, already extracted). Value scheme:
+  `0`=absent/NoData, `1`=minor occurrence, `2`=major (Byte, paletted). Resample `nearest`.
 - `aoh_richness_mammals` / `aoh_richness_birds` — Lumbierres AOH richness, **"all" (not Red List)**
 
-Reference / excluded:
+Reference / masks / excluded:
 - `y2y_boundary/y2y_region_boundary_2013.gpkg` — corridor reference extent for the
-  coverage flag (a vector; **not** a raster inventory row).
+  coverage flag + study area (a vector; **not** a raster inventory row).
+- `y2y_protected_areas/y2y_protected_areas_2025.gpkg` — protected-areas polygons (509,
+  already ESRI:102008); rasterized in 02 as the **PA lock-in mask**. Prep only — its use
+  as a constraint is R-side.
+- **No urban/converted mask** — deferred on purpose; gHM-derived intactness already
+  down-weights converted land.
 - **Not using:** `bhi_beri_parc/`, `elevational_diversity/`.
 
 ## Structure — two notebooks + shared config
@@ -67,8 +74,10 @@ Reference / excluded:
   registry, grid params (`TARGET_CRS`/`TARGET_RES_M`/`BUFFER_KM`), discovery helpers
   (`is_raster`/`find_rasters`/`pick_representative`), and `study_area()`. Add a dataset
   by adding one entry. Per-entry flags: `multi` (True only for `iucn_efg`), `resampling`
-  (`average`/`bilinear`/`nearest`), `build_vrt` (True only for `human_modification`).
-  Both notebooks `importlib.reload(config)` in their import cell to pick up edits.
+  (`average`/`bilinear`/`nearest`), `build_vrt` (True only for `human_modification`),
+  `orient` (`complement` for gHM→intactness, `invert` for velocity→refugia, else raw).
+  Also holds `HANDOFF_DIR`, `PA_VECTOR`, and QA knobs `CONNECTIVITY_CAP_PCTILE` (None =
+  no cap) / `CARBON_FLAG_PCTILE`. Both notebooks `importlib.reload(config)` to pick up edits.
 - **Resampling rule:** native finer than 1 km → `average` (down-sample); coarser/≈1 km →
   `bilinear` (up-sample); categorical (EFG) → `nearest`.
 
@@ -91,15 +100,29 @@ reproject/resample/clip/align.
 
 ### `02_preprocess_align.ipynb` — cleaning / alignment (reads + writes full data)
 
-Reproject/resample/clip every layer to the shared grid (ESRI:102008, 1 km, Y2Y boundary
-buffered by `BUFFER_KM`) → coregistered stack in `input_data/cleaned_aligned/` (EFGs in
-an `iucn_efg/` subfolder). Ethan runs it; heavy.
+**Two stages.** Produces the prioritizr-ready hand-off stack on the shared grid
+(ESRI:102008, 1 km, Y2Y buffered by `BUFFER_KM`). Ethan runs it; heavy. Follows the
+pre-processing hand-off (orientation, no normalization, raw carbon, PU-mask consistency,
+NoData→NA) with **resolution held at 1 km** for iteration 1.
 
-- **Engine = system `gdalwarp`/`gdalbuildvrt` via subprocess** (osgeo bindings are NOT in
-  the venv; system GDAL CLIs are on PATH). One streamed reproject+resample+cutline-clip
-  per layer; reads only the Y2Y window so global rasters aren't warped in full
-  (clip-before-reproject is implicit). Fixed `-te`/`-tr` → every output shares the grid.
-- gHM VRT is rebuilt from its 4 tiles in-workflow (`gdalbuildvrt`) then aligned.
-- EFGs: warp all 109, then **drop any with no presence (value > 0) inside the corridor**
-  — assumes EFG values encode occurrence as `> 0`; verify if kept/dropped looks off.
-- Final cell asserts all outputs share CRS/transform/shape. Grid ≈ 1286 × 3312 cells.
+**Stage 1 — warp** (system `gdalwarp`/`gdalbuildvrt`/`gdal_rasterize` via subprocess;
+osgeo bindings aren't in the venv): one streamed reproject+resample+cutline-clip per layer
+to `cleaned_aligned/` (**intermediate, raw orientation**). Reads only the Y2Y window so
+global rasters aren't warped in full. Fixed `-te`/`-tr` → shared grid. gHM VRT rebuilt from
+its 4 tiles in-workflow. EFGs: warp all 109, **drop any with no presence (>0) in the
+corridor**.
+
+**Stage 2 — orient → mask → QA → COG** (numpy + rasterio, in memory; grid is small):
+- **Orient** so higher = more conservation value: gHM→intactness (`1−gHM`, clip [0,1]),
+  backward velocity→refugia (`vmax−v`, vmax over the reference extent); carbon/connectivity
+  already more=better. All features forced non-negative.
+- **One PU mask** = cells valid in **all continuous features** (EFG `0`=absent is valid, so
+  EFGs don't constrain it). Applied identically to every feature **and** the uniform
+  `cost_uniform`=1 layer → no cell valid in one layer but NoData in another.
+- **QA (surface, don't silently transform):** flag carbon tail cells (`CARBON_FLAG_PCTILE`);
+  print connectivity quantiles and cap **only** if `CONNECTIVITY_CAP_PCTILE` is set.
+- **Outputs = COGs** in `input_data/aligned_stack/` (`HANDOFF_DIR`; EFGs in `iucn_efg/`):
+  continuous features + cost are float32/NaN-NoData; EFGs + `mask_protected_areas` are
+  uint8 with `255`=NoData (so EFG `0` stays a valid value).
+- Final cell validates: identical grid, NoData consistency, **matching PU cell counts**,
+  non-negativity, orientation spot-check. Grid ≈ 1286 × 3312 cells.
