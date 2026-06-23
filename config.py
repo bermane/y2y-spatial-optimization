@@ -56,24 +56,58 @@ CARBON_FLAG_PCTILE = 0.999
 # prototyping today); "gurobi" = enables the MGA gap-portfolio (needs an unlimited
 # academic license -- the trial license is size-limited and cannot solve this).
 SOLVER = "highs"
-SOLVER_TIME_LIMIT = 600      # seconds; caps the solve and returns the best so far (0 = no cap)
+SOLVER_TIME_LIMIT = 1800     # seconds; caps the solve and returns the best so far (0 = no cap)
+# HiGHS LP algorithm: "simplex" (dual simplex, default) struggles on the huge sparse
+# boundary-penalty LP; "ipm" (interior point) plows through it far faster. Same LP optimum.
+# "choose" lets HiGHS decide. Ignored when no boundary penalty (clean LP solves fine either way).
+HIGHS_SOLVER = "ipm"
 # Decision type: "binary" = each cell selected or not (a reserve; the real formulation,
 # but the MILP is too big for HiGHS at 1 km). "proportion" = fractional 0-1 allocation per
 # cell -> a pure LP that HiGHS solves fast at full 1 km. Use "proportion" for the rapid
 # prototype; "binary" with Gurobi for the real run.
 DECISION_TYPE = "proportion"
-# Prototype coarsening: >1 aggregates the grid in 03 by this factor (2 -> 2 km). LP at
-# full 1 km is tractable, so keep 1. (Raise only if coarsening a binary run for HiGHS.)
-PROTOTYPE_AGG_FACTOR = 1
-BUDGET_PCT = 0.30            # area budget = 30% of the region (30x30)
-TARGET_PCT = 0.30            # aspirational per-feature representation target (soft)
+# Objective (within the 30%-of-area budget):
+#   "min_shortfall" = minimize the weighted shortfall from per-feature targets (TARGET_PCT).
+#       With TARGET_PCT = 1.0 this maximizes the captured FRACTION of every input, balanced
+#       across inputs (each on a 0-100% scale) -- "protect 30% of area, get the most full
+#       value of every input." Scale-invariant.  <-- current choice
+#   "max_utility"  = maximize total (weighted) captured amount; value-first, no floor (can
+#       under-serve some inputs). NOT scale-invariant.
+#   "min_set"      = ignore the budget; minimize AREA needed to meet TARGET_PCT of every input.
+OBJECTIVE = "min_shortfall"
+# Prototype coarsening: >1 aggregates the grid in 03 by this factor (2 -> 2 km).
+PROTOTYPE_AGG_FACTOR = 2
+BUDGET_PCT = 0.30            # area budget = 30% of the region (30x30); binds for both objectives
+TARGET_PCT = 1.0             # per-feature target (min_shortfall/min_set). 1.0 = maximize the
+                             # captured fraction of each input within the budget (balanced)
+# 03 normalizes each feature so its TOTAL = NORM_TOTAL (conditioning constant). With a 100%
+# target the target equals the full total, which must stay < 1e6 for prioritizr's presolve;
+# 1e5 keeps it safe with well-scaled coefficients. min_shortfall is scale-invariant, so this
+# does not change the solution.
+NORM_TOTAL = 1e5
 OPT_GAP = 0.10               # relative MIP gap (raise for a faster, rougher prototype)
 PORTFOLIO_N = 8              # number of near-optimal alternatives (gurobi MGA portfolio only)
 PORTFOLIO_GAP = 0.10         # pool gap: keep solutions within 10% of optimal shortfall
 # Connectivity penalty magnitude is scale-dependent: start at 0 for a baseline
 # solve, then raise after 03 prints the connectivity-matrix scale (see notebook).
 CONNECTIVITY_PENALTY = 0.0
-BOUNDARY_PENALTY = 0.0       # optional compactness penalty; off by default
+# Boundary penalty = compactness / anti-scatter (clustering). 03 normalizes the boundary
+# to edge units, so this is "shortfall-equivalent cost per exposed cell edge". TUNE: if the
+# map is still scattered, raise x10; if the radar drops well below the target (representation
+# sacrificed for compactness), lower it. 0 = off. NOTE: starting guess -- boundary penalties
+# span orders of magnitude; expect to tune. ON now to force clustering into coherent blocks
+# (so 04 can decompose them into candidate areas). 03 prints the boundary/objective scale.
+BOUNDARY_PENALTY = 1e-4
+
+# Features to exclude from the optimization (kept in the aligned stack, dropped from the
+# manifest 03 reads). Use to trial feature subsets without re-running 02's heavy warp.
+EXCLUDE_FEATURES = ["irrecoverable_carbon_sl_soc"]   # subsoil carbon; keep only m_soc for now
+
+# ---- Results analysis (04) ----------------------------------------------
+# Decompose the selected network into spatial clusters (candidate areas) for per-cluster
+# value-profile star plots. Read directly by 04 (imports config); not needed in the manifest.
+CLUSTER_MIN_CELLS = 25   # drop connected components smaller than this (~100 km^2 at 2 km)
+CLUSTER_MAX_PLOTS = 16   # cap the per-cluster small-multiples grid (largest clusters first)
 
 # ---- Raster discovery ----------------------------------------------------
 # Raster extensions to characterize/align; GDAL sidecars are excluded.
@@ -263,9 +297,9 @@ def write_manifest(handoff_dir=HANDOFF_DIR, manifest_path=MANIFEST_PATH):
     handoff_dir = Path(handoff_dir)
     layers = []
 
-    # Continuous features: every single-raster dataset entry.
+    # Continuous features: every single-raster dataset entry (minus exclusions).
     for key, cfg in DATASETS.items():
-        if cfg.get("multi"):
+        if cfg.get("multi") or key in EXCLUDE_FEATURES:
             continue
         layers.append(
             layer_meta(
@@ -274,9 +308,11 @@ def write_manifest(handoff_dir=HANDOFF_DIR, manifest_path=MANIFEST_PATH):
             )
         )
 
-    # Categorical EFG features (kept survivors from 02).
+    # Categorical EFG features (kept survivors from 02; minus exclusions).
     efg_citation = DATASETS["iucn_efg"]["citation"]
     for p in sorted((handoff_dir / "iucn_efg").glob("*.tif")):
+        if p.stem in EXCLUDE_FEATURES:
+            continue
         layers.append(layer_meta(p, p.stem, "feature_efg", citation=efg_citation))
 
     # Cost layer and the locked-in (protected-areas) mask.
@@ -305,8 +341,11 @@ def write_manifest(handoff_dir=HANDOFF_DIR, manifest_path=MANIFEST_PATH):
         "params": {
             "solver": SOLVER,
             "solver_time_limit": SOLVER_TIME_LIMIT,
+            "highs_solver": HIGHS_SOLVER,
+            "objective": OBJECTIVE,
             "decision_type": DECISION_TYPE,
             "prototype_agg_factor": PROTOTYPE_AGG_FACTOR,
+            "norm_total": NORM_TOTAL,
             "budget_pct": BUDGET_PCT,
             "target_pct": TARGET_PCT,
             "opt_gap": OPT_GAP,
