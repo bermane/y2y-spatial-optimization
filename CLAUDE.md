@@ -150,27 +150,38 @@ corridor**.
 
 ### `03_prioritizr.ipynb` — optimization (R, kernel `y2y-r`)
 
-Runs the conservation optimization on the hand-off stack; writes results for 04. Reads +
-validates `manifest.json`, then builds one `prioritizr` problem. **Iteration-1 formulation**
-(see project memory `prioritizr-run-design`):
-- **Minimum-shortfall** objective, **budget = 30% of region area** (30×30), PAs **locked in**
-  and counted toward the budget. Targets soft (`add_relative_targets(0.30)`), so no single
-  feature/EFG is forced. *Not* min-set (target-first, ignores the area cap).
-- **EFG down-weighting** via `add_feature_weights` (continuous @ 1.0, each EFG @ 1/n_efg so
-  the 40 EFGs ≈ one theme).
-- **Connectivity penalty** from the `transboundary_connectivity` surface
-  (`connectivity_matrix` + `add_connectivity_penalties`); `CONNECTIVITY_PENALTY=0` by default
-  (scale-dependent — calibrate after inspecting the printed matrix scale).
-- **MGA gap-portfolio** (`add_gap_portfolio`) → a suite of near-optimal alternatives.
-  **Requires Gurobi** (at build time, not just solve).
-- Outputs → `output_data/iter1_minshortfall30/`: `portfolio.tif` (one alt per band),
-  `selection_frequency.tif` (sum across alts = robustness/priority),
-  `portfolio_representation.csv` (`relative_held` per feature×alt → feeds 04 radar),
+Builds + solves one `prioritizr` problem on the hand-off stack; writes results for 04. Reads +
+validates `manifest.json`. **All run params come from `config.py` via the manifest.** Current
+choices (full rationale + history in project memory `prioritizr-run-design`):
+- **Objective** = `OBJECTIVE` knob. Current **`min_shortfall` with `TARGET_PCT=1.0`** under a
+  **30%-of-area budget** (`BUDGET_PCT`) ≡ maximize the captured *fraction* of every input.
+  Also supports `max_utility` and `min_set`. **Caveat:** min-shortfall@100% favours spatially
+  *concentrated* inputs (carbon dominates; some EFGs neglected) — unresolved, see memory.
+- **Normalization:** each feature sum-normalized to total = `NORM_TOTAL` (1e5) so 100% targets
+  stay < 1e6 (prioritizr presolve guard); scale-invariant for min-shortfall.
+- **PAs locked in** (counted toward budget); **EFG down-weighting** (`add_feature_weights`,
+  continuous @1, each EFG @1/40); `sl_soc` carbon excluded (`EXCLUDE_FEATURES`).
+- **Solver/decisions:** `SOLVER="highs"` + `DECISION_TYPE="proportion"` (LP, ~99% integral) is
+  the **working prototype** — the binary MILP chokes HiGHS presolve at 1 km, and the real
+  **Gurobi MGA gap-portfolio** (`add_gap_portfolio`, binary) is **blocked by a TRIAL Gurobi
+  license** (need a free academic one). The boundary-penalty LP needs `HIGHS_SOLVER="ipm"`
+  (dual simplex times out). `SOLVER_TIME_LIMIT` caps the solve — **a timed-out run returns an
+  infeasible point (area > budget); discard it.**
+- **Spatial penalties:** `CONNECTIVITY_PENALTY` (corridors, off) and `BOUNDARY_PENALTY`
+  (compactness/clustering, on — edge-normalized, uncalibrated). The boundary penalty adds a
+  constraint per adjacent cell pair → huge LP → run at `PROTOTYPE_AGG_FACTOR=2` (2 km).
+- Outputs → `output_data/<RESULTS_SUBDIR>/`: `portfolio.tif` (proportion→float, binary→uint8),
+  `selection_frequency.tif`, `portfolio_representation.csv` (`relative_held` → 04 radar),
   `run_summary.json`.
 
 ### `04_results_analysis.ipynb` — results (Python, kernel `y2y-geo`)
 
-Reads `output_data/iter1_minshortfall30/`. **Radar/star plot** (axes = 9 continuous features
-+ 1 aggregated EFG axis; one polygon per alternative), **selection-frequency priority map**
-(over the Y2Y boundary + PAs), a couple of **representative alternatives**, and a
-**trade-off table** (per-alt area / % region / area beyond PAs). Saves figures to `figures/`.
+Adapts to the run type read from `run_summary` (objective/decision). **Whole-network views:**
+radar (captured fraction per input vs a 30% area-share ring), allocation/priority map,
+existing-vs-new map, trade-off table. **Cluster decomposition** (needs `BOUNDARY_PENALTY>0`):
+splits the result into **NEW candidate areas** (`selected & not-PA`) and **EXISTING PA
+clusters** (`scipy.ndimage.label`, 8-conn), each with a numbered map + **value-profile star
+plots** — each axis = mean within the cluster of an input **scaled 0–1 over the whole region**
+(5th–95th pctile) = relative richness vs the region. New-vs-PA profiles = gap analysis. Knobs
+`CLUSTER_MIN_CELLS` / `CLUSTER_MAX_PLOTS`. Needs `scipy` + `matplotlib` in `.venv`. Figures →
+`figures/`.
