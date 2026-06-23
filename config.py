@@ -57,6 +57,14 @@ CARBON_FLAG_PCTILE = 0.999
 # academic license -- the trial license is size-limited and cannot solve this).
 SOLVER = "highs"
 SOLVER_TIME_LIMIT = 600      # seconds; caps the solve and returns the best so far (0 = no cap)
+# Decision type: "binary" = each cell selected or not (a reserve; the real formulation,
+# but the MILP is too big for HiGHS at 1 km). "proportion" = fractional 0-1 allocation per
+# cell -> a pure LP that HiGHS solves fast at full 1 km. Use "proportion" for the rapid
+# prototype; "binary" with Gurobi for the real run.
+DECISION_TYPE = "proportion"
+# Prototype coarsening: >1 aggregates the grid in 03 by this factor (2 -> 2 km). LP at
+# full 1 km is tractable, so keep 1. (Raise only if coarsening a binary run for HiGHS.)
+PROTOTYPE_AGG_FACTOR = 1
 BUDGET_PCT = 0.30            # area budget = 30% of the region (30x30)
 TARGET_PCT = 0.30            # aspirational per-feature representation target (soft)
 OPT_GAP = 0.10               # relative MIP gap (raise for a faster, rougher prototype)
@@ -297,6 +305,8 @@ def write_manifest(handoff_dir=HANDOFF_DIR, manifest_path=MANIFEST_PATH):
         "params": {
             "solver": SOLVER,
             "solver_time_limit": SOLVER_TIME_LIMIT,
+            "decision_type": DECISION_TYPE,
+            "prototype_agg_factor": PROTOTYPE_AGG_FACTOR,
             "budget_pct": BUDGET_PCT,
             "target_pct": TARGET_PCT,
             "opt_gap": OPT_GAP,
