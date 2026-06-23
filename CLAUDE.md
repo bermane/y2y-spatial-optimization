@@ -41,19 +41,23 @@ Built as Jupyter notebooks, run cell-by-cell. Pipeline: **01** inventory →
 - Geospatial stack lives in the project venv **`.venv` on Python 3.12.13** (Ethan
   recreated `.venv` on 3.12 — it was briefly 3.14.3, whose geo wheels are unreliable).
 - Stack: `rioxarray rasterio(1.5.0) xarray pyproj(3.7.2) pandas(3.0.3) geopandas(1.1.3)`
-  (+ `ipykernel jupyterlab`). Pinned in `requirements.txt` (`pip freeze`).
+  (+ `ipykernel jupyterlab`; `matplotlib` + `scipy` added for 04 plots/clustering). Pinned
+  in `requirements.txt` (`pip freeze`).
 - Jupyter kernel registered as **`y2y-geo`** (display "Python (y2y-geo)"). Select it
   for notebooks 01/02/04. System GDAL is 3.12.2; rasterio/fiona ship bundled GDAL wheels.
 - **R stack (for 03)**: R 4.6.0 via Homebrew; `prioritizr(8.1.0) terra sf units jsonlite
-  IRkernel highs` from CRAN, pinned in `requirements-R.txt`. Kernel **`y2y-r`** (display
+  IRkernel highs` from CRAN (+ `gurobi` bindings from the Gurobi distro), pinned in
+  `requirements-R.txt`. Kernel **`y2y-r`** (display
   "R (y2y)") — select it for 03. System libs via brew: `gdal geos proj udunits cmake`.
   - **macOS toolchain fix** in `~/.R/Makevars` (user-global, not in repo): R 4.6 + Apple
     CLT clang 16 need `CC=clang -std=gnu2x` (R hard-codes the unsupported `gnu23`) and
     `CXX=... -nostdinc++ -isystem .../SDKs/MacOSX.sdk/usr/include/c++/v1` (the CLT libc++
     headers are corrupted). Without these, every C/C++ R package fails to compile.
-  - **Gurobi REQUIRED for 03**: `add_gap_portfolio()` needs it (at build time, not just
-    solve) — HiGHS has no solution pool. Free academic license; see `requirements-R.txt`.
-    `highs` is installed as a fallback/validation solver but is **not** used by 03.
+  - **Gurobi** is needed for the binary MGA gap-portfolio (`add_gap_portfolio`, build-time) —
+    HiGHS has no solution pool. The installed license is **TRIAL (size-limited ~2000 vars)**,
+    so that real run is **blocked until a free academic license** is activated (`grbgetkey` →
+    `~/gurobi.lic` should read `TYPE=ACADEMIC`; see `requirements-R.txt`). Meanwhile 03 runs a
+    **HiGHS proportion-LP prototype** — the `highs` package IS used.
 
 ## Data (`./input_data`, ~24.5 GB)
 
@@ -90,9 +94,12 @@ Reference / masks / excluded:
   (`average`/`bilinear`/`nearest`), `build_vrt` (True only for `human_modification`),
   `orient` (`complement` for gHM→intactness, `invert` for velocity→refugia, else raw).
   Also holds `HANDOFF_DIR`, `PA_VECTOR`, QA knobs `CONNECTIVITY_CAP_PCTILE` (None =
-  no cap) / `CARBON_FLAG_PCTILE`, the **prioritizr run params** (`BUDGET_PCT=0.30`,
-  `TARGET_PCT=0.30`, `OPT_GAP`, `PORTFOLIO_N`, `PORTFOLIO_GAP`, `CONNECTIVITY_PENALTY=0`,
-  `BOUNDARY_PENALTY=0`), `RESULTS_DIR`/`RESULTS_SUBDIR`/`MANIFEST_PATH`, and
+  no cap) / `CARBON_FLAG_PCTILE`, the **prioritizr run params** — `OBJECTIVE`
+  (`min_shortfall`/`max_utility`/`min_set`), `BUDGET_PCT=0.30`, `TARGET_PCT=1.0`, `NORM_TOTAL`,
+  `SOLVER`/`HIGHS_SOLVER`/`SOLVER_TIME_LIMIT`, `DECISION_TYPE`, `PROTOTYPE_AGG_FACTOR`,
+  `OPT_GAP`, `PORTFOLIO_N/GAP`, `CONNECTIVITY_PENALTY`, `BOUNDARY_PENALTY`, `EXCLUDE_FEATURES`,
+  the 04 cluster knobs (`CLUSTER_MIN_CELLS`/`CLUSTER_MAX_PLOTS`) — plus
+  `RESULTS_DIR`/`RESULTS_SUBDIR`/`MANIFEST_PATH`, and
   `write_manifest()` (the Python→R contract writer). Notebooks `importlib.reload(config)`
   to pick up edits.
 - **Resampling rule:** native finer than 1 km → `average` (down-sample); coarser/≈1 km →
