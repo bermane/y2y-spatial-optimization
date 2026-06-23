@@ -17,4 +17,12 @@ __pycache__/
 # Not for GitHub -- obtain/regenerate locally.
 /input_data
 
-# Tracked on purpose (NOT ignored): config.py, *.ipynb, requirements.txt, CLAUDE.md
+# Optimization outputs (03) + figures (04): generated, regenerate locally.
+/output_data
+/figures
+
+# R: user-global ~/.R/Makevars holds the macOS toolchain fixes (not in-repo).
+gurobi.log
+
+# Tracked on purpose (NOT ignored): config.py, *.ipynb, requirements.txt,
+# requirements-R.txt, CLAUDE.md, .claude/settings.json

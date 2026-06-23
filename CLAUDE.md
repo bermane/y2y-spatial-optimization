@@ -15,8 +15,11 @@ Working context for Claude across sessions on this project.
 ## Project
 
 Conservation-prioritization framework for the Yellowstone-to-Yukon (Y2Y) corridor.
-Built as Jupyter notebooks, run cell-by-cell. The eventual pipeline produces an
-**aligned raster stack** that feeds `prioritizr` (in R) — **not there yet**.
+Built as Jupyter notebooks, run cell-by-cell. Pipeline: **01** inventory →
+**02** align to an **aligned raster stack** → **03** `prioritizr` optimization (R) →
+**04** results analysis (Python). The Python→R hand-off is the stack +
+`aligned_stack/manifest.json`; the R→Python hand-off is GeoTIFFs + CSV/JSON in
+`output_data/`.
 
 ### Target grid (decided 2026-06-10)
 
@@ -40,7 +43,17 @@ Built as Jupyter notebooks, run cell-by-cell. The eventual pipeline produces an
 - Stack: `rioxarray rasterio(1.5.0) xarray pyproj(3.7.2) pandas(3.0.3) geopandas(1.1.3)`
   (+ `ipykernel jupyterlab`). Pinned in `requirements.txt` (`pip freeze`).
 - Jupyter kernel registered as **`y2y-geo`** (display "Python (y2y-geo)"). Select it
-  for all notebooks here. System GDAL is 3.12.2; rasterio/fiona ship bundled GDAL wheels.
+  for notebooks 01/02/04. System GDAL is 3.12.2; rasterio/fiona ship bundled GDAL wheels.
+- **R stack (for 03)**: R 4.6.0 via Homebrew; `prioritizr(8.1.0) terra sf units jsonlite
+  IRkernel highs` from CRAN, pinned in `requirements-R.txt`. Kernel **`y2y-r`** (display
+  "R (y2y)") — select it for 03. System libs via brew: `gdal geos proj udunits cmake`.
+  - **macOS toolchain fix** in `~/.R/Makevars` (user-global, not in repo): R 4.6 + Apple
+    CLT clang 16 need `CC=clang -std=gnu2x` (R hard-codes the unsupported `gnu23`) and
+    `CXX=... -nostdinc++ -isystem .../SDKs/MacOSX.sdk/usr/include/c++/v1` (the CLT libc++
+    headers are corrupted). Without these, every C/C++ R package fails to compile.
+  - **Gurobi REQUIRED for 03**: `add_gap_portfolio()` needs it (at build time, not just
+    solve) — HiGHS has no solution pool. Free academic license; see `requirements-R.txt`.
+    `highs` is installed as a fallback/validation solver but is **not** used by 03.
 
 ## Data (`./input_data`, ~24.5 GB)
 
@@ -76,8 +89,12 @@ Reference / masks / excluded:
   by adding one entry. Per-entry flags: `multi` (True only for `iucn_efg`), `resampling`
   (`average`/`bilinear`/`nearest`), `build_vrt` (True only for `human_modification`),
   `orient` (`complement` for gHM→intactness, `invert` for velocity→refugia, else raw).
-  Also holds `HANDOFF_DIR`, `PA_VECTOR`, and QA knobs `CONNECTIVITY_CAP_PCTILE` (None =
-  no cap) / `CARBON_FLAG_PCTILE`. Both notebooks `importlib.reload(config)` to pick up edits.
+  Also holds `HANDOFF_DIR`, `PA_VECTOR`, QA knobs `CONNECTIVITY_CAP_PCTILE` (None =
+  no cap) / `CARBON_FLAG_PCTILE`, the **prioritizr run params** (`BUDGET_PCT=0.30`,
+  `TARGET_PCT=0.30`, `OPT_GAP`, `PORTFOLIO_N`, `PORTFOLIO_GAP`, `CONNECTIVITY_PENALTY=0`,
+  `BOUNDARY_PENALTY=0`), `RESULTS_DIR`/`RESULTS_SUBDIR`/`MANIFEST_PATH`, and
+  `write_manifest()` (the Python→R contract writer). Notebooks `importlib.reload(config)`
+  to pick up edits.
 - **Resampling rule:** native finer than 1 km → `average` (down-sample); coarser/≈1 km →
   `bilinear` (up-sample); categorical (EFG) → `nearest`.
 
@@ -125,4 +142,35 @@ corridor**.
   continuous features + cost are float32/NaN-NoData; EFGs + `mask_protected_areas` are
   uint8 with `255`=NoData (so EFG `0` stays a valid value).
 - Final cell validates: identical grid, NoData consistency, **matching PU cell counts**,
-  non-negativity, orientation spot-check. Grid ≈ 1286 × 3312 cells.
+  non-negativity, orientation spot-check. Grid = **1286 × 3312**, PU = **1,272,914 cells**;
+  hand-off = 9 continuous + cost + PA mask + **40 EFGs**.
+- **Last cell writes `aligned_stack/manifest.json`** via `config.write_manifest()` — the
+  Python→R contract (per-layer role/dtype/NoData/orient + grid + run params). Metadata-only,
+  so re-running just that cell is cheap (no re-warp).
+
+### `03_prioritizr.ipynb` — optimization (R, kernel `y2y-r`)
+
+Runs the conservation optimization on the hand-off stack; writes results for 04. Reads +
+validates `manifest.json`, then builds one `prioritizr` problem. **Iteration-1 formulation**
+(see project memory `prioritizr-run-design`):
+- **Minimum-shortfall** objective, **budget = 30% of region area** (30×30), PAs **locked in**
+  and counted toward the budget. Targets soft (`add_relative_targets(0.30)`), so no single
+  feature/EFG is forced. *Not* min-set (target-first, ignores the area cap).
+- **EFG down-weighting** via `add_feature_weights` (continuous @ 1.0, each EFG @ 1/n_efg so
+  the 40 EFGs ≈ one theme).
+- **Connectivity penalty** from the `transboundary_connectivity` surface
+  (`connectivity_matrix` + `add_connectivity_penalties`); `CONNECTIVITY_PENALTY=0` by default
+  (scale-dependent — calibrate after inspecting the printed matrix scale).
+- **MGA gap-portfolio** (`add_gap_portfolio`) → a suite of near-optimal alternatives.
+  **Requires Gurobi** (at build time, not just solve).
+- Outputs → `output_data/iter1_minshortfall30/`: `portfolio.tif` (one alt per band),
+  `selection_frequency.tif` (sum across alts = robustness/priority),
+  `portfolio_representation.csv` (`relative_held` per feature×alt → feeds 04 radar),
+  `run_summary.json`.
+
+### `04_results_analysis.ipynb` — results (Python, kernel `y2y-geo`)
+
+Reads `output_data/iter1_minshortfall30/`. **Radar/star plot** (axes = 9 continuous features
++ 1 aggregated EFG axis; one polygon per alternative), **selection-frequency priority map**
+(over the Y2Y boundary + PAs), a couple of **representative alternatives**, and a
+**trade-off table** (per-alt area / % region / area beyond PAs). Saves figures to `figures/`.

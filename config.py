@@ -24,6 +24,14 @@ PA_VECTOR = INPUT_DIR / "y2y_protected_areas" / "y2y_protected_areas_2025.gpkg"
 ALIGNED_DIR = INPUT_DIR / "cleaned_aligned"
 HANDOFF_DIR = INPUT_DIR / "aligned_stack"
 
+# Prioritizr results from 03 (R) land here; 04 (Python) reads them back.
+#   RESULTS_DIR    : root for all optimization outputs
+#   RESULTS_SUBDIR : per-run folder (objective + budget tag)
+#   MANIFEST_PATH  : the Python->R hand-off contract describing the HANDOFF_DIR stack
+RESULTS_DIR = PROJECT_DIR / "output_data"
+RESULTS_SUBDIR = "iter1_minshortfall30"
+MANIFEST_PATH = HANDOFF_DIR / "manifest.json"
+
 # ---- Target grid (decided 2026-06-10; see CLAUDE.md) ---------------------
 TARGET_CRS = "ESRI:102008"   # North America Albers Equal Area Conic
 TARGET_RES_M = 1000          # 1 km, first iteration
@@ -37,6 +45,27 @@ CONNECTIVITY_CAP_PCTILE = None
 # Carbon tail QA: cells above this percentile are *flagged* for review (not
 # transformed). Winsorize only confirmed artefacts after inspection.
 CARBON_FLAG_PCTILE = 0.999
+
+# ---- Prioritizr run parameters (03) -------------------------------------
+# Single source of truth for the optimization; written into manifest.json so the
+# R notebook reads them instead of hard-coding. Iteration 1: minimum-shortfall
+# objective with a 30%-of-region area budget (existing PAs locked in and counted
+# toward it), a Gurobi gap-portfolio of near-optimal alternatives, EFG down-
+# weighting, and an (initially off) connectivity penalty for contiguity.
+# Solver: "highs" = single solution, open-source, NO license cap (use for rapid
+# prototyping today); "gurobi" = enables the MGA gap-portfolio (needs an unlimited
+# academic license -- the trial license is size-limited and cannot solve this).
+SOLVER = "highs"
+SOLVER_TIME_LIMIT = 600      # seconds; caps the solve and returns the best so far (0 = no cap)
+BUDGET_PCT = 0.30            # area budget = 30% of the region (30x30)
+TARGET_PCT = 0.30            # aspirational per-feature representation target (soft)
+OPT_GAP = 0.10               # relative MIP gap (raise for a faster, rougher prototype)
+PORTFOLIO_N = 8              # number of near-optimal alternatives (gurobi MGA portfolio only)
+PORTFOLIO_GAP = 0.10         # pool gap: keep solutions within 10% of optimal shortfall
+# Connectivity penalty magnitude is scale-dependent: start at 0 for a baseline
+# solve, then raise after 03 prints the connectivity-matrix scale (see notebook).
+CONNECTIVITY_PENALTY = 0.0
+BOUNDARY_PENALTY = 0.0       # optional compactness penalty; off by default
 
 # ---- Raster discovery ----------------------------------------------------
 # Raster extensions to characterize/align; GDAL sidecars are excluded.
@@ -188,3 +217,101 @@ DATASETS = {
         "citation": "Lumbierres et al., AOH species richness (birds, all)",
     },
 }
+
+
+# ---- Python -> R hand-off contract ---------------------------------------
+def write_manifest(handoff_dir=HANDOFF_DIR, manifest_path=MANIFEST_PATH):
+    """Describe the aligned hand-off stack as JSON so 03 (R) reads an explicit
+    contract instead of globbing/guessing. Metadata-only -- safe to run anytime
+    without re-warping. Output filename convention (set by 02): <dataset_key>.tif
+    for single-raster features, EFGs in iucn_efg/, plus cost_uniform.tif and
+    mask_protected_areas.tif."""
+    import json
+    import math
+    import rasterio  # local import keeps config light for 01
+
+    def rel(p):
+        return Path(p).resolve().relative_to(PROJECT_DIR).as_posix()
+
+    def clean_nodata(nd):
+        # NaN is not valid JSON; emit null. R reads the actual NaN NoData from the
+        # GeoTIFF itself, so the manifest only needs to flag integer sentinels (255).
+        if nd is None or (isinstance(nd, float) and math.isnan(nd)):
+            return None
+        return nd
+
+    def layer_meta(path, name, role, orient=None, citation=None):
+        with rasterio.open(path) as src:
+            return {
+                "name": name,
+                "path": rel(path),
+                "role": role,
+                "dtype": src.dtypes[0],
+                "nodata": clean_nodata(src.nodata),
+                "orient": orient,
+                "citation": citation,
+            }
+
+    handoff_dir = Path(handoff_dir)
+    layers = []
+
+    # Continuous features: every single-raster dataset entry.
+    for key, cfg in DATASETS.items():
+        if cfg.get("multi"):
+            continue
+        layers.append(
+            layer_meta(
+                handoff_dir / f"{key}.tif", key, "feature_continuous",
+                orient=cfg.get("orient"), citation=cfg.get("citation"),
+            )
+        )
+
+    # Categorical EFG features (kept survivors from 02).
+    efg_citation = DATASETS["iucn_efg"]["citation"]
+    for p in sorted((handoff_dir / "iucn_efg").glob("*.tif")):
+        layers.append(layer_meta(p, p.stem, "feature_efg", citation=efg_citation))
+
+    # Cost layer and the locked-in (protected-areas) mask.
+    layers.append(layer_meta(handoff_dir / "cost_uniform.tif", "cost_uniform", "cost"))
+    layers.append(
+        layer_meta(
+            handoff_dir / "mask_protected_areas.tif",
+            "mask_protected_areas", "mask_locked_in",
+        )
+    )
+
+    # Canonical grid, read from a representative continuous feature.
+    with rasterio.open(handoff_dir / "human_modification.tif") as src:
+        grid = {
+            "crs": TARGET_CRS,
+            "width": src.width,
+            "height": src.height,
+            "res_m": TARGET_RES_M,
+            "transform": list(src.transform)[:6],  # affine a,b,c,d,e,f
+            "bounds": [src.bounds.left, src.bounds.bottom,
+                       src.bounds.right, src.bounds.top],
+        }
+
+    manifest = {
+        "grid": grid,
+        "params": {
+            "solver": SOLVER,
+            "solver_time_limit": SOLVER_TIME_LIMIT,
+            "budget_pct": BUDGET_PCT,
+            "target_pct": TARGET_PCT,
+            "opt_gap": OPT_GAP,
+            "portfolio_n": PORTFOLIO_N,
+            "portfolio_gap": PORTFOLIO_GAP,
+            "connectivity_penalty": CONNECTIVITY_PENALTY,
+            "boundary_penalty": BOUNDARY_PENALTY,
+            "results_dir": rel(RESULTS_DIR),
+            "results_subdir": RESULTS_SUBDIR,
+        },
+        "layers": layers,
+    }
+
+    manifest_path = Path(manifest_path)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=2, allow_nan=False)  # strict JSON for R/jsonlite
+    return manifest_path

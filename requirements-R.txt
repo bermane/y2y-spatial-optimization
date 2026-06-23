@@ -1,0 +1,38 @@
+# R environment for 03_prioritizr.ipynb  (mirrors requirements.txt for the Python side)
+# Kernel registered as "y2y-r" (display "R (y2y)"); select it for 03.
+#
+# R 4.6.0 (2026-04-24), installed via Homebrew (`brew install r`).
+#
+# ---- R packages (install.packages from CRAN) ----------------------------
+prioritizr 8.1.0     # systematic conservation prioritization
+terra      1.9.34    # raster I/O (reads the aligned_stack COGs)
+sf         1.1.1     # vector / spatial (prioritizr dependency)
+units      1.0.1     # sf dependency
+jsonlite   2.0.0     # read manifest.json, write run_summary.json
+IRkernel   1.3.2     # Jupyter R kernel
+highs      1.14.0.2  # open-source MILP solver (fallback / validation; NOT used by 03)
+# gurobi   <version>  # REQUIRED by 03 for add_gap_portfolio() -- install separately (below)
+#
+# ---- System libraries (Homebrew) ----------------------------------------
+# brew install r gdal geos proj udunits cmake
+#   gdal/geos/proj : terra + sf
+#   udunits        : units (else "configuration failed for package 'units'")
+#   cmake          : highs
+#
+# ---- macOS toolchain fix (~/.R/Makevars) --------------------------------
+# R 4.6.0 + Apple Command Line Tools (clang 16) need two overrides, set in
+# ~/.R/Makevars (user-global, not in this repo):
+#   1. C: R hard-codes `-std=gnu23`, which Apple clang 16 only accepts as `-std=gnu2x`.
+#   2. C++: the CLT libc++ headers at /Library/Developer/CommandLineTools/usr/include/
+#      c++/v1 are corrupted; force C++ builds to the SDK copy via
+#      `-nostdinc++ -isystem .../SDKs/MacOSX.sdk/usr/include/c++/v1`.
+# See ~/.R/Makevars for the exact CC/CXX lines.
+#
+# ---- Gurobi (REQUIRED for the MGA gap-portfolio in 03) -------------------
+# add_gap_portfolio() needs Gurobi (HiGHS has no solution pool). Steps:
+#   1. Register for a free academic license at https://www.gurobi.com/academia/
+#   2. Install the Gurobi Optimizer; run `grbgetkey <KEY>` to activate the license.
+#   3. Install the R bindings against your install:
+#        R CMD INSTALL "$GUROBI_HOME/R/gurobi_<ver>.tgz"   (or see the Gurobi R docs)
+#   4. Confirm: Rscript -e 'library(gurobi)'
+# prioritizr vignette: vignette("gurobi_installation_guide")
