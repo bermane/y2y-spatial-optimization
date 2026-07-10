@@ -71,8 +71,10 @@ Datasets in scope (one inventory row each):
 - `climate_type_macrorefugia` — Carroll 2023 / AdaptWest backward climatic velocity
 - `irrecoverable_carbon` — Berman/McDowell irrecoverable carbon, **3 pools each its own
   feature** (`biomass`, `m_soc` mineral soil, `sl_soc` subsoil; all `t_ha` density)
-- `iucn_efg` — IUCN GET EFG Level 3 (~109 GeoTIFFs, already extracted). Value scheme:
-  `0`=absent/NoData, `1`=minor occurrence, `2`=major (Byte, paletted). Resample `nearest`.
+- `iucn_efg` — IUCN GET EFG Level 3 (~109 GeoTIFFs, already extracted). **Source** value
+  scheme: `0`=absent, **`1`=MAJOR occurrence, `2`=minor** (Byte, paletted; verified vs the
+  IUCN GET Earth Engine catalog). Resample `nearest`. **02 SWAPS to `major=2`/`minor=1`** so
+  the optimizer (higher value = more weight) weights major occurrences above minor.
 - `aoh_richness_mammals` / `aoh_richness_birds` — Lumbierres AOH richness, **"all" (not Red List)**
 
 Reference / masks / excluded:

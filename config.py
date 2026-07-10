@@ -29,7 +29,7 @@ HANDOFF_DIR = INPUT_DIR / "aligned_stack"
 #   RESULTS_SUBDIR : per-run folder (objective + budget tag)
 #   MANIFEST_PATH  : the Python->R hand-off contract describing the HANDOFF_DIR stack
 RESULTS_DIR = PROJECT_DIR / "output_data"
-RESULTS_SUBDIR = "iter1_minshortfall30"
+RESULTS_SUBDIR = "iter4_lp_2km_compact"
 MANIFEST_PATH = HANDOFF_DIR / "manifest.json"
 
 # ---- Target grid (decided 2026-06-10; see CLAUDE.md) ---------------------
@@ -39,8 +39,9 @@ BUFFER_KM = 20               # study area = Y2Y boundary buffered by this many k
 
 # ---- QA knobs (02) -------------------------------------------------------
 # Connectivity current-flow has a long high tail (partly resistance-model
-# artefact). OPEN decision: 02 prints its distribution; set a percentile here to
-# cap pinch points (e.g. 0.999), or leave None to keep raw. Do not bake silently.
+# artefact). None = raw (current). Only needed for the connectivity-penalty idea (deferred):
+# the raw connectivity_matrix spans ~40,000x, so capping (~0.99, tighten to 0.95) would be
+# required before that penalty is calibratable. 02 prints the distribution + capped count.
 CONNECTIVITY_CAP_PCTILE = None
 # Carbon tail QA: cells above this percentile are *flagged* for review (not
 # transformed). Winsorize only confirmed artefacts after inspection.
@@ -56,7 +57,10 @@ CARBON_FLAG_PCTILE = 0.999
 # prototyping today); "gurobi" = enables the MGA gap-portfolio (needs an unlimited
 # academic license -- the trial license is size-limited and cannot solve this).
 SOLVER = "highs"
-SOLVER_TIME_LIMIT = 1800     # seconds; caps the solve and returns the best so far (0 = no cap)
+SOLVER_TIME_LIMIT = 1800     # seconds; caps the solve and returns the best so far (0 = no cap).
+                             # 2 km boundary-penalty LP solves in ~500 s (iter1), so 1800 is ample.
+                             # A timed-out HiGHS run returns an infeasible point (area > budget) --
+                             # discard it and coarsen / drop the penalty.
 # HiGHS LP algorithm: "simplex" (dual simplex, default) struggles on the huge sparse
 # boundary-penalty LP; "ipm" (interior point) plows through it far faster. Same LP optimum.
 # "choose" lets HiGHS decide. Ignored when no boundary penalty (clean LP solves fine either way).
@@ -76,6 +80,9 @@ DECISION_TYPE = "proportion"
 #   "min_set"      = ignore the budget; minimize AREA needed to meet TARGET_PCT of every input.
 OBJECTIVE = "min_shortfall"
 # Prototype coarsening: >1 aggregates the grid in 03 by this factor (2 -> 2 km).
+# 2 = 2 km: the boundary-penalty LP is tractable at this scale (~500 s); 1 km + boundary is
+# too large for HiGHS. Downstream area (04) is derived from the output resolution, so km^2 /
+# area-% / efficiency stay correct at 2 km automatically.
 PROTOTYPE_AGG_FACTOR = 2
 BUDGET_PCT = 0.30            # area budget = 30% of the region (30x30); binds for both objectives
 TARGET_PCT = 1.0             # per-feature target (min_shortfall/min_set). 1.0 = maximize the
@@ -88,16 +95,20 @@ NORM_TOTAL = 1e5
 OPT_GAP = 0.10               # relative MIP gap (raise for a faster, rougher prototype)
 PORTFOLIO_N = 8              # number of near-optimal alternatives (gurobi MGA portfolio only)
 PORTFOLIO_GAP = 0.10         # pool gap: keep solutions within 10% of optimal shortfall
-# Connectivity penalty magnitude is scale-dependent: start at 0 for a baseline
-# solve, then raise after 03 prints the connectivity-matrix scale (see notebook).
+# Connectivity penalty (corridor-following via transboundary_connectivity). OFF for now:
+# the raw connectivity_matrix spans ~40,000x (pinch-point tail), so the penalty is
+# uncalibratable without first capping the tail (CONNECTIVITY_CAP_PCTILE). Deferred -- Ethan
+# will revisit. To try it: cap the tail, re-run 02, then set this from 03's printed scale.
 CONNECTIVITY_PENALTY = 0.0
 # Boundary penalty = compactness / anti-scatter (clustering). 03 normalizes the boundary
 # to edge units, so this is "shortfall-equivalent cost per exposed cell edge". TUNE: if the
 # map is still scattered, raise x10; if the radar drops well below the target (representation
 # sacrificed for compactness), lower it. 0 = off. NOTE: starting guess -- boundary penalties
-# span orders of magnitude; expect to tune. ON now to force clustering into coherent blocks
-# (so 04 can decompose them into candidate areas). 03 prints the boundary/objective scale.
-BOUNDARY_PENALTY = 1e-4
+# span orders of magnitude; expect to tune. 03 prints the boundary/objective scale.
+# ON at 5e-5 = half the original iter1 1e-4: the working compactness driver at 2 km (~500 s).
+# Softer clustering than 1e-4 -> less representation sacrificed. Coherence source for 04's
+# cluster decomposition. (Connectivity-penalty alternative deferred; see above.) TUNE later.
+BOUNDARY_PENALTY = 5e-5
 
 # Features to exclude from the optimization (kept in the aligned stack, dropped from the
 # manifest 03 reads). Use to trial feature subsets without re-running 02's heavy warp.
@@ -107,7 +118,7 @@ EXCLUDE_FEATURES = ["irrecoverable_carbon_sl_soc"]   # subsoil carbon; keep only
 # Decompose the selected network into spatial clusters (candidate areas) for per-cluster
 # value-profile star plots. Read directly by 04 (imports config); not needed in the manifest.
 CLUSTER_MIN_CELLS = 25   # drop connected components smaller than this (~100 km^2 at 2 km)
-CLUSTER_MAX_PLOTS = 16   # cap the per-cluster small-multiples grid (largest clusters first)
+CLUSTER_MAX_PLOTS = 6    # cap the per-cluster small-multiples grid (largest clusters first)
 
 # ---- Raster discovery ----------------------------------------------------
 # Raster extensions to characterize/align; GDAL sidecars are excluded.
@@ -180,13 +191,14 @@ def study_area(buffer_km=BUFFER_KM):
 DATASETS = {
     "human_modification": {
         "path": INPUT_DIR / "human_modification",
-        # VRT was deleted; 01 reads the main tile. 02 rebuilds the VRT from all tiles.
-        "representative": "HM_Y2Y_2024_90_60land-0000000000-0000000000.tif",
+        # Single mosaicked GeoTIFF downloaded from GEE by 00 (asset v202606); no VRT needed.
+        # The old 4-tile export still sits in this folder but is unused (exact-name match below).
+        "representative": "HM_Y2Y_2024_90_60land_v202606.tif",
         "multi": False,
         "resampling": "average",  # gHM ~90 m -> 1 km
         "orient": "complement",   # gHM (0-1 modification) -> intactness 1 - gHM
-        "build_vrt": True,
-        "citation": "Theobald et al. 2024, gHM v3 human modification",
+        "build_vrt": False,
+        "citation": "Theobald et al., gHM human modification (Y2Y asset v202606)",
     },
     "transboundary_connectivity": {
         "path": INPUT_DIR / "transboundary_connectivity",

@@ -1,0 +1,11 @@
+short_name,longer_name,layer_description,source_link
+human_modification,Landscape intactness (from gHM),Theobald gHM v3 cumulative human footprint 0-1; used inverted as intactness (1 - gHM). Project pulls a Y2Y-clipped GEE asset (~90 m).,https://gee-community-catalog.org/projects/ghm-v3/
+transboundary_connectivity,Omnidirectional connectivity,"Pither et al. 2023 Circuitscape current density (~300 m, amperes); higher = stronger predicted movement.",https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0281980
+climate_corridors,Climate-linkage centrality,Carroll et al. 2018 current-flow centrality between current & future climate analogs (~5 km).,https://adaptwest.databasin.org/datasets/c45d1455f319403b93219b8ad10b3321/
+climate_type_macrorefugia,Climate macrorefugia,"Carroll 2023 (AdaptWest) backward climatic velocity (km/yr), 8-GCM ensemble SSP5-8.5 2071-2100; used inverted (vmax - v) -> refugia.",https://adaptwest.databasin.org/pages/adaptwest-velocitywna/
+irrecoverable_carbon_biomass,Irrecoverable carbon - biomass,"Biomass pool, t C/ha. Project layer attributed to Berman & McDowell (derivation of the global product).",https://www.conservation.org/irrecoverable-carbon
+irrecoverable_carbon_m_soc,Irrecoverable carbon - mineral soil,"Mineral-soil organic carbon pool, t C/ha. Project layer attributed to Berman & McDowell.",https://www.conservation.org/irrecoverable-carbon
+aoh_richness_mammals,Mammal richness (AOH),"Lumbierres et al. 2022 Area-of-Habitat richness - mammals, all species (~100 m).",https://doi.org/10.5061/dryad.02v6wwq48
+aoh_richness_birds,Bird richness (AOH),"Lumbierres et al. 2022 Area-of-Habitat richness - birds, all species (~100 m).",https://doi.org/10.5061/dryad.02v6wwq48
+iucn_efg,Ecosystem functional groups (IUCN GET),"IUCN Global Ecosystem Typology Level-3 EFGs; 40 Y2Y-present groups each down-weighted (group counts like one theme). Source encodes 1=major, 2=minor; pipeline swaps to major=2/minor=1.",https://zenodo.org/records/10081251
+irrecoverable_carbon_sl_soc,Irrecoverable carbon - subsoil (EXCLUDED),"Subsoil organic carbon pool, t C/ha; prepared but currently excluded from the optimization. Berman & McDowell.",https://www.conservation.org/irrecoverable-carbon
