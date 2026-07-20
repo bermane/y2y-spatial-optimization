@@ -155,12 +155,36 @@ corridor**.
   hand-off = 9 continuous + cost + PA mask + **40 EFGs**.
 - **Last cell writes `aligned_stack/manifest.json`** via `config.write_manifest()` — the
   Python→R contract (per-layer role/dtype/NoData/orient + grid + run params). Metadata-only,
-  so re-running just that cell is cheap (no re-warp).
+  so re-running just that cell is cheap (no re-warp). **03 also regenerates it** (same
+  function), so this cell is now just the "stack is ready" marker — a `config.py` edit does
+  **not** require a trip back to 02.
 
-### `03_prioritizr.ipynb` — optimization (R, kernel `y2y-r`)
+### `03a/03b/03c` — three analyses over `prioritizr_core.R` (R, kernel `y2y-r`)
 
-Builds + solves one `prioritizr` problem on the hand-off stack; writes results for 04. Reads +
-validates `manifest.json`. **All run params come from `config.py` via the manifest.** Current
+**03 was split (2026-07-20)** into three thin notebooks — `03a_y2y` (corridor-wide),
+`03b_north_bc` (connect 4 draft IPCAs: crop to their buffered bbox, lock them in, up-weight
+connectivity ×5), `03c_ab_foothills` (crop+mask to Alberta ∩ Foothills natural region,
+compactness off) — all sourcing the shared engine **`prioritizr_core.R`** (one `pr_*` function
+per old cell; each notebook differs by one line, `ANALYSIS <- "<key>"`). Per-analysis params
+live in **`config.ANALYSES[key]`**; global params stay module-level. Each 03x cell 1 shells
+`config.write_manifest(analysis='<key>')`. The one new capability is `terra::crop(+mask)` in
+`pr_ingest` (ROI built Python-side by `config.build_roi`, which writes `roi_<analysis>.gpkg` +
+reprojected `lockin_<analysis>.gpkg`); `BUDGET` auto-shrinks to the crop. 03a reproduces the
+old y2y result exactly. **`03_prioritizr.ipynb` is the legacy monolith** (reference; rename to
+`_LEGACY` once done with it). Alberta data derived into `input_data/alberta_boundary/` +
+`input_data/ab_foothills/`. 04 sub-region adaptation is still pending (Phase 5). The rest of
+this section describes the shared engine, unchanged from the monolith:
+
+### `03_prioritizr.ipynb` (LEGACY monolith) — optimization (R, kernel `y2y-r`)
+
+Builds + solves one `prioritizr` problem on the hand-off stack; writes results for 04.
+**Configuring a run = edit `config.py`, then run 03 — no trip back to 02.** Cell 1 shells out
+to `.venv/bin/python -c "import config; config.write_manifest()"` to **refresh** the manifest
+(metadata-only; `write_manifest()` is standalone — it globs the hand-off dir and reads the grid
+off the rasters), then reads + validates it. A failed refresh **stops** the run rather than
+solving against a stale manifest — the drift bug that once mislabelled an iter4 run. 02 only
+needs re-running when the *stack itself* changes. **All run params come from `config.py` via
+the manifest.** Current
 choices (full rationale + history in project memory `prioritizr-run-design`):
 - **Objective** = `OBJECTIVE` knob. Current **`min_shortfall` with `TARGET_PCT=1.0`** under a
   **30%-of-area budget** (`BUDGET_PCT`) ≡ maximize the captured *fraction* of every input.
@@ -183,7 +207,22 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
   `selection_frequency.tif`, `portfolio_representation.csv` (`relative_held` → 04 radar),
   `run_summary.json`.
 
-### `04_results_analysis.ipynb` — results (Python, kernel `y2y-geo`)
+### `04a/04b/04c` — three results notebooks over `results_core.py` (Python)
+
+**04 was split (2026-07-20)** to match 03: `04a_y2y` / `04b_north_bc` / `04c_ab_foothills`,
+each `import results_core as rc` then `A = rc.load(ANALYSIS)` and one cell per view
+(`rc.radar(A)`, `rc.new_map(A)`, `rc.consequences(A)`, …). Per-analysis 04 knobs live in
+**`config.RESULTS_04[key]`** (region_label, cluster_select, **benchmark** spec, benchmark_title,
+manual_area). **Contribution / efficiency denominators = the FULL Y2Y totals** (read off the
+whole stack), so "% of Y2Y" is literally correct even for a cropped sub-region (a window area =
+its share of the whole corridor); area% uses the full-Y2Y PU count. The **benchmark** block (the
+"existing protection" star-plot set) is per-analysis: y2y = the 6 featured parks + Ross River;
+north_bc = the 4 draft IPCA anchors; ab_foothills = the existing PAs ranked by cells inside the
+foothills window. Figure names: `benchmark_*` / `manual_*` / `clusters_new_*`. 04a reproduces the
+legacy y2y figures. **`04_results_analysis.ipynb` is the legacy y2y-only monolith** (retire like
+03). Below describes the shared views, unchanged from the monolith:
+
+### `04_results_analysis.ipynb` (LEGACY, y2y-only) — results (Python, kernel `y2y-geo`)
 
 Adapts to the run type read from `run_summary` (objective/decision). **Whole-network views:**
 radar (captured fraction per input vs a 30% area-share ring), allocation/priority map,
