@@ -175,15 +175,24 @@ ANALYSES = {
         # Connect 4 draft IPCAs: crop to their buffered bbox, lock them in as anchors, and
         # up-weight connectivity so the solve fills the best land linking them.
         "results_subdir": "iter6_north_bc",
-        "roi": {"mode": "bbox_union", "sources": [str(DRAFT_PA_VECTOR)],
-                "buffer_km": 25, "mask": False},
-        "objective": "min_shortfall", "budget_pct": 0.55, "target_pct": 1.0,
+        # ROI = CONVEX HULL of the 4 IPCAs + 50 km, MASKED to that shape. The hull fills the area
+        # BETWEEN the anchors (which a buffered union alone may not) while avoiding a bbox's empty
+        # far corners; mask=True means the analysis really is that shape, not its rectangle.
+        # -> 178,040 PU, anchors lock 43,257 (24.3%).
+        "roi": {"mode": "hull", "sources": [str(DRAFT_PA_VECTOR)],
+                "buffer_km": 50, "mask": True},
+        # Lock BOTH the existing PAs and the draft IPCAs (the drafts are treated as effectively
+        # protected since they are likely to be designated) -> 73,297 cells locked = 41.2% of the
+        # window (IPCAs 43,257 + existing PAs 30,375; they overlap by only 335).
+        # budget 0.52 = that 41.2% + ~19,300 cells of NEW connective corridor. Raise for more
+        # corridor (0.55 -> ~24,600), lower for less (0.45 -> ~6,800). Tune off 03b cell 3.
+        "objective": "min_shortfall", "budget_pct": 0.52, "target_pct": 1.0,
         "decision_type": DECISION_TYPE, "solver": SOLVER, "highs_solver": HIGHS_SOLVER,
         "connectivity_penalty": 0.0, "boundary_penalty": 0.0, "neighbor_penalty": 1e-5,
         # anchors total ~45,039 km^2 (one giant IPCA dominates); budget_pct MUST exceed the
         # locked fraction of the WINDOW or the feasibility guard stops the run -- tune off the
         # printed "locked-in / budget" line (start 0.55).
-        "lock_in": {"source": "vector", "vector_path": str(DRAFT_PA_VECTOR)},
+        "lock_in": {"source": "both", "vector_path": str(DRAFT_PA_VECTOR)},   # existing PAs + IPCAs
         "feature_weight_multipliers": {
             "transboundary_connectivity": 5.0, "climate_corridors": 5.0},
     },
@@ -278,7 +287,10 @@ RESULTS_04 = {
                                  "Wədzih Yiné’ (Caribou Song)": "Caribou Song"}},
         "benchmark_title": "Proposed IPCA anchors",
         "manual_area": None,
-        "outline_label": "analysis window",
+        # maps draw existing PAs (grey) and the locked draft IPCAs (teal) as separate layers;
+        # this labels the teal one.
+        "anchor_label": "draft IPCAs (committed)",
+        "outline_label": "analysis window (IPCA hull + 50 km)",
         "context_outline": None, "context_label": None,
     },
     "ab_foothills": {
@@ -493,6 +505,11 @@ def build_roi(analysis, handoff_dir=HANDOFF_DIR):
 
     if roi["mode"] == "bbox_union":
         poly = pd.concat(gdfs, ignore_index=True).union_all()
+    elif roi["mode"] == "hull":
+        # CONVEX HULL of the sources, then buffered: a shape that encompasses the anchors AND
+        # the area between them, without a bounding box's far-flung empty corners. Use with
+        # mask=True so the analysis really is that shape (not its bbox).
+        poly = pd.concat(gdfs, ignore_index=True).union_all().convex_hull
     elif roi["mode"] == "intersect":
         inter = gdfs[0]
         for g in gdfs[1:]:
@@ -600,7 +617,7 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
     # here and written as lockin_<analysis>.gpkg, so R rasterizes an already-aligned polygon.
     roi_bounds, roi_mask = build_roi(analysis, handoff_dir)
     lock_in = dict(a["lock_in"])
-    if lock_in["source"] == "vector":
+    if lock_in["source"] in ("vector", "both"):   # "both" also needs the reprojected rel path
         import geopandas as gpd
         vp = Path(lock_in["vector_path"])
         if not vp.exists():

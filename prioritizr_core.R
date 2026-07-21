@@ -168,13 +168,20 @@ pr_planning_units <- function(ctx) {
   total_cost <- terra::global(cost, "sum", na.rm = TRUE)[[1]]   # == n_pu (uniform cost)
   BUDGET <- params$budget_pct * total_cost                      # area budget in cost units
 
-  # Lock-in source: existing PAs (pa_mask) or a rasterized polygon (vector, e.g. draft anchors).
+  # Lock-in source: "pa_mask" = existing PAs; "vector" = a rasterized polygon (e.g. draft
+  # anchors); "both" = the UNION of the two (treat draft designations as effectively protected
+  # alongside existing PAs).
   li <- params$lock_in
-  if (identical(li$source, "vector")) {
+  if (identical(li$source, "vector") || identical(li$source, "both")) {
     v <- terra::vect(file.path(proj, li$vector_path))            # already TARGET_CRS (Python)
-    r <- terra::rasterize(v, cost, field = 1, background = 0)
-    locked <- terra::mask(r >= 0.5, cost)
-    li_desc <- sprintf("vector (%s)", basename(li$vector_path))
+    sel <- terra::rasterize(v, cost, field = 1, background = 0) >= 0.5
+    if (identical(li$source, "both")) {
+      sel <- sel | (pa >= 0.5)                                   # ALSO lock the existing PAs
+      li_desc <- sprintf("existing PAs + %s", basename(li$vector_path))
+    } else {
+      li_desc <- sprintf("vector (%s)", basename(li$vector_path))
+    }
+    locked <- terra::mask(sel, cost)
   } else {
     locked <- terra::mask(pa >= 0.5, cost)                       # PA lock-in mask (default)
     li_desc <- "pa_mask"

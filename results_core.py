@@ -33,6 +33,9 @@ import config
 
 # tab10: 10 saturated, well-separated hues, no pale twins (shared by maps AND star plots).
 CLUSTER_CMAP = plt.get_cmap("tab10")
+PA_COLOR = "0.6"          # existing protected areas (map backdrop)
+ANCHOR_COLOR = "#4f9d9d"  # committed anchors (e.g. draft IPCAs) -- muted teal, distinct from
+                          # the grey PAs, the wheat "other allocation" and the tab10 clusters
 
 # Per-objective metadata: display name, native unit (raw table), raw-aggregation rule.
 RAW_SPEC = {
@@ -109,6 +112,35 @@ def _outline_handles(A):
     if A.context is not None:
         h.append(Line2D([0], [0], color="0.35", lw=1.1, ls="--", label=A.context_label))
     return h
+
+
+def _locked_mask(A, ref):
+    """(existing_PA_mask, anchor_mask, locked_mask, label) on `ref`'s grid.
+
+    `anchor_mask` is the rasterized lock-in vector (e.g. the draft IPCAs) on its own, so maps can
+    draw existing PAs and committed anchors in DIFFERENT colours; it is all-False when the
+    analysis locks only the PA mask.
+
+    `locked` is what THIS analysis actually locked in, per the run's params: "pa_mask" = existing
+    PAs, "vector" = rasterized anchors (e.g. the draft IPCAs), "both" = the union. NEW candidate
+    areas are `selected & ~locked` -- using the existing-PA raster alone would mislabel locked
+    draft anchors as "new", since drafts are not in mask_protected_areas.tif."""
+    pa = (rioxarray.open_rasterio(config.HANDOFF_DIR / "mask_protected_areas.tif", masked=True)
+          .squeeze().rio.reproject_match(ref).values >= 0.5)
+    li = A.summary["params"].get("lock_in") or {"source": "pa_mask"}
+    src = li.get("source", "pa_mask")
+    anchors = np.zeros(pa.shape, dtype=bool)
+    if src in ("vector", "both") and li.get("vector_path"):
+        v = gpd.read_file(config.PROJECT_DIR / li["vector_path"]).to_crs(ref.rio.crs)
+        anchors = rasterize([(g, 1) for g in v.geometry], out_shape=ref.shape[-2:],
+                            transform=ref.rio.transform(), fill=0, dtype="uint8").astype(bool)
+    locked = np.zeros(pa.shape, dtype=bool)
+    if src in ("pa_mask", "both"):
+        locked |= pa
+    locked |= anchors
+    label = ("existing PAs + committed anchors" if src == "both"
+             else "locked-in anchors" if src == "vector" else "existing protected areas")
+    return pa, anchors, locked, label
 
 
 def _frame(A, ax):
@@ -200,19 +232,31 @@ def solution_maps(A):
 
 def existing_vs_new(A):
     """Split selected cells into locked-in PAs vs newly allocated."""
-    pa_grid = rioxarray.open_rasterio(config.HANDOFF_DIR / "mask_protected_areas.tif", masked=True).squeeze()
-    pa_on = pa_grid.rio.reproject_match(A.freq)
     sol = A.portfolio.isel(band=0)
-    existing = pa_on >= 0.5; new_alloc = (sol > 0.5) & ~existing
-    cat = xr.where(existing, 1, xr.where(new_alloc, 2, np.nan))
+    pa, anchors, locked, _ = _locked_mask(A, A.freq)      # what this analysis actually locked in
+    new_alloc = (sol.fillna(0).values > 0.5) & ~locked
+    has_anchors = bool(anchors.any())
+    anchor_label = A.a04.get("anchor_label", "committed anchors")
+    # 1 = existing PA, 2 = new allocation, 3 = committed anchors (drawn distinctly, over the PAs)
+    cat = np.full(A.freq.shape, np.nan, dtype="float32")
+    cat[pa & ~anchors] = 1.0
+    cat[new_alloc] = 2.0
+    if has_anchors:
+        cat[anchors] = 3.0
+    colors = [PA_COLOR, "#1b9e77"] + ([ANCHOR_COLOR] if has_anchors else [])
     fig, ax = plt.subplots(figsize=(7, 12))
-    cat.plot.imshow(ax=ax, cmap=ListedColormap(["#7a7a7a", "#1b9e77"]), vmin=1, vmax=2, add_colorbar=False)
+    A.freq.copy(data=cat).plot.imshow(ax=ax, cmap=ListedColormap(colors), vmin=1, vmax=len(colors),
+                                      add_colorbar=False)
     _frame(A, ax)
-    ax.legend(handles=[Patch(color="#7a7a7a", label="existing protected area"),
-                       Patch(color="#1b9e77", label="new allocation")] + _outline_handles(A),
-              loc="lower left", fontsize=9, frameon=True)
-    ax.set_title(f"{A.region_label} — existing protection vs new allocation\n"
-                 f"existing PA: {int(existing.sum()):,} cells | new: {int(new_alloc.sum()):,} cells")
+    handles = [Patch(color=PA_COLOR, label="existing protected area")]
+    if has_anchors:
+        handles.append(Patch(color=ANCHOR_COLOR, label=anchor_label))
+    handles.append(Patch(color="#1b9e77", label="new allocation"))
+    ax.legend(handles=handles + _outline_handles(A), loc="lower left", fontsize=9, frameon=True)
+    ax.set_title(f"{A.region_label} — locked-in protection vs new allocation\n"
+                 f"locked: {int(locked.sum()):,} cells"
+                 + (f" (PA {int((pa & ~anchors).sum()):,} + anchors {int(anchors.sum()):,})" if has_anchors else "")
+                 + f" | new: {int(new_alloc.sum()):,} cells")
     ax.set_aspect("equal"); ax.set_axis_off()
     fig.savefig(A.fig_dir / "existing_vs_new.png", dpi=150, bbox_inches="tight"); plt.show()
 
@@ -295,9 +339,10 @@ def build_stacks(A):
 
     A.valid_all = np.isfinite(A.cont_raw).all(axis=0)
     sel = A.sol0.fillna(0).values > 0.5
-    A.pa_on = (rioxarray.open_rasterio(config.HANDOFF_DIR / "mask_protected_areas.tif", masked=True)
-               .squeeze().rio.reproject_match(A.sol0).values >= 0.5)
-    A.new_mask = sel & ~A.pa_on
+    # NEW candidate areas exclude everything this analysis LOCKED (existing PAs and/or anchors),
+    # so locked draft IPCAs are never mislabelled as new candidates.
+    A.pa_on, A.anchors, A.locked, A.locked_label = _locked_mask(A, A.sol0)
+    A.new_mask = sel & ~A.locked
 
     A.MIN_CELLS = config.CLUSTER_MIN_CELLS; A.MAX_PLOTS = config.CLUSTER_MAX_PLOTS
     A.cluster_select = A.a04["cluster_select"]
@@ -465,9 +510,15 @@ def plot_stars(A, C, metric, title, fname, rmax=None):
 def new_map(A):
     OTHER = "#ecdcae"
     other = A.new_mask & ~np.isin(A.NEW["lab"], A.NEW["ids"])
+    has_anchors = bool(A.anchors.any())
     fig, ax = plt.subplots(figsize=(8, 12))
-    A.sol0.copy(data=np.where(A.pa_on, 1.0, np.nan).astype("float32")).plot.imshow(
-        ax=ax, cmap=ListedColormap(["0.6"]), add_colorbar=False)
+    # existing PAs (grey) and committed anchors (teal) drawn as SEPARATE layers so they read
+    # distinctly, then the rest of the allocation, then the profiled clusters on top.
+    A.sol0.copy(data=np.where(A.pa_on & ~A.anchors, 1.0, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap=ListedColormap([PA_COLOR]), add_colorbar=False)
+    if has_anchors:
+        A.sol0.copy(data=np.where(A.anchors, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap([ANCHOR_COLOR]), add_colorbar=False)
     A.sol0.copy(data=np.where(other, 1.0, np.nan).astype("float32")).plot.imshow(
         ax=ax, cmap=ListedColormap([OTHER]), add_colorbar=False)
     for cid in A.NEW["ids"]:
@@ -482,11 +533,14 @@ def new_map(A):
                     annotation_clip=False, zorder=6)
     _frame(A, ax)
     n_other = int(other.sum()); n_top = int(np.isin(A.NEW["lab"], A.NEW["ids"]).sum())
-    ax.legend(handles=[Patch(color="0.6", label="existing protected areas"),
-                       Patch(color=OTHER, label=f"other new allocation ({n_other*A.cell_km2:,.0f} km²)"),
-                       Patch(color="none", label=f"numbered = top {len(A.NEW['ids'])} ({n_top*A.cell_km2:,.0f} km²)")]
-                      + _outline_handles(A),
-              loc="lower left", fontsize=8, frameon=True)
+    handles = [Patch(color=PA_COLOR, label="existing protected areas")]
+    if has_anchors:
+        handles.append(Patch(color=ANCHOR_COLOR,
+                             label=f"{A.a04.get('anchor_label', 'committed anchors')} "
+                                   f"({A.anchors.sum()*A.cell_km2:,.0f} km²)"))
+    handles += [Patch(color=OTHER, label=f"other new allocation ({n_other*A.cell_km2:,.0f} km²)"),
+                Patch(color="none", label=f"numbered = top {len(A.NEW['ids'])} ({n_top*A.cell_km2:,.0f} km²)")]
+    ax.legend(handles=handles + _outline_handles(A), loc="lower left", fontsize=8, frameon=True)
     ax.set_title(f"{A.region_label} — new candidate areas within the full allocation")
     ax.set_aspect("equal"); ax.set_axis_off()
     fig.savefig(A.fig_dir / "clusters_map.png", dpi=150, bbox_inches="tight"); plt.show()
