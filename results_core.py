@@ -37,22 +37,29 @@ PA_COLOR = "0.6"          # existing protected areas (map backdrop)
 ANCHOR_COLOR = "#4f9d9d"  # committed anchors (e.g. draft IPCAs) -- muted teal, distinct from
                           # the grey PAs, the wheat "other allocation" and the tab10 clusters
 
-# Per-objective metadata: display name, native unit (raw table), raw-aggregation rule.
+# Per-objective metadata: display name, native unit (raw table), raw-aggregation rule, and the
+# RAW-table decimal places. Decimals are PER ROW because the rows span wildly different scales:
+# one shared dp would round a 0-1 intactness index to a flat "1.0" while carbon needs none.
 RAW_SPEC = {
-    "human_modification":           ("Intactness",             "intactness 0-1 (mean; 1-gHM)",              "mean"),
-    "transboundary_connectivity":   ("Connectivity",           "current density, amperes (mean)",          "mean"),
-    "climate_corridors":            ("Climate corridors",      "current-flow centrality, amperes (mean)",  "mean"),
-    "climate_type_macrorefugia":    ("Climate refugia",        "km/yr (mean; refugial value = vmax - backward velocity)", "mean"),
-    "irrecoverable_carbon_biomass": ("Carbon: biomass",        "t C (total)",                              "tonnes"),
-    "irrecoverable_carbon_m_soc":   ("Carbon: mineral soil",   "t C (total)",                              "tonnes"),
-    "aoh_richness_mammals":         ("Mammal richness",        "species/cell (mean)",                      "mean"),
-    "aoh_richness_birds":           ("Bird richness",          "species/cell (mean)",                      "mean"),
-    "EFG_mean":                     ("Ecosystem groups (EFG)", None,                                       "efg_groups"),
+    "human_modification":           ("Intactness",             "intactness 0-1 (mean; 1-gHM)",              "mean",       3),
+    "transboundary_connectivity":   ("Connectivity",           "current density, amperes (mean)",          "mean",       2),
+    "climate_corridors":            ("Climate corridors",      "current-flow centrality, amperes (mean)",  "mean",       2),
+    "climate_type_macrorefugia":    ("Climate refugia",        "km/yr (mean; refugial value = vmax - backward velocity)", "mean", 2),
+    "irrecoverable_carbon_biomass": ("Carbon: biomass",        "t C (total)",                              "tonnes",     0),
+    "irrecoverable_carbon_m_soc":   ("Carbon: mineral soil",   "t C (total)",                              "tonnes",     0),
+    "aoh_richness_mammals":         ("Mammal richness",        "species/cell (mean)",                      "mean",       1),
+    "aoh_richness_birds":           ("Bird richness",          "species/cell (mean)",                      "mean",       1),
+    "EFG_mean":                     ("Ecosystem groups (EFG)", None,                                       "efg_groups", 0),
 }
+# fmt drives BOTH the radial tick labels and the composite in each star-plot subtitle.
+# richness is a 0-1 index and efficiency is small (0-0.3), so both need 3 dp for depth: at 2 dp
+# 108 richness values collapsed to 66 distinct (Banff 0.498 / NEW-90 0.497 / NEW-445 0.499 all
+# read "0.50"), and efficiency ticks mis-rendered (0.075 -> "0.08", 0.225 -> "0.23").
+# contribution stays at 1 dp -- it is a 0-100 % and the team asked for fewer decimals there.
 METRIC_SPEC = {
-    "richness":     dict(key="profs",   unit="relative richness (0-1, region 5-95 pctile)", rmax=1.0,  fmt="{:.2f}"),
+    "richness":     dict(key="profs",   unit="relative richness (0-1, region 5-95 pctile)", rmax=1.0,  fmt="{:.3f}"),
     "contribution": dict(key="contrib", unit="% of Y2Y region total",                       rmax=None, fmt="{:.1f}"),
-    "efficiency":   dict(key="eff",     unit="% of Y2Y total per 1,000 km^2",                rmax=None, fmt="{:.2f}"),
+    "efficiency":   dict(key="eff",     unit="% of Y2Y total per 1,000 km^2",                rmax=None, fmt="{:.3f}"),
 }
 
 
@@ -635,7 +642,12 @@ def consequences(A):
                              index=["area (km^2)", "area (% of Y2Y)"], columns=options)
 
     def build(values_by, dp, defn, unit=None):
-        body = pd.DataFrame(values_by, index=A.OBJ_DISPLAY, columns=options).round(dp)
+        body = pd.DataFrame(values_by, index=A.OBJ_DISPLAY, columns=options)
+        if isinstance(dp, (list, tuple)):        # per-row decimals (raw table; mixed scales)
+            body = pd.DataFrame([row.round(d) for (_, row), d in zip(body.iterrows(), dp)],
+                                index=body.index, columns=body.columns)
+        else:
+            body = body.round(dp)
         df = pd.concat([area_head, body])
         if unit is not None:
             df.insert(0, "unit", ["km^2", "% of Y2Y"] + list(unit))
@@ -644,13 +656,23 @@ def consequences(A):
 
     contrib_tbl = build(contrib_by, 1, "Contribution = area's share of the Y2Y region-wide total per input (%). Rows: 2 area metrics + 9 inputs; columns: areas.")
     eff_tbl = build(eff_by, 3, "Efficiency = contribution per unit area (% of Y2Y total per 1,000 km^2). Rows: 2 area metrics + 9 inputs; columns: areas.")
-    raw_tbl = build(raw_by, 1, "Raw = actual amount per input in the area, in the native units in the 'unit' column. Rows: 2 area metrics + 9 inputs; columns: areas.", unit=A.OBJ_UNIT)
+    raw_dp = [RAW_SPEC[c][3] for c in A.axis_cols]      # per-objective decimals (mixed scales)
+    raw_tbl = build(raw_by, raw_dp, "Raw = actual amount per input in the area, in the native units in the 'unit' column. Rows: 2 area metrics + 9 inputs; columns: areas.", unit=A.OBJ_UNIT)
+
+    def _fmt_raw(df):
+        """String-format the raw table per row so a 0-1 index and tonnes both read correctly
+        (pandas otherwise formats per COLUMN and forces scientific notation on mixed scales)."""
+        out = df.copy().astype(object)
+        dps = [0, 2] + raw_dp                          # area km^2, area %, then the objectives
+        for (idx, row), d in zip(df.iterrows(), dps):
+            out.loc[idx] = [v if isinstance(v, str) else f"{v:,.{d}f}" for v in row]
+        return out
 
     pd.set_option("display.width", 300); pd.set_option("display.max_columns", None)
     for name, tbl in [("CONTRIBUTION (% of Y2Y total)", contrib_tbl),
-                      ("EFFICIENCY (% of Y2Y per 1,000 km^2)", eff_tbl),
-                      ("RAW (native units)", raw_tbl)]:
+                      ("EFFICIENCY (% of Y2Y per 1,000 km^2)", eff_tbl)]:
         print(name + ":"); print(tbl.to_string()); print()
+    print("RAW (native units):"); print(_fmt_raw(raw_tbl).to_string()); print()
 
     # disjoint check: NEW + benchmark are spatially disjoint -> summed contribution <= 100%.
     disj = [o for o in options if kinds[o] in ("new", "benchmark")]
