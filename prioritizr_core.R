@@ -224,8 +224,26 @@ pr_penalty_matrices <- function(ctx) {
   cm <- NULL; bm <- NULL
   if (params$connectivity_penalty > 0) {
     cm <- prioritizr::connectivity_matrix(cost, features[["transboundary_connectivity"]])
-    cat(sprintf("connectivity matrix: %s edges | weight range [%.4g, %.4g]\n",
-                format(length(cm@x), big.mark = ","), min(cm@x), max(cm@x)))
+    raw_rng <- c(min(cm@x), max(cm@x))
+    # CAP the pinch-point tail, then NORMALISE by the median edge weight so mean weight ~= 1.
+    # That puts connectivity_penalty on the same scale as the already-calibrated neighbor_penalty
+    # (binary adjacency = weight 1): it becomes "a neighbour penalty weighted by RELATIVE
+    # connectivity", so the magnitude is principled rather than guessed. Without this the raw
+    # matrix can span ~40,000x corridor-wide and the penalty is uncalibratable.
+    cap_p <- if (is.null(params$connectivity_cap_pctile)) 0.99 else params$connectivity_cap_pctile
+    if (!is.null(cap_p) && cap_p > 0 && cap_p < 1) {
+      cap <- stats::quantile(cm@x, cap_p, names = FALSE)
+      n_cap <- sum(cm@x > cap)
+      cm@x <- pmin(cm@x, cap)
+      cat(sprintf("connectivity matrix: capped at p%.0f = %.3g (%s of %s edges clipped)\n",
+                  100 * cap_p, cap, format(n_cap, big.mark = ","),
+                  format(length(cm@x), big.mark = ",")))
+    }
+    med <- stats::median(cm@x)
+    if (is.finite(med) && med > 0) cm@x <- cm@x / med          # -> mean weight ~= 1
+    cat(sprintf("connectivity matrix: %s edges | raw [%.4g, %.4g] -> normalised [%.3g, %.3g], mean %.2f\n",
+                format(length(cm@x), big.mark = ","), raw_rng[1], raw_rng[2],
+                min(cm@x), max(cm@x), mean(cm@x)))
   }
   if (params$boundary_penalty > 0) {
     bm <- prioritizr::boundary_matrix(cost)

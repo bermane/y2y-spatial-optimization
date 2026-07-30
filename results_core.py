@@ -37,6 +37,25 @@ PA_COLOR = "0.6"          # existing protected areas (map backdrop)
 ANCHOR_COLOR = "#4f9d9d"  # committed anchors (e.g. draft IPCAs) -- muted teal, distinct from
                           # the grey PAs, the wheat "other allocation" and the tab10 clusters
 
+
+class _NS(types.SimpleNamespace):
+    """SimpleNamespace with a ONE-LINE repr.
+
+    Every view function ends `return A` so calls can chain, and Jupyter echoes that return value
+    after each cell — under the default repr that dumps the whole manifest, run summary and every
+    cached stack/table after every single cell."""
+
+    def __repr__(self):
+        bits = [str(getattr(self, "analysis", "?"))]
+        s = getattr(self, "summary", None)
+        if s:
+            bits.append(str(s.get("run_tag", "")))
+        if getattr(self, "portfolio", None) is not None:
+            bits.append(f"{self.portfolio.rio.width}x{self.portfolio.rio.height}")
+        if getattr(self, "NEW", None):
+            bits.append(f"{len(self.NEW['ids'])} new clusters")
+        return f"<results {' | '.join(b for b in bits if b)}>"
+
 # Per-objective metadata: display name, native unit (raw table), raw-aggregation rule, and the
 # RAW-table decimal places. Decimals are PER ROW because the rows span wildly different scales:
 # one shared dp would round a 0-1 intactness index to a flat "1.0" while carbon needs none.
@@ -90,7 +109,7 @@ def load(analysis):
           f"{'proportion/LP' if is_prop else 'binary portfolio'}")
     print(f"region={a04['region_label']} | figures -> {fig_dir.relative_to(config.PROJECT_DIR)}")
 
-    return types.SimpleNamespace(
+    return _NS(
         analysis=analysis, a04=a04, run_dir=run_dir, fig_dir=fig_dir,
         manifest=manifest, summary=summary, rep=rep, REL=REL, is_prop=is_prop,
         region_label=a04["region_label"], outline=outline,
@@ -155,19 +174,30 @@ def _frame(A, ax):
 
     Framing (RESULTS_04[key]["frame"]):
       "window" (default) -> keep the map on the analysis window (context can't zoom it out);
-      "context"          -> zoom OUT to the whole context extent (e.g. all of Alberta), so the
-                            window/foothills data reads inside the full province.
-    Axis direction (rioxarray may invert y) is preserved either way."""
+      "pad"              -> zoom out by `frame_pad` (fraction of the window span) for breathing
+                            room / surrounding context, WITHOUT jumping to the full context extent
+                            (the context outline is then simply clipped by the view -- fine);
+      "context"          -> zoom OUT to the whole context extent (e.g. all of Alberta).
+    Axis direction (rioxarray may invert y) is preserved in every case."""
     xlim, ylim = ax.get_xlim(), ax.get_ylim()                 # window extent from the raster
     A.outline.boundary.plot(ax=ax, color="black", linewidth=0.9)
     if A.context is not None:
         A.context.boundary.plot(ax=ax, color="0.35", linewidth=1.1, linestyle="--")
-    if A.context is not None and A.a04.get("frame") == "context":
+
+    def _oriented(lo, hi, ref):                               # keep the axis' own direction
+        return (lo, hi) if ref[0] <= ref[1] else (hi, lo)
+
+    mode = A.a04.get("frame", "window")
+    if A.context is not None and mode == "context":
         minx, miny, maxx, maxy = A.context.total_bounds
         m = 0.03 * max(maxx - minx, maxy - miny)              # small margin
-        xs, ys = (minx - m, maxx + m), (miny - m, maxy + m)
-        ax.set_xlim(xs if xlim[0] <= xlim[1] else xs[::-1])   # preserve axis direction
-        ax.set_ylim(ys if ylim[0] <= ylim[1] else ys[::-1])
+        ax.set_xlim(_oriented(minx - m, maxx + m, xlim))
+        ax.set_ylim(_oriented(miny - m, maxy + m, ylim))
+    elif mode == "pad":
+        f = A.a04.get("frame_pad", 0.25)
+        for lim, setter in ((xlim, ax.set_xlim), (ylim, ax.set_ylim)):
+            lo, hi = min(lim), max(lim); d = (hi - lo) * f
+            setter(_oriented(lo - d, hi + d, lim))
     else:
         ax.set_xlim(xlim); ax.set_ylim(ylim)                  # stay framed on the window
 
@@ -344,7 +374,10 @@ def build_stacks(A):
     A.efg_region[A.efg_region == 0] = np.nan
     A.n_region_full = _region_total(A, cost_path(A))                        # full Y2Y PU count
 
-    A.valid_all = np.isfinite(A.cont_raw).all(axis=0)
+    # The analysis PU = cells the solve actually ran on. sol0 is NaN outside the ROI mask, so it
+    # must be ANDed in: the feature rasters are only reproject_matched (grid-aligned), NOT masked,
+    # so feature-validity alone spills outside a masked window.
+    A.valid_all = np.isfinite(A.sol0.values) & np.isfinite(A.cont_raw).all(axis=0)
     sel = A.sol0.fillna(0).values > 0.5
     # NEW candidate areas exclude everything this analysis LOCKED (existing PAs and/or anchors),
     # so locked draft IPCAs are never mislabelled as new candidates.
@@ -405,9 +438,14 @@ def _cluster_profile(A, mask, kind):
     profs, contrib, eff, raw = {}, {}, {}, {}
     for cid in ids:
         profs[cid], contrib[cid], eff[cid], raw[cid] = mask_profile(A, lab == cid)
+    # Public identity = "Option 1..N" in the order `_select_clusters` returned (N->S for "spread",
+    # largest-first for "largest"). The raw connected-component id (`cid`, e.g. 445) stays the
+    # internal key that indexes the label raster, but it is never shown -- the map annotation, the
+    # star titles and the consequences columns all read "Option k" so they cross-reference.
+    labnum = {cid: j + 1 for j, cid in enumerate(ids)}
     print(f"{kind:22s}: {n} components, {len(ids)} kept (>= {A.MIN_CELLS} cells, {A.cluster_select})")
-    return dict(lab=lab, ids=ids, cnt=cnt, colors=colors, labnum={cid: cid for cid in ids},
-                names={cid: f"cluster {cid}" for cid in ids},
+    return dict(lab=lab, ids=ids, cnt=cnt, colors=colors, labnum=labnum,
+                names={cid: f"Option {labnum[cid]}" for cid in ids},
                 profs=profs, contrib=contrib, eff=eff, raw=raw)
 
 
@@ -421,8 +459,26 @@ def _benchmark_geoms(A):
         assert not missing, f"benchmark PA_Name not found: {missing}"
         return [(pa.loc[pa.PA_Name == n, "geometry"].iloc[0], lab) for n, lab in spec["featured"]]
     if t == "named_vector":
-        g = gpd.read_file(spec["vector"]).to_crs(A.crs); nf = spec["name_field"]
-        labels = spec.get("labels", {})
+        # honour the same source_filter the analysis used (e.g. northern subset only), and cap to
+        # `top_n` largest so a long anchor list doesn't produce an unreadable star-plot grid.
+        g = config._load_source(spec["vector"], spec.get("source_filter")).to_crs(A.crs)
+        nf = spec["name_field"]; labels = spec.get("labels", {})
+        if spec.get("top_n"):
+            # largest first, but SKIP areas essentially nested inside an already-picked larger one
+            # (e.g. Peel River sits 100% inside Peel Watershed): their profile is just a subset of
+            # the parent's and they'd double-count in the consequences table. The slot goes to the
+            # next-largest distinct area instead.
+            g = g.assign(_km2=g.geometry.area).sort_values("_km2", ascending=False)
+            keep = []
+            for idx, row in g.iterrows():
+                if len(keep) >= spec["top_n"]:
+                    break
+                if any(row.geometry.intersection(g.loc[k, "geometry"]).area >= 0.9 * row.geometry.area
+                       for k in keep):
+                    print(f"  skip nested benchmark area: {row[nf]}")
+                    continue
+                keep.append(idx)
+            g = g.loc[keep]
         return [(row.geometry, labels.get(row[nf], str(row[nf]))) for _, row in g.iterrows()]
     if t == "in_window_pa":
         # Rank PAs by cells ACTUALLY inside the analysis window (valid_all = ROI-masked PUs),
@@ -446,8 +502,10 @@ def _benchmark_profile(A):
     """Profile the benchmark areas over their FULL polygon clipped to the window's PUs -- same
     structure as _cluster_profile so the maps/stars/consequences consume it identically."""
     geoms = _benchmark_geoms(A)
-    lab = np.zeros(A.sol0.shape, dtype=np.int32)
-    ids, cnt, colors, names, labnum, geom_by = [], {}, {}, {}, {}, {}
+    # Each area keeps its OWN mask. A shared first-wins label raster silently erased any area
+    # fully overlapped by an earlier one (e.g. Peel River inside Peel Watershed) -- it kept a cell
+    # count but had nothing to draw, so the map's center_of_mass returned NaN and blew up.
+    ids, cnt, colors, names, labnum, geom_by, masks = [], {}, {}, {}, {}, {}, {}
     profs, contrib, eff, raw = {}, {}, {}, {}
     for j, (geom, short) in enumerate(geoms):
         rast = rasterize([(geom, 1)], out_shape=A.sol0.shape, transform=A.sol0.rio.transform(),
@@ -456,13 +514,17 @@ def _benchmark_profile(A):
         cells = int(m.sum())
         if cells < A.MIN_CELLS:
             print(f"  SKIP {short}: {cells} PU cells (< {A.MIN_CELLS})"); continue
-        ids.append(short); cnt[short] = cells; names[short] = short
+        ids.append(short); cnt[short] = cells; names[short] = short; masks[short] = m
         colors[short] = CLUSTER_CMAP(j % 10); labnum[short] = j + 1; geom_by[short] = geom
-        lab[m & (lab == 0)] = j + 1
         profs[short], contrib[short], eff[short], raw[short] = mask_profile(A, m)
+    overlaps = [(a, b) for i, a in enumerate(ids) for b in ids[i+1:] if (masks[a] & masks[b]).any()]
+    if overlaps:
+        print(f"  note: {len(overlaps)} benchmark pair(s) overlap "
+              f"(e.g. {overlaps[0][0][:24]} / {overlaps[0][1][:24]}) -- drawn in order, "
+              f"contribution counts them separately")
     print(f"{'benchmark areas':22s}: {len(ids)} profiled [{A.a04['benchmark']['type']}]")
-    return dict(lab=lab, ids=ids, cnt=cnt, colors=colors, names=names, labnum=labnum, geoms=geom_by,
-                profs=profs, contrib=contrib, eff=eff, raw=raw)
+    return dict(ids=ids, cnt=cnt, colors=colors, names=names, labnum=labnum, geoms=geom_by,
+                masks=masks, profs=profs, contrib=contrib, eff=eff, raw=raw)
 
 
 def _manual_profile(A):
@@ -533,7 +595,7 @@ def new_map(A):
             ax=ax, cmap=ListedColormap([A.NEW["colors"][cid]]), add_colorbar=False)
         cy, cx = ndimage.center_of_mass(A.NEW["lab"] == cid)
         x, y = float(A.sol0.x.values[int(round(cx))]), float(A.sol0.y.values[int(round(cy))])
-        ax.annotate(str(cid), xy=(x, y), xytext=(9, 9), textcoords="offset points", fontsize=7,
+        ax.annotate(str(A.NEW["labnum"][cid]), xy=(x, y), xytext=(9, 9), textcoords="offset points", fontsize=7,
                     fontweight="bold", ha="center", va="center", color="black",
                     path_effects=[pe.withStroke(linewidth=2, foreground="white")],
                     arrowprops=dict(arrowstyle="-", lw=0.5, color="black", shrinkA=1, shrinkB=1),
@@ -546,7 +608,8 @@ def new_map(A):
                              label=f"{A.a04.get('anchor_label', 'committed anchors')} "
                                    f"({A.anchors.sum()*A.cell_km2:,.0f} km²)"))
     handles += [Patch(color=OTHER, label=f"other new allocation ({n_other*A.cell_km2:,.0f} km²)"),
-                Patch(color="none", label=f"numbered = top {len(A.NEW['ids'])} ({n_top*A.cell_km2:,.0f} km²)")]
+                Patch(color="none", label=f"numbered = Options 1–{len(A.NEW['ids'])} "
+                                          f"({n_top*A.cell_km2:,.0f} km²)")]
     ax.legend(handles=handles + _outline_handles(A), loc="lower left", fontsize=8, frameon=True)
     ax.set_title(f"{A.region_label} — new candidate areas within the full allocation")
     ax.set_aspect("equal"); ax.set_axis_off()
@@ -567,12 +630,12 @@ def bench_map(A):
         ax=ax, cmap=ListedColormap(["0.82"]), add_colorbar=False)
     handles = [Patch(color="0.82", label="other existing PAs")]
     for n, cid in enumerate(B["ids"], 1):
-        j = B["labnum"][cid]
-        A.sol0.copy(data=np.where(B["lab"] == j, 1.0, np.nan).astype("float32")).plot.imshow(
+        m = B["masks"][cid]                       # each area's OWN mask (overlap-safe)
+        A.sol0.copy(data=np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
             ax=ax, cmap=ListedColormap([B["colors"][cid]]), add_colorbar=False)
         km2 = int(round(B["cnt"][cid]*A.cell_km2))
         handles.append(Patch(color=B["colors"][cid], label=f"{n}. {cid} ({km2:,} km²)"))
-        cy, cx = ndimage.center_of_mass(B["lab"] == j)
+        cy, cx = ndimage.center_of_mass(m)
         x, y = float(A.sol0.x.values[int(round(cx))]), float(A.sol0.y.values[int(round(cy))])
         ax.annotate(str(n), xy=(x, y), xytext=(10, 10), textcoords="offset points", fontsize=9,
                     fontweight="bold", ha="center", va="center", color="black",
@@ -619,38 +682,60 @@ def manual_block(A):
 
 
 # ---- consequences tables + heatmaps + plain language ----
+# Column groups for the consequences tables: the model's NEW candidate areas are decision
+# OPTIONS; the benchmark areas (parks / proposed IPCAs) and any hand-drawn area are the
+# already-designated yardstick they are read against.
+GRP_NEW = "Alternatives (new options)"
+GRP_EST = "Established Protected/Priority Areas"
+UNIT_COL = ("", "unit")
+
+
 def _blocks(A):
-    b = [("NEW", "new", A.NEW), ("", "benchmark", A.BENCH)]
+    """(column group, kind, block) per profiled set, in table order."""
+    b = [(GRP_NEW, "new", A.NEW), (GRP_EST, "benchmark", A.BENCH)]
     if A.manual:
-        b.append(("", "manual", A.manual))
+        b.append((GRP_EST, "manual", A.manual))
     return b
+
+
+def _dec(v, dp, sig=2, dp_max=6):
+    """Decimals for `v`: at least `dp`, extended until `sig` significant figures show.
+
+    A fixed dp per row silently flattened small values -- at 1 dp the whole Alberta-foothills
+    contribution table read "0.0 / 0.1", and a 0-1 index at 1 dp reads a flat "1.0". Only the
+    small cells gain decimals; everything else keeps the row's declared dp."""
+    if v is None or not np.isfinite(v) or v == 0:
+        return dp
+    return int(min(max(dp, sig - 1 - int(np.floor(np.log10(abs(v))))), dp_max))
 
 
 def consequences(A):
     n_full = A.n_region_full
     options, area_km2, area_pct, kinds = [], [], [], {}
     contrib_by, eff_by, raw_by = {}, {}, {}
-    for prefix, kind, C in _blocks(A):
+    for group, kind, C in _blocks(A):
         for cid in C["ids"]:
-            label = f"{prefix}-{cid}" if prefix else str(cid)
-            options.append(label)
+            # public name: "Option k" for the new areas, the park / IPCA name for the rest
+            col = (group, C["names"].get(cid, str(cid)))
+            options.append(col)
             area_km2.append(int(round(C["cnt"][cid]*A.cell_km2)))
-            area_pct.append(round(100.0*C["cnt"][cid]/n_full, 2))
-            contrib_by[label] = C["contrib"][cid]; eff_by[label] = C["eff"][cid]; raw_by[label] = C["raw"][cid]
-            kinds[label] = kind
-    area_head = pd.DataFrame([dict(zip(options, area_km2)), dict(zip(options, area_pct))],
-                             index=["area (km^2)", "area (% of Y2Y)"], columns=options)
+            pct = 100.0*C["cnt"][cid]/n_full
+            area_pct.append(round(pct, _dec(pct, 2)))      # >= 2 sig figs for tiny sub-regions
+            contrib_by[col] = C["contrib"][cid]; eff_by[col] = C["eff"][cid]; raw_by[col] = C["raw"][cid]
+            kinds[col] = kind
+    assert len(set(options)) == len(options), f"duplicate area names: {options}"
+    cols = pd.MultiIndex.from_tuples(options)          # level 0 = group, level 1 = area name
+    area_head = pd.DataFrame([area_km2, area_pct], index=["area (km^2)", "area (% of Y2Y)"],
+                             columns=cols)
 
     def build(values_by, dp, defn, unit=None):
-        body = pd.DataFrame(values_by, index=A.OBJ_DISPLAY, columns=options)
-        if isinstance(dp, (list, tuple)):        # per-row decimals (raw table; mixed scales)
-            body = pd.DataFrame([row.round(d) for (_, row), d in zip(body.iterrows(), dp)],
-                                index=body.index, columns=body.columns)
-        else:
-            body = body.round(dp)
+        body = pd.DataFrame(values_by, index=A.OBJ_DISPLAY, columns=cols)
+        dps = dp if isinstance(dp, (list, tuple)) else [dp]*len(body)   # per-row minimum decimals
+        body = pd.DataFrame([[round(v, _dec(v, d)) for v in row] for (_, row), d in zip(body.iterrows(), dps)],
+                            index=body.index, columns=body.columns)
         df = pd.concat([area_head, body])
         if unit is not None:
-            df.insert(0, "unit", ["km^2", "% of Y2Y"] + list(unit))
+            df.insert(0, UNIT_COL, ["km^2", "% of Y2Y"] + list(unit))
         df.index.name = defn
         return df
 
@@ -659,20 +744,24 @@ def consequences(A):
     raw_dp = [RAW_SPEC[c][3] for c in A.axis_cols]      # per-objective decimals (mixed scales)
     raw_tbl = build(raw_by, raw_dp, "Raw = actual amount per input in the area, in the native units in the 'unit' column. Rows: 2 area metrics + 9 inputs; columns: areas.", unit=A.OBJ_UNIT)
 
-    def _fmt_raw(df):
-        """String-format the raw table per row so a 0-1 index and tonnes both read correctly
-        (pandas otherwise formats per COLUMN and forces scientific notation on mixed scales)."""
+    def _fmt(df, dp):
+        """String-format per CELL so a 0-1 index and tonnes both read correctly (pandas otherwise
+        formats per COLUMN and forces scientific notation on mixed scales) and so the >= 2 sig-fig
+        rule survives display -- a cell rounded to 0.045 must not print back as "0.0"."""
         out = df.copy().astype(object)
-        dps = [0, 2] + raw_dp                          # area km^2, area %, then the objectives
+        dps = [0, 2] + (list(dp) if isinstance(dp, (list, tuple)) else [dp]*len(A.OBJ_DISPLAY))
         for (idx, row), d in zip(df.iterrows(), dps):
-            out.loc[idx] = [v if isinstance(v, str) else f"{v:,.{d}f}" for v in row]
+            out.loc[idx] = [v if isinstance(v, str) else f"{v:,.{_dec(v, d)}f}" for v in row]
         return out
 
     pd.set_option("display.width", 300); pd.set_option("display.max_columns", None)
-    for name, tbl in [("CONTRIBUTION (% of Y2Y total)", contrib_tbl),
-                      ("EFFICIENCY (% of Y2Y per 1,000 km^2)", eff_tbl)]:
-        print(name + ":"); print(tbl.to_string()); print()
-    print("RAW (native units):"); print(_fmt_raw(raw_tbl).to_string()); print()
+    for name, tbl, dp in [("CONTRIBUTION (% of Y2Y total)", contrib_tbl, 1),
+                          ("EFFICIENCY (% of Y2Y per 1,000 km^2)", eff_tbl, 3),
+                          ("RAW (native units)", raw_tbl, raw_dp)]:
+        # the definition rides along as index.name for the CSV, but printing it there pads the
+        # row-label column to its own width -- print it as a caption instead.
+        print(f"{name}:\n  {tbl.index.name}")
+        print(_fmt(tbl, dp).rename_axis(None).to_string()); print()
 
     # disjoint check: NEW + benchmark are spatially disjoint -> summed contribution <= 100%.
     disj = [o for o in options if kinds[o] in ("new", "benchmark")]
@@ -680,17 +769,72 @@ def consequences(A):
     assert (tot <= 100.5).all(), f"contribution > 100% for {tot[tot > 100.5].index.tolist()}"
 
     for name, tbl in [("contribution", contrib_tbl), ("efficiency", eff_tbl), ("raw", raw_tbl)]:
-        tbl.to_csv(A.run_dir / f"consequences_{name}.csv")
+        # utf-8-SIG: row labels include Indigenous place names (the 04b IPCA benchmark especially).
+        # Excel on macOS assumes Mac Roman without a BOM and mangles them.
+        tbl.to_csv(A.run_dir / f"consequences_{name}.csv", encoding="utf-8-sig")
     print(f"wrote consequences_{{contribution,efficiency,raw}}.csv -> {A.run_dir.relative_to(config.PROJECT_DIR)}")
     A.contrib_tbl, A.eff_tbl, A.raw_tbl = contrib_tbl, eff_tbl, raw_tbl
     return contrib_tbl, eff_tbl, raw_tbl
 
 
+def corridor_report(A):
+    """Is the new allocation CORRIDORS between anchors, or fresh clumps?
+
+    For connectivity analyses (northern_ipcas) the goal is land that LINKS the locked anchors.
+    Prints objective shape metrics; the decisive one is the last: label `locked | new` and count
+    how many distinct connected components still contain anchors -- corridors working means the
+    anchors merge into FEWER components (ideally 1)."""
+    new, locked, anchors = A.new_mask, A.locked, A.anchors
+    k = A.cell_km2
+    lab, n = ndimage.label(new, structure=np.ones((3, 3), int))
+    cnt = np.bincount(lab.ravel())[1:]
+    print(f"{A.region_label} — corridor report\n")
+    print(f"  new allocation      : {new.sum():,} cells ({new.sum()*k:,.0f} km²) in {n:,} components")
+    print(f"  singletons          : {int((cnt == 1).sum()):,} | median component {np.median(cnt):.0f} cells"
+          if n else "  (no new allocation)")
+
+    # attachment: new area sitting in components that touch a locked area
+    grow = ndimage.binary_dilation(locked, np.ones((3, 3), bool))
+    touch = set(np.unique(lab[new & grow])) - {0}
+    att = np.isin(lab, list(touch)) & new
+    pct = 100 * att.sum() / max(new.sum(), 1)
+    print(f"  attached to locked  : {att.sum():,} cells ({pct:.0f}%)  ->  {100-pct:.0f}% DETACHED "
+          f"(connects nothing)")
+
+    # shape: exposed edges per new cell (0 = solid blob, 4 = isolated pixels; corridors sit high)
+    p = np.pad(new, 1)
+    e = sum(((p[1:-1, 1:-1] == 1) & (p[a:b, c:d] == 0)).sum()
+            for a, b, c, d in [(None, -2, 1, -1), (2, None, 1, -1), (1, -1, None, -2), (1, -1, 2, None)])
+    print(f"  edges per new cell  : {e/max(new.sum(),1):.2f}   (0 = solid blob, ~4 = scattered pixels)")
+
+    # THE corridor test: do the anchors end up in the same connected network?
+    if anchors.any():
+        alab, na = ndimage.label(anchors, structure=np.ones((3, 3), int))
+
+        def n_components(mask):
+            """Distinct connected components of `mask` that the anchors occupy (0 = outside the
+            PU, excluded -- an anchor lying off the planning units is not its own component)."""
+            net, _ = ndimage.label(mask, structure=np.ones((3, 3), int))
+            comps = set()
+            for i in range(1, na + 1):
+                comps |= {int(v) for v in np.unique(net[alab == i]) if v}
+            return len(comps)
+
+        now, was = n_components(locked | new), n_components(locked)
+        verdict = "corridors ARE joining anchors" if now < was else "new area is NOT joining anchors"
+        print(f"\n  anchors span {was} connected component(s) of `locked` alone")
+        print(f"           -> {now} component(s) once the new allocation is added   [{verdict}]")
+    return None
+
+
 def plain_language(A):
     print(f"{A.region_label} — per-area strongest / weakest inputs (by relative richness):\n")
-    for prefix, kind, C in _blocks(A):
+    seen = set()
+    for group, kind, C in _blocks(A):
+        if C["ids"] and group not in seen:      # benchmark + manual share one group heading
+            print(f"  [{group}]"); seen.add(group)
         for cid in C["ids"]:
-            label = f"{prefix}-{cid}" if prefix else str(cid)
+            label = C["names"].get(cid, str(cid))
             order = np.argsort(C["profs"][cid])
             strongest = ", ".join(np.array(A.OBJ_DISPLAY)[order[::-1][:3]])
             weakest = ", ".join(np.array(A.OBJ_DISPLAY)[order[:3]])
@@ -699,7 +843,8 @@ def plain_language(A):
 
 def heatmaps(A):
     def heatmap(tbl, title, fname):
-        opts = [c for c in tbl.columns if c != "unit"]
+        opts = [c for c in tbl.columns if c != UNIT_COL]
+        names = [c[1] for c in opts]                       # leaf label; c[0] is the column group
         M = tbl.loc[A.OBJ_DISPLAY, opts].to_numpy(dtype=float)
         rmin = np.nanmin(M, axis=1, keepdims=True); rmax = np.nanmax(M, axis=1, keepdims=True)
         norm = np.where(rmax > rmin, (M - rmin) / (rmax - rmin), 0.5)
@@ -709,7 +854,7 @@ def heatmaps(A):
             words[i] = np.where(M[i] >= hi, "High", np.where(M[i] <= lo, "Low", "Med"))
         fig, ax = plt.subplots(figsize=(2.2 + 0.7*len(opts), 0.72*len(A.OBJ_DISPLAY) + 1.8))
         ax.imshow(norm, cmap="YlGn", aspect="auto", vmin=0, vmax=1)
-        ax.set_xticks(range(len(opts))); ax.set_xticklabels(opts, rotation=45, ha="right", fontsize=8)
+        ax.set_xticks(range(len(opts))); ax.set_xticklabels(names, rotation=45, ha="right", fontsize=8)
         ax.set_yticks(range(len(A.OBJ_DISPLAY))); ax.set_yticklabels(A.OBJ_DISPLAY, fontsize=9)
         for i in range(M.shape[0]):
             for j in range(M.shape[1]):
@@ -718,7 +863,17 @@ def heatmaps(A):
         ax.set_xticks(np.arange(-.5, len(opts), 1), minor=True)
         ax.set_yticks(np.arange(-.5, len(A.OBJ_DISPLAY), 1), minor=True)
         ax.grid(which="minor", color="white", linewidth=1.5); ax.tick_params(which="minor", length=0)
-        ax.set_title(title, fontsize=12, pad=10); fig.tight_layout()
+        # column groups: a divider between them + the group name centred over its columns, so the
+        # heatmap carries the same Alternatives / Established split as the tables.
+        groups = [c[0] for c in opts]
+        for g in dict.fromkeys(groups):
+            js = [j for j, gg in enumerate(groups) if gg == g]
+            ax.text((js[0] + js[-1]) / 2, -0.75, g, ha="center", va="bottom", fontsize=8,
+                    fontweight="bold", color="0.25")
+            if js[0] > 0:
+                ax.axvline(js[0] - 0.5, color="0.25", lw=1.6)
+        ax.set_title(title, fontsize=12, pad=24)     # pad clears the group labels drawn above row 0
+        fig.tight_layout()
         fig.savefig(A.fig_dir / fname, dpi=150, bbox_inches="tight"); plt.show()
 
     heatmap(A.contrib_tbl, f"{A.region_label} — contribution (High/Med/Low per objective)", "consequences_heatmap_contribution.png")

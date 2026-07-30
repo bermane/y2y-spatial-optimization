@@ -207,6 +207,78 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
   `selection_frequency.tif`, `portfolio_representation.csv` (`relative_held` → 04 radar),
   `run_summary.json`.
 
+### `05_corridors_north.ipynb` — least-cost corridors over `corridors_core.py` (Python)
+
+**Standalone corridor analysis (2026-07-23), NOT prioritizr.** Connects the northern proposed
+IPCAs + existing PAs with **least-cost routing** — the tool the prioritizr connectivity *penalty*
+could not be (the penalty aggregates permeable land; this *routes* between nodes). Driver = the
+transboundary connectivity current-density (with gHM as a barrier guard). `corridors_core.py`
+(`skimage.graph.MCP_Geometric` cost-distance + Prim MST + traceback centre-lines + swaths); params
+in `config.CORRIDORS["north"]`; outputs → `output_data/corridors_north/` (corridors.tif/.gpkg,
+resistance.tif, corridor_summary.json). Kernel `y2y-geo`. Reuses `config._load_source` and the
+`results_core` map colours. **Resistance = a config-driven BLEND of driver layers** (current-density
++ climate corridors + refugia, each stretched 0-1, weighted) × a gHM barrier — edit
+`resistance.drivers`. **`corridor_ensemble`** (the MGA analog) perturbs the resistance `n_runs`
+times → `corridor_frequency.tif` (robust core vs flexible) + `corridors_alt{k}.gpkg` (distinct
+near-optimal networks). Tune `corridor_width_frac`, the driver weights, and
+`ensemble.{n_runs,jitter}`.
+
+**Driver scaling (`resistance.scale`, decided 2026-07-27).** `"minmax"` stretches each driver over
+`[lo_pctile, pctile]`; `"zero_max"` is the old `layer/pctile`. minmax is required because the drivers
+don't all start at zero — macrorefugia runs ~10-15, so zero_max left it near-constant and **inert**
+(corr with resistance −0.03 → −0.10 after the fix). Anchors are **p1/p99**: NOT p0/p100 (connectivity's
+p100=65.4 vs p95=3.86 is a single-pixel pinch-point tail; anchoring there flattens resistance to a 2.2×
+spread and the router stops following the landscape), NOT p5/p95 (clipping the bottom 5% to 0
+manufactures hard walls at `perm_floor`). Top-end clipping costs little either way — `resistance=1/perm`
+compresses the good end by construction. Directions verified empirically: all three drivers correlate
+negatively with resistance, and the aligned `human_modification` layer really is **intactness**
+(`orient="complement"`), so `gHM = 1 − it` feeds `base**gHM` correctly.
+
+**`run_scenarios` / `compare_map` (2026-07-28).** `config.CORRIDORS[key]["scenarios"]` names
+driver-stretch variants (currently `p1_p99` = `primary_scenario`, `p5_p95`); a scenario overrides
+**only** the stretch anchors. `cc.run_scenarios(A)` replaces the resistance→ensemble cells and solves
+each end to end, stashing a snapshot per scenario on `A.scenarios` — it deliberately **drops
+`A.cwd`/`A.mcp` between scenarios** (one float64 grid per node ≈ 800 MB at 1 km) and restores the
+primary onto `A`, so `map`/`write_outputs` are unchanged. `cc.compare_map(A)` = one row per scenario
+(corridors | robustness) + a difference panel; `cc.compare_resistance(A)` is a **separate** plot of the
+resistance surfaces on a **shared** log scale (they were a greyscale backdrop inside `compare_map` —
+which both collided with the grey PAs and cluttered the corridor panels). Both frame to the **working
+region** via `_region_extent`/`_nodes_overlay` (drawing `A.outline` otherwise expands the axes to the
+whole Y2Y and wastes the canvas on the empty southern tail; `map()` keeps its wider framing). Diff
+palette avoids the PA grey: shared = orange `SHARED_COLOR`, per-scenario = purple/blue.
+`write_outputs` writes the primary at the top level **plus** a full set per scenario in `<scenario>/`,
+and adds `scenarios` + `scenario_jaccard` blocks to the summary. **Figures land in
+`output_data/corridors_north/figures/` (`A.fig_dir`), not the project `figures/` dir.**
+Current: p1_p99 29,031 km²/1,187 centre-line cells, p5_p95 33,185/1,295, **Jaccard 0.72**, both
+1 connected group — same 44 MST edges and trunk, differing at a few links.
+
+**`corridor_profile` — co-benefit audit (2026-07-28).** Value star plots for the corridors, reusing
+04's `results_core.mask_profile` + `plot_stars` **unchanged**. `_profile_stacks` is a minimal stand-in
+for `build_stacks` (which is coupled to a solved run): it hands `rc._scaled`/`_read_match`/
+`_region_total` a namespace whose grid reference is **05's own grid**, so 05 stays standalone from
+03/04. Compares three areas — corridor's own new land, proposed IPCAs, existing PAs.
+**Mask must be `corridor & ~nodes`:** swath bands radiate from the nodes, so **37% of the raw swath
+lies inside PA/IPCA polygons** and profiling it whole would credit corridors with already-protected
+land (18,188 km² new, 1.43% of Y2Y). Two scalings coexist: richness = 0-1 over the **northern
+window**; contribution/efficiency = **full-Y2Y** denominators. **Frame as an audit, not a scorecard**
+— corridors are routed for permeability, so a low value axis is a finding. RESULT: corridors are
+**complementary, not redundant** — per 1,000 km² they beat both PA sets on biomass carbon (0.127 vs
+0.050/0.068), connectivity (0.105 vs 0.088/0.084) and AOH richness, while the PAs/IPCAs dominate
+**soil carbon** (0.119-0.125 vs 0.063). Outputs `corridors_stars_{richness,contribution,efficiency}
+.png` + `corridor_profile.csv`.
+
+**Corridor SEGMENTS (`n_groups=10`, default).** The corridor is profiled per geographic segment, not
+as one blob: **removing the node polygons cuts the network at every PA/IPCA, so the connected
+components ARE the physical links** — 23 of them, the **top 10 holding 94%** of corridor area (2,955
+down to 424 km², 54.3-64.1°N). No arbitrary clustering needed. Segments are numbered **north→south**
+and named by the nodes they touch (via `binary_dilation` against a node-id raster), e.g. "3. Dene
+Kʼéh Kusān ↔ Nahanni". The 13 smaller components (1,133 km², 6%) are reported, never silently
+dropped. **IPCAs and existing PAs stay WHOLE units.** `_short_node_name` strips the IPCA·/PA· prefix,
+parentheticals and generic designations ("Nahanni National Park Reserve Of Canada" → "Nahanni") for
+star titles — the full names collide on a 4.8" polar panel; map legend and CSV keep them.
+`cc.corridor_group_map(A)` draws the numbered map from the same `A.groups`, so numbering cannot drift
+from the stars. `n_groups=None` restores the single whole-network profile.
+
 ### `04a/04b/04c` — three results notebooks over `results_core.py` (Python)
 
 **04 was split (2026-07-20)** to match 03: `04a_y2y` / `04b_north_bc` / `04c_ab_foothills`,
@@ -220,7 +292,20 @@ its share of the whole corridor); area% uses the full-Y2Y PU count. The **benchm
 north_bc = the 4 draft IPCA anchors; ab_foothills = the existing PAs ranked by cells inside the
 foothills window. Figure names: `benchmark_*` / `manual_*` / `clusters_new_*`. 04a reproduces the
 legacy y2y figures. **`04_results_analysis.ipynb` is the legacy y2y-only monolith** (retire like
-03). Below describes the shared views, unchanged from the monolith:
+03).
+
+**Consequences-table presentation (2026-07-28).** Columns carry a **two-level header**: level 0 =
+the group — `"Alternatives (new options)"` (the NEW clusters) vs
+`"Established Protected/Priority Areas"` (benchmark + manual, e.g. Ross River) — level 1 = the
+area name. NEW clusters are named **`Option 1..N`** in `_select_clusters` order (the raw
+connected-component id stays internal); `new_map` annotates the same 1..N, so map ↔ table ↔ star
+plots cross-reference. Benchmark areas keep their real park/IPCA names. Every table cell is
+rounded AND printed at **≥ 2 significant figures** via `_dec(v, dp)` — the per-row `dp` is now a
+*minimum*, so a 0-1 index or a tiny sub-region contribution no longer flattens to `0.0`/`1.0`
+(the whole ab_foothills contribution table read "0.0 / 0.1"). The tables print through one
+per-cell string formatter (`_fmt`) with the long definition as a caption instead of `index.name`
+(which padded the label column); the CSVs still carry it. `heatmaps` draws the group split as a
+divider + group captions. Below describes the shared views, unchanged from the monolith:
 
 ### `04_results_analysis.ipynb` (LEGACY, y2y-only) — results (Python, kernel `y2y-geo`)
 

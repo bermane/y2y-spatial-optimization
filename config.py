@@ -19,7 +19,10 @@ CORRIDOR_REF = INPUT_DIR / "y2y_boundary" / "y2y_region_boundary_2013.gpkg"
 PA_VECTOR = INPUT_DIR / "y2y_protected_areas" / "y2y_protected_areas_2025.gpkg"
 
 # ROI / lock-in vectors for the sub-regional analyses (03b/03c); see ANALYSES below.
-#   DRAFT_PA_VECTOR  : 4 proposed IPCAs in northern BC (EPSG:3857) -> north_bc window + anchors.
+#   PROPOSED_PA_VECTOR : 32 proposed PAs across the corridor (EPSG:3857). The northern_ipcas
+#                      analysis uses the NORTHERN subset only, selected by `source_filter`
+#                      (min_lat=55) -> the 13 in northern BC + Yukon (56-67N). There is a clean
+#                      gap in the data at 54.05-56.26N, so 55 separates them unambiguously.
 #   AB_BOUNDARY      : Alberta provincial boundary (Natural Earth 1:10m admin-1).
 #   FOOTHILLS_VECTOR : the AB mountain-front study polygon for ab_foothills. Derived from the
 #                      Alberta Natural Regions & Subregions (2005) service (geospatial.alberta.ca),
@@ -29,7 +32,7 @@ PA_VECTOR = INPUT_DIR / "y2y_protected_areas" / "y2y_protected_areas_2025.gpkg"
 #                      border and butting against every AB mountain park (incl. the high Kananaskis
 #                      parks — Subalpine closes that gap). The strict "Foothills NR" alone (central
 #                      AB only, 51-56N) stops well north of the border, hence the broader union.
-DRAFT_PA_VECTOR  = INPUT_DIR / "y2y_northern_bc_proposed_ipcas" / "proposed_pa_v2_northern_bc.shp"
+PROPOSED_PA_VECTOR = INPUT_DIR / "y2y_proposed_pa" / "proposed_pa_v2.shp"
 AB_BOUNDARY      = INPUT_DIR / "alberta_boundary" / "alberta.gpkg"
 FOOTHILLS_VECTOR = INPUT_DIR / "ab_foothills" / "foothills.gpkg"
 
@@ -171,30 +174,47 @@ ANALYSES = {
         "lock_in": {"source": "pa_mask", "vector_path": None},
         "feature_weight_multipliers": {},
     },
-    "north_bc": {
-        # Connect 4 draft IPCAs: crop to their buffered bbox, lock them in as anchors, and
-        # up-weight connectivity so the solve fills the best land linking them.
-        "results_subdir": "iter6_north_bc",
-        # ROI = CONVEX HULL of the 4 IPCAs + 50 km, MASKED to that shape. The hull fills the area
-        # BETWEEN the anchors (which a buffered union alone may not) while avoiding a bbox's empty
-        # far corners; mask=True means the analysis really is that shape, not its rectangle.
-        # -> 178,040 PU, anchors lock 43,257 (24.3%).
-        "roi": {"mode": "hull", "sources": [str(DRAFT_PA_VECTOR)],
-                "buffer_km": 50, "mask": True},
-        # Lock BOTH the existing PAs and the draft IPCAs (the drafts are treated as effectively
-        # protected since they are likely to be designated) -> 73,297 cells locked = 41.2% of the
-        # window (IPCAs 43,257 + existing PAs 30,375; they overlap by only 335).
-        # budget 0.52 = that 41.2% + ~19,300 cells of NEW connective corridor. Raise for more
-        # corridor (0.55 -> ~24,600), lower for less (0.45 -> ~6,800). Tune off 03b cell 3.
-        "objective": "min_shortfall", "budget_pct": 0.52, "target_pct": 1.0,
+    "northern_ipcas": {
+        # Connect the NORTHERN proposed IPCAs (northern BC + Yukon): crop to their convex hull,
+        # lock them in as anchors alongside existing PAs, and up-weight connectivity so the solve
+        # fills the best land linking them. SUPERSEDES the old 4-IPCA "north_bc" analysis.
+        "results_subdir": "iter6_northern_ipcas",
+        # 13 of the 32 proposed PAs, picked by source_filter below (56-67N, BC + Yukon; 176,998
+        # km2 of anchors). ROI = their CONVEX HULL + 25 km, MASKED to that shape: the hull fills
+        # the area BETWEEN anchors while avoiding a bbox's empty far corners.
+        # -> 481,488 PU, locked 195,953 (40.7%).
+        "roi": {"mode": "hull", "sources": [str(PROPOSED_PA_VECTOR)],
+                "buffer_km": 25, "mask": True},
+        # Northern subset only -- "everything north of the polygons we were previously using,
+        # nothing further south". A clean data gap at 54.05-56.26N makes 55 unambiguous.
+        "source_filter": {"min_lat": 55.0},
+        # Lock BOTH existing PAs and the proposed IPCAs (drafts treated as effectively protected
+        # since they are likely to be designated) -> 196,195 cells = 40.7% of the window.
+        # budget 0.43 = that 40.7% + ~11,200 cells of NEW connective corridor. TRIMMED from 0.46
+        # (~25,700) so the solve spends its area only on the best connective land -- a leaner
+        # budget reads as corridors rather than swaths. Tune off 03b cell 3.
+        "objective": "min_shortfall", "budget_pct": 0.43, "target_pct": 1.0,
         "decision_type": DECISION_TYPE, "solver": SOLVER, "highs_solver": HIGHS_SOLVER,
-        "connectivity_penalty": 0.0, "boundary_penalty": 0.0, "neighbor_penalty": 1e-5,
-        # anchors total ~45,039 km^2 (one giant IPCA dominates); budget_pct MUST exceed the
-        # locked fraction of the WINDOW or the feasibility guard stops the run -- tune off the
-        # printed "locked-in / budget" line (start 0.55).
-        "lock_in": {"source": "both", "vector_path": str(DRAFT_PA_VECTOR)},   # existing PAs + IPCAs
+        # CORRIDOR FORMULATION: the connectivity penalty is the actual corridor mechanism -- it
+        # rewards selected units connected to EACH OTHER and to the locked anchors. The neighbor
+        # penalty is OFF because it does the opposite: it penalises units with FEW selected
+        # neighbours, so a thin corridor is penalised while a compact blob is rewarded.
+        # (Deferred corridor-wide because the raw matrix spans ~40,000x; in THIS window it is
+        # 20x raw / 2.7x capped, so it is calibratable. pr_penalty_matrices caps + normalises it
+        # to mean weight ~1, putting this on the same scale as the neighbor penalty.)
+        # Penalties reverted to the standard prototype (matching y2y): light neighbor compactness,
+        # connectivity penalty OFF. The connectivity-penalty experiment (1e-5 -> 1e-4 -> 3e-4) was
+        # CONCLUSIVELY the wrong tool for connecting the anchors -- tripling it to 122% of the
+        # objective still left the 13 anchors in 12 components. It aggregates permeable LAND, it
+        # does not route A->B corridors; the "connect the PAs" goal moved to a SEPARATE least-cost
+        # corridor analysis. connectivity_cap_pctile is inert while connectivity_penalty = 0.
+        "connectivity_penalty": 0.0, "connectivity_cap_pctile": 0.99,
+        "boundary_penalty": 0.0, "neighbor_penalty": 1e-5,
+        "lock_in": {"source": "both", "vector_path": str(PROPOSED_PA_VECTOR)},  # existing PAs + IPCAs
+        # x2 (was x5): weights say WHAT to capture, the penalty says WHAT SHAPE. At x5 the solver
+        # grabbed the highest-connectivity CELLS anywhere (hotspot clumps) instead of chains.
         "feature_weight_multipliers": {
-            "transboundary_connectivity": 5.0, "climate_corridors": 5.0},
+            "transboundary_connectivity": 2.0, "climate_corridors": 2.0},
     },
     "ab_foothills": {
         # Candidate small areas in the Alberta eastern foothills: crop AND mask to
@@ -275,23 +295,26 @@ RESULTS_04 = {
         "outline_label": "Y2Y boundary",
         "context_outline": None, "context_label": None,
     },
-    "north_bc": {
-        "region_label": "Northern BC",
-        "cluster_select": "largest",   # narrow window; connective corridors, not N->S spread
-        # Benchmark = the 4 draft IPCAs (the locked anchors) -> gap analysis vs the NEW
-        # connective clusters the solve adds between them.
-        "benchmark": {"type": "named_vector", "vector": DRAFT_PA_VECTOR, "name_field": "PA_NAME",
-                      "labels": {"Dene Kʼéh Kusān": "Dene Kʼéh Kusān",
-                                 "Tahltan - Sacred Headwaters (Klappan)": "Klappan",
-                                 "Wilps Gwininitxw": "Wilps Gwininitxw",
-                                 "Wədzih Yiné’ (Caribou Song)": "Caribou Song"}},
+    "northern_ipcas": {
+        "region_label": "Northern BC + Yukon",
+        "cluster_select": "spread",   # wide 56-67N window -> N->S spread reads better than "largest"
+        # Benchmark = the proposed IPCA anchors themselves -> gap analysis vs the NEW connective
+        # clusters the solve adds between them. 13 anchors is too many to star-plot, so `top_n`
+        # keeps the largest few; the MAP still shows all 13 in the teal anchor layer. Labels come
+        # straight from PA_NAME (already meaningful); add a `labels` dict to shorten any.
+        "benchmark": {"type": "named_vector", "vector": PROPOSED_PA_VECTOR, "name_field": "PA_NAME",
+                      "source_filter": {"min_lat": 55.0}, "top_n": 6},
         "benchmark_title": "Proposed IPCA anchors",
         "manual_area": None,
-        # maps draw existing PAs (grey) and the locked draft IPCAs (teal) as separate layers;
+        # maps draw existing PAs (grey) and the locked proposed IPCAs (teal) as separate layers;
         # this labels the teal one.
-        "anchor_label": "draft IPCAs (committed)",
-        "outline_label": "analysis window (IPCA hull + 50 km)",
-        "context_outline": None, "context_label": None,
+        "anchor_label": "proposed IPCAs (committed)",
+        "outline_label": "analysis window (IPCA hull + 25 km)",
+        # show the Y2Y corridor boundary for geographic context, and zoom out 25% so there is
+        # breathing room around the window. Framing to the FULL corridor ("context") would shrink
+        # this northern window to a sliver, so the Y2Y outline is simply clipped by the view.
+        "context_outline": str(CORRIDOR_REF), "context_label": "Y2Y corridor",
+        "frame": "pad", "frame_pad": 0.25,
     },
     "ab_foothills": {
         "region_label": "Alberta foothills",
@@ -313,6 +336,69 @@ RESULTS_04 = {
         "context_outline": str(AB_BOUNDARY), "context_label": "Alberta",   # dashed grey context
         "frame": "context",   # zoom maps out to show the WHOLE province (foothills sits inside it);
                               # "window" (default) frames tight on the analysis window instead.
+    },
+}
+
+# ---- Least-cost corridors (05) ------------------------------------------
+# Standalone corridor analysis (corridors_core.py) that CONNECTS anchor areas with least-cost
+# paths -- the routing tool the prioritizr connectivity penalty could not be (that aggregates
+# permeable land; this routes A->B). DRIVER = the transboundary connectivity current-density
+# (the team's intent), with gHM as a barrier guard. Not a prioritizr run; pure Python (skimage).
+CORRIDORS = {
+    "north": {
+        "results_subdir": "corridors_north",
+        "region_label": "Northern BC + Yukon",
+        # nodes to connect: the northern proposed IPCAs + existing PAs above a size in the region.
+        "nodes": {"proposed": str(PROPOSED_PA_VECTOR), "source_filter": {"min_lat": 55.0},
+                  "include_existing_pas": True, "existing_pa_min_km2": 200, "node_min_cells": 25},
+        # crop the working grid north for routing room (least-cost paths need space around anchors).
+        "region_filter": {"min_lat": 54.0},
+        # RESISTANCE = (1 / permeability^conn_exponent) * barrier_base^gHM, where permeability is a
+        # weighted blend of corridor-relevant DRIVER layers each scaled 0-1 at its pctile (higher =
+        # more permeable). Current-density weighted highest (contrast ~6.6x vs the climate layers'
+        # ~1.5x). conn_exponent sharpens the blend; barrier multiplies resistance up through the
+        # human footprint (gHM = 1 - intactness); perm_floor caps max resistance. All layers are
+        # aligned-stack names; weights are normalised to sum 1.
+        "resistance": {
+            # scale: "minmax" stretches each driver over [lo_pctile, pctile] -> full 0-1 range per
+            # layer (needed because macrorefugia runs ~10-15, so plain 0-to-pctile leaves it near-
+            # constant / inert); "zero_max" is the old layer/pctile. minmax makes each weight bite.
+            #
+            # Anchors p1/p99 (compared against p5/p95, p2/p98, p0/p100 in the north, 2026-07-27).
+            # NOT p0/p100: connectivity's p100=65.4 vs p95=3.86 is a single-pixel pinch-point tail,
+            # and refugia's p0=0 (vs p1=9.4) is edge junk -- anchoring there flattens resistance to a
+            # 2.2x spread, so the router ignores the landscape and draws near-straight lines. NOT
+            # p5/p95: clipping the bottom 5% to 0 manufactures hard walls at perm_floor out of merely
+            # poor land. p1/p99 keeps an 11x spread, improves every driver's grip on the surface, and
+            # cuts floor-pinned cells ~12x. Top-end clipping costs little either way: resistance=1/perm
+            # compresses the good end by construction (perm .95 vs 1.0 = resistance 1.05 vs 1.00).
+            "scale": "minmax",
+            "drivers": [
+                {"layer": "transboundary_connectivity", "weight": 0.5, "pctile": 99, "lo_pctile": 1},
+                {"layer": "climate_corridors",          "weight": 0.3, "pctile": 99, "lo_pctile": 1},
+                {"layer": "climate_type_macrorefugia",  "weight": 0.2, "pctile": 99, "lo_pctile": 1},
+            ],
+            "conn_exponent": 2.0,
+            "barrier": {"layer": "human_modification", "base": 10.0},   # base ** gHM
+            "perm_floor": 1e-3,
+        },
+        # Named driver-stretch variants, each solved as a full run (network + near-optimal ensemble)
+        # so the anchor choice can be compared on ROBUSTNESS, not just on the baseline route. A
+        # scenario overrides ONLY the stretch anchors, applied to every driver -- weights,
+        # conn_exponent, barrier and perm_floor always come from the "resistance" block above.
+        # Drop this key (or leave one entry) to go back to a single run.
+        "scenarios": {
+            "p1_p99": {"lo_pctile": 1, "pctile": 99},
+            "p5_p95": {"lo_pctile": 5, "pctile": 95},
+        },
+        "primary_scenario": "p1_p99",   # restored onto A; written at the top level of run_dir
+        # corridor swath width: per MST edge, keep cells whose (CWD_i + CWD_j) is within
+        # width_frac * (edge least-cost distance) of that edge's minimum. 0.05 ~ a few km wide;
+        # raise for wider corridors. corridors_core prints the corridor km² to tune.
+        "corridor_width_frac": 0.05,
+        # near-optimal ensemble (the MGA analog): n_runs solves with resistance jittered +-jitter
+        # -> a corridor FREQUENCY/robustness surface + n_alternatives distinct near-optimal networks.
+        "ensemble": {"n_runs": 12, "jitter": 0.20, "seed": 42, "n_alternatives": 3},
     },
 }
 
@@ -475,6 +561,28 @@ def _rel(p):
     return Path(p).resolve().relative_to(PROJECT_DIR).as_posix()
 
 
+def _load_source(path, filt=None):
+    """Read a vector in TARGET_CRS, optionally subset by the analysis' `source_filter`.
+
+    Supports {"min_lat": deg} / {"max_lat": deg} on the feature CENTROID -- used to take only the
+    northern (BC + Yukon) proposed PAs out of the corridor-wide file. Applied to BOTH the ROI
+    sources and the lock-in vector so the window and the anchors can never disagree."""
+    import geopandas as gpd
+
+    g = gpd.read_file(path).to_crs(TARGET_CRS)
+    if filt:
+        # centroid in the PROJECTED CRS (g is already TARGET_CRS), then to lat/lon -- computing
+        # centroids in EPSG:4326 directly is geometrically incorrect.
+        cen = g.geometry.centroid.to_crs("EPSG:4326")
+        if filt.get("min_lat") is not None:
+            g = g[cen.y >= filt["min_lat"]]
+        if filt.get("max_lat") is not None:
+            g = g[cen.y <= filt["max_lat"]]
+        if g.empty:
+            raise ValueError(f"source_filter {filt} removed every feature from {path}")
+    return g
+
+
 def build_roi(analysis, handoff_dir=HANDOFF_DIR):
     """Build a sub-analysis ROI and return (bounds_snapped | None, mask_path | None).
 
@@ -501,7 +609,7 @@ def build_roi(analysis, handoff_dir=HANDOFF_DIR):
         raise FileNotFoundError(
             f"ROI source(s) for analysis '{analysis}' not found: {missing}. "
             "Supply the vector(s) before running this analysis (see Phase 4 / config comments).")
-    gdfs = [gpd.read_file(s).to_crs(TARGET_CRS) for s in srcs]
+    gdfs = [_load_source(s, ANALYSES[analysis].get("source_filter")) for s in srcs]
 
     if roi["mode"] == "bbox_union":
         poly = pd.concat(gdfs, ignore_index=True).union_all()
@@ -623,7 +731,7 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
         if not vp.exists():
             raise FileNotFoundError(f"lock-in vector for analysis '{analysis}' not found: {vp}")
         out = Path(handoff_dir) / f"lockin_{analysis}.gpkg"
-        gpd.read_file(vp).to_crs(TARGET_CRS).to_file(out, driver="GPKG")
+        _load_source(vp, a.get("source_filter")).to_file(out, driver="GPKG")   # same filter as ROI
         lock_in["vector_path"] = rel(out)
 
     # Per-analysis params come from ANALYSES[analysis]; GLOBAL params stay module-level.
@@ -644,6 +752,8 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
             "portfolio_n": PORTFOLIO_N,
             "portfolio_gap": PORTFOLIO_GAP,
             "connectivity_penalty": a["connectivity_penalty"],
+            # percentile the connectivity matrix is winsorized at before normalising (R side)
+            "connectivity_cap_pctile": a.get("connectivity_cap_pctile", 0.99),
             "boundary_penalty": a["boundary_penalty"],
             "neighbor_penalty": a["neighbor_penalty"],
             "feature_weight_multipliers": a["feature_weight_multipliers"],
