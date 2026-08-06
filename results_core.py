@@ -36,6 +36,10 @@ CLUSTER_CMAP = plt.get_cmap("tab10")
 PA_COLOR = "0.6"          # existing protected areas (map backdrop)
 ANCHOR_COLOR = "#4f9d9d"  # committed anchors (e.g. draft IPCAs) -- muted teal, distinct from
                           # the grey PAs, the wheat "other allocation" and the tab10 clusters
+NEW_ALLOC_COLOR = "#ecdcae"   # solver-selected land that is NOT already protected ("new allocation").
+                              # One constant so the clusters map and the benchmark map read as the
+                              # same quantity -- the benchmark map otherwise showed parks with no
+                              # indication of where the run actually wants to expand.
 
 
 class _NS(types.SimpleNamespace):
@@ -577,7 +581,7 @@ def plot_stars(A, C, metric, title, fname, rmax=None):
 
 # ---- NEW candidate-area map + stars ----
 def new_map(A):
-    OTHER = "#ecdcae"
+    OTHER = NEW_ALLOC_COLOR
     other = A.new_mask & ~np.isin(A.NEW["lab"], A.NEW["ids"])
     has_anchors = bool(A.anchors.any())
     fig, ax = plt.subplots(figsize=(8, 12))
@@ -629,6 +633,13 @@ def bench_map(A):
     A.sol0.copy(data=np.where(A.pa_on, 1.0, np.nan).astype("float32")).plot.imshow(
         ax=ax, cmap=ListedColormap(["0.82"]), add_colorbar=False)
     handles = [Patch(color="0.82", label="other existing PAs")]
+    # the run's new allocation, in the SAME wheat as the clusters map, so the benchmark parks can be
+    # read against where the solution actually expands. Drawn under the benchmark areas; they cannot
+    # overlap anyway (new_mask excludes locked-in PAs), so this only sets the backdrop.
+    A.sol0.copy(data=np.where(A.new_mask, 1.0, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap=ListedColormap([NEW_ALLOC_COLOR]), add_colorbar=False)
+    handles.append(Patch(color=NEW_ALLOC_COLOR,
+                         label=f"new allocation ({A.new_mask.sum()*A.cell_km2:,.0f} km²)"))
     for n, cid in enumerate(B["ids"], 1):
         m = B["masks"][cid]                       # each area's OWN mask (overlap-safe)
         A.sol0.copy(data=np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
@@ -638,6 +649,20 @@ def bench_map(A):
         cy, cx = ndimage.center_of_mass(m)
         x, y = float(A.sol0.x.values[int(round(cx))]), float(A.sol0.y.values[int(round(cy))])
         ax.annotate(str(n), xy=(x, y), xytext=(10, 10), textcoords="offset points", fontsize=9,
+                    fontweight="bold", ha="center", va="center", color="black",
+                    path_effects=[pe.withStroke(linewidth=2.5, foreground="white")],
+                    arrowprops=dict(arrowstyle="-", lw=0.6, color="black", shrinkA=1, shrinkB=1),
+                    annotation_clip=False, zorder=6)
+    # the hand-drawn proposal (Ross River for y2y) continues the numbering as the last entry, in its
+    # OWN colour -- it is a PROPOSED area, not existing protection, so it should not read as one of
+    # the featured parks. Map only; the star plots and tables keep it in its own block.
+    if A.manual:
+        M = A.manual; nm = M["ids"][0]; n = len(B["ids"]) + 1
+        M["gdf"].plot(ax=ax, facecolor=M["color"], edgecolor="black", linewidth=0.8, alpha=0.85)
+        handles.append(Patch(color=M["color"], label=f"{n}. {nm} — proposed "
+                                                     f"({int(round(M['cnt'][nm]*A.cell_km2)):,} km²)"))
+        rp = M["gdf"].geometry.iloc[0].representative_point()
+        ax.annotate(str(n), xy=(rp.x, rp.y), xytext=(10, 10), textcoords="offset points", fontsize=9,
                     fontweight="bold", ha="center", va="center", color="black",
                     path_effects=[pe.withStroke(linewidth=2.5, foreground="white")],
                     arrowprops=dict(arrowstyle="-", lw=0.6, color="black", shrinkA=1, shrinkB=1),
@@ -661,21 +686,8 @@ def manual_block(A):
     if not A.manual:
         print("no manual area for this analysis"); return
     M = A.manual; nm = M["ids"][0]
-    fig, ax = plt.subplots(figsize=(8, 12))
-    A.sol0.copy(data=np.where(A.pa_on, 1.0, np.nan).astype("float32")).plot.imshow(
-        ax=ax, cmap=ListedColormap(["0.6"]), add_colorbar=False)
-    M["gdf"].plot(ax=ax, facecolor=M["color"], edgecolor="black", linewidth=0.8, alpha=0.55)
-    rp = M["gdf"].geometry.iloc[0].representative_point()
-    ax.annotate(nm, xy=(rp.x, rp.y), fontsize=9, fontweight="bold", ha="center", va="center",
-                color="black", path_effects=[pe.withStroke(linewidth=3, foreground="white")], annotation_clip=False)
-    _frame(A, ax)
-    ax.legend(handles=[Patch(color="0.6", label="existing PA"),
-                       Patch(color=M["color"], label=f"{nm} ({int(round(M['cnt'][nm]*A.cell_km2)):,} km²)")]
-                      + _outline_handles(A),
-              loc="lower left", fontsize=9)
-    ax.set_title(f"{nm} — proposed area vs existing protection")
-    ax.set_aspect("equal"); ax.set_axis_off()
-    fig.savefig(A.fig_dir / "manual_area_map.png", dpi=150, bbox_inches="tight"); plt.show()
+    # STAR PLOTS ONLY. The area used to get its own map too; it is now drawn on the benchmark map as
+    # the last numbered entry (bench_map), so a second, near-identical map earned nothing.
     plot_stars(A, M, "richness",     f"{nm}: relative richness", "manual_richness.png")
     plot_stars(A, M, "contribution", f"{nm}: contribution to Y2Y totals", "manual_contribution.png")
     plot_stars(A, M, "efficiency",   f"{nm}: value density (shared scale)", "manual_efficiency.png", rmax=A.EFF_RMAX)

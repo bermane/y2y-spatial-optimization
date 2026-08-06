@@ -15,6 +15,7 @@ All params come from config.CORRIDORS[key]. Pure Python (skimage.graph.MCP_Geome
 import json
 import types
 import copy
+import itertools
 import pathlib
 import pandas as pd
 
@@ -62,6 +63,46 @@ class _NS(types.SimpleNamespace):
 
 
 # ================= setup =================
+def _dedupe_nodes(raw, frac, cell_km2):
+    """Merge nodes that are the SAME PLACE under two designations, e.g. Teetł'it Gwinjik inside the
+    Peel Watershed SMA/WA, or Fishing Branch Wilderness Preserve inside its Habitat Protection Area.
+    Both source layers mix designation tiers that nest, and neither is de-duplicated (the PA dissolve
+    is by name only), so a nested pair enters as two nodes covering one piece of ground: it is
+    double-counted in the node area and it spends an MST edge on a zero-distance link.
+
+    Merge test is on the RASTERIZED masks, not the polygons -- a shared cell is exactly the condition
+    that makes the node-to-node cost distance 0. Requires an overlap of `frac` of the SMALLER node,
+    so genuine neighbours that merely abut are left alone: Dene Kʼéh Kusān wraps around 11 BC parks
+    and clips each by a 2-63 km² sliver, but they are different places and stay separate nodes.
+
+    Note this does not change the routing -- an MST over a zero-distance pair picks the zero edge and
+    then connects the rest exactly as the merged node would. It corrects the accounting."""
+    idx = [np.flatnonzero(m) for _, m, _ in raw]
+    parent = list(range(len(raw)))
+    def _find(x):
+        while parent[x] != x: parent[x] = parent[parent[x]]; x = parent[x]
+        return x
+    for i, j in itertools.combinations(range(len(raw)), 2):
+        shared = np.intersect1d(idx[i], idx[j], assume_unique=True).size
+        if shared >= frac * min(idx[i].size, idx[j].size):
+            parent[_find(i)] = _find(j)
+    groups = defaultdict(list)
+    for i in range(len(raw)): groups[_find(i)].append(i)
+
+    nodes, kinds = [], []
+    for members in groups.values():
+        members.sort(key=lambda i: -idx[i].size)             # largest member names the merged node
+        lbl, m, kind = raw[members[0]]
+        for i in members[1:]: m = m | raw[i][1]
+        if len(members) > 1:
+            absorbed = [raw[i][0].split("· ")[-1] for i in members[1:]]
+            print(f"  merged node: {lbl} absorbs {', '.join(absorbed)} "
+                  f"({idx[members[1]].size * cell_km2:,.0f} km² nested)")
+            lbl = f"{lbl} (+{len(members)-1})"
+        nodes.append((lbl, m)); kinds.append(kind)
+    return nodes, kinds
+
+
 def load(key):
     """Read every layer the resistance config references, crop the working grid to the region,
     assemble the anchor nodes (proposed IPCAs + large existing PAs), rasterize them onto the grid."""
@@ -102,7 +143,6 @@ def load(key):
     for _, row in ipca.iterrows():
         m = _rast(row.geometry); (nodes if m.sum() >= nc["node_min_cells"] else dropped).append(
             (f"IPCA · {row[nfield]}", m, "ipca"))
-    n_ipca = sum(k == "ipca" for _, _, k in nodes)
     if nc.get("include_existing_pas"):
         pas = gpd.read_file(config.PA_VECTOR).to_crs(crs).dissolve(by="PA_Name").reset_index()
         pas = pas[pas.geometry.area / 1e6 >= nc["existing_pa_min_km2"]]
@@ -110,19 +150,24 @@ def load(key):
             m = _rast(row.geometry)
             if m.sum() >= nc["node_min_cells"]:
                 nodes.append((f"PA · {row['PA_Name']}", m, "pa"))
-    nodes = [(lbl, m) for lbl, m, _ in nodes]
-    kinds = ["ipca"] * n_ipca + ["pa"] * (len(nodes) - n_ipca)
+    nodes, kinds = _dedupe_nodes(nodes, nc.get("dedupe_overlap_frac", 0.5), cell_km2)
+    n_ipca = sum(k == "ipca" for k in kinds)
     print(f"nodes: {len(nodes)} ({n_ipca} IPCAs + {len(nodes)-n_ipca} existing PAs "
           f">= {nc['existing_pa_min_km2']} km²)")
     if dropped:
         print(f"  dropped {len(dropped)} IPCA(s) with < {nc['node_min_cells']} PU cells in region: "
               + ", ".join(d[0].split('· ')[1] for d in dropped))
 
+    node_union = np.zeros(shape, bool)
+    for _, m in nodes: node_union |= m
+    print(f"  node land: {int(node_union.sum()) * cell_km2:,.0f} km² (excluded from the corridor)")
+
     outline = gpd.read_file(config.CORRIDOR_REF).to_crs(crs)
     return _NS(
         key=key, cfg=cfg, run_dir=run_dir, fig_dir=fig_dir, region_label=cfg["region_label"],
         template=template, layers=layers, crs=crs, transform=transform, shape=shape, pu=pu,
-        cell_km2=cell_km2, cell_km=cell_km, nodes=nodes, kinds=kinds, outline=outline)
+        cell_km2=cell_km2, cell_km=cell_km, nodes=nodes, kinds=kinds, node_union=node_union,
+        outline=outline)
 
 
 # ================= resistance =================
@@ -234,8 +279,14 @@ def _network_from_cwd(A, cwd, mcp):
         field = cwd[i] + cwd[j]; lcp = np.nanmin(field)
         corr |= np.isfinite(field) & (field <= lcp + frac * cost_ij)
         lengths.append((A.nodes[i][0], A.nodes[j][0], cost_ij))
-    corr &= A.pu
-    return dict(corridor=corr, mst=mst, lengths=lengths, path_cells=path_cells,
+    # The corridor is the NEW land it proposes, so node cells never count. They otherwise would:
+    # cwd[i] is 0 across the whole of node i, so `field` sits at its minimum throughout the node and
+    # the swath test passes there by construction. That put ~37% of the raw swath inside ground that
+    # is already a PA or an IPCA proposal, and it made the map disagree with the star plots (which
+    # have always profiled `corridor & ~nodes`). The raw swath is still reported in the summary.
+    swath = corr & A.pu
+    corr = swath & ~A.node_union
+    return dict(corridor=corr, swath=swath, mst=mst, lengths=lengths, path_cells=path_cells,
                 n_groups=_n_groups(A, corr))
 
 
@@ -250,10 +301,15 @@ def cost_distances(A):
 def corridor_network(A):
     """Baseline corridor network on the un-perturbed resistance."""
     net = _network_from_cwd(A, A.cwd, A.mcp)
-    A.corridor = net["corridor"]; A.mst = net["mst"]; A.mst_lengths = net["lengths"]
+    A.corridor = net["corridor"]; A.swath = net["swath"]; A.mst = net["mst"]
+    A.mst_lengths = net["lengths"]
     A.n_groups = net["n_groups"]; A.base_path_cells = net["path_cells"]
     area = int(A.corridor.sum()) * A.cell_km2
-    print(f"MST: {len(A.mst)} edges | corridor swath {int(A.corridor.sum()):,} cells = {area:,.0f} km²")
+    # links at distance 0 join nodes that already touch -- real connections are the rest
+    real = sum(1 for c, _, _ in A.mst if c > 0)
+    print(f"MST: {len(A.mst)} edges ({real} between separated nodes) | "
+          f"corridor (new land) {int(A.corridor.sum()):,} cells = {area:,.0f} km² "
+          f"| raw swath incl. node land {int(A.swath.sum()) * A.cell_km2:,.0f} km²")
     print(f"anchors connected: {len(A.nodes)} nodes in {A.n_groups} network group(s) (1 = fully connected)")
     return A
 
@@ -309,7 +365,8 @@ def _snapshot(A):
     1 km), so holding it for every scenario would blow memory. Nothing downstream reads it."""
     r = A.resistance_arr[A.pu]
     return dict(
-        resistance_arr=A.resistance_arr, corridor=A.corridor, mst=A.mst, mst_lengths=A.mst_lengths,
+        resistance_arr=A.resistance_arr, corridor=A.corridor, swath=A.swath, mst=A.mst,
+        mst_lengths=A.mst_lengths,
         n_groups=A.n_groups, base_path_cells=A.base_path_cells, cfg=A.cfg,
         frequency=getattr(A, "frequency", None), alternatives=getattr(A, "alternatives", None),
         spread=float(np.percentile(r, 95) / np.percentile(r, 5)),
@@ -401,8 +458,12 @@ def _write_set(A, dst, s):
     summary = dict(
         region=A.region_label, n_nodes=len(A.nodes),
         n_ipca=sum(k == "ipca" for k in A.kinds), n_existing_pa=sum(k == "pa" for k in A.kinds),
-        n_mst_edges=len(s["mst"]), n_network_groups=s["n_groups"],
+        n_mst_edges=len(s["mst"]), n_mst_edges_separated=sum(1 for c, _, _ in s["mst"] if c > 0),
+        n_network_groups=s["n_groups"],
+        # corridor_km2 = the NEW land only; the raw swath additionally covers node interiors, which
+        # are already protected/proposed (see _network_from_cwd).
         corridor_km2=round(int(s["corridor"].sum()) * A.cell_km2),
+        swath_incl_node_land_km2=round(int(s["swath"].sum()) * A.cell_km2),
         resistance=s["cfg"]["resistance"], corridor_width_frac=s["cfg"]["corridor_width_frac"],
         mst_edges=[dict(a=a, b=b, lcp_cost=round(float(c), 1)) for a, b, c in s["mst_lengths"]])
 
@@ -492,7 +553,7 @@ def map(A):
     _frame_region(A, ax)
     ax.legend(handles=[Patch(color=PA_COLOR, label="existing PAs (nodes)"),
                        Patch(color=ANCHOR_COLOR, label="proposed IPCAs (nodes)"),
-                       Patch(color=CORRIDOR_COLOR, label=f"least-cost corridors "
+                       Patch(color=CORRIDOR_COLOR, label=f"least-cost corridors — new land "
                              f"({A.corridor.sum()*A.cell_km2:,.0f} km²)"),
                        plt.Line2D([0], [0], color="0.35", ls="--", label="Y2Y corridor")],
               loc="lower left", fontsize=9, frameon=True)
@@ -735,13 +796,36 @@ def _corridor_groups(A, corr, nodes, n_groups):
     """Split the corridor's own land into geographic segments, numbered north -> south.
 
     Removing the node polygons cuts the network at every PA/IPCA, so the connected components ARE
-    the physical links between protected areas — no arbitrary clustering needed. Keeps the
-    `n_groups` largest (currently the top 10 hold ~94% of corridor area) and reports the remainder
-    rather than dropping it silently. Each segment is named by the nodes it actually touches."""
+    the physical links between protected areas. There are more of them (~23) than can be read as star
+    panels, so the `n_groups` LARGEST components seed the clusters and every remaining component is
+    absorbed into its nearest seed: the segments then account for 100% of corridor area (the earlier
+    top-N cut left ~6% in 13 unplotted components — printed, but absent from the stars and the CSV),
+    while each panel is still ONE PHYSICAL LINK plus a few small neighbours, which is what makes the
+    "X <-> Y" naming honest and keeps the profiles comparable to a top-N run.
+
+    Seeded, not free clustering (e.g. average-linkage over all 23 centroids): free clustering
+    allocates panels by ISOLATION rather than by importance — it spent two of ten panels on 8 km² and
+    67 km² far-north slivers while merging the two biggest links away.
+
+    Nearest by CELL, not by centroid. Segments are long and sinuous, so a scrap lying alongside a
+    link is adjacent to it while being far from its centroid. One EDT over the seed union gives every
+    cell its nearest seed cell, so each component's own closest cell picks the owner."""
     lab, n = ndimage.label(corr & ~nodes, structure=np.ones((3, 3), int))
     cnt = np.bincount(lab.ravel())
-    order = sorted(range(1, n + 1), key=lambda i: cnt[i], reverse=True)
-    keep, rest = order[:n_groups], order[n_groups:]
+    ids = np.arange(1, n + 1)
+
+    order = ids[np.argsort(cnt[ids])[::-1]]
+    seeds, rest = order[:n_groups], order[n_groups:]
+    cl = np.zeros(n + 1, int)
+    cl[seeds] = seeds                                        # a seed is its own cluster
+    if len(rest):
+        dist, (ri, ci) = ndimage.distance_transform_edt(~np.isin(lab, seeds), return_indices=True)
+        for c in rest:
+            m = lab == c
+            r, co = np.nonzero(m)
+            k = np.argmin(dist[r, co])                       # the component's cell closest to a seed
+            cl[c] = lab[ri[r[k], co[k]], ci[r[k], co[k]]]
+    cl = cl[ids]
 
     # node-id raster once, so each segment's touching nodes is a single unique() per segment
     node_id = np.zeros(A.shape, np.int16)
@@ -750,13 +834,20 @@ def _corridor_groups(A, corr, nodes, n_groups):
     lat = pyproj.Transformer.from_crs(A.crs, "EPSG:4326", always_xy=True)
 
     segs = []
-    for cid in keep:
-        m = lab == cid
+    for c_id in np.unique(cl):
+        members = ids[cl == c_id]
+        m = np.isin(lab, members)
         touch = np.unique(node_id[ndimage.binary_dilation(m, np.ones((3, 3), bool))])
         names = [A.nodes[k - 1][0] for k in touch if k > 0]
         r, c = np.nonzero(m)
         y = lat.transform(A.template.x.values[c].mean(), A.template.y.values[r].mean())[1]
-        segs.append(dict(cid=cid, mask=m, cells=int(cnt[cid]), lat=y, ends=names))
+        # label the map at the LARGEST part: a multi-part cluster's overall centroid can fall on
+        # empty ground between its pieces.
+        big = members[np.argmax(cnt[members])]
+        br, bc = np.nonzero(lab == big)
+        segs.append(dict(cid=int(c_id), mask=m, cells=int(cnt[members].sum()), lat=y, ends=names,
+                         parts=len(members),
+                         anchor_xy=(A.template.x.values[bc].mean(), A.template.y.values[br].mean())))
     segs.sort(key=lambda s: -s["lat"])                       # number north -> south
     for j, s in enumerate(segs, 1):
         ends = " ↔ ".join(s["ends"][:2]) if len(s["ends"]) >= 2 else (s["ends"] or ["unattached"])[0]
@@ -767,8 +858,7 @@ def _corridor_groups(A, corr, nodes, n_groups):
         short = [_short_node_name(e) for e in s["ends"][:2]] or ["unattached"]
         s["short"] = f"{j}. {' ↔ '.join(short)}{extra}"
         s["color"] = rc.CLUSTER_CMAP((j - 1) % 10)
-    dropped = int(sum(cnt[i] for i in rest))
-    return segs, dropped, len(rest)
+    return segs, n
 
 
 def corridor_profile(A, n_groups=10, scenario=None):
@@ -779,9 +869,10 @@ def corridor_profile(A, n_groups=10, scenario=None):
     objectives. Compares three areas on shared axes: the corridor's OWN new land, the proposed
     IPCAs, and the existing PAs = what the connective tissue adds over the protected areas.
 
-    The corridor mask is `corridor & ~nodes`: swath bands radiate outward from the nodes, so ~37% of
-    the raw swath lies INSIDE PA/IPCA polygons and profiling it whole would credit the corridors
-    with already-protected land.
+    The corridor mask excludes node land -- `_network_from_cwd` now does that at construction, so
+    this is the same mask the map and the summary report. (Swath bands radiate outward from the
+    nodes, so the raw swath lies ~37% inside PA/IPCA polygons; profiling it whole would credit the
+    corridors with already-protected land. The `& ~nodes` below is left as a cheap guard.)
 
     Two different scalings share these figures — say which is which when reading them:
       richness              = 0-1 over the WORKING REGION (5-95 pctile), i.e. relative to the north
@@ -794,12 +885,16 @@ def corridor_profile(A, n_groups=10, scenario=None):
 
     # corridors split into geographic segments; the PA sets stay WHOLE units for comparison
     if n_groups:
-        segs, dropped, n_rest = _corridor_groups(A, corr, nodes, n_groups)
+        segs, n_comp = _corridor_groups(A, corr, nodes, n_groups)
         A.groups = segs
         areas = [(s["name"], s["mask"], s["color"]) for s in segs]
-        print(f"corridor segments: {len(segs)} kept of {len(segs)+n_rest} components "
-              f"({100*sum(s['cells'] for s in segs)/max((corr & ~nodes).sum(),1):.0f}% of corridor "
-              f"area); {n_rest} smaller segments totalling {dropped*A.cell_km2:,.0f} km² not plotted")
+        covered = sum(s["cells"] for s in segs)
+        print(f"corridor segments: {n_comp} components merged by location into {len(segs)} clusters "
+              f"({100*covered/max((corr & ~nodes).sum(),1):.0f}% of corridor area — all of it)")
+        multi = [s for s in segs if s["parts"] > 1]
+        if multi:
+            print("  multi-part clusters: " + "; ".join(
+                f"{s['name'].split('.')[0]} = {s['parts']} components" for s in multi))
     else:
         A.groups = None
         areas = [("corridor (new land)", corr & ~nodes, CORRIDOR_COLOR)]
@@ -820,7 +915,8 @@ def corridor_profile(A, n_groups=10, scenario=None):
     for name, m, _ in areas:
         print(f"  {name[:44]:44s} {int(m.sum())*A.cell_km2:8,.0f} km²  "
               f"({100*int(m.sum())/P.n_region_full:.2f}% of Y2Y)")
-    print(f"  overlap check: {100*(corr & nodes).sum()/max(corr.sum(),1):.0f}% of the raw swath sits "
+    swath = A.scenarios[scenario]["swath"] if scenario else getattr(A, "swath", corr)
+    print(f"  overlap check: {100*(swath & nodes).sum()/max(swath.sum(),1):.0f}% of the raw swath sits "
           f"inside node polygons and is EXCLUDED from the corridor rows")
 
     for metric in ("richness", "contribution", "efficiency"):
@@ -866,16 +962,18 @@ def corridor_group_map(A, pad=0.05):
     for s in segs:
         _da(A, np.where(s["mask"], 1.0, np.nan).astype("float32")).plot.imshow(
             ax=ax, cmap=ListedColormap([s["color"]]), add_colorbar=False)
-        r, c = np.nonzero(s["mask"])
-        ax.annotate(s["name"].split(".")[0], (A.template.x.values[c].mean(), A.template.y.values[r].mean()),
+        ax.annotate(s["name"].split(".")[0], s["anchor_xy"],
                     fontsize=11, fontweight="bold", ha="center", va="center",
                     bbox=dict(boxstyle="circle,pad=0.25", fc="white", ec=s["color"], lw=1.6))
     A.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--")
     ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+    seg_handles = []
+    for s in segs:
+        parts = f", {s['parts']} parts" if s["parts"] > 1 else ""
+        seg_handles.append(Patch(color=s["color"],
+                                 label=f"{s['name'][:52]} ({s['cells']*A.cell_km2:,.0f} km²{parts})"))
     ax.legend(handles=[Patch(color=PA_COLOR, label="existing PAs"),
-                       Patch(color=ANCHOR_COLOR, label="proposed IPCAs")] +
-                      [Patch(color=s["color"], label=f"{s['name'][:52]} "
-                             f"({s['cells']*A.cell_km2:,.0f} km²)") for s in segs],
+                       Patch(color=ANCHOR_COLOR, label="proposed IPCAs")] + seg_handles,
               loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=9, frameon=True)
     ax.set_title(f"{A.region_label} — corridor segments (numbered north → south)")
     fig.savefig(A.fig_dir / "corridors_segments_map.png", dpi=150, bbox_inches="tight")

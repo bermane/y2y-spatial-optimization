@@ -68,7 +68,22 @@ Datasets in scope (one inventory row each):
 - `human_modification` — Theobald gHM v3 (VRT mosaic `HM_Y2Y_2024_90_60land.vrt`)
 - `transboundary_connectivity` — Pither et al. omnidirectional connectivity
 - `climate_corridors` — Carroll et al. 2018 current-flow centrality (**was a `.zip`**)
-- `climate_type_macrorefugia` — Carroll 2023 / AdaptWest backward climatic velocity
+- `climate_type_macrorefugia` — AdaptWest CMIP6 **backward climatic velocity**, 8-GCM ensemble.
+  **Naming decoded (2026-07-30) from the dataset's own `ReadMe_ClimateNA_CMIP6_zenodo.txt`,
+  Zenodo doi:10.5281/zenodo.10631707** — `[direction][metric][version]_[GCM]_[SSP]_[period].tif`:
+  `bw`/`fw` = inbound/outbound, `vel`/`disp` = velocity / disappearing-climate proportion,
+  **`731` = ClimateNA software version 7.31** (*not* a threshold or climate-type code),
+  `245`/`370`/`585` = SSP low-moderate/moderate/high, period = 2041-2070 or 2071-2100 against a
+  **1961-1990** historical normal. Analogs matched by multivariate PCA over **11 variables**
+  (MAT, MWMT, MCMT, TD, MAP, MSP, MWP, DD5, NFFD, Eref, CMD); no-analog cells = NODATA.
+  Backward velocity = distance from a cell's *future* climate to its nearest *current* analog,
+  per year → **low = macrorefugium**, hence `orient="invert"`. **km/yr is a per-year AVERAGE over
+  the elapsed baseline→future span, so 2071-2100 divides by a LONGER denominator than 2041-2070**
+  — late-century values are diluted, not simply more extreme (this is why SSP245 is flat across
+  horizons: 1.995 → 1.998 km/yr on the PU). The CMIP6 readme does not restate the exact
+  denominator; the CMIP5 sibling product documents distance ÷ years-elapsed. Cite as
+  "AdaptWest Project. 2023. Gridded CMIP6-based climate velocity data for North America at 1km
+  resolution." 6 realizations are on disk (3 SSP × 2 horizons); see the 02 stage-1 QA block.
 - `irrecoverable_carbon` — Berman/McDowell irrecoverable carbon, **3 pools each its own
   feature** (`biomass`, `m_soc` mineral soil, `sl_soc` subsoil; all `t_ha` density)
 - `iucn_efg` — IUCN GET EFG Level 3 (~109 GeoTIFFs, already extracted). **Source** value
@@ -137,6 +152,26 @@ to `cleaned_aligned/` (**intermediate, raw orientation**). Reads only the Y2Y wi
 global rasters aren't warped in full. Fixed `-te`/`-tr` → shared grid. gHM VRT rebuilt from
 its 4 tiles in-workflow. EFGs: warp all 109, **drop any with no presence (>0) in the
 corridor**.
+
+**Stage-1 QA — climate-scenario materiality (added 2026-07-30, cells 8–10 over `scenario_core.py`).**
+`DATASETS["climate_type_macrorefugia"]` uses **one** of six AdaptWest realizations (SSP
+245/370/585 × 2041–2070/2071–2100); `585_2071_2100` (hottest SSP, latest horizon, *least*
+refugial) was an unstated pick. These cells warp all six to `cleaned_aligned/climate_scenarios/`
+and measure whether the choice is decision-relevant, **before** spending six 1 km solves (~7.6 h)
+or a sensitivity-analysis factor slot on it. Same doctrine as the Stage-2 QA: surface, don't
+transform. Headline statistic = **top-`BUDGET_PCT` Jaccard** (overlap of the most-refugial 30% of
+PUs — correlation alone is necessary but not sufficient), contextualised by the same statistic
+between macrorefugia and each other input (**measured: 0.11–0.24**, i.e. what a genuinely
+different input looks like). Verdict thresholds are **pre-registered** in
+`config.CLIMATE_SCENARIOS["rule"]` → IMMATERIAL (drop the factor, skip the six solves) /
+MATERIAL / AMBIGUOUS. Runs on **raw** velocity: the `vmax−v` flip is monotone, so correlation and
+top-quantile membership are unchanged and no `vmax` decision is needed. `shared_anchor_report()`
+prints candidate **pooled p1/p99 shared anchors** for a future six-scenario run — reported, never
+applied (adopting them changes the feature even in the single-scenario case, because 03
+sum-normalizes so an additive offset does *not* cancel → forces a re-solve). Diagnostic only:
+nothing reaches `aligned_stack/`, the manifest, or a solve (`write_manifest` builds features from
+`DATASETS` keys + `iucn_efg/*.tif`, never globbing the hand-off top level). Figure →
+`figures/climate_scenario_spread.png`.
 
 **Stage 2 — orient → mask → QA → COG** (numpy + rasterio, in memory; grid is small):
 - **Orient** so higher = more conservation value: gHM→intactness (`1−gHM`, clip [0,1]),
@@ -249,17 +284,43 @@ palette avoids the PA grey: shared = orange `SHARED_COLOR`, per-scenario = purpl
 `write_outputs` writes the primary at the top level **plus** a full set per scenario in `<scenario>/`,
 and adds `scenarios` + `scenario_jaccard` blocks to the summary. **Figures land in
 `output_data/corridors_north/figures/` (`A.fig_dir`), not the project `figures/` dir.**
-Current: p1_p99 29,031 km²/1,187 centre-line cells, p5_p95 33,185/1,295, **Jaccard 0.72**, both
-1 connected group — same 44 MST edges and trunk, differing at a few links.
+Pre-fix figures (raw swath): p1_p99 29,031 km²/1,187 centre-line cells, p5_p95 33,185/1,295,
+**Jaccard 0.72**, both 1 connected group — same 44 MST edges and trunk, differing at a few links.
+**Superseded by the node-land fix below — re-run 05 to refresh every corridor number and figure.**
+
+**Corridor = NEW LAND only; nodes de-duplicated (2026-08-05).** Two defects, both in accounting, not
+in routing. (1) The swath test passed *inside* the source node by construction — `cwd[i]` is 0 across
+the whole of node i, so `field = cwd[i]+cwd[j]` sits at its minimum there — putting **37% of the raw
+swath (10,843 of 29,031 km²) on ground that is already a PA or an IPCA proposal**, and making map
+panel 1 (corridor drawn over nodes) contradict panel 3 (nodes drawn over frequency). `_network_from_cwd`
+now returns `corridor = swath & ~node_union` (`A.node_union`, built in `load`); the raw swath survives
+as `A.swath` → `swath_incl_node_land_km2` in the summary. All consumers agree now — map legend
+("new land"), summary, gpkg/tif, and the star plots, which always used `corridor & ~nodes`.
+(2) Both source layers mix **nesting designation tiers** and neither is de-duplicated (the PA dissolve
+is by name only), so one place entered as two nodes: Teetł'it Gwinjik ⊂ Peel Watershed SMA/WA
+(4,143 km², both IPCA), Fishing Branch Wilderness Preserve ⊂ its HPA (5,353 km², both PA), Neah
+Conservancy ⊂ Ne'ah – Horseranch Range Deadwood Lake PA (2,293 km², both PA) — ~11,800 km²
+double-counted, and those three nodes came out 100% "corridor". `_dedupe_nodes` merges nodes whose
+**rasterized masks** share ≥ `nodes.dedupe_overlap_frac` (0.5) of the smaller — masks, not polygons,
+because a shared cell is exactly what makes the cost distance 0. **45 → 42 nodes** (10 IPCA + 32 PA;
+all three merges are within-layer, so the IPCA/PA map colours and the 04-style benchmark split are
+untouched). Cross-layer overlap is only **384 km² (0.2%)** — all slivers, e.g. Dene Kʼéh Kusān wraps
+*around* 11 BC parks clipping each by 2-63 km², which is why the test needs a fraction, not a cell.
+Those slivers still yield zero-distance MST edges, so `n_mst_edges` is now reported alongside
+`n_mst_edges_separated` (was 44 edges, only 29 between separated nodes). **Dedup does not change the
+routing** — Prim over a zero-distance pair takes the zero edge and then connects the rest exactly as
+the merged node would; it corrects the accounting only.
 
 **`corridor_profile` — co-benefit audit (2026-07-28).** Value star plots for the corridors, reusing
 04's `results_core.mask_profile` + `plot_stars` **unchanged**. `_profile_stacks` is a minimal stand-in
 for `build_stacks` (which is coupled to a solved run): it hands `rc._scaled`/`_read_match`/
 `_region_total` a namespace whose grid reference is **05's own grid**, so 05 stays standalone from
 03/04. Compares three areas — corridor's own new land, proposed IPCAs, existing PAs.
-**Mask must be `corridor & ~nodes`:** swath bands radiate from the nodes, so **37% of the raw swath
-lies inside PA/IPCA polygons** and profiling it whole would credit corridors with already-protected
-land (18,188 km² new, 1.43% of Y2Y). Two scalings coexist: richness = 0-1 over the **northern
+**Mask must exclude node land** (as of 2026-08-05 `A.corridor` already does; the `& ~nodes` here is a
+guard): swath bands radiate from the nodes, so **37% of the raw swath lies inside PA/IPCA polygons**
+and profiling it whole would credit corridors with already-protected land (18,188 km² new, 1.43% of
+Y2Y — this was always the right number, and is now what every other output reports too).
+Two scalings coexist: richness = 0-1 over the **northern
 window**; contribution/efficiency = **full-Y2Y** denominators. **Frame as an audit, not a scorecard**
 — corridors are routed for permeability, so a low value axis is a finding. RESULT: corridors are
 **complementary, not redundant** — per 1,000 km² they beat both PA sets on biomass carbon (0.127 vs
@@ -267,17 +328,73 @@ window**; contribution/efficiency = **full-Y2Y** denominators. **Frame as an aud
 **soil carbon** (0.119-0.125 vs 0.063). Outputs `corridors_stars_{richness,contribution,efficiency}
 .png` + `corridor_profile.csv`.
 
-**Corridor SEGMENTS (`n_groups=10`, default).** The corridor is profiled per geographic segment, not
-as one blob: **removing the node polygons cuts the network at every PA/IPCA, so the connected
-components ARE the physical links** — 23 of them, the **top 10 holding 94%** of corridor area (2,955
-down to 424 km², 54.3-64.1°N). No arbitrary clustering needed. Segments are numbered **north→south**
-and named by the nodes they touch (via `binary_dilation` against a node-id raster), e.g. "3. Dene
-Kʼéh Kusān ↔ Nahanni". The 13 smaller components (1,133 km², 6%) are reported, never silently
-dropped. **IPCAs and existing PAs stay WHOLE units.** `_short_node_name` strips the IPCA·/PA· prefix,
+**Corridor SEGMENTS (`n_groups=10` = a CEILING on clusters, default).** The corridor is profiled per
+geographic segment, not as one blob: **removing the node polygons cuts the network at every PA/IPCA,
+so the connected components ARE the physical links** — 23 of them. **Changed 2026-08-05: the 10
+LARGEST components seed the clusters and every remaining component is absorbed into its nearest
+seed**, so the segments account for 100% of corridor area. The old top-10 cut left 13 components
+(1,133 km², 6%) plotted nowhere — printed, but absent from the stars and the CSV, a coverage hole in
+an audit whose point is completeness. **Seeded, not free clustering:** average-linkage over all 23
+centroids was tried first and allocates panels by ISOLATION rather than importance — it spent two of
+ten panels on 8 km² and 67 km² far-north slivers while merging the two biggest links away, and a
+7-component cluster named after 2 touched nodes is a dishonest label. Seeding keeps **one panel = one
+physical link + its small neighbours**, so the "X ↔ Y" naming holds and the profiles stay comparable
+to the previous run. **Nearest by CELL, not centroid** (segments are long and sinuous, so a scrap can
+be adjacent to a link but far from its centroid): one `distance_transform_edt` over the seed union
+gives every cell its nearest seed cell, and each component's own closest cell picks the owner.
+Result on p1_p99: 23 → 10 clusters, **437 to 3,162 km²**, seven of them multi-part; the seeds match
+the previous CSV rows exactly (top row still 2,901 km²) and 17,055 + 1,133 = 18,188 km² reconciles.
+Clusters are numbered **north→south**
+and named by the nodes their cells touch (via `binary_dilation` against a node-id raster), e.g. "3.
+Dene Kʼéh Kusān ↔ Nahanni"; `seg["parts"]` carries the component count and `seg["anchor_xy"]` puts
+the map number on the LARGEST part (a multi-part cluster's overall centroid can fall on empty
+ground). **IPCAs and existing PAs stay WHOLE units** — and are unaffected by the node de-duplication
+above, since those rows are boolean unions (verified: masks bit-identical, 146,525 / 78,405 km²). `_short_node_name` strips the IPCA·/PA· prefix,
 parentheticals and generic designations ("Nahanni National Park Reserve Of Canada" → "Nahanni") for
 star titles — the full names collide on a 4.8" polar panel; map legend and CSV keep them.
 `cc.corridor_group_map(A)` draws the numbered map from the same `A.groups`, so numbering cannot drift
 from the stars. `n_groups=None` restores the single whole-network profile.
+
+### `06_uncertainty_analysis.ipynb` — GSA over `ensemble_core.py` + `run_one.R` (Python)
+
+**Added 2026-07-30 (Phases 2 / 2.5 / 3 of the uncertainty programme).** `03`/`04` say *where* the
+priorities are; 06 says *what drives them* — it re-solves the same problem many times under
+perturbed parameters and attributes the movement to individual factors. Post-solve, so it sits
+after 03/04; it consumes the same aligned stack. Kernel `y2y-geo`.
+
+- **`run_one.R`** — headless driver, mirrors 03a cells 1–9 **exactly** and holds no logic of its
+  own. Takes `<manifest_path> <project_dir>` and calls `pr_setup()` directly (skipping
+  `pr_refresh_manifest`, which hardcodes the canonical manifest path). Prints `RUN_ONE_OK` as the
+  success sentinel. `prioritizr_core.R` needed **one line**: `n_threads` now honours an optional
+  `params$threads` so concurrent solves each take a slice instead of all grabbing 10 cores.
+- **`ensemble_core.py`** — the runner. **Design principle: patch a COPY of manifest.json per run;
+  never mutate `config.py`.** config.py stays the baseline's single source of truth, every
+  perturbation is an explicit delta in the design matrix, concurrent solves never share state, and
+  each run's exact manifest sits beside its outputs so any single run is reproducible alone.
+  `run()` is **resumable** (skips rows with a `run_summary.json`), runs `workers × threads`
+  concurrently, logs per run. `collect()` returns a tidy table + an allocation matrix on a common
+  domain; it deletes `selection_frequency.tif` (identical to `portfolio.tif` when `n_sol == 1`)
+  and **flags** infeasible/timed-out runs — `analyze_morris()` then *refuses* rather than
+  analysing around them, because a Morris design with holes is invalid.
+- **Config**: `ENSEMBLE` (rscript/driver/workers/threads/agg_factor/time_limit) and `MORRIS`
+  (r=10, num_levels=4, seed, and the **12 factors** — 8 continuous feature weights + EFG group,
+  each as a log2 multiplier ×0.25–×4; `budget_pct`; `target_pct`; `neighbor_penalty` as log10).
+  Climate scenario is deliberately NOT a factor (needs shared-anchor orientation + a headline
+  re-solve; deferred with Phase 1b). `min_shortfall` is scale-invariant in the weights, so
+  scaling all nine together is a **null direction** — state this in methods.
+- **Gates before the batch**: **G1 equivalence** (driver at 1 km must reproduce
+  `iter5_lp_1km_neighbor`: same PU/budget/locked, Jaccard 1.0) → **G2 scale transfer** (fresh 2 km
+  baseline vs the 1 km headline; `iter4_lp_2km_compact` can't serve — wrong penalty, predates
+  `neighbor_penalty`) → **G3 noise floor** (10 identical solves at the same thread config; with
+  `OPT_GAP=0.10` solutions aren't proven optimal, and Morris effects are *differences*, so an
+  effect below the floor is solver noise, not signal).
+- **Phase 3** = 130 solves (r(k+1)). Metrics: `dissim_vs_base` (1 − Jaccard vs baseline, primary),
+  `held_*` per feature, and `pct_region` as a **deliberate validity check** — selected area must
+  track `budget_pct` and nothing else. Outputs μ*/σ table, the μ*-vs-σ scatter, and **per-cell μ\***
+  maps (computed by a vectorised elementary-effects routine, since 300k SALib calls is infeasible;
+  `cross_check()` asserts it equals SALib on a scalar — verified to 1e-16). Figures → `figures/`.
+- Requires **SALib** (added to `requirements.txt`). Phase 4 (Sobol' vs crossed factorial) is
+  decided at the Phase-3 gate; Phases 1b / 5 / 7 remain out of scope.
 
 ### `04a/04b/04c` — three results notebooks over `results_core.py` (Python)
 
@@ -291,7 +408,16 @@ its share of the whole corridor); area% uses the full-Y2Y PU count. The **benchm
 "existing protection" star-plot set) is per-analysis: y2y = the 6 featured parks + Ross River;
 north_bc = the 4 draft IPCA anchors; ab_foothills = the existing PAs ranked by cells inside the
 foothills window. Figure names: `benchmark_*` / `manual_*` / `clusters_new_*`. 04a reproduces the
-legacy y2y figures. **`04_results_analysis.ipynb` is the legacy y2y-only monolith** (retire like
+legacy y2y figures. **`bench_map` also draws the run's `new_mask` (2026-08-05)** in the same wheat as
+the clusters map, so the benchmark parks can be read against where the solution actually expands —
+the two maps share one constant, `results_core.NEW_ALLOC_COLOR` (was a local `OTHER` inside
+`new_map`). Applies to all three 04x notebooks, since `bench_map` is shared. **`bench_map` also
+appends the manual area as the LAST numbered entry** (y2y: "7. Ross River IPCA — proposed"), in its
+own crimson rather than the next tab10 hue so it does not read as a seventh existing park; numbering
+continues from `len(B["ids"])`, and the block is guarded by `if A.manual` so 04b/04c are unaffected.
+**`manual_block` is therefore STAR PLOTS ONLY** — its standalone map was near-identical to the
+benchmark map. `output_data/iter6_y2y/figures/manual_area_map.png` is now stale and no longer
+regenerates. **`04_results_analysis.ipynb` is the legacy y2y-only monolith** (retire like
 03).
 
 **Consequences-table presentation (2026-07-28).** Columns carry a **two-level header**: level 0 =

@@ -339,6 +339,65 @@ RESULTS_04 = {
     },
 }
 
+# ---- Ensemble runner + sensitivity design (06) --------------------------
+# The runner (ensemble_core.py) solves the SAME prioritizr problem many times under different
+# parameter sets, by PATCHING a copy of manifest.json per run -- config.py is never mutated per
+# run. That keeps this file the single source of truth for the BASELINE while every perturbation
+# stays an explicit delta in the design matrix, and it lets concurrent solves run without
+# fighting over shared state. Each run's exact manifest sits beside its outputs, so any single
+# run is reproducible in isolation.
+ENSEMBLE = {
+    "rscript": "/opt/homebrew/bin/Rscript",
+    "driver": "run_one.R",
+    # 10 cores here: 3 concurrent solves x 3 threads leaves one free for the OS. HiGHS IPM scales
+    # sublinearly, so several narrow solves finish a batch sooner than one wide one.
+    "workers": 3,
+    "threads": 3,
+    # Sensitivity runs are at 2 km (agg 2): ~1/4 the LP of the 1 km headline. The headline stays
+    # 1 km -- G2 (scale transfer) checks that 2 km conclusions carry over before the batch runs.
+    "agg_factor": 2,
+    "analysis": "y2y",            # baseline analysis the ensemble perturbs
+    # Per-run wall-clock cap. A 2 km solve should take ~10 min, so this is a stuck-run guard so
+    # one pathological parameter set can't eat the batch. A timed-out HiGHS run returns an
+    # INFEASIBLE point (area > budget) -- the collector flags those rather than using them.
+    "time_limit": 7200,
+    # Selected = allocation above this (the LP is ~99.98% integral, so 0.5 is a clean cut).
+    "select_threshold": 0.5,
+    # selection_frequency.tif == portfolio.tif when there is one solution (pr_summaries computes
+    # it as sum(s)), so the collector drops the duplicate.
+    "drop_duplicate_freq": True,
+}
+
+# Morris screening (Phase 3): rank ALL factors by how much each moves the priority map.
+# `r` trajectories x (k+1) = the run count; r=10, k=12 -> 130 solves.
+# Sampling spaces are chosen so the factor is uniform in the space that matters: weight
+# multipliers in log2 (x0.25-x4 is symmetric around 1) and the neighbor penalty in log10.
+# NOTE min_shortfall is scale-invariant in the weights, so scaling all nine together is a NULL
+# direction -- harmless for Morris (it simply shows zero effect), but state it in methods.
+# The climate scenario is deliberately NOT a factor: it would need shared-anchor orientation plus
+# a headline re-solve (deferred with Phase 1b, 2026-07-30).
+MORRIS = {
+    "r": 10,                 # trajectories
+    "num_levels": 4,         # standard Morris grid
+    "seed": 20260730,
+    "weight_log2_range": (-2.0, 2.0),          # x0.25 .. x4
+    "factors": [
+        # (name, kind, low, high) -- kind drives how the value is turned into a manifest patch
+        ("w_human_modification",         "weight_log2", -2.0, 2.0),
+        ("w_transboundary_connectivity", "weight_log2", -2.0, 2.0),
+        ("w_climate_corridors",          "weight_log2", -2.0, 2.0),
+        ("w_climate_type_macrorefugia",  "weight_log2", -2.0, 2.0),
+        ("w_irrecoverable_carbon_biomass", "weight_log2", -2.0, 2.0),
+        ("w_irrecoverable_carbon_m_soc", "weight_log2", -2.0, 2.0),
+        ("w_aoh_richness_mammals",       "weight_log2", -2.0, 2.0),
+        ("w_aoh_richness_birds",         "weight_log2", -2.0, 2.0),
+        ("w_EFG_group",                  "efg_log2",    -2.0, 2.0),   # applied to all 40 EFGs
+        ("budget_pct",                   "linear",       0.20, 0.40),
+        ("target_pct",                   "linear",       0.50, 1.00),
+        ("neighbor_penalty",             "log10",       -6.0, -4.0),  # 1e-6 .. 1e-4
+    ],
+}
+
 # ---- Least-cost corridors (05) ------------------------------------------
 # Standalone corridor analysis (corridors_core.py) that CONNECTS anchor areas with least-cost
 # paths -- the routing tool the prioritizr connectivity penalty could not be (that aggregates
@@ -349,8 +408,14 @@ CORRIDORS = {
         "results_subdir": "corridors_north",
         "region_label": "Northern BC + Yukon",
         # nodes to connect: the northern proposed IPCAs + existing PAs above a size in the region.
+        # dedupe_overlap_frac: merge two nodes into one when their rasterized masks share at least
+        # this fraction of the SMALLER node -- the same place entered twice under nesting
+        # designations (Teetł'it Gwinjik inside the Peel Watershed SMA/WA; Fishing Branch Wilderness
+        # Preserve inside its Habitat Protection Area). Slivers stay separate, so an IPCA that wraps
+        # around a park still routes to it. Set to None/1.1 to disable.
         "nodes": {"proposed": str(PROPOSED_PA_VECTOR), "source_filter": {"min_lat": 55.0},
-                  "include_existing_pas": True, "existing_pa_min_km2": 200, "node_min_cells": 25},
+                  "include_existing_pas": True, "existing_pa_min_km2": 200, "node_min_cells": 25,
+                  "dedupe_overlap_frac": 0.5},
         # crop the working grid north for routing room (least-cost paths need space around anchors).
         "region_filter": {"min_lat": 54.0},
         # RESISTANCE = (1 / permeability^conn_exponent) * barrier_base^gHM, where permeability is a
@@ -497,6 +562,22 @@ DATASETS = {
         "resampling": "bilinear",  # ~5 km -> 1 km
         "citation": "Carroll et al. 2018, current-flow centrality",
     },
+    # FILE NAMING (decoded from the dataset's own ReadMe_ClimateNA_CMIP6_zenodo.txt, Zenodo
+    # 10.5281/zenodo.10631707): [direction][metric][version]_[GCM]_[SSP]_[period].tif
+    #   bw / fw    inbound (backward) / outbound (forward) direction
+    #   vel / disp velocity / proportion of disappearing (no-analog) climates
+    #   731        ClimateNA software version 7.31  <- NOT a threshold or climate-type code
+    #   245/370/585  SSP low-moderate / moderate / high emissions
+    #   period     2041-2070 or 2071-2100, against a 1961-1990 historical normal baseline
+    # Analogs are matched by multivariate PCA over 11 climate variables (MAT, MWMT, MCMT, TD,
+    # MAP, MSP, MWP, DD5, NFFD, Eref, CMD); no-analog cells are NODATA.
+    #
+    # BACKWARD velocity = distance from a cell's FUTURE climate to its nearest analog in the
+    # CURRENT climate, per year. Low = the future climate already exists nearby = macrorefugium,
+    # hence orient="invert". Units km/yr are a per-year AVERAGE over the elapsed baseline->future
+    # span, so the 2071-2100 layers divide by a LONGER denominator than 2041-2070 -- late-century
+    # values are diluted, not simply more extreme (the CMIP6 readme does not restate the exact
+    # denominator; the CMIP5 sibling product documents distance / years-elapsed).
     "climate_type_macrorefugia": {
         "path": INPUT_DIR / "climate_type_macrorefugia" / "ensemble_8gcm",
         "include": "bwvel731",  # backward climatic velocity scenarios only
@@ -504,7 +585,9 @@ DATASETS = {
         "multi": False,
         "resampling": "bilinear",
         "orient": "invert",  # low backward velocity = high refugial value -> vmax - v
-        "citation": "Carroll 2023 (AdaptWest), backward climatic velocity",
+        "citation": ("AdaptWest Project 2023, Gridded CMIP6-based climate velocity data for "
+                     "North America at 1km resolution (adaptwest.databasin.org; "
+                     "doi:10.5281/zenodo.10631707), backward velocity, 8-GCM ensemble"),
     },
     "irrecoverable_carbon_biomass": {
         "path": INPUT_DIR / "irrecoverable_carbon",
@@ -551,6 +634,54 @@ DATASETS = {
         "multi": False,
         "resampling": "average",
         "citation": "Lumbierres et al., AOH species richness (birds, all)",
+    },
+}
+
+
+# ---- Climate-scenario materiality diagnostic (02 stage-1 QA; Phase 1a) ---
+# `DATASETS["climate_type_macrorefugia"]` uses ONE of six AdaptWest realizations
+# (SSP 245/370/585 x 2041-2070/2071-2100) -- currently 585_2071_2100, the hottest SSP at the
+# latest horizon, i.e. the LEAST refugial of the set. That single pick is an unstated choice.
+# Before spending six full 1 km solves (~7.6 h) or a sensitivity-analysis factor slot on it, 02
+# warps all six and measures whether they differ in a DECISION-RELEVANT way. Diagnostic only:
+# these rasters live in their own subfolder, are never oriented, and can never reach a prioritizr
+# problem (write_manifest builds features from DATASETS keys + aligned_stack/iucn_efg/*.tif, and
+# never globs the hand-off top level).
+#
+# The comparison runs on RAW backward velocity, NOT the oriented `vmax - v` feature: the flip is
+# a monotone affine map, so it leaves both correlation and top-quantile membership unchanged.
+CLIMATE_SCENARIOS = {
+    "src_dir": INPUT_DIR / "climate_type_macrorefugia" / "ensemble_8gcm",
+    "out_dir": ALIGNED_DIR / "climate_scenarios",
+    "prefix": "bwvel731_ensemble_8gcm_",     # backward velocity, 8-GCM ensemble
+    # key -> source filename. Keys sort chronologically within SSP; order is the report order.
+    "members": {
+        "245_2041_2070": "bwvel731_ensemble_8gcm_245_2041_2070.tif",
+        "245_2071_2100": "bwvel731_ensemble_8gcm_245_2071_2100.tif",
+        "370_2041_2070": "bwvel731_ensemble_8gcm_370_2041_2070.tif",
+        "370_2071_2100": "bwvel731_ensemble_8gcm_370_2071_2100.tif",
+        "585_2041_2070": "bwvel731_ensemble_8gcm_585_2041_2070.tif",
+        "585_2071_2100": "bwvel731_ensemble_8gcm_585_2071_2100.tif",
+    },
+    "current": "585_2071_2100",   # the member DATASETS currently points at (identity check)
+    "resampling": "bilinear",     # same as the DATASETS entry -- must match to stay comparable
+    # Overlap statistic: fraction of PU cells taken as "the priority set" for the Jaccard. Tied
+    # to BUDGET_PCT so the number answers the decision question ("would the selected 30% move?"),
+    # not just "are the surfaces correlated".
+    "top_q": BUDGET_PCT,
+    # Percentiles reported (NOT applied) as candidate SHARED anchors for a future Phase 1b, where
+    # all six would need one common affine map. p1/p99 rather than min/max because the tails are
+    # single-pixel artefacts -- the same reasoning that fixed CORRIDORS driver scaling (2026-07-27).
+    "anchor_pctiles": (1, 99),
+    # PRE-REGISTERED decision rule -- fixed here BEFORE the numbers are seen, so the downstream
+    # consequence is not chosen post hoc. See the plan / CLAUDE.md.
+    "rule": {
+        # IMMATERIAL: keep one scenario (stated as a choice), document in the supplement, drop
+        # the scenario factor from the sensitivity design, skip the six-solve Phase 1b.
+        "immaterial": {"min_spearman": 0.90, "min_jaccard": 0.80},
+        # MATERIAL: scenario enters the sensitivity design as a factor AND Phase 1b is warranted.
+        "material": {"max_jaccard_below": 0.60},
+        # anything else -> AMBIGUOUS: enters the design; Phase 1b decided at the screening gate.
     },
 }
 

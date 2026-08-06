@@ -283,7 +283,10 @@ pr_build_problem <- function(ctx) {
   if (params$boundary_penalty > 0)     p <- p |> add_boundary_penalties(params$boundary_penalty, data = bm)
   if (params$neighbor_penalty > 0)     p <- p |> add_neighbor_penalties(params$neighbor_penalty)
 
-  n_threads <- parallel::detectCores()
+  # Threads: all cores for a single interactive solve (notebooks), but the ENSEMBLE runner sets
+  # params$threads so N concurrent solves each take a slice instead of all fighting for 10 cores
+  # (HiGHS IPM scales sublinearly, so several narrow solves beat one wide one).
+  n_threads <- if (!is.null(params$threads)) as.integer(params$threads) else parallel::detectCores()
   if (ctx$use_portfolio) {
     stopifnot("solver='gurobi' but the gurobi R package is not installed (see requirements-R.txt)" = ctx$have_gurobi)
     p <- p |>
