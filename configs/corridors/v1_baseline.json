@@ -1,0 +1,74 @@
+{
+  "record": "v1 baseline of the 05 northern corridor analysis, frozen before the v2 rebuild",
+  "frozen_on": "2026-08-07",
+  "superseded_by": "docs/05_methods_v2.md (decisions D1-D10)",
+  "why": "v1 resistance was a weighted blend of three regional products (Pither current density, Carroll climate corridors, AdaptWest macrorefugia) with an uncalibrated conn_exponent, a 10**gHM barrier and a percentile stretch. D1/D2 replace it with the published O'Brien transboundary movement-cost surface; D6 replaces the relative corridor band with an absolute cost-weighted-distance cutoff; D7 adds redundancy to the bare MST; D8 retires the uniform-noise jitter ensemble.",
+  "git_sha_at_freeze": "0ee87e4f152d65cb60139f3099d2cfd219c72d34",
+  "engine": "corridors_core.py @ 0ee87e4f (clean at freeze)",
+  "notebook": "archive/05_corridors_north_v1.ipynb",
+  "outputs": "output_data/corridors_north/_v1_frozen/  (gitignored; local archive only)",
+  "config_CORRIDORS_north": {
+    "results_subdir": "corridors_north",
+    "region_label": "Northern BC + Yukon",
+    "nodes": {
+      "proposed": "input_data/y2y_proposed_pa/proposed_pa_v2.shp",
+      "source_filter": {
+        "min_lat": 55.0
+      },
+      "include_existing_pas": true,
+      "existing_pa_min_km2": 200,
+      "node_min_cells": 25,
+      "dedupe_overlap_frac": 0.5
+    },
+    "region_filter": {
+      "min_lat": 54.0
+    },
+    "resistance": {
+      "scale": "minmax",
+      "drivers": [
+        {
+          "layer": "transboundary_connectivity",
+          "weight": 0.5,
+          "pctile": 99,
+          "lo_pctile": 1
+        },
+        {
+          "layer": "climate_corridors",
+          "weight": 0.3,
+          "pctile": 99,
+          "lo_pctile": 1
+        },
+        {
+          "layer": "climate_type_macrorefugia",
+          "weight": 0.2,
+          "pctile": 99,
+          "lo_pctile": 1
+        }
+      ],
+      "conn_exponent": 2.0,
+      "barrier": {
+        "layer": "human_modification",
+        "base": 10.0
+      },
+      "perm_floor": 0.001
+    },
+    "scenarios": {
+      "p1_p99": {
+        "lo_pctile": 1,
+        "pctile": 99
+      },
+      "p5_p95": {
+        "lo_pctile": 5,
+        "pctile": 95
+      }
+    },
+    "primary_scenario": "p1_p99",
+    "corridor_width_frac": 0.05,
+    "ensemble": {
+      "n_runs": 12,
+      "jitter": 0.2,
+      "seed": 42,
+      "n_alternatives": 3
+    }
+  }
+}

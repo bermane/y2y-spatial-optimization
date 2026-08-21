@@ -1,0 +1,9 @@
+feature,orient,leverage,cap_min,cap_max,theta_area,theta_target,cls,lever,target
+human_modification,complement,0.042,0.272,0.314,0.0,0.0,low-contrast-inexpressible,none (disclosed),1.0
+transboundary_connectivity,raw,0.461,0.091,0.552,0.002,0.013,diffuse-linear,weight,1.0
+climate_corridors,raw,0.263,0.156,0.419,0.0,0.0,diffuse-linear,weight,1.0
+climate_type_macrorefugia,reciprocal,0.422,0.135,0.558,0.0047,0.031,diffuse-linear,weight,1.0
+irrecoverable_carbon_biomass,raw,0.801,0.001,0.803,0.0117,0.066,diffuse-linear,weight,1.0
+irrecoverable_carbon_m_soc,raw,0.884,0.005,0.889,0.0406,0.332,concentrated-satiating,target,0.332
+aoh_richness_mammals,raw,0.181,0.209,0.39,0.0,0.0,diffuse-linear,weight,1.0
+aoh_richness_birds,raw,0.232,0.181,0.413,0.0,0.0,diffuse-linear,weight,1.0

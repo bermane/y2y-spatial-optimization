@@ -266,8 +266,15 @@ def collect(tag, design, drop_freq=None):
         rec = dict(run_id=rid, n_selected=stats["n_selected"], pct_region=stats["pct_region"],
                    n_added_beyond_pa=stats["n_added_beyond_pa"], solve_seconds=s["solve_seconds"],
                    budget_cells=s["budget_cells"], n_planning_units=s["n_planning_units"])
-        # a timed-out HiGHS run returns an infeasible point (area > budget) -- flag, don't use
-        rec["infeasible"] = rec["n_selected"] > rec["budget_cells"] * 1.001
+        # Two independent ways a run can be unusable, and the area test alone MISSES most of them:
+        #   over_budget -- the returned point spends more area than the budget allows
+        #   timed_out   -- the solver stopped on the clock, so the point is wherever it had got to.
+        # A timed-out run often lands UNDER budget (the LP had not finished spending it), which the
+        # area test happily passes: in the first 130-run batch 19 runs hit the limit and only 1 was
+        # caught. Un-converged is un-converged regardless of which side of the budget it stopped on.
+        rec["over_budget"] = rec["n_selected"] > rec["budget_cells"] * 1.001
+        rec["timed_out"] = rec["solve_seconds"] >= s["params"]["solver_time_limit"] * 0.999
+        rec["unusable"] = bool(rec["over_budget"] or rec["timed_out"])
         rep = d / "portfolio_representation.csv"
         if rep.exists():
             t = pd.read_csv(rep)
@@ -287,26 +294,86 @@ def collect(tag, design, drop_freq=None):
     domain = np.isfinite(A).all(axis=0)
     A = A[:, domain]
     out = design.merge(pd.DataFrame(rows), on="run_id", how="inner").sort_values("run_id")
-    n_bad = int(out.infeasible.sum())
+    n_bad = int(out.unusable.sum())
     print(f"[{tag}] collected {len(out)} runs | domain {int(domain.sum()):,} cells")
     if n_bad:
         # NOT dropped: a Morris design with holes is invalid (the trajectory structure is what
         # makes an elementary effect meaningful), so the fix is to re-solve these with a longer
         # time limit, not to analyse around them. analyze_morris() refuses while any remain.
-        print(f"  WARNING: {n_bad} run(s) INFEASIBLE (area > budget => hit the time limit): "
-              f"{out.loc[out.infeasible, 'run_id'].tolist()[:12]}")
+        bad = out.loc[out.unusable]
+        print(f"  WARNING: {n_bad} run(s) UNUSABLE "
+              f"({int(out.timed_out.sum())} timed out, {int(out.over_budget.sum())} over budget): "
+              f"{bad['run_id'].tolist()[:20]}")
+        # which trajectory each one falls in: an elementary effect is a difference between
+        # CONSECUTIVE runs inside a trajectory, so one bad run spoils the effects either side of it
+        # and a whole bad trajectory spoils every effect it carries. This is the number that says
+        # how much of the design is at risk, which "n runs bad" on its own does not.
+        r_traj = int(config.MORRIS.get("r", 10))
+        per = max(len(out) // r_traj, 1)
+        traj = sorted({int(i) // per for i in bad["run_id"]})
+        print(f"  -> affects {len(traj)} of {r_traj} trajectories: {traj}")
         print(f"  -> raise ENSEMBLE['time_limit'], delete those run dirs, and re-run run()")
     return out, A, domain
 
 
-def add_baseline_metrics(df, A, base_row=0):
-    """Jaccard of each run's selected set against the baseline run -- the primary Morris metric."""
+def baseline_alloc(domain, tag="baseline_2km", run_id=0):
+    """The UNPERTURBED baseline's allocation, on the ensemble's common domain.
+
+    This is the G2 scale-transfer run (`baseline_overrides`, every multiplier 1.0), which is the
+    only run whose parameters are config.py's own. It is deliberately solved OUTSIDE the design
+    batch -- see add_baseline_metrics for why that distinction matters."""
+    p = _run_dir(tag, run_id) / "portfolio.tif"
+    if not p.exists():
+        raise FileNotFoundError(
+            f"baseline run not found: {p}\n  The primary metric is measured against the "
+            f"unperturbed baseline, so solve it first (the G2 cell in 06).")
+    a = _alloc(p)
+    if a.shape != domain.shape:
+        raise ValueError(f"baseline grid {a.shape} != ensemble domain {domain.shape} -- the "
+                         f"baseline must be solved at the same agg_factor as the batch.")
+    n_bad = int(np.isnan(a[domain]).sum())
+    if n_bad:
+        raise ValueError(f"baseline has {n_bad:,} NoData cells inside the batch domain -- the two "
+                         f"do not share a planning-unit footprint, so the Jaccard is not defined.")
+    return a[domain]
+
+
+def add_baseline_metrics(df, A, domain, base_tag="baseline_2km", base_run=0, base=None):
+    """Jaccard of each run's selected set against the UNPERTURBED baseline -- the primary metric.
+
+    The reference must be the baseline solve, NOT a row of the design batch. Taking it from the
+    batch (this function used to default to `base_row=0`) silently measures every run against an
+    arbitrary design corner, which is wrong in three compounding ways:
+      - the reference is itself perturbed -- here morris/run_0000 sat 0.33 Jaccard from the true
+        baseline (budget 26.7%, climate corridors x4, biomass carbon x0.25, target 50%);
+      - a factor whose reference level is at an END of its range can then only be stepped one way,
+        so its elementary effects come out one-signed and mu collapses onto mu* (climate corridors
+        read mu = -mu* exactly; macrorefugia mu = +mu* exactly) -- an artefact, not a finding;
+      - the mu* RANKING itself moves: correcting it promoted biomass carbon 3rd -> 1st and the
+        neighbour penalty 5th -> 3rd, i.e. it changes the headline claim.
+    Recomputing is cheap (metric only, no re-solving), so this reads the baseline off disk rather
+    than accepting an index. Pass `base` to supply the allocation vector directly.
+
+    NOTE the design never SITS at the baseline: with num_levels=4 the sampled levels are 0, 1/3,
+    2/3, 1 of each range while every baseline value is at 0.5 (weight multiplier x1, budget 30%,
+    penalty 1e-5), so 11 of the 12 factors are off-baseline in every run. `dissim_vs_base`
+    therefore has a positive floor -- it is a valid response surface for screening, but its
+    ABSOLUTE level is not "how far plausible perturbations push the published map"."""
     thr = config.ENSEMBLE["select_threshold"]
     S = A > thr
-    b = S[base_row]
+    b = (baseline_alloc(domain, base_tag, base_run) if base is None else np.asarray(base)) > thr
     df = df.copy()
     df["jaccard_vs_base"] = [float((s & b).sum() / max((s | b).sum(), 1)) for s in S]
     df["dissim_vs_base"] = 1.0 - df["jaccard_vs_base"]
+    # Guard against the regression this docstring is about: a design row that reproduces the
+    # reference exactly means the reference came from inside the batch.
+    exact = int((df["jaccard_vs_base"] >= 1.0).sum())
+    print(f"reference = {base_tag}/run_{base_run:04d} (unperturbed) | "
+          f"{int(b.sum()):,} selected cells | dissim over the batch: "
+          f"{df.dissim_vs_base.min():.3f} .. {df.dissim_vs_base.max():.3f}")
+    if exact:
+        print(f"  WARNING: {exact} design run(s) match the reference EXACTLY -- if that is not a "
+              f"coincidence, the reference is a batch row and the effects are contaminated.")
     return df
 
 
@@ -338,11 +405,12 @@ def analyze_morris(df, X, metric="dissim_vs_base", prob=None):
     d = df.sort_values("run_id")
     y = d[metric].to_numpy(dtype=float)
     assert len(y) == len(X), f"{len(y)} results vs {len(X)} design rows -- incomplete batch"
-    if "infeasible" in d:
-        bad = d.loc[d.infeasible, "run_id"].tolist()
-        assert not bad, (f"{len(bad)} infeasible run(s) in the design ({bad[:8]}): their solutions "
-                         f"are timed-out garbage. Morris needs every trajectory row valid -- "
-                         f"re-solve them, don't analyse around them.")
+    gate = "unusable" if "unusable" in d else "infeasible"     # pre-2026-08-07 tables
+    if gate in d:
+        bad = d.loc[d[gate], "run_id"].tolist()
+        assert not bad, (f"{len(bad)} unusable run(s) in the design ({bad[:8]}): timed out or over "
+                         f"budget, so their solutions are wherever the solver stopped. Morris needs "
+                         f"every trajectory row valid -- re-solve them, don't analyse around them.")
     res = salib_morris.analyze(prob, X, y, num_levels=config.MORRIS["num_levels"])
     out = (pd.DataFrame({"factor": res["names"], "mu_star": res["mu_star"],
                          "mu": res["mu"], "sigma": res["sigma"],
@@ -425,21 +493,48 @@ def plot_morris(tbl, title="Morris screening", fname=None, fig_dir=None):
     plt.show()
 
 
-def plot_mu_star_maps(mu, domain, names, top=3, ref_tif=None, fig_dir=None, outline=None):
-    """Per-cell mu* for the `top` most influential factors -- where each factor decides."""
+def plot_mu_star_maps(mu, domain, names, top=3, ref_tif=None, fig_dir=None, outline=None,
+                      tag="morris", share_scale=True):
+    """Per-cell mu* for the `top` most influential factors -- where each factor decides.
+
+    GEOREFERENCED, which it was not before: `imshow` defaults to ARRAY-INDEX coordinates
+    (0..ncol, 0..nrow) while `outline` is in TARGET_CRS metres, so drawing both on one axes made
+    matplotlib autoscale to the outline and the raster vanished -- a blank map with a correct
+    boundary on top. `extent` (read off the run grid, which is what `domain` indexes) puts the
+    image in CRS coordinates so the two actually overlay. `ref_tif` was already in the signature
+    for this and simply never wired up; it defaults to run 0 of `tag`, since every run in a batch
+    shares one grid.
+
+    `share_scale` puts all panels on one colour scale. Per-panel autoscaling silently renormalises
+    each factor to its own max, so panels look equally influential no matter how far apart their
+    mu* actually are -- which defeats the point of a comparison figure."""
     order = np.argsort(-mu.mean(axis=1))[:top]
+    ref_tif = Path(ref_tif) if ref_tif else _run_dir(tag, 0) / "portfolio.tif"
+    if not ref_tif.exists():
+        raise FileNotFoundError(f"no reference raster for georeferencing: {ref_tif}")
+    with rasterio.open(ref_tif) as s:
+        if s.shape != domain.shape:
+            raise ValueError(f"reference grid {s.shape} != domain {domain.shape} -- `ref_tif` must "
+                             f"be a run from the same batch/agg_factor as `mu`.")
+        b, crs = s.bounds, s.crs
+    extent = (b.left, b.right, b.bottom, b.top)
+    vmax = float(np.nanpercentile(mu[order], 99)) if share_scale else None
+
     fig, axes = plt.subplots(1, len(order), figsize=(5.2 * len(order), 11))
     axes = np.atleast_1d(axes)
     for ax, i in zip(axes, order):
         img = np.full(domain.shape, np.nan, "float32")
         img[domain] = mu[i]
-        im = ax.imshow(img, cmap="magma")
-        fig.colorbar(im, ax=ax, shrink=0.35, label="mu* (allocation)")
+        im = ax.imshow(img, cmap="magma", extent=extent, vmin=0, vmax=vmax)
+        fig.colorbar(im, ax=ax, shrink=0.35,
+                     label="mu* (allocation)" + (" — shared scale" if share_scale else ""))
         if outline is not None:
-            outline.boundary.plot(ax=ax, color="black", linewidth=0.6)
+            outline.to_crs(crs).boundary.plot(ax=ax, color="black", linewidth=0.6)
+        ax.set_xlim(extent[0], extent[1]); ax.set_ylim(extent[2], extent[3])
         ax.set_title(f"{names[i]}", fontsize=10)
         ax.set_aspect("equal"); ax.set_axis_off()
-    fig.suptitle("Where each factor drives the priorities (per-cell mu*)", fontsize=13, y=0.92)
+    fig.suptitle("Where each factor drives the priorities (per-cell mu*)", fontsize=13)
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
     if fig_dir:
         Path(fig_dir).mkdir(parents=True, exist_ok=True)
         fig.savefig(Path(fig_dir) / "morris_mu_star_maps.png", dpi=150, bbox_inches="tight")

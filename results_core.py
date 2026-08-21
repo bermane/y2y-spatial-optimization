@@ -25,6 +25,7 @@ import rioxarray
 import xarray as xr
 import geopandas as gpd
 from scipy import ndimage
+from scipy.stats import spearmanr
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 import pyproj
@@ -87,12 +88,33 @@ METRIC_SPEC = {
 
 
 # ================= setup =================
-def load(analysis):
+def load(analysis, run=None):
     """Light setup: locate the run, read manifest/summary/representation, set the region label
-    and the map outline (the ROI polygon for sub-regions, the full Y2Y boundary for y2y)."""
+    and the map outline (the ROI polygon for sub-regions, the full Y2Y boundary for y2y).
+
+    `run` names the output folder to read, overriding `config.ANALYSES[analysis]["results_subdir"]`.
+    REQUIRED when the solve came from 03a's RUN LEVER, because that lever patches `results_subdir`
+    into the R run context only -- config.py still points at whatever it pointed at before, so
+    without this argument 04 would quietly analyse a DIFFERENT (older) solve than the one just
+    produced and every figure would be silently stale. Pass the same string the lever built,
+    e.g. rc.load("y2y", run="iter7_y2y_r1_density5x")."""
     a04 = config.RESULTS_04[analysis]
-    run_dir = config.RESULTS_DIR / config.ANALYSES[analysis]["results_subdir"]
-    assert run_dir.exists(), f"{run_dir} not found -- run 03{('a' if analysis=='y2y' else '')} first"
+    subdir = run or config.ANALYSES[analysis]["results_subdir"]
+    run_dir = config.RESULTS_DIR / subdir
+    # Test for run_summary.json, NOT for the directory: 03a's lever (pr_override) creates the
+    # output folder eagerly when you run the lever cell, so an EMPTY folder exists as soon as a
+    # run is named and long before it is solved. A bare directory check passes on that and the
+    # failure then surfaces as a confusing raw "no such file" three lines later.
+    if not (run_dir / "run_summary.json").exists():
+        # List what IS on disk: during a sweep the usual cause is a typo'd or not-yet-solved run
+        # name, and guessing from a bare "not found" is needless friction.
+        avail = sorted(p.name for p in config.RESULTS_DIR.glob("*") if (p / "run_summary.json").exists())
+        state = "exists but is EMPTY (named but not yet solved)" if run_dir.exists() else "does not exist"
+        solve_nb = "analyses/y2y/02_solve.ipynb" if analysis == "y2y" else f"03{{b,c}} for {analysis}"
+        raise FileNotFoundError(
+            f"no solved run at {run_dir} -- it {state}.\n"
+            f"  Run {solve_nb} through its write cell first, or set RUN to "
+            f"one of: {', '.join(avail) if avail else '(none)'}")
     fig_dir = run_dir / "figures"; fig_dir.mkdir(parents=True, exist_ok=True)
 
     manifest = json.loads(Path(config.MANIFEST_PATH).read_text())
@@ -787,6 +809,84 @@ def consequences(A):
     print(f"wrote consequences_{{contribution,efficiency,raw}}.csv -> {A.run_dir.relative_to(config.PROJECT_DIR)}")
     A.contrib_tbl, A.eff_tbl, A.raw_tbl = contrib_tbl, eff_tbl, raw_tbl
     return contrib_tbl, eff_tbl, raw_tbl
+
+
+def footprint_audit(A):
+    """Does the solution avoid human-modified land -- and if so, is it the OPTIMIZER doing it?
+
+    WHY THIS EXISTS. `human_modification` enters the solve as intactness (1 - gHM), which over a
+    uniformly wild region has leverage 0.042: its captured fraction is confined to 27.2-31.4%
+    whatever we select, so it holds ~1% of the objective's achievable swing and cannot counterweight
+    anything. The consequence is measurable and was not visible in any existing view, because the
+    whole-solution average hides it: the locked PAs are very intact (they are existing parks), which
+    drags the overall mean down and makes the run look like it avoids modified land. Split out the
+    NEW selection and the sign flips.
+
+    Reported deliberately rather than fixed. Restoring intactness would need either a role change
+    (gHM as a penalty/cost) or an aggressive nonlinearity -- a p1-p99 stretch only reaches 0.084 --
+    and both introduce a new uncalibrated dial. The decision (2026-08-17) was to leave the layer
+    alone and publish the bias with its mechanism, so a reader can weigh it.
+
+    Reads RAW gHM from `cleaned_aligned/` (pre-orientation), because "how modified is this cell" is
+    the interpretable quantity; the hand-off layer holds 1 - gHM."""
+    ghm = _read_match(A, str((config.ALIGNED_DIR / "human_modification.tif")
+                             .relative_to(config.PROJECT_DIR)))
+    v = A.valid_all
+    sel, new, locked = (A.sol0.fillna(0).values > 0.5) & v, A.new_mask & v, A.locked & v
+    uns = v & ~sel
+
+    rows = [("selected (all)", sel), ("  of which: locked PAs", locked),
+            ("  of which: NEW allocation", new), ("unselected", uns), ("whole region", v)]
+    print(f"mean raw gHM by group ({A.region_label})")
+    for label, m in rows:
+        print(f"  {label:<28}{np.nanmean(ghm[m]):7.4f}   ({int(m.sum()):,} cells)")
+
+    # THE HEADLINE. If the optimizer were avoiding modified land, new < unselected.
+    mean_new, mean_uns = float(np.nanmean(ghm[new])), float(np.nanmean(ghm[uns]))
+    verdict = ("MORE modified than the land it passed over" if mean_new > mean_uns
+               else "less modified than the land it passed over")
+    print(f"\n  -> the NEW selection is {verdict}: {mean_new:.4f} vs {mean_uns:.4f}")
+    if mean_new > mean_uns:
+        print("     (the overall solution looks intact only because the locked PAs already are)")
+
+    # Selection rate inside the modified tail: 30% = indifferent.
+    print(f"\nselection rate within the gHM tail (vs {100*config.BUDGET_PCT:.0f}% if indifferent)")
+    tail_rows = []
+    for q in (90, 99, 99.9):
+        thr = float(np.nanpercentile(ghm[v], q))
+        tail = v & (ghm >= thr)
+        rate = 100.0 * (tail & sel).sum() / max(int(tail.sum()), 1)
+        tail_rows.append(dict(pctile=q, threshold=thr, pct_selected=rate))
+        print(f"  top {100-q:>4.1f}% (gHM >= {thr:.3f}): {rate:5.1f}% selected")
+
+    # WHY. Any feature correlated with gHM pulls the solution toward modified land; nothing in the
+    # stack pushes back hard enough. Richness peaks in productive low valleys, which is also where
+    # people are -- a confound, not a modelling error, but it decides the outcome here.
+    print("\nSpearman(raw gHM, feature) -- which inputs pull TOWARD modified land?")
+    conf = []
+    for name in A.cont:
+        # Skip the gHM-derived feature itself: it is a monotone transform of the variable we are
+        # correlating against, so it scores -1.000 by construction and says nothing.
+        if name == "human_modification":
+            continue
+        path = next(L["path"] for L in A.manifest["layers"] if L["name"] == name)
+        f = _read_match(A, path)
+        ok = v & np.isfinite(f) & np.isfinite(ghm)
+        # rank-correlate on a subsample: full-PU spearman on ~1.3M cells is slow and the estimate
+        # is already stable at 200k.
+        idx = np.flatnonzero(ok.ravel())
+        if idx.size > 200_000:
+            idx = np.random.default_rng(0).choice(idx, 200_000, replace=False)
+        r = float(spearmanr(ghm.ravel()[idx], f.ravel()[idx]).statistic)
+        conf.append(dict(feature=name, spearman_vs_ghm=r))
+        flag = "  <-- pulls toward modified land" if r > 0.15 else ""
+        print(f"  {name:<34}{r:+.3f}{flag}")
+
+    A.footprint = dict(
+        by_group={label.strip(): float(np.nanmean(ghm[m])) for label, m in rows},
+        tail=pd.DataFrame(tail_rows), confound=pd.DataFrame(conf).sort_values(
+            "spearman_vs_ghm", ascending=False).reset_index(drop=True))
+    return A
 
 
 def corridor_report(A):

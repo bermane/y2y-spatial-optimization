@@ -35,6 +35,12 @@ Built as Jupyter notebooks, run cell-by-cell. Pipeline: **01** inventory →
 - Resampling method (for the alignment stage, later): average for down-sampling fine
   continuous layers, bilinear for up-sampling coarse ones, nearest/majority for
   categorical layers (IUCN EFG). Nothing aligns to this grid yet.
+- **EXCEPTION — 05 routes at 300 m (decided 2026-08-07).** The corridor analysis runs on its
+  own 300 m grid, because its resistance layer is natively 300 m and at 1 km a two-lane
+  highway averaged down from 90 m gHM effectively vanishes — linear barriers are the signal
+  there. It has its own grid namespace (`input_data/corridors_300m/`), never enters
+  `aligned_stack/` or the manifest, and its **co-benefit audit still runs at 1 km**.
+  **02/03/04/06 are unaffected and stay at 1 km.** See `docs/05_methods_v2.md` §3.
 
 ## Environment
 
@@ -54,10 +60,27 @@ Built as Jupyter notebooks, run cell-by-cell. Pipeline: **01** inventory →
     `CXX=... -nostdinc++ -isystem .../SDKs/MacOSX.sdk/usr/include/c++/v1` (the CLT libc++
     headers are corrupted). Without these, every C/C++ R package fails to compile.
   - **Gurobi** is needed for the binary MGA gap-portfolio (`add_gap_portfolio`, build-time) —
-    HiGHS has no solution pool. The installed license is **TRIAL (size-limited ~2000 vars)**,
-    so that real run is **blocked until a free academic license** is activated (`grbgetkey` →
-    `~/gurobi.lic` should read `TYPE=ACADEMIC`; see `requirements-R.txt`). Meanwhile 03 runs a
-    **HiGHS proportion-LP prototype** — the `highs` package IS used.
+    HiGHS has no solution pool. Gurobi 13.0.2 + R `gurobi` 13.0.2 are installed
+    (`/Library/gurobi1302`). Meanwhile 03 runs a **HiGHS proportion-LP prototype** — the `highs`
+    package IS used.
+  - **STILL BLOCKED as of 2026-08-17, but for a NEW reason — do not re-diagnose from scratch.**
+    The old TRIAL licence (size-limited ~2000 vars, `Error 10010`) was replaced by a **"Gurobi
+    Gives Back" nonprofit WLS licence, LICENSEID 2853457, valid to 2027-08-14** (Brynn's ticket
+    #120339; named users brynn@y2y.net + ethan@earthlineanalytics.com). The size cap is gone, but
+    the licence is **capped at 8 cores and this Mac has 10 physical cores**, so Gurobi will not
+    even initialise: `Error 10009: Requested number of cores (10) is greater than allowed (8)`.
+    **It fails at environment creation, before any model loads** — `gurobi_cl --license` itself
+    fails, and a 2-variable toy model fails identically. Gurobi documents that **the `Threads`
+    parameter does NOT resolve this and there is no programmatic workaround** (verified: tried
+    `Threads=8` as a solve param and via a `gurobi.env` file). Documented options are: run on a
+    machine with fewer cores, run in a VM/container that restricts visible cores, or have the
+    licence's core limit raised. **Chosen path: ask Gurobi support to raise it** — their academic
+    WLS restrictions page lists a 2-concurrent-session limit and *no* core limit, so 8 cores looks
+    like how this one was provisioned. Draft email written 2026-08-17; awaiting Brynn.
+    Old trial file backed up at `~/gurobi.lic.trial-backup-20260817`.
+    Two WLS properties to remember once it works: it needs a **live internet connection during
+    optimization**, and academic WLS allows **2 concurrent sessions** — so `ENSEMBLE["workers"]=3`
+    would fail on checkout. Keep ensemble runs on HiGHS; reserve Gurobi for the headline solve.
 
 ## Data (`./input_data`, ~24.5 GB)
 
@@ -102,6 +125,51 @@ Reference / masks / excluded:
   down-weights converted land.
 - **Not using:** `bhi_beri_parc/`, `elevational_diversity/`.
 
+## FLAGSHIP — `analyses/y2y/`: hierarchical selection-frequency ensemble (added 2026-08-18)
+
+The methods paper this project now leads with; spec = **`analyses/y2y/spec/
+frequency_ensemble_study_plan.md` (v0.8, accepted by Ethan 2026-08-21)** — read it before touching
+anything here. (That on-disk copy was encoding-repaired from a chat attachment; Ethan dropping in
+his original guarantees fidelity.) **v0.8 additions, both implemented:** transform screening is
+UNIVERSAL ({identity, log1p, sqrt} for every feature + flip/reciprocal where cost-oriented;
+adoption gated by R1's value-model test with the binding concavity distinction — measured payoff:
+log1p FLIPS m_soc to diffuse-linear, the E9 log-arm story, and pushes AOH birds under the
+expressivity floor), and Gate 0a renders **feature cards** (`leverage_core.feature_cards` → one
+6-panel page per input + EFG block card + summary sheet = 10 pages into
+`analyses/y2y/audit/feature_cards/`; archive now in `audit/audit_objects/`; the spec's "12 cards"
+is a disclosed miscount — its own input list is 8 continuous + EFG block = 9). Cards are the human
+review checkpoint BEFORE any Gate-0 solve. NOTE v0.8 did NOT absorb the five corrections this repo
+already measured (Gurobi-gated pools, capacity-vs-outcome, SSP climate axis, Claim C linear-arm
+limit, and the "capture lands at target (not above)" pass criterion that co-capture refutes) — they
+remain owed to a future revision; the validation notebook keeps the measured-corrected verdicts. **Implemented scope = through Gate 0 ONLY, then report back** — Gate 1+, manifest
+freeze, and all Gurobi work wait on that review. **The whole campaign lives in `analyses/y2y/` (self-contained, 2026-08-18)** — the old `03a_y2y` /
+`04a_y2y` root notebooks were MIGRATED here (outputs preserved; root-finding bootstraps added so
+they run from the subfolder; `03b/03c`, `04b/04c` stay at root). Each notebook runs top-to-bottom
+by Ethan, in numeric order: **`01_feature_audit.ipynb`** (Gate 0a: the §2.5 protocol over
+`leverage_core`'s audit battery — `classify`/`characterization_table`/`trajectory_figure`/
+`audit_archive`; constants FROZEN in `config.AUDIT`; archives budget-independent curves per spec
+D2) → **`02_solve.ipynb` × 4–5** (the migrated 03a; Gate-0 arms in the RUN LEVER: `a0_control`/
+`a1_protocol`/`a2_flat30`/`a3_flat40`/optional `a4_pullcheck`, ALL with **`WEIGHTS <- TARGETS`**,
+i.e. w = t so pull `w/t` stays 1.00 and only the stopping point varies; **the lever call is
+`ctx <- pr_override(...)` DIRECT assignment — never `modifyList(ctx, pr_override(...))`, which
+deep-merges dict params so an arm's targets would MERGE with the config baseline instead of
+replacing it; check the printed `EFFECTIVE targets:` line, `<none>` on a0**) →
+**`03_gate0_validation.ipynb`** (verdict tables) → **`04_results.ipynb`** (the migrated 04a;
+deep-dive one arm via its `RUN` variable). Gate-0a classifications (verified in code):
+m_soc → concentrated-satiating (target **0.332**); **biomass REVERTED to diffuse-linear** by R2's
+tail-mass criterion (implied target 0.066 < t_min 0.15) so `config.TARGETS`' biomass entry is
+superseded by the protocol; intactness → R3-inexpressible; 36/40 EFGs rare-attainable.
+**Measured on the superseded w=1 run (`iter7_y2y_r1_density5x`, 2026-08-18):** m_soc parked at
+EXACTLY 0.332; biomass landed at 0.259 vs its 0.066 target — **min-shortfall never penalizes
+exceeding a target** (excess = incidental co-capture, expected, not a failure; the spec's "lands
+at target (not above)" pass criterion is wrong as written → v0.8 list); and the solve took
+**4,289 s (~71 min, mostly HiGHS presolve) — NOT the 12 s of the untargeted LP**. Known spec-v0.7
+errors carried for the v0.8 revision: shuffle-on-HiGHS fallback is false (all near-optimal
+portfolios need BINARY decisions → Gurobi-gated), "36/40 EFGs saturate" conflates capacity with
+outcome (5 did in iter6), climate axis must be **SSP245 vs SSP585 both 2071–2100** (not
+"RCP4.5-2050s vs RCP8.5-2080s"), and Claim C's `w = influence/leverage` only holds on the linear
+arm. 06's planned plausible-range ensemble is **superseded** by this study — do not build both.
+
 ## Structure — two notebooks + shared config
 
 - **`config.py`** = single source of truth imported by both notebooks: `DATASETS`
@@ -109,18 +177,33 @@ Reference / masks / excluded:
   (`is_raster`/`find_rasters`/`pick_representative`), and `study_area()`. Add a dataset
   by adding one entry. Per-entry flags: `multi` (True only for `iucn_efg`), `resampling`
   (`average`/`bilinear`/`nearest`), `build_vrt` (True only for `human_modification`),
-  `orient` (`complement` for gHM→intactness, `invert` for velocity→refugia, else raw).
+  `orient` (`complement` for gHM→intactness, **`reciprocal` for velocity→refugia**, else raw;
+  `invert` is SUPERSEDED but kept so pre-2026-08-17 runs reproduce — see the leverage note below).
   Also holds `HANDOFF_DIR`, `PA_VECTOR`, QA knobs `CONNECTIVITY_CAP_PCTILE` (None =
-  no cap) / `CARBON_FLAG_PCTILE`, the **prioritizr run params** — `OBJECTIVE`
-  (`min_shortfall`/`max_utility`/`min_set`), `BUDGET_PCT=0.30`, `TARGET_PCT=1.0`, `NORM_TOTAL`,
+  no cap) / `CARBON_FLAG_PCTILE` / **`LEVERAGE_MIN=0.10`**, the **prioritizr run params** — `OBJECTIVE`
+  (`min_shortfall`/`max_utility`/`min_set`), `BUDGET_PCT=0.30`, `TARGET_PCT=1.0`, **`TARGETS`**
+  (per-feature target overrides; see 03), `NORM_TOTAL`,
   `SOLVER`/`HIGHS_SOLVER`/`SOLVER_TIME_LIMIT`, `DECISION_TYPE`, `PROTOTYPE_AGG_FACTOR`,
-  `OPT_GAP`, `PORTFOLIO_N/GAP`, `CONNECTIVITY_PENALTY`, `BOUNDARY_PENALTY`, `EXCLUDE_FEATURES`,
-  the 04 cluster knobs (`CLUSTER_MIN_CELLS`/`CLUSTER_MAX_PLOTS`) — plus
+  `OPT_GAP`, `PORTFOLIO_N/GAP`, `CONNECTIVITY_PENALTY`, `BOUNDARY_PENALTY`, **`NEIGHBOR_PENALTY=0`**,
+  `EXCLUDE_FEATURES`, the 04 cluster knobs (`CLUSTER_MIN_CELLS`/`CLUSTER_MAX_PLOTS`) — plus
   `RESULTS_DIR`/`RESULTS_SUBDIR`/`MANIFEST_PATH`, and
   `write_manifest()` (the Python→R contract writer). Notebooks `importlib.reload(config)`
   to pick up edits.
 - **Resampling rule:** native finer than 1 km → `average` (down-sample); coarser/≈1 km →
   `bilinear` (up-sample); categorical (EFG) → `nearest`.
+- **`leverage_core.py`** (added 2026-08-17) = the concept that reorganised the whole y2y-wide
+  analysis. **LEVERAGE** = the range of a feature's captured fraction the budget can possibly span
+  (share held by its richest `BUDGET_PCT` of PUs minus its poorest). At leverage ≈ 0 the feature's
+  min-shortfall term is near-constant across *every* feasible selection, so its weight multiplies a
+  constant and **cannot move the answer** — no re-weighting helps. It reproduces 06's Morris μ\*
+  ranking at **Spearman +0.922 with zero solves**, so `w_f × leverage_f` decomposes the objective's
+  achievable swing exactly. Three uses: the 02 QA gate (`report`, flags below `LEVERAGE_MIN`),
+  deriving targets from a density rule (`target_cost_curve`), and reading a low-leverage radar axis
+  honestly (`achievable_band`). **Two traps it exposes, both live:** an ADDITIVE orientation flip
+  destroys leverage under 03's sum-normalization (`vmax−v` cost macrorefugia 75%, `1−gHM` cost gHM
+  94%) — prefer multiplicative; and leverage bounds achievable swing but says nothing about its
+  AREA PRICE, which is why 36 of 40 EFGs score ~1.0 (rare enough to fit in the budget entirely,
+  so bought cheaply) yet rank below carbon in Morris.
 
 ### `01_raster_inventory.ipynb` — exploration (read-only)
 
@@ -175,13 +258,26 @@ nothing reaches `aligned_stack/`, the manifest, or a solve (`write_manifest` bui
 
 **Stage 2 — orient → mask → QA → COG** (numpy + rasterio, in memory; grid is small):
 - **Orient** so higher = more conservation value: gHM→intactness (`1−gHM`, clip [0,1]),
-  backward velocity→refugia (`vmax−v`, vmax over the reference extent); carbon/connectivity
-  already more=better. All features forced non-negative.
+  backward velocity→refugia (**`1/v`** — refugial residence time, yr/km; loud assert on `v<=0`
+  rather than a silent epsilon floor, min over the PU is 0.097); carbon/connectivity
+  already more=better. All features forced non-negative. **`vmax−v` was replaced 2026-08-17**: the
+  additive flip does not cancel under 03's sum-normalization, so it crushed the layer's leverage
+  0.353 → 0.090 and made macrorefugia the least influential factor in 06 — an artefact of the
+  orientation, not a property of the climate data. `1/v` restores it to **0.422**, above the raw
+  layer's own 0.353, with a verified-safe tail (max 10.3, top 100 cells = 0.1% of total).
 - **One PU mask** = cells valid in **all continuous features** (EFG `0`=absent is valid, so
   EFGs don't constrain it). Applied identically to every feature **and** the uniform
   `cost_uniform`=1 layer → no cell valid in one layer but NoData in another.
 - **QA (surface, don't silently transform):** flag carbon tail cells (`CARBON_FLAG_PCTILE`);
   print connectivity quantiles and cap **only** if `CONNECTIVITY_CAP_PCTILE` is set.
+- **Stage-2 leverage QA (added 2026-08-17, cell over `leverage_core`).** The last gate before the
+  stack reaches 03: prints per-feature leverage + the `w × leverage` influence share and **asserts**
+  that the only feature below `LEVERAGE_MIN` is `human_modification`. That one is flagged
+  DELIBERATELY — gHM is not recoverable by rescaling (a p1–p99 stretch only reaches 0.084), and the
+  decision was to leave the layer alone and report the consequence (04a `footprint_audit`) rather
+  than add an uncalibrated dial. Any *other* flag stops the run: classify it as (a) an orientation
+  artefact, (b) 1 km aggregation flattening, or (c) genuine uniformity → report, never manufacture
+  signal. Exists because 06 spent 130 solves discovering arithmetic.
 - **Outputs = COGs** in `input_data/aligned_stack/` (`HANDOFF_DIR`; EFGs in `iucn_efg/`):
   continuous features + cost are float32/NaN-NoData; EFGs + `mask_protected_areas` are
   uint8 with `255`=NoData (so EFG `0` stays a valid value).
@@ -195,6 +291,11 @@ nothing reaches `aligned_stack/`, the manifest, or a solve (`write_manifest` bui
   **not** require a trip back to 02.
 
 ### `03a/03b/03c` — three analyses over `prioritizr_core.R` (R, kernel `y2y-r`)
+
+> **03a MOVED (2026-08-18): the corridor-wide solve notebook is now
+> `analyses/y2y/02_solve.ipynb`** (part of the flagship campaign above; outputs preserved, R
+> root-finding bootstrap added, RUN LEVER carries the Gate-0 arms). 03b/03c remain at root and are
+> unchanged. Everything below about the shared engine still applies to all three.
 
 **03 was split (2026-07-20)** into three thin notebooks — `03a_y2y` (corridor-wide),
 `03b_north_bc` (connect 4 draft IPCAs: crop to their buffered bbox, lock them in, up-weight
@@ -221,139 +322,145 @@ solving against a stale manifest — the drift bug that once mislabelled an iter
 needs re-running when the *stack itself* changes. **All run params come from `config.py` via
 the manifest.** Current
 choices (full rationale + history in project memory `prioritizr-run-design`):
-- **Objective** = `OBJECTIVE` knob. Current **`min_shortfall` with `TARGET_PCT=1.0`** under a
-  **30%-of-area budget** (`BUDGET_PCT`) ≡ maximize the captured *fraction* of every input.
-  Also supports `max_utility` and `min_set`. **Caveat:** min-shortfall@100% favours spatially
-  *concentrated* inputs (carbon dominates; some EFGs neglected) — unresolved, see memory.
+- **Objective** = `OBJECTIVE` knob. Current **`min_shortfall`, default `TARGET_PCT=1.0`** under a
+  **30%-of-area budget** (`BUDGET_PCT`). Also supports `max_utility` and `min_set`. **The
+  "concentrated inputs dominate" caveat is now QUANTIFIED, not vague:** influence ∝
+  `w_f × leverage_f`, so under equal weights the two carbon pools held **39.7%** of the objective's
+  achievable swing and were captured at 45.5%/41.8% (**1.52×/1.39× area share**) while every other
+  value landed at 0.96–1.06× — the map was "the best 30% for carbon, everything else proportional".
+  Note this is NOT fixable by switching objective: min_shortfall / max_utility / min_set are all
+  linear in captured fraction, so the only levers are **weights** and **feature definitions**.
+- **Per-feature targets (`config.TARGETS`, added 2026-08-17) — the carbon lever.** A target is a
+  STOPPING RULE, not a weight: under min-shortfall a feature that reaches its target contributes
+  zero and stops competing for area, and since the objective is linear the solver was already
+  taking that feature's *densest* cells first. So a low target = "grab the hotspots, pass over the
+  mediocre pixels, reallocate the rest". Preferred over re-weighting because it is a policy
+  statement ("we aim to secure 33% of mineral-soil carbon") rather than a tuning knob.
+  **Values are DERIVED, not chosen** — the rule "keep taking cells while marginal density ≥ 5× the
+  regional mean" via `leverage_core.target_cost_curve` gives m_soc **0.332** (cutoff 304 t/ha, 4.1%
+  of the region) and biomass **0.066** (cutoff 106 t/ha) — biomass demotes itself because it has
+  almost no exceptional tail. **DO NOT lower every target**: if all became simultaneously
+  achievable, shortfall is zero everywhere, the objective is flat, and the solver returns an
+  arbitrary member of a huge optimal set. Foundational features stay at 1.0. Carried through the
+  manifest as a NAME→value object and rebuilt R-side by `pr_targets` via `names(features)` lookup,
+  so it cannot silently misalign; unknown names and out-of-range values `stop()`. **Set per
+  analysis** — 03b/03c keep `{}`.
+- **The RUN LEVER (03a cell 2) is where a sweep is driven from, NOT `config.py`.** `pr_override`
+  patches `targets` + `results_subdir` into `ctx$params` after `pr_setup` (recomputing `out_dir`/
+  `run_tag`, else the run overwrites whatever config pointed at), and `stop()`s on a param name
+  the manifest doesn't define so a typo can't silently no-op into two identical runs. Overrides
+  are deliberately NOT written back to `manifest.json`; `pr_build_problem` already snapshots
+  `solve_params` and `pr_write_outputs` records those, so **`run_summary.json` is the record of
+  what was actually solved** and is what sweep runs should be compared on. Same principle as
+  `ensemble_core` patching a copy of the manifest per run rather than mutating `config.py`.
 - **Normalization:** each feature sum-normalized to total = `NORM_TOTAL` (1e5) so 100% targets
   stay < 1e6 (prioritizr presolve guard); scale-invariant for min-shortfall.
 - **PAs locked in** (counted toward budget); **EFG down-weighting** (`add_feature_weights`,
   continuous @1, each EFG @1/40); `sl_soc` carbon excluded (`EXCLUDE_FEATURES`).
 - **Solver/decisions:** `SOLVER="highs"` + `DECISION_TYPE="proportion"` (LP, ~99% integral) is
   the **working prototype** — the binary MILP chokes HiGHS presolve at 1 km, and the real
-  **Gurobi MGA gap-portfolio** (`add_gap_portfolio`, binary) is **blocked by a TRIAL Gurobi
-  license** (need a free academic one). The boundary-penalty LP needs `HIGHS_SOLVER="ipm"`
+  **Gurobi MGA gap-portfolio** (`add_gap_portfolio`, binary) is **still blocked — now by the
+  8-core cap on the new WLS licence, not the old size cap** (see Environment). The
+  boundary-penalty LP needs `HIGHS_SOLVER="ipm"`
   (dual simplex times out). `SOLVER_TIME_LIMIT` caps the solve — **a timed-out run returns an
-  infeasible point (area > budget); discard it.**
-- **Spatial penalties:** `CONNECTIVITY_PENALTY` (corridors, off) and `BOUNDARY_PENALTY`
-  (compactness/clustering, on — edge-normalized, uncalibrated). The boundary penalty adds a
-  constraint per adjacent cell pair → huge LP → run at `PROTOTYPE_AGG_FACTOR=2` (2 km).
+  infeasible point (area > budget); discard it.** With every penalty off, the 1 km LP solves in
+  **~12 s**, so time limits are no longer the operative constraint for y2y.
+- **Spatial penalties: ALL OFF as of 2026-08-17.** `CONNECTIVITY_PENALTY` (corridors) was always
+  off; `BOUNDARY_PENALTY` needs `PROTOTYPE_AGG_FACTOR=2`; and **`NEIGHBOR_PENALTY` is now 0** —
+  compactness moved OUT of the optimizer to post-hoc delineation. Three measured reasons:
+  (1) at 1e-5, an uncalibrated first guess, Morris ranked it the **3rd** largest driver of the map
+  and it **relocates a third of the selection** (Jaccard 0.662 vs the unpenalized `iter2_lp_1km`);
+  (2) it wasn't creating the structure — the unpenalized solution is already **66.6% clustered by
+  area** (blocks ≥100 km²) with singletons just 3% of new area; (3) it cost **400× the solve time**
+  — 1 km takes **12 s** without it vs **4,826 s** with it, and every 06 timeout, the 6 h cap, the
+  machine contention and the 2 km screening compromise trace to this one term. Removing it makes
+  the ensemble affordable at full 1 km and matches 05's D9 (ship a graded surface, not hard lines).
 - Outputs → `output_data/<RESULTS_SUBDIR>/`: `portfolio.tif` (proportion→float, binary→uint8),
   `selection_frequency.tif`, `portfolio_representation.csv` (`relative_held` → 04 radar),
   `run_summary.json`.
 
-### `05_corridors_north.ipynb` — least-cost corridors over `corridors_core.py` (Python)
+### `05_corridors_north.ipynb` — least-cost corridors, **v2** (Python)
 
-**Standalone corridor analysis (2026-07-23), NOT prioritizr.** Connects the northern proposed
-IPCAs + existing PAs with **least-cost routing** — the tool the prioritizr connectivity *penalty*
-could not be (the penalty aggregates permeable land; this *routes* between nodes). Driver = the
-transboundary connectivity current-density (with gHM as a barrier guard). `corridors_core.py`
-(`skimage.graph.MCP_Geometric` cost-distance + Prim MST + traceback centre-lines + swaths); params
-in `config.CORRIDORS["north"]`; outputs → `output_data/corridors_north/` (corridors.tif/.gpkg,
-resistance.tif, corridor_summary.json). Kernel `y2y-geo`. Reuses `config._load_source` and the
-`results_core` map colours. **Resistance = a config-driven BLEND of driver layers** (current-density
-+ climate corridors + refugia, each stretched 0-1, weighted) × a gHM barrier — edit
-`resistance.drivers`. **`corridor_ensemble`** (the MGA analog) perturbs the resistance `n_runs`
-times → `corridor_frequency.tif` (robust core vs flexible) + `corridors_alt{k}.gpkg` (distinct
-near-optimal networks). Tune `corridor_width_frac`, the driver weights, and
-`ensemble.{n_runs,jitter}`.
+Standalone corridor analysis, NOT prioritizr: it **routes** between anchor areas, which the
+prioritizr connectivity penalty could not do (that aggregates permeable land; it cannot answer "how
+does an animal get from park A to park B"). Kernel `y2y-geo`.
 
-**Driver scaling (`resistance.scale`, decided 2026-07-27).** `"minmax"` stretches each driver over
-`[lo_pctile, pctile]`; `"zero_max"` is the old `layer/pctile`. minmax is required because the drivers
-don't all start at zero — macrorefugia runs ~10-15, so zero_max left it near-constant and **inert**
-(corr with resistance −0.03 → −0.10 after the fix). Anchors are **p1/p99**: NOT p0/p100 (connectivity's
-p100=65.4 vs p95=3.86 is a single-pixel pinch-point tail; anchoring there flattens resistance to a 2.2×
-spread and the router stops following the landscape), NOT p5/p95 (clipping the bottom 5% to 0
-manufactures hard walls at `perm_floor`). Top-end clipping costs little either way — `resistance=1/perm`
-compresses the good end by construction. Directions verified empirically: all three drivers correlate
-negatively with resistance, and the aligned `human_modification` layer really is **intactness**
-(`orient="complement"`), so `gHM = 1 − it` feeds `base**gHM` correctly.
+**REBUILT 2026-08-07 (decisions D1–D10).** Full rationale in **`docs/05_methods_v2.md`** — read that
+before changing anything here. v1 is frozen at git tag **`05-v1`**, outputs in
+`output_data/corridors_north/_v1_frozen/`, notebook `archive/05_corridors_north_v1.ipynb`, config
+`configs/corridors/v1_baseline.json`. What changed:
 
-**`run_scenarios` / `compare_map` (2026-07-28).** `config.CORRIDORS[key]["scenarios"]` names
-driver-stretch variants (currently `p1_p99` = `primary_scenario`, `p5_p95`); a scenario overrides
-**only** the stretch anchors. `cc.run_scenarios(A)` replaces the resistance→ensemble cells and solves
-each end to end, stashing a snapshot per scenario on `A.scenarios` — it deliberately **drops
-`A.cwd`/`A.mcp` between scenarios** (one float64 grid per node ≈ 800 MB at 1 km) and restores the
-primary onto `A`, so `map`/`write_outputs` are unchanged. `cc.compare_map(A)` = one row per scenario
-(corridors | robustness) + a difference panel; `cc.compare_resistance(A)` is a **separate** plot of the
-resistance surfaces on a **shared** log scale (they were a greyscale backdrop inside `compare_map` —
-which both collided with the grey PAs and cluttered the corridor panels). Both frame to the **working
-region** via `_region_extent`/`_nodes_overlay` (drawing `A.outline` otherwise expands the axes to the
-whole Y2Y and wastes the canvas on the empty southern tail; `map()` keeps its wider framing). Diff
-palette avoids the PA grey: shared = orange `SHARED_COLOR`, per-scenario = purple/blue.
-`write_outputs` writes the primary at the top level **plus** a full set per scenario in `<scenario>/`,
-and adds `scenarios` + `scenario_jaccard` blocks to the summary. **Figures land in
-`output_data/corridors_north/figures/` (`A.fig_dir`), not the project `figures/` dir.**
-Pre-fix figures (raw swath): p1_p99 29,031 km²/1,187 centre-line cells, p5_p95 33,185/1,295,
-**Jaccard 0.72**, both 1 connected group — same 44 MST edges and trunk, differing at a few links.
-**Superseded by the node-land fix below — re-run 05 to refresh every corridor number and figure.**
+- **D1/D2 — resistance is the published movement-cost surface, not a blend.** v1 blended Pither
+  current density (0.5) + Carroll climate corridors (0.3) + AdaptWest macrorefugia (0.2), raised to
+  `conn_exponent`, floored, and multiplied by `10**gHM`. That triple-counted human footprint, used a
+  circuit-theory OUTPUT as a routing INPUT, and mixed climate-**analog** layers into **movement**
+  cost. Every blend knob is deleted, and `resolve()` **raises** if one reappears in config.
+  The layer is `input_data/transboundary_connectivity/Movement_Cost_Layer.tif` — the **O'Brien et al.
+  transboundary extension of Pither et al. 2023** (seamless US+Canada), which shipped in the same
+  download as `Raw_CurrentDensity_Map.tif` and was never registered. EPSG:3347, 300 m, values
+  strictly `{1, 10, 100, 1000}`.
+- **D6 — corridor band is an ABSOLUTE cwd cutoff**, not a fraction of edge cost (which made corridor
+  width scale with edge cost). `cwd_cutoff_abs` is **calibrated** by `cc.calibrate_cutoff` to
+  reproduce v1's 18,188 km² on **MST-only** edges, so v1↔v2 comparisons aren't confounded by band
+  size; augmentation area is reported separately.
+- **D7 — MST + bridge-backup augmentation.** The originally drafted criterion (keep any direct edge
+  with cost ≤ α × MST-path cost) was **vacuous** — least-cost distance obeys the triangle inequality,
+  so it admits the complete graph. `alpha` is retired. Replaced by sequential bridge backup, in
+  descending criticality with recomputation, under a cost-ratio ceiling **`beta`**; links where
+  nothing clears the ceiling are flagged **irreplaceable**, and those flags are the headline output.
+- **D8 — structured ensemble** (`corridors_ensemble.py`) replaces the uniform-noise jitter: axis B
+  band cutoff, C node leave-one-out, D β sweep. Axis A deferred (**H2**).
+- **D9 — the deliverable is a graded `linkage_priority.tif`**, not hard corridor lines.
 
-**Corridor = NEW LAND only; nodes de-duplicated (2026-08-05).** Two defects, both in accounting, not
-in routing. (1) The swath test passed *inside* the source node by construction — `cwd[i]` is 0 across
-the whole of node i, so `field = cwd[i]+cwd[j]` sits at its minimum there — putting **37% of the raw
-swath (10,843 of 29,031 km²) on ground that is already a PA or an IPCA proposal**, and making map
-panel 1 (corridor drawn over nodes) contradict panel 3 (nodes drawn over frequency). `_network_from_cwd`
-now returns `corridor = swath & ~node_union` (`A.node_union`, built in `load`); the raw swath survives
-as `A.swath` → `swath_incl_node_land_km2` in the summary. All consumers agree now — map legend
-("new land"), summary, gpkg/tif, and the star plots, which always used `corridor & ~nodes`.
-(2) Both source layers mix **nesting designation tiers** and neither is de-duplicated (the PA dissolve
-is by name only), so one place entered as two nodes: Teetł'it Gwinjik ⊂ Peel Watershed SMA/WA
-(4,143 km², both IPCA), Fishing Branch Wilderness Preserve ⊂ its HPA (5,353 km², both PA), Neah
-Conservancy ⊂ Ne'ah – Horseranch Range Deadwood Lake PA (2,293 km², both PA) — ~11,800 km²
-double-counted, and those three nodes came out 100% "corridor". `_dedupe_nodes` merges nodes whose
-**rasterized masks** share ≥ `nodes.dedupe_overlap_frac` (0.5) of the smaller — masks, not polygons,
-because a shared cell is exactly what makes the cost distance 0. **45 → 42 nodes** (10 IPCA + 32 PA;
-all three merges are within-layer, so the IPCA/PA map colours and the 04-style benchmark split are
-untouched). Cross-layer overlap is only **384 km² (0.2%)** — all slivers, e.g. Dene Kʼéh Kusān wraps
-*around* 11 BC parks clipping each by 2-63 km², which is why the test needs a fraction, not a cell.
-Those slivers still yield zero-distance MST edges, so `n_mst_edges` is now reported alongside
-`n_mst_edges_separated` (was 44 edges, only 29 between separated nodes). **Dedup does not change the
-routing** — Prim over a zero-distance pair takes the zero edge and then connects the rest exactly as
-the merged node would; it corrects the accounting only.
+**TWO GRIDS, and this is a correctness requirement.** Routing is **300 m** (native, so roads survive
+— verified: the cost-10 class forms linear features up to 395 km long); the **co-benefit audit stays
+at 1 km**. `results_core.mask_profile` sums a feature over the mask while `_region_total` computes
+the denominator at native 1 km with no finer-than-source path, so profiling a 300 m mask would
+inflate every "% of Y2Y" figure ~11× while looking plausible (and cost ~10 GB of stacks). `A.template`
+is the 300 m routing grid; `A.audit_template` is pinned to a 1 km hand-off layer; `_to_audit` crosses
+masks at the boundary. **This overrides the 1 km grid decision for 05 only** — 02/03/04/06 stay 1 km.
 
-**`corridor_profile` — co-benefit audit (2026-07-28).** Value star plots for the corridors, reusing
-04's `results_core.mask_profile` + `plot_stars` **unchanged**. `_profile_stacks` is a minimal stand-in
-for `build_stacks` (which is coupled to a solved run): it hands `rc._scaled`/`_read_match`/
-`_region_total` a namespace whose grid reference is **05's own grid**, so 05 stays standalone from
-03/04. Compares three areas — corridor's own new land, proposed IPCAs, existing PAs.
-**Mask must exclude node land** (as of 2026-08-05 `A.corridor` already does; the `& ~nodes` here is a
-guard): swath bands radiate from the nodes, so **37% of the raw swath lies inside PA/IPCA polygons**
-and profiling it whole would credit corridors with already-protected land (18,188 km² new, 1.43% of
-Y2Y — this was always the right number, and is now what every other output reports too).
-Two scalings coexist: richness = 0-1 over the **northern
-window**; contribution/efficiency = **full-Y2Y** denominators. **Frame as an audit, not a scorecard**
-— corridors are routed for permeability, so a low value axis is a finding. RESULT: corridors are
-**complementary, not redundant** — per 1,000 km² they beat both PA sets on biomass carbon (0.127 vs
-0.050/0.068), connectivity (0.105 vs 0.088/0.084) and AOH richness, while the PAs/IPCAs dominate
-**soil carbon** (0.119-0.125 vs 0.063). Outputs `corridors_stars_{richness,contribution,efficiency}
-.png` + `corridor_profile.csv`.
+**Modules.** `corridors_prep.py` (one-off warp + gate G2) · `corridor_graph.py` (raster-free: MST,
+augmentation, quotient-graph centrality, criticality, `selftest()`) · `corridors_core.py` (grid,
+nodes, CWD cache, bands, priority surface, audit, maps) · `corridors_ensemble.py`.
 
-**Corridor SEGMENTS (`n_groups=10` = a CEILING on clusters, default).** The corridor is profiled per
-geographic segment, not as one blob: **removing the node polygons cuts the network at every PA/IPCA,
-so the connected components ARE the physical links** — 23 of them. **Changed 2026-08-05: the 10
-LARGEST components seed the clusters and every remaining component is absorbed into its nearest
-seed**, so the segments account for 100% of corridor area. The old top-10 cut left 13 components
-(1,133 km², 6%) plotted nowhere — printed, but absent from the stars and the CSV, a coverage hole in
-an audit whose point is completeness. **Seeded, not free clustering:** average-linkage over all 23
-centroids was tried first and allocates panels by ISOLATION rather than importance — it spent two of
-ten panels on 8 km² and 67 km² far-north slivers while merging the two biggest links away, and a
-7-component cluster named after 2 touched nodes is a dishonest label. Seeding keeps **one panel = one
-physical link + its small neighbours**, so the "X ↔ Y" naming holds and the profiles stay comparable
-to the previous run. **Nearest by CELL, not centroid** (segments are long and sinuous, so a scrap can
-be adjacent to a link but far from its centroid): one `distance_transform_edt` over the seed union
-gives every cell its nearest seed cell, and each component's own closest cell picks the owner.
-Result on p1_p99: 23 → 10 clusters, **437 to 3,162 km²**, seven of them multi-part; the seeds match
-the previous CSV rows exactly (top row still 2,901 km²) and 17,055 + 1,133 = 18,188 km² reconciles.
-Clusters are numbered **north→south**
-and named by the nodes their cells touch (via `binary_dilation` against a node-id raster), e.g. "3.
-Dene Kʼéh Kusān ↔ Nahanni"; `seg["parts"]` carries the component count and `seg["anchor_xy"]` puts
-the map number on the LARGEST part (a multi-part cluster's overall centroid can fall on empty
-ground). **IPCAs and existing PAs stay WHOLE units** — and are unaffected by the node de-duplication
-above, since those rows are boolean unions (verified: masks bit-identical, 146,525 / 78,405 km²). `_short_node_name` strips the IPCA·/PA· prefix,
-parentheticals and generic designations ("Nahanni National Park Reserve Of Canada" → "Nahanni") for
-star titles — the full names collide on a 4.8" polar panel; map legend and CSV keep them.
-`cc.corridor_group_map(A)` draws the numbered map from the same `A.groups`, so numbering cannot drift
-from the stars. `n_groups=None` restores the single whole-network profile.
+**Run convention.** `config.CORRIDORS["north"]` is the editable baseline; `cc.start()` resolves it,
+writes `run_config.json` (params + git SHA + input hashes) into
+`output_data/corridors_north/v2_runNNN/`, and the engine then reads **only** that file. Provenance is
+load-bearing because `output_data/` is gitignored — the run dir is the only record that survives.
+
+**CWD caching is what makes the ensemble affordable:** cost-weighted distance depends only on
+(resistance, node seeds), and axes B/C/D change neither — axis C drops a node, which deletes a row
+and column from the distance matrix but leaves every remaining node's field bit-identical. So the
+whole ensemble reuses one cached CWD set. Cached as float32 memmaps under
+`input_data/corridors_300m/cwd_cache/<sha>/`.
+
+**Gates** (asserted notebook cells; no pytest in this repo). **G1 is the one that matters**: it runs
+the new engine on **v1's own frozen resistance and grid** with MST-only edges and the relative band,
+and requires v1's corridor back — isolating the refactor from every semantic change. **Measured:
+Jaccard 1.0000**, 41 edges (12 zero-cost), 18,188 km². Also G0 node identity (42 nodes = 10 IPCA +
+32 PA, same three dedupe merges), G2 warp fidelity, G3 raster-vs-graph component agreement, G4
+β=0 ⇒ MST, G5 audit invariance, G7 cache reuse, G8 dead-config detection.
+
+**Two traps preserved in comments — do not "optimise" them away.** `find_costs` returns MCP's
+internal buffer (must copy); and `mcp.traceback` reads whichever `find_costs` ran **last**, so
+regrouping traceback calls silently returns paths from the wrong source node with no exception. G1
+is what catches that.
+
+**Zero-cost "adjacency" edges (12 of 41)** — node pairs that already touch, chiefly Dene Kʼéh Kusān
+wrapping 11 BC parks. Kept in the graph, contributing **no corridor land**; centrality computed on
+the **quotient graph** (contracting zero-cost cliques is the correct physics, not a numerical
+nuisance — and it is computation-scoped, so the 2026-08-05 dedupe decision is untouched); excluded
+from failure enumeration and backup candidacy, since their failure mode is the *node* disappearing,
+which leave-one-out covers. Flooring the cost is explicitly rejected — it would invent corridor land
+between abutting polygons.
+
+**Incidental finding, applies beyond 05:** v1's routable area was a strict subset of v2's (751,614
+vs 872,725 km²) because v1 inherited the prioritizr PU mask. That mask is set by
+**`irrecoverable_carbon_biomass`**, whose footprint (1,274,564 km²) is the binding constraint — every
+other continuous feature covers ~1,551,000+ km² of the 1,551,654 km² buffered study area. So ~18% of
+the study area is excluded from **every** prioritizr solve (03/04/06) by one layer's coverage.
+Flagged, not acted on.
 
 ### `06_uncertainty_analysis.ipynb` — GSA over `ensemble_core.py` + `run_one.R` (Python)
 
@@ -374,8 +481,14 @@ after 03/04; it consumes the same aligned stack. Kernel `y2y-geo`.
   `run()` is **resumable** (skips rows with a `run_summary.json`), runs `workers × threads`
   concurrently, logs per run. `collect()` returns a tidy table + an allocation matrix on a common
   domain; it deletes `selection_frequency.tif` (identical to `portfolio.tif` when `n_sol == 1`)
-  and **flags** infeasible/timed-out runs — `analyze_morris()` then *refuses* rather than
-  analysing around them, because a Morris design with holes is invalid.
+  and **flags unusable runs** — `analyze_morris()` then *refuses* rather than analysing around them,
+  because a Morris design with holes is invalid. **The flag was wrong until 2026-08-07**: it tested
+  only `over_budget` (area > budget), but a timed-out solve stops wherever it had got to and usually
+  lands *under* budget, so the area test passes it. In the first 130-run batch **19 runs hit the
+  7,200 s limit and exactly 1 was caught**. `collect()` now records `timed_out` (on the clock) and
+  `over_budget` (on the area) separately plus a combined `unusable`, and reports **which
+  trajectories** are hit — the number that matters, since an elementary effect is a difference
+  between consecutive runs *within* a trajectory.
 - **Config**: `ENSEMBLE` (rscript/driver/workers/threads/agg_factor/time_limit) and `MORRIS`
   (r=10, num_levels=4, seed, and the **12 factors** — 8 continuous feature weights + EFG group,
   each as a log2 multiplier ×0.25–×4; `budget_pct`; `target_pct`; `neighbor_penalty` as log10).
@@ -385,18 +498,104 @@ after 03/04; it consumes the same aligned stack. Kernel `y2y-geo`.
 - **Gates before the batch**: **G1 equivalence** (driver at 1 km must reproduce
   `iter5_lp_1km_neighbor`: same PU/budget/locked, Jaccard 1.0) → **G2 scale transfer** (fresh 2 km
   baseline vs the 1 km headline; `iter4_lp_2km_compact` can't serve — wrong penalty, predates
-  `neighbor_penalty`) → **G3 noise floor** (10 identical solves at the same thread config; with
-  `OPT_GAP=0.10` solutions aren't proven optimal, and Morris effects are *differences*, so an
-  effect below the floor is solver noise, not signal).
+  `neighbor_penalty`) → **G3 noise floor** (10 identical solves at the same thread config; Morris
+  effects are *differences*, so an effect below the floor would be solver noise, not signal).
+  **G3 measured 0.000000, which is the CORRECT answer here, not a broken gate**: with
+  `decision_type="proportion"` this is an LP, HiGHS IPM is deterministic, and `OPT_GAP` is a *MIP*
+  gap and therefore inert. The "solutions aren't proven optimal at a 10% gap" concern applies only
+  to a binary Gurobi run. A zero floor means all downstream variance is attributable to inputs.
+- **Batch 1 (130 solves) failed, was repaired, and the cause was ENVIRONMENTAL — not the parameter
+  space (2026-08-07).** 19 runs hit the 7,200 s limit, **18 of them silently** (see the flag bug
+  above), and they were not randomly placed: **all at `budget_pct` 26.67%**, confined to **2 of the
+  10 trajectories** — damage correlated with a factor level, the one thing a Morris design cannot
+  absorb. Fix = `ENSEMBLE["time_limit"]` **7200 → 21600** + delete those 19 run dirs + re-run `run()`
+  (resumable → 111 skipped, 19 re-solved). **The re-solves took 109-2,904 s, median 212 s** — same
+  parameters, same `agg_factor`/solver/`workers`/`threads`, only the cap differed, and a cap cannot
+  make a solve faster. So the stalls were **machine contention / memory pressure** (three heavy
+  neighbour-penalty solves overlapping), NOT LP degeneracy at that budget level — an earlier
+  degeneracy reading of the same numbers was wrong. Practical lesson: **a wall-clock cap is a poor
+  convergence proxy**, since it conflates "hard problem" with "busy machine", and the batch stayed
+  silently corrupt because the only validity test was on area. Watch `solve_seconds` spreads across
+  a batch as a load symptom, and keep `agg_factor`/solver/`highs_solver`/`threads` identical across
+  re-runs (thread count can change where an interior-point solve stops).
 - **Phase 3** = 130 solves (r(k+1)). Metrics: `dissim_vs_base` (1 − Jaccard vs baseline, primary),
   `held_*` per feature, and `pct_region` as a **deliberate validity check** — selected area must
   track `budget_pct` and nothing else. Outputs μ*/σ table, the μ*-vs-σ scatter, and **per-cell μ\***
   maps (computed by a vectorised elementary-effects routine, since 300k SALib calls is infeasible;
   `cross_check()` asserts it equals SALib on a scalar — verified to 1e-16). Figures → `figures/`.
-- Requires **SALib** (added to `requirements.txt`). Phase 4 (Sobol' vs crossed factorial) is
-  decided at the Phase-3 gate; Phases 1b / 5 / 7 remain out of scope.
+- **The primary metric's REFERENCE was wrong until 2026-08-07, and fixing it changed the headline.**
+  `add_baseline_metrics(df, A, base_row=0)` took row 0 of the **Morris batch** as the reference, not
+  the unperturbed baseline — despite `baseline_overrides`' own docstring saying the G2 run "doubles
+  as the reference". morris/run_0000 is an arbitrary design corner (budget 26.7%, climate corridors
+  ×4, intactness ×4, biomass carbon ×0.25, target 50%) sitting **Jaccard 0.67 from `baseline_2km`**.
+  The tell was `dissim_vs_base` bottoming out at exactly 0.000 — a map compared with itself.
+  Consequences: (1) a factor whose reference level sits at an END of its range can only be stepped
+  one way, so its effects come out one-signed and μ collapses onto μ* (climate corridors read
+  μ = −μ* exactly; macrorefugia μ = +μ*) — an artefact read as a finding; (2) the **μ\* ranking
+  moves** — biomass carbon 3rd → **1st**, neighbour penalty 5th → 3rd, budget_pct 1st → 2nd.
+  Signature is now `add_baseline_metrics(df, A, domain)`, reading `baseline_2km/run_0000` off disk;
+  `base_row` is GONE so any stale call fails loudly. Verified against a **reference-free** ranking
+  (per-cell μ* averaged over cells — built from consecutive-run differences, no baseline enters):
+  it matches the corrected order to adjacent swaps, the as-run order much worse. Re-deriving is
+  metric-only, **no re-solving**.
+- **Read μ\* and σ, NOT μ.** `dissim_vs_base` is a *distance from a reference*, so the response
+  surface is V-shaped in every factor and signed μ only reports which side of the baseline the
+  trajectory steps fell on. The same V-shape **inflates σ** — every factor lands at σ/μ* 1.0–1.4,
+  so "5+ survivors with high σ → Sobol'" is being fed a contaminated σ. Do not commit to Phase 4
+  on it. Related: with `num_levels=4` the sampled levels are 0, ⅓, ⅔, 1 of each range while every
+  baseline value is at 0.5 (×1 multiplier, budget 30%, penalty 1e-5), so **11 of 12 factors are
+  off-baseline in every run** (only `target_pct=1.0` is sampled, as an endpoint) and dissim has a
+  positive floor of 0.221. Valid for screening; the absolute level is NOT "how far plausible
+  perturbations push the published map".
+- **μ\* is predicted by LEVERAGE, not by ecological importance** — Spearman(μ*, leverage) =
+  **+0.922** over the 8 continuous layers (Gini scores the same +0.922 and was the original
+  reading, but it is a CORRELATE; leverage is the mechanism — see `leverage_core.py` above). So
+  "the map is insensitive to how we weight connectivity / richness / refugia / intactness" is true,
+  but the mechanism is **those layers cannot span enough captured-fraction to move a 30%-of-area
+  selection** — a statement about the data (and, for two of them, about our own preprocessing),
+  not a validation of the priorities. State the mechanism; a reviewer who spots it unacknowledged
+  reads the bare claim as spin.
+- **The 2026-08-17 redesign came out of this.** Leverage reproduces the whole Morris ranking with
+  ZERO solves, so the screening's real yield was a mechanism, not a ranking. Consequences: two of
+  the four "inert" layers were inert because of an ADDITIVE orientation flip (macrorefugia fixed to
+  `1/v`; gHM left alone and reported), carbon's dominance was retargeted rather than re-weighted,
+  and `neighbor_penalty` — 3rd of 12 — was removed from the optimizer entirely. **The Morris table
+  in `docs/context_y2y_wide_methods.md` is therefore superseded** and must be re-derived after the
+  re-solve; the leverage table predicts the new order (macrorefugia 12th → ~3rd–4th).
+- **Weight-sensitivity ≠ content-sensitivity.** Morris varies *how much you weight* a layer; the
+  Phase-1a QA varied *which version of the layer you use*. Macrorefugia being weight-inert does NOT
+  discharge that QA's **MATERIAL** verdict — a different SSP/horizon changes the layer's spatial
+  pattern, not its weight (the six realizations disagreed at Jaccard 0.46). The scenario factor
+  still needs testing on its own terms.
+- **PHASE 4 (Sobol') IS DROPPED — decided 2026-08-17, and this is a pre-registered gate outcome
+  that must stay documented, not a silent omission** (there is already one live pre-registration
+  deviation in the climate-scenario factor; a second undocumented one reads as a pattern). Four
+  reasons: (1) **the gate cannot fire** — it triggers on "high σ" as evidence of interaction, but
+  σ is inflated by the V-shaped distance metric, and the σ/μ* pattern (1.01–1.12 for the top four
+  factors, 1.33–1.67 for the rest, rising as μ* falls) is scatter scaling inversely with effect
+  size, i.e. a NOISE signature, not an interaction one; (2) **Sobol' inherits the contaminated
+  metric and is hurt more by it** — Jaccard is bounded and compressed into ~[0.221, 0.550], so
+  variance decomposition reads saturation as interaction, and Sobol' indices are defined relative
+  to the input distribution, which here is an arbitrary ×0.25–×4 hypercube (a ranking degrades
+  gracefully under a bad box; apportioned percentages do not); (3) **marginal information is
+  small** — the ranking is now known twice, once analytically via leverage; (4) **cost**, measured
+  off this batch (mean solve 1,001 s, workers=3): 1,792 solves ≈ **6.9 days** at N=128 without
+  second order, 3,328 ≈ 12.8 days at SALib's default, 13,312 ≈ 51 days at N=512 — the "~4 days" in
+  the original gate was off by an order of magnitude.
+  **Replaced by a baseline-anchored plausible-range ensemble** (baseline as a real design point,
+  defensible ranges instead of ×0.25–×4, ~40–60 solves) whose per-cell **selection frequency** is
+  both the robustness answer Y2Y actually asks for and the surface post-hoc delineation grows
+  candidate areas from — and a partial substitute for the MGA gap-portfolio still blocked by the
+  Gurobi licence. Note the whole ensemble is now affordable at **full 1 km** (12 s/solve without
+  the neighbour penalty), so the 2 km screening compromise and the G2 scale-transfer gate are moot.
+- Requires **SALib** (added to `requirements.txt`). Phases 1b / 5 / 7 remain out of scope.
 
 ### `04a/04b/04c` — three results notebooks over `results_core.py` (Python)
+
+> **04a MOVED (2026-08-18): the corridor-wide results notebook is now
+> `analyses/y2y/04_results.ipynb`** (Python bootstrap added; its `RUN` variable selects which
+> Gate-0 arm to deep-dive, and `rc.load(analysis, run=...)` is the mechanism). 04b/04c remain at
+> root and are unchanged. Everything below about the shared views applies to all three.
 
 **04 was split (2026-07-20)** to match 03: `04a_y2y` / `04b_north_bc` / `04c_ab_foothills`,
 each `import results_core as rc` then `A = rc.load(ANALYSIS)` and one cell per view
@@ -419,6 +618,18 @@ continues from `len(B["ids"])`, and the block is guarded by `if A.manual` so 04b
 benchmark map. `output_data/iter6_y2y/figures/manual_area_map.png` is now stale and no longer
 regenerates. **`04_results_analysis.ipynb` is the legacy y2y-only monolith** (retire like
 03).
+
+**`footprint_audit(A)` (added 2026-08-17, 04a; runs after `build_stacks`).** The reporting half of
+the "leave gHM alone" decision. Prints mean raw gHM for selected / locked-PA / NEW-allocation /
+unselected, the selection rate inside the gHM top 10/1/0.1% tails against the 30% indifference
+line, and Spearman(raw gHM, each feature). **The headline is the group split, and it reverses the
+obvious reading:** the whole solution looks intact (0.048 vs 0.053 regional) only because the
+locked PAs are already at 0.022; the optimizer's OWN new selection is at **0.074 — more modified
+than the 0.055 land it passed over**. Cause: intactness holds ~1% of the objective's swing and
+cannot counterweight AOH richness, which correlates with gHM at **+0.636 (birds) / +0.607
+(mammals)** because richness peaks in the productive low valleys where people settle. Reads RAW gHM
+from `cleaned_aligned/` (the hand-off layer is `1−gHM`) and skips gHM's own feature in the
+correlation table (it would score −1.000 by construction).
 
 **Consequences-table presentation (2026-07-28).** Columns carry a **two-level header**: level 0 =
 the group — `"Alternatives (new options)"` (the NEW clusters) vs

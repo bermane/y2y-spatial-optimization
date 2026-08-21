@@ -28,6 +28,7 @@ ctx <- pr_setup(MANIFEST, PROJ)
 ctx <- modifyList(ctx, pr_ingest(ctx))
 ctx <- modifyList(ctx, pr_planning_units(ctx))
 ctx <- modifyList(ctx, pr_weights(ctx))
+ctx <- modifyList(ctx, pr_targets(ctx))
 ctx <- modifyList(ctx, pr_penalty_matrices(ctx))
 
 bp  <- pr_build_problem(ctx); ctx$p <- bp$p; ctx$solve_params <- bp$solve_params

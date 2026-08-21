@@ -107,8 +107,44 @@ OBJECTIVE = "min_shortfall"
 # correct at either resolution automatically.
 PROTOTYPE_AGG_FACTOR = 1
 BUDGET_PCT = 0.30            # area budget = 30% of the region (30x30); binds for both objectives
-TARGET_PCT = 1.0             # per-feature target (min_shortfall/min_set). 1.0 = maximize the
-                             # captured fraction of each input within the budget (balanced)
+TARGET_PCT = 1.0             # DEFAULT per-feature target (min_shortfall/min_set) for any feature
+                             # not named in TARGETS. 1.0 = never satisfiable, so the feature keeps
+                             # competing for area for its entire capture.
+# Per-feature target OVERRIDES, by feature name. This is the lever that demotes a feature without
+# touching its weight, and it is a POLICY statement rather than a tuning knob ("we aim to secure
+# 33% of mineral-soil carbon"), which is why it is preferred here over re-weighting.
+#
+# WHY IT WORKS AS A STOPPING RULE. Under min_shortfall, shortfall_f = max(0, t_f - held_f)/t_f, so
+# once held_f reaches t_f the feature contributes ZERO and the optimizer has no further incentive
+# to spend area on it. The objective is linear, so it was already taking that feature's DENSEST
+# cells first -- the target simply says how far down the distribution to keep going. Result: grab
+# the hotspots, pass over the mediocre pixels, reallocate the rest.
+#
+# WHY CARBON. With every target at 1.0 the two carbon pools took 39.7% of the objective's
+# achievable swing and were captured at 45.5% / 41.8% (1.52x / 1.39x their area share) while every
+# other value landed at 0.96-1.06x -- i.e. the map was "the best 30% for carbon, everything else
+# proportional". Y2Y's position is that carbon is an added benefit, not a driver.
+#
+# HOW THESE NUMBERS WERE DERIVED (not chosen): the rule "keep taking cells while marginal density
+# >= 5x the regional mean" applied to each pool, via leverage_core.target_cost_curve. Mineral soil
+# has a genuinely exceptional tail (33.2% of its total sits above 304 t/ha, in 4.1% of the region);
+# biomass has almost none (only 6.6% above 106 t/ha), so it demotes itself on its own geometry.
+#
+# DO NOT lower every target. If all targets became simultaneously achievable the shortfall would be
+# zero everywhere, the objective flat, and the solver would return an arbitrary member of a huge
+# optimal set. Keeping the foundational features at 1.0 is what keeps this a real trade-off.
+# UPDATED 2026-08-18 by the Gate-0a characterization protocol (leverage_core.classify, constants
+# in AUDIT): biomass's entry is REMOVED -- it crosses theta but fails the R2 tail-mass criterion
+# (implied target 0.066 < t_min 0.15: the rule would saturate instantly, leaving the feature
+# governed by weight anyway), so it reverts to diffuse-linear (t = 1.0, weight-levered). This is
+# the protocol overruling the initial hand treatment, adopted per spec s2.5. Gate-0 arms override
+# this dict from 03a's RUN LEVER; this baseline matters for run_one.R / the 06 ensemble.
+# NOTE the companion decision: the solve pairs every target with an equal weight (w = t, set in
+# the lever as feature_weight_multipliers), keeping effective pull w/t at 1.0 so the target acts
+# ONLY as a stopping rule -- at w = 1 this 0.332 target would raise m_soc's pull to 3.0x.
+TARGETS = {
+    "irrecoverable_carbon_m_soc": 0.332,     # >= 5x regional mean (60.7 t/ha) -> cutoff 304 t/ha
+}
 # 03 normalizes each feature so its TOTAL = NORM_TOTAL (conditioning constant). With a 100%
 # target the target equals the full total, which must stay < 1e6 for prioritizr's presolve;
 # 1e5 keeps it safe with well-scaled coefficients. min_shortfall is scale-invariant, so this
@@ -136,9 +172,55 @@ BOUNDARY_PENALTY = 0.0
 # CALIBRATION: separate scale from BOUNDARY_PENALTY -- it acts on INTERIOR adjacent pairs
 # (~2 per selected cell) rather than the perimeter, so it needs a smaller coefficient. The 03
 # solve prints the objective (iter4 @2 km was ~6.4); aim for the penalty term to land ~1-3 of
-# that -- meaningful but not dominating. 1e-5 is a first guess: raise x10 if still fragmented,
-# lower x10 if the radar/representation collapses.
-NEIGHBOR_PENALTY = 1e-5
+# that -- meaningful but not dominating. 1e-5 was a first guess.
+#
+# TURNED OFF 2026-08-17. Compactness moved OUT of the optimizer to post-hoc delineation from the
+# ensemble's selection-frequency surface (results_core), for three measured reasons:
+#   1. UNCALIBRATED AND DECISIVE. At 1e-5 -- a first guess, never calibrated -- Morris ranked it
+#      the 3rd largest driver of the map out of 12 factors, and it relocates a THIRD of the
+#      selection (Jaccard 0.662 between iter2_lp_1km and iter6_y2y).
+#   2. IT WASN'T CREATING THE STRUCTURE. The unpenalized solution is already 66.6% clustered by
+#      area (new area in components >= 100 km2), with singletons only 3% of new area. The penalty
+#      consolidates structure the value surface already has -- it does not supply it.
+#   3. IT COST 400x THE SOLVE TIME. 1 km: 12 s without it, 4,826 s with it. Every timeout, the
+#      6 h cap, the machine contention and the 2 km screening compromise in 06 trace to this one
+#      term. Removing it makes the ensemble affordable at full 1 km.
+# Delineating afterwards also makes compactness re-tunable with ZERO re-solves, and matches 05's
+# D9 decision to ship a graded priority surface rather than hard lines.
+# The parameter stays so runs before this date remain reproducible.
+NEIGHBOR_PENALTY = 0.0
+
+# Leverage floor for the 02 QA (leverage_core). A feature whose captured fraction can only span
+# `leverage` across ALL feasible selections cannot be moved by its weight; below this value,
+# reweighting it is inert by construction. 0.10 sits just under macrorefugia's pre-fix 0.090 and
+# gHM's 0.042 (both flagged) and clear of AOH mammals at 0.181 (the lowest passing feature).
+LEVERAGE_MIN = 0.10
+
+# ---- Feature characterization protocol (frequency-ensemble spec s2.5, Gate 0a) ------------
+# FROZEN per rule R4 of the spec (v0.3, 2026-08-18) BEFORE the audit runs; no per-feature tuning.
+# Every input passes the same univariate audit; leverage_core.classify() applies rules R1-R4 and
+# the current formulation is RE-DERIVED from the protocol rather than asserted. Disclosures the
+# spec requires carrying in Methods:
+#   theta  was originally set on carbon and is generalized here (E10 theta-sensitivity at 3x/10x
+#          is the empirical backstop);
+#   t_min  chosen knowing the data BUT classification is insensitive across 0.07-0.33
+#          (mineral soil 0.332 vs biomass 0.066 -- a five-fold margin);
+#   lambda sits in the wide gap between AOH mammals (0.181) and gHM intactness (0.042) --
+#          identical classification for any floor in 0.05-0.15; mammals flagged marginally live.
+AUDIT = {
+    "theta": 5.0,          # marginal-density ratio a stopping rule must clear (x regional mean)
+    "a_min": 0.005,        # ...sustained over at least this AREA fraction of the region
+    "t_min": 0.15,         # tail-mass criterion: the implied target must secure at least this
+                           # captured fraction, else the rule saturates instantly and the feature
+                           # is really weight-governed -> diffuse-linear (this is what reverts
+                           # biomass: implied target 0.066)
+    "leverage_min": LEVERAGE_MIN,   # R3 expressivity floor (lambda)
+    "rare_cap": 0.999,     # cap_max at/above this = capturable in full within the budget
+                           # -> rare-attainable (saturates for free; no scenario lever)
+    "curve_points": 10_001,  # resolution of the ARCHIVED Lorenz / marginal-density curves --
+                             # budget-independent objects (spec D2) so re-deriving targets at any
+                             # theta or budget is interpolation on the archive, not a recompute
+}
 
 # Features to exclude from the optimization (kept in the aligned stack, dropped from the
 # manifest 03 reads). Use to trial feature subsets without re-running 02's heavy warp.
@@ -163,11 +245,16 @@ EXCLUDE_FEATURES = ["irrecoverable_carbon_sl_soc"]   # subsoil carbon; keep only
 #                    {"source":"vector","vector_path":...} = rasterize + lock a polygon
 #                    (write_manifest reprojects it to TARGET_CRS first).
 #   feature_weight_multipliers : {feature_name: x} scales that feature's min-shortfall weight.
+#   targets        : {feature_name: t} per-feature relative-target OVERRIDES; anything unlisted
+#                    uses this analysis's target_pct. Set PER ANALYSIS deliberately -- the carbon
+#                    demotion is a corridor-wide policy decision and is NOT inherited by the
+#                    sub-regional analyses, which keep every target at 1.0 until reviewed.
 ANALYSES = {
     "y2y": {
         "results_subdir": "iter6_y2y",
         "roi": {"mode": "full", "sources": None, "buffer_km": 0, "mask": False},
         "objective": OBJECTIVE, "budget_pct": BUDGET_PCT, "target_pct": TARGET_PCT,
+        "targets": TARGETS,
         "decision_type": DECISION_TYPE, "solver": SOLVER, "highs_solver": HIGHS_SOLVER,
         "connectivity_penalty": CONNECTIVITY_PENALTY, "boundary_penalty": BOUNDARY_PENALTY,
         "neighbor_penalty": NEIGHBOR_PENALTY,
@@ -194,6 +281,7 @@ ANALYSES = {
         # (~25,700) so the solve spends its area only on the best connective land -- a leaner
         # budget reads as corridors rather than swaths. Tune off 03b cell 3.
         "objective": "min_shortfall", "budget_pct": 0.43, "target_pct": 1.0,
+        "targets": {},          # unchanged: the carbon demotion is a y2y-wide decision only
         "decision_type": DECISION_TYPE, "solver": SOLVER, "highs_solver": HIGHS_SOLVER,
         # CORRIDOR FORMULATION: the connectivity penalty is the actual corridor mechanism -- it
         # rewards selected units connected to EACH OTHER and to the locked anchors. The neighbor
@@ -227,6 +315,7 @@ ANALYSES = {
         # own, so budget_pct must exceed that. 0.45 = existing parks (~30%) + ~15% for NEW candidate
         # foothills area (~11,000 cells). Tune off the "locked-in / budget" line in 03c cell 3.
         "objective": "min_shortfall", "budget_pct": 0.45, "target_pct": 1.0,
+        "targets": {},          # unchanged: the carbon demotion is a y2y-wide decision only
         "decision_type": DECISION_TYPE, "solver": SOLVER, "highs_solver": HIGHS_SOLVER,
         "connectivity_penalty": 0.0, "boundary_penalty": 0.0, "neighbor_penalty": 0.0,
         "lock_in": {"source": "pa_mask", "vector_path": None},
@@ -357,10 +446,15 @@ ENSEMBLE = {
     # 1 km -- G2 (scale transfer) checks that 2 km conclusions carry over before the batch runs.
     "agg_factor": 2,
     "analysis": "y2y",            # baseline analysis the ensemble perturbs
-    # Per-run wall-clock cap. A 2 km solve should take ~10 min, so this is a stuck-run guard so
-    # one pathological parameter set can't eat the batch. A timed-out HiGHS run returns an
-    # INFEASIBLE point (area > budget) -- the collector flags those rather than using them.
-    "time_limit": 7200,
+    # Per-run wall-clock cap -- a stuck-run guard so one pathological parameter set cannot eat the
+    # batch. RAISED 7200 -> 21600 (2026-08-07): at 7200 the FIRST 130-run batch lost 19 runs, all at
+    # budget_pct 26.67% (median solve there 7,313 s vs 206-916 s at every other level -- LP
+    # degeneracy, many near-identical optima), and they fell in only 2 of the 10 trajectories, which
+    # is exactly the correlated damage a Morris design cannot absorb. This is a CAP, not an
+    # expectation: the median solve elsewhere is 843 s.
+    # A timed-out run stops wherever it had got to -- it can land EITHER side of the budget, so the
+    # collector flags `timed_out` on the clock as well as `over_budget` on the area.
+    "time_limit": 21600,
     # Selected = allocation above this (the LP is ~99.98% integral, so 0.5 is a clean cut).
     "select_threshold": 0.5,
     # selection_frequency.tif == portfolio.tif when there is one solution (pr_summaries computes
@@ -393,77 +487,159 @@ MORRIS = {
         ("w_aoh_richness_birds",         "weight_log2", -2.0, 2.0),
         ("w_EFG_group",                  "efg_log2",    -2.0, 2.0),   # applied to all 40 EFGs
         ("budget_pct",                   "linear",       0.20, 0.40),
+        # NOTE (2026-08-17): with per-feature TARGETS in play this factor now perturbs the target
+        # of every feature EXCEPT the ones named in TARGETS -- carbon is pinned by its override and
+        # does not move with it. Read it as "default target for the foundational features". That is
+        # the right split: carbon's target is a POLICY choice, not an uncertainty, and it is tested
+        # explicitly and legibly by the R0-R3 comparison runs instead of being blurred into a
+        # screening factor.
         ("target_pct",                   "linear",       0.50, 1.00),
-        ("neighbor_penalty",             "log10",       -6.0, -4.0),  # 1e-6 .. 1e-4
+        # ("neighbor_penalty",           "log10",       -6.0, -4.0),
+        # REMOVED 2026-08-17, and it must NOT come back while NEIGHBOR_PENALTY = 0. The design
+        # SETS each factor per run, so leaving it here would have switched the compactness penalty
+        # back on in all 130 runs -- screening a model we deliberately stopped using, and taking
+        # each 1 km solve from ~12 s to ~4,826 s (the whole batch from ~30 min to weeks). It ranked
+        # 3rd of 12 in the previous screening precisely because it moves the map so much; that is
+        # why it was removed from the optimizer, not a reason to keep perturbing it.
     ],
 }
 
 # ---- Least-cost corridors (05) ------------------------------------------
-# Standalone corridor analysis (corridors_core.py) that CONNECTS anchor areas with least-cost
-# paths -- the routing tool the prioritizr connectivity penalty could not be (that aggregates
-# permeable land; this routes A->B). DRIVER = the transboundary connectivity current-density
-# (the team's intent), with gHM as a barrier guard. Not a prioritizr run; pure Python (skimage).
+# Standalone corridor analysis (corridors_core.py) that ROUTES between anchor areas -- the tool the
+# prioritizr connectivity penalty could not be (that aggregates permeable land; it cannot answer
+# "how does an animal get from park A to park B"). Not a prioritizr run; pure Python (skimage).
+#
+# ============================ v2 REBUILD (2026-08-07) ============================
+# Decisions D1-D10 live in docs/05_methods_v2.md. What changed from v1, and why:
+#
+#   D1/D2  RESISTANCE IS A PUBLISHED MOVEMENT-COST SURFACE, not a weighted blend. v1 blended
+#          Pither current density (0.5) + Carroll climate corridors (0.3) + AdaptWest macrorefugia
+#          (0.2), raised it to conn_exponent, floored it, and multiplied by 10**gHM. That
+#          triple-counted human footprint (all three of gHM, current density and centrality encode
+#          it), used a circuit-theory OUTPUT as a routing INPUT, and mixed process-mismatched
+#          climate-ANALOG layers into movement cost. Every blend knob is gone: scale, drivers,
+#          conn_exponent, barrier, perm_floor, and the percentile-anchor scenarios.
+#   D6     CORRIDOR BAND IS AN ABSOLUTE cost-weighted-distance cutoff (Linkage Mapper convention),
+#          not a fraction of edge cost. The relative band made corridor width scale with edge cost
+#          -- an unintended claim -- and blocked two-track equivalence with the operational LM run.
+#   D7     NETWORK = MST + BRIDGE-BACKUP AUGMENTATION. A bare MST has n-1 edges, no cycles, so
+#          every edge is a single point of failure. (The originally drafted criterion -- keep any
+#          direct edge with cost <= alpha * MST-path cost -- is VACUOUS: least-cost distance obeys
+#          the triangle inequality, so direct cost is never above tree-path cost and the test
+#          admits the complete graph. `alpha` is retired; see "beta" below.)
+#   D8     STRUCTURED ENSEMBLE over interpretable axes, replacing uniform multiplicative noise on
+#          the final resistance surface, which represented no identifiable uncertainty.
+#   +      ROUTING RUNS AT THE COST SURFACE'S NATIVE 300 m. At 1 km a 2-lane highway averaged from
+#          90 m gHM effectively vanishes, which is exactly the signal this analysis is about.
+#          The CO-BENEFIT AUDIT STAYS AT 1 km -- see "grid" below.
 CORRIDORS = {
     "north": {
         "results_subdir": "corridors_north",
         "region_label": "Northern BC + Yukon",
-        # nodes to connect: the northern proposed IPCAs + existing PAs above a size in the region.
-        # dedupe_overlap_frac: merge two nodes into one when their rasterized masks share at least
-        # this fraction of the SMALLER node -- the same place entered twice under nesting
-        # designations (Teetł'it Gwinjik inside the Peel Watershed SMA/WA; Fishing Branch Wilderness
-        # Preserve inside its Habitat Protection Area). Slivers stay separate, so an IPCA that wraps
-        # around a park still routes to it. Set to None/1.1 to disable.
-        "nodes": {"proposed": str(PROPOSED_PA_VECTOR), "source_filter": {"min_lat": 55.0},
-                  "include_existing_pas": True, "existing_pa_min_km2": 200, "node_min_cells": 25,
-                  "dedupe_overlap_frac": 0.5},
-        # crop the working grid north for routing room (least-cost paths need space around anchors).
-        "region_filter": {"min_lat": 54.0},
-        # RESISTANCE = (1 / permeability^conn_exponent) * barrier_base^gHM, where permeability is a
-        # weighted blend of corridor-relevant DRIVER layers each scaled 0-1 at its pctile (higher =
-        # more permeable). Current-density weighted highest (contrast ~6.6x vs the climate layers'
-        # ~1.5x). conn_exponent sharpens the blend; barrier multiplies resistance up through the
-        # human footprint (gHM = 1 - intactness); perm_floor caps max resistance. All layers are
-        # aligned-stack names; weights are normalised to sum 1.
+
+        # ---- routing grid: 300 m, northern window --------------------------------------
+        # ONLY routing is 300 m. The audit (star plots, "% of Y2Y") stays on the 1 km grid because
+        # every value layer is natively 1 km -- upsampling adds no information, costs ~10 GB of
+        # stacks, and would SILENTLY INFLATE contribution ~11x: results_core.mask_profile sums a
+        # feature over the mask but results_core._region_total computes the denominator at native
+        # 1 km, and there is no finer-than-source path (only a coarsening `agg`).
+        # The warp covers the whole lat>=min_lat window; corridors_core.load() then crops to the
+        # node bbox + routing_buffer_km, since memory scales with array size even where cells are
+        # invalid (full window = 4,287 x 5,767 = 24.7 M cells, 11.1x the 1 km run).
+        "grid": {
+            "res_m": 300,
+            "region_filter": {"min_lat": 54.0},   # routing room around the anchors
+            "routing_buffer_km": 100,             # kept around the node bbox when cropping
+            "dir": INPUT_DIR / "corridors_300m",
+        },
+
+        # ---- resistance = the published cost surface (D1/D2) ---------------------------
+        # O'Brien et al. transboundary extension of Pither et al. 2023 -- seamless US+Canada, so it
+        # covers the whole Y2Y rather than stopping at the border. Shipped in the same download as
+        # Raw_CurrentDensity_Map.tif and never registered until the v2 rebuild.
+        # Values are FOUR log-spaced ordinal classes {1, 10, 100, 1000}; over the Y2Y bbox they run
+        # 58.8 / 7.3 / 5.2 / 28.7 %. Resampling is "near" and that is not a compromise: at
+        # 300 m -> 300 m it reprojects EPSG:3347 -> ESRI:102008 while preserving the classes
+        # exactly, so no averaging/mode/geometric-mean rule has to be defended.
+        # NOTE this layer is deliberately NOT in DATASETS / aligned_stack / manifest.json: it is not
+        # a prioritizr feature, it is unoriented (higher = WORSE, unlike every hand-off layer), and
+        # adding it would corrupt the PU mask that 02/03/04/06 depend on. (config's `is_feature`
+        # flag is documented but read by no code, so it cannot be relied on to hold it out.)
         "resistance": {
-            # scale: "minmax" stretches each driver over [lo_pctile, pctile] -> full 0-1 range per
-            # layer (needed because macrorefugia runs ~10-15, so plain 0-to-pctile leaves it near-
-            # constant / inert); "zero_max" is the old layer/pctile. minmax makes each weight bite.
-            #
-            # Anchors p1/p99 (compared against p5/p95, p2/p98, p0/p100 in the north, 2026-07-27).
-            # NOT p0/p100: connectivity's p100=65.4 vs p95=3.86 is a single-pixel pinch-point tail,
-            # and refugia's p0=0 (vs p1=9.4) is edge junk -- anchoring there flattens resistance to a
-            # 2.2x spread, so the router ignores the landscape and draws near-straight lines. NOT
-            # p5/p95: clipping the bottom 5% to 0 manufactures hard walls at perm_floor out of merely
-            # poor land. p1/p99 keeps an 11x spread, improves every driver's grip on the surface, and
-            # cuts floor-pinned cells ~12x. Top-end clipping costs little either way: resistance=1/perm
-            # compresses the good end by construction (perm .95 vs 1.0 = resistance 1.05 vs 1.00).
-            "scale": "minmax",
-            "drivers": [
-                {"layer": "transboundary_connectivity", "weight": 0.5, "pctile": 99, "lo_pctile": 1},
-                {"layer": "climate_corridors",          "weight": 0.3, "pctile": 99, "lo_pctile": 1},
-                {"layer": "climate_type_macrorefugia",  "weight": 0.2, "pctile": 99, "lo_pctile": 1},
-            ],
-            "conn_exponent": 2.0,
-            "barrier": {"layer": "human_modification", "base": 10.0},   # base ** gHM
-            "perm_floor": 1e-3,
+            "source": INPUT_DIR / "transboundary_connectivity" / "Movement_Cost_Layer.tif",
+            "out_name": "movement_cost.tif",
+            "resampling": "near",
+            "expect_classes": [1, 10, 100, 1000],
+            "citation": ("O'Brien et al., transboundary movement cost surface "
+                         "(extension of Pither et al. 2023)"),
         },
-        # Named driver-stretch variants, each solved as a full run (network + near-optimal ensemble)
-        # so the anchor choice can be compared on ROBUSTNESS, not just on the baseline route. A
-        # scenario overrides ONLY the stretch anchors, applied to every driver -- weights,
-        # conn_exponent, barrier and perm_floor always come from the "resistance" block above.
-        # Drop this key (or leave one entry) to go back to a single run.
-        "scenarios": {
-            "p1_p99": {"lo_pctile": 1, "pctile": 99},
-            "p5_p95": {"lo_pctile": 5, "pctile": 95},
+
+        # ---- nodes to connect ----------------------------------------------------------
+        # The northern proposed IPCAs + existing PAs above a size in the region.
+        # dedupe_overlap_frac: merge two nodes when their rasterized masks share at least this
+        # fraction of the SMALLER node -- the same place entered twice under nesting designations
+        # (Teetł'it Gwinjik inside the Peel Watershed SMA/WA; Fishing Branch Wilderness Preserve
+        # inside its Habitat Protection Area). Slivers stay separate, so an IPCA that merely wraps
+        # around a park still routes to it. Set to None/1.1 to disable.
+        # node_min_km2 REPLACES v1's node_min_cells=25: a cell count is resolution-dependent, and
+        # at 300 m the same 25 cells would mean 2.25 km², silently changing the node set.
+        "nodes": {"proposed": str(PROPOSED_PA_VECTOR), "source_filter": {"min_lat": 55.0},
+                  "include_existing_pas": True, "existing_pa_min_km2": 200, "node_min_km2": 25,
+                  "dedupe_overlap_frac": 0.5},
+
+        # ---- corridor band: ABSOLUTE cwd cutoff (D6) ------------------------------------
+        # Per edge, keep cells whose (CWD_i + CWD_j) is within `cwd_cutoff_abs` COST UNITS of that
+        # edge's least-cost minimum -- no dependence on edge cost. Calibrated (not guessed) so the
+        # MST-only corridor area on the new resistance reproduces v1's 18,188 km²: same edge set,
+        # same `& ~node_union` area definition, so v1<->v2 route comparisons are not confounded by
+        # band size. Augmentation adds area on top and is reported separately -- calibrating against
+        # the augmented network would let the cutoff absorb the augmentation and conflate D6 with D7.
+        # None until corridors_core.calibrate_cutoff has been run (resolve() refuses to solve).
+        "cwd_cutoff_abs": None,
+        "calibration": {"target_km2": 18188, "edges": "mst"},   # pre-registered before running
+
+        # ---- network augmentation (D7) --------------------------------------------------
+        # Bridge backup, processed SEQUENTIALLY in descending criticality with recomputation: one
+        # added edge typically kills several bridges at once (any cycle it closes covers every tree
+        # edge on that cycle), so independent per-bridge processing would overcount additions and
+        # misstate which failure each edge insures. This is the standard greedy heuristic for
+        # minimum-cost 2-edge-connectivity augmentation; trivial at n=42 with D already computed.
+        #
+        # beta = cost-ratio CEILING: add the cheapest restoring edge only when
+        #   backup_cost <= beta * failed_edge_cost.
+        # Adding a backup unconditionally would route "alternatives" through land so resistant that
+        # nobody would treat them as real -- that does not create redundancy, it HIDES
+        # irreplaceability. Where nothing clears the ceiling the link is flagged IRREPLACEABLE, and
+        # those flags are the headline Phase-3 output: the augmented graph says where alternatives
+        # exist, the flags say where Y2Y cannot afford to lose the land at any reasonable price.
+        "beta": 2.5,
+
+        # ---- linkage priority surface (D9) ----------------------------------------------
+        # priority = max_e (ecfb_raw_e * (1 - slack_e / cutoff)); max, not sum, so overlap regions
+        # are not inflated purely by edge redundancy and every cell keeps a single owning edge.
+        # Tier breaks are percentiles of the non-zero priority surface, PRE-REGISTERED here before
+        # the run (same doctrine as CLIMATE_SCENARIOS["rule"]).
+        "priority_tiers": {"robust_core": 90, "frequent": 70, "occasional": 0},
+
+        # ---- structured ensemble (D8) ---------------------------------------------------
+        # Axes B/C/D all reuse the SAME resistance, and CWD depends only on resistance + node seeds
+        # -- axis C drops a node, which removes a row/column from D but leaves every remaining
+        # node's CWD field untouched. So the whole ensemble is ONE CWD computation plus cheap
+        # re-derivations, and with band slack cached at the largest cutoff axis B needs no band
+        # recomputation either. Axis A (component-cost perturbation) is the only one that changes
+        # resistance and is DEFERRED pending H2 (perturbation ranges are a judgment call).
+        "ensemble": {
+            "cutoff_mult": [0.5, 1.0, 2.0],      # axis B, x cwd_cutoff_abs
+            "leave_one_out": True,               # axis C, one run per node (mandatory-complete)
+            "beta_sweep": [1.5, 2.5, 4.0],       # axis D
+            "robust_core_freq": 0.9,
         },
-        "primary_scenario": "p1_p99",   # restored onto A; written at the top level of run_dir
-        # corridor swath width: per MST edge, keep cells whose (CWD_i + CWD_j) is within
-        # width_frac * (edge least-cost distance) of that edge's minimum. 0.05 ~ a few km wide;
-        # raise for wider corridors. corridors_core prints the corridor km² to tune.
-        "corridor_width_frac": 0.05,
-        # near-optimal ensemble (the MGA analog): n_runs solves with resistance jittered +-jitter
-        # -> a corridor FREQUENCY/robustness surface + n_alternatives distinct near-optimal networks.
-        "ensemble": {"n_runs": 12, "jitter": 0.20, "seed": 42, "n_alternatives": 3},
+
+        # ---- named variants -------------------------------------------------------------
+        # A variant is an override dict merged over this config and solved into its own run dir.
+        # This is where D4's climate scenario attaches in Phase 7 -- resist-vs-facilitate is an
+        # adaptation-philosophy choice that must be a VISIBLE scenario axis, never a blend weight.
+        "variants": {},
     },
 }
 
@@ -530,9 +706,21 @@ def study_area(buffer_km=BUFFER_KM):
 #   build_vrt      : True -> 02 rebuilds a mosaic VRT from the tiles before aligning
 #   orient         : value transform so HIGHER = more conservation value (02, post-warp):
 #                    "complement" -> 1 - x   (gHM modification -> intactness; x in [0,1])
-#                    "invert"     -> vmax - x (backward velocity -> refugial value; vmax
-#                                    over the study area, documented at run time)
+#                    "reciprocal" -> 1 / x   (backward velocity -> refugial residence time)
+#                    "invert"     -> vmax - x (SUPERSEDED by "reciprocal"; kept so pre-2026-08-17
+#                                    runs stay reproducible -- see the macrorefugia entry)
 #                    omitted/None -> already "more = better", leave raw
+#
+#                    ADDITIVE FLIPS DESTROY LEVERAGE -- the trap this list now encodes. 03
+#                    sum-normalizes each feature, so an additive offset does NOT cancel: it
+#                    compresses the feature toward a constant, and a feature whose value is
+#                    near-constant across cells contributes a near-constant objective term that
+#                    NO weight can turn into a decision. Both additive flips did exactly this:
+#                    `1 - gHM` cut gHM's leverage 0.742 -> 0.042 (94% lost, because gHM is
+#                    right-skewed: median 0.018, so intactness piles up at ~0.98), and `vmax - v`
+#                    cut velocity's 0.353 -> 0.090 (75% lost). Those were the two lowest-ranked
+#                    factors in the 06 Morris screening -- an artefact read as a finding. Prefer a
+#                    MULTIPLICATIVE orientation; see leverage_core for how to check one.
 #   is_feature     : True (default) -> a prioritizr feature; contributes to the PU mask
 #                    if continuous. (All current entries are features.)
 DATASETS = {
@@ -574,17 +762,29 @@ DATASETS = {
     #
     # BACKWARD velocity = distance from a cell's FUTURE climate to its nearest analog in the
     # CURRENT climate, per year. Low = the future climate already exists nearby = macrorefugium,
-    # hence orient="invert". Units km/yr are a per-year AVERAGE over the elapsed baseline->future
-    # span, so the 2071-2100 layers divide by a LONGER denominator than 2041-2070 -- late-century
-    # values are diluted, not simply more extreme (the CMIP6 readme does not restate the exact
-    # denominator; the CMIP5 sibling product documents distance / years-elapsed).
+    # hence an inverting orientation. Units km/yr are a per-year AVERAGE over the elapsed
+    # baseline->future span, so the 2071-2100 layers divide by a LONGER denominator than 2041-2070
+    # -- late-century values are diluted, not simply more extreme (the CMIP6 readme does not
+    # restate the exact denominator; the CMIP5 sibling product documents distance / years-elapsed).
+    #
+    # ORIENTATION CHANGED 2026-08-17: "invert" (vmax - v) -> "reciprocal" (1/v). The additive flip
+    # added a large constant (p1 rose 0.60 -> 9.23 km/yr) which, under 03's sum-normalization, does
+    # not cancel -- it crushed the layer's leverage from 0.353 to 0.090 and made macrorefugia the
+    # single least influential factor in the 06 Morris screening. That was an artefact of this
+    # line, not a property of the climate data. 1/v restores leverage to 0.422 -- above the raw
+    # layer's own 0.353 -- and reads as refugial residence time (yr/km) rather than
+    # distance-from-the-worst-cell-in-the-window. The tail is safe: min velocity over the PU is
+    # 0.097 km/yr, so 1/v maxes at 10.3 and the top 100 cells hold 0.1% of the total (checked).
+    # NOTE this does NOT invalidate the Phase-1a scenario QA: top-q refugial set membership is
+    # invariant under ANY monotone-decreasing transform of v, so the MATERIAL verdict and its
+    # 0.460-0.910 Jaccards carry over unchanged.
     "climate_type_macrorefugia": {
         "path": INPUT_DIR / "climate_type_macrorefugia" / "ensemble_8gcm",
         "include": "bwvel731",  # backward climatic velocity scenarios only
         "rep_contains": "bwvel731_ensemble_8gcm_585_2071_2100",  # chosen scenario
         "multi": False,
         "resampling": "bilinear",
-        "orient": "invert",  # low backward velocity = high refugial value -> vmax - v
+        "orient": "reciprocal",  # low backward velocity = high refugial value -> 1 / v
         "citation": ("AdaptWest Project 2023, Gridded CMIP6-based climate velocity data for "
                      "North America at 1km resolution (adaptwest.databasin.org; "
                      "doi:10.5281/zenodo.10631707), backward velocity, 8-GCM ensemble"),
@@ -879,6 +1079,12 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
             "norm_total": NORM_TOTAL,
             "budget_pct": a["budget_pct"],
             "target_pct": a["target_pct"],
+            # Per-feature target overrides, emitted as a NAME->value object rather than a bare
+            # vector on purpose: the R side rebuilds the vector by looking each feature up in
+            # problem order, so it cannot silently drift out of alignment with the feature stack
+            # (a bare vector would apply the wrong target to the wrong feature with no error).
+            # Same guard pattern as feature_weight_multipliers.
+            "targets": a.get("targets", {}),
             "opt_gap": OPT_GAP,
             "portfolio_n": PORTFOLIO_N,
             "portfolio_gap": PORTFOLIO_GAP,

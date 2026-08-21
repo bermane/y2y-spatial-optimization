@@ -23,6 +23,23 @@ __pycache__/
 
 # R: user-global ~/.R/Makevars holds the macOS toolchain fixes (not in-repo).
 gurobi.log
+.Rhistory
+.RData
+Rplots.pdf
+
+# Flagship analyses (analyses/<name>/): notebooks, the spec, and the SMALL frozen audit records
+# (feature_characterization.csv = the frozen T2; audit_constants.json = constants + layer sha256s)
+# are TRACKED -- they are the pre-registration record. Everything generated and regenerable from
+# 01_feature_audit.ipynb is not: the bulky curve archive (hash-pinned by audit_constants.json),
+# the feature-card PDFs, figures, and -- later -- the per-cell solution matrices (spec s10 runs/).
+analyses/*/figures/
+analyses/*/audit/feature_cards/
+analyses/*/audit/audit_objects/feature_audit.npz
+analyses/*/runs/
 
 # Tracked on purpose (NOT ignored): config.py, *.ipynb, requirements.txt,
-# requirements-R.txt, CLAUDE.md, .claude/settings.json
+# requirements-R.txt, CLAUDE.md, .claude/settings.json,
+# analyses/*/spec/ (study plan + future manifest freeze + sha256),
+# analyses/*/audit/audit_objects/{feature_characterization.csv,audit_constants.json},
+# archive/ (frozen v1 notebooks; their outputs live in gitignored output_data/),
+# configs/ (frozen run configs, e.g. corridors v1 baseline)

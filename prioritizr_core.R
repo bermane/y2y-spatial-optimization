@@ -73,6 +73,89 @@ pr_setup <- function(manifest_path, proj) {
        use_portfolio = use_portfolio, have_gurobi = have_gurobi)
 }
 
+# ---- Stage 1b: notebook-level run overrides (for sweeps) ----------------
+pr_override <- function(ctx, ..., overwrite = FALSE) {
+  # Point a SWEEP at the notebook instead of config.py. config.py stays the baseline's single
+  # source of truth; each override is an explicit, visible delta in the notebook running it --
+  # the same principle ensemble_core uses when it patches a COPY of the manifest per run rather
+  # than mutating config.py.
+  #
+  # These live in ctx$params, NOT in manifest.json on disk, so the manifest beside the outputs
+  # still describes config.py. That is safe because pr_build_problem snapshots `solve_params`
+  # from ctx$params and pr_write_outputs records THAT in run_summary.json -- the existing drift
+  # guard. run_summary is the record of what was actually solved; read it, not the manifest,
+  # when comparing sweep runs.
+  # RETURNS THE FULL UPDATED ctx -- assign it directly: `ctx <- pr_override(ctx, ...)`.
+  # NEVER merge it with modifyList: utils::modifyList RECURSES into nested lists, so a dict-valued
+  # override (targets, feature_weight_multipliers) would be DEEP-MERGED with the config.py
+  # baseline instead of replacing it -- an empty list() would clear nothing, and a control arm
+  # would silently solve with the baseline's carbon target still in place (caught by adversarial
+  # verification 2026-08-18 before any arm ran; the near-miss that motivates this warning).
+  ov <- list(...)
+  fmt <- function(v) {
+    if (is.list(v)) {
+      if (!length(v)) return("{} (empty -- cleared to defaults)")
+      return(paste(sprintf("%s=%g", names(v), unlist(v)), collapse = ", "))
+    }
+    paste(format(v), collapse = ", ")
+  }
+  if (!length(ov)) {
+    cat("no overrides -- running config.py as-is\n")
+    return(ctx)
+  }
+  for (nm in names(ov)) {
+    # Loud on a param the manifest does not define, so a typo cannot silently no-op and leave you
+    # comparing two runs that were actually identical.
+    stopifnot("override names a param not in the manifest" = nm %in% names(ctx$params))
+    ctx$params[[nm]] <- ov[[nm]]
+    cat(sprintf("  override %-16s -> %s\n", nm, fmt(ov[[nm]])))
+  }
+  # Print the EFFECTIVE dict-valued params after replacement (not just the deltas): this line is
+  # the operator's tripwire -- on a control arm it must read "<none>"; if a baseline value shows
+  # up here uninvited, something upstream is merging instead of replacing.
+  eff <- function(v) if (is.null(v) || !length(v)) "<none>" else fmt(v)
+  cat(sprintf("  EFFECTIVE targets: %s | weight multipliers: %s\n",
+              eff(ctx$params$targets), eff(ctx$params$feature_weight_multipliers)))
+  # results_subdir is consumed in pr_setup, so overriding it must recompute the derived paths --
+  # otherwise the run writes over whatever config.py pointed at.
+  if ("results_subdir" %in% names(ov)) {
+    ctx$run_tag <- ctx$params$results_subdir
+    ctx$out_dir <- file.path(ctx$proj, ctx$params$results_dir, ctx$run_tag)
+    dir.create(ctx$out_dir, recursive = TRUE, showWarnings = FALSE)
+    cat(sprintf("  outputs  -> %s\n", sub(paste0(ctx$proj, "/"), "", ctx$out_dir)))
+  }
+
+  # CLOBBER GUARD. The output folder is set by `results_subdir`, NOT derived from the run's
+  # settings, so editing a target or a weight while forgetting to rename the run would silently
+  # overwrite the previous result -- and a sweep whose folders quietly collapse onto each other
+  # looks like a real null finding. Compare targets AND weight multipliers against what is already
+  # on disk and refuse if either differs. Re-running the SAME configuration is allowed
+  # (idempotent), so a repeated cell is not blocked.
+  final_dir <- ctx$out_dir
+  prev <- file.path(final_dir, "run_summary.json")
+  if (!isTRUE(overwrite) && file.exists(prev)) {
+    norm <- function(t) {
+      if (is.null(t) || !length(t)) return("<none>")
+      v <- unlist(t)
+      paste(sprintf("%s=%g", names(v), unname(v))[order(names(v))], collapse = ", ")
+    }
+    oldp <- tryCatch(jsonlite::read_json(prev, simplifyVector = TRUE)$params,
+                     error = function(e) NULL)
+    for (key in c("targets", "feature_weight_multipliers")) {
+      if (!identical(norm(oldp[[key]]), norm(ctx$params[[key]]))) {
+        stop(sprintf(paste0(
+          "'%s' already holds a run with DIFFERENT %s -- solving would overwrite it.\n",
+          "    on disk : %s\n    about to run: %s\n",
+          "  Change RUN in the lever cell to a new name, or pass overwrite = TRUE to replace it."),
+          basename(final_dir), key, norm(oldp[[key]]), norm(ctx$params[[key]])))
+      }
+    }
+    cat(sprintf("  note: '%s' already exists with the SAME targets+weights -- it will be replaced\n",
+                basename(final_dir)))
+  }
+  ctx
+}
+
 # ---- Stage 2: ingest -- rast + CROP(+mask) + relaxed validation + agg + normalize ----
 pr_ingest <- function(ctx) {
   params <- ctx$params; grid <- ctx$grid; layers <- ctx$layers; proj <- ctx$proj
@@ -218,6 +301,33 @@ pr_weights <- function(ctx) {
   list(weights = weights)
 }
 
+# ---- Stage 4b: per-feature relative targets ------------------------------
+pr_targets <- function(ctx) {
+  params <- ctx$params; features <- ctx$features
+  # Start every feature at the analysis default, then apply name-keyed overrides. Built BY NAME
+  # off names(features) rather than accepting a bare vector from the manifest: a positional vector
+  # would apply the wrong target to the wrong feature silently if the stack order ever changed.
+  # Same guard as feature_weight_multipliers.
+  targets <- rep(as.numeric(params$target_pct), terra::nlyr(features))
+  names(targets) <- names(features)
+  ov <- params$targets
+  for (nm in names(ov)) {
+    stopifnot("targets names a feature not in the stack" = nm %in% names(targets))
+    targets[nm] <- as.numeric(ov[[nm]])
+  }
+  stopifnot("targets must be in (0, 1]" = all(targets > 0 & targets <= 1))
+  if (length(ov)) {
+    # A target only bites if it is BELOW what the feature would otherwise capture; report the
+    # overrides so a non-binding one (set above the achievable capture) is visible, not silent.
+    cat(sprintf("targets: default %.2f; %d override(s):\n", params$target_pct, length(ov)))
+    for (nm in names(ov)) cat(sprintf("  %-34s %.3f\n", nm, targets[[nm]]))
+  } else {
+    cat(sprintf("targets: %.2f for all %d features (no overrides)\n",
+                params$target_pct, length(targets)))
+  }
+  list(targets = targets)
+}
+
 # ---- Stage 5: spatial-penalty matrices (each only if its penalty > 0) ----
 pr_penalty_matrices <- function(ctx) {
   params <- ctx$params; cost <- ctx$cost; features <- ctx$features; cell_m <- ctx$cell_m
@@ -263,15 +373,20 @@ pr_build_problem <- function(ctx) {
   params <- ctx$params; cost <- ctx$cost; features <- ctx$features
   weights <- ctx$weights; locked <- ctx$locked; budget <- ctx$budget
   cm <- ctx$cm; bm <- ctx$bm
+  # Unnamed, in feature order -- pr_targets built it off names(features), so position is correct.
+  # Derived here when absent so a notebook that does not run the pr_targets stage (03b / 03c,
+  # which keep every target at the default) still builds. Calling the stage explicitly is
+  # preferred -- it prints the override report.
+  targets <- unname(if (is.null(ctx$targets)) pr_targets(ctx)$targets else ctx$targets)
 
   p <- problem(cost, features)
   if (identical(params$objective, "min_set")) {
-    p <- p |> add_min_set_objective() |> add_relative_targets(params$target_pct)
+    p <- p |> add_min_set_objective() |> add_relative_targets(targets)
   } else if (identical(params$objective, "max_utility")) {
     p <- p |> add_max_utility_objective(budget = budget) |> add_feature_weights(weights)
   } else {   # min_shortfall (default): maximise the captured fraction of every input
     p <- p |> add_min_shortfall_objective(budget = budget) |>
-              add_relative_targets(params$target_pct) |> add_feature_weights(weights)
+              add_relative_targets(targets) |> add_feature_weights(weights)
   }
   p <- p |> add_locked_in_constraints(locked)
 
