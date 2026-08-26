@@ -442,8 +442,12 @@ def trajectory_figure(fig_path=None, handoff_dir=None, audit=None):
     pu = pu_mask(handoff_dir)
     audit = audit or config.AUDIT
 
+    def _pct(x):        # 0.20% / 0.47% below 1, 4.1% above -- enough digits to distinguish
+        return f"{x:.2f}%" if x < 1 else f"{x:.1f}%"
+
     fig, ax = plt.subplots(figsize=(9, 6))
     ymax = 1.0
+    crossings = []
     for n in continuous_features():
         v = _read(handoff_dir / f"{n}.tif")[pu]
         area, ratio = marginal_trajectory(v)
@@ -454,6 +458,20 @@ def trajectory_figure(fig_path=None, handoff_dir=None, audit=None):
         if above.any():
             xa = 100 * float(area[above][-1])
             ax.plot([xa], [audit["theta"]], "o", ms=5, color=line.get_color())
+            crossings.append((xa, line.get_color()))
+    # Label each crossing with the area sitting ABOVE theta, in the curve's own colour --
+    # the annotation that makes the log axis readable (log-x compresses exactly this quantity:
+    # 4.1% sits visually close to 0.47% while being 9x the area, so the number rides the dot).
+    # Collision detection works in LOG space: crossings within ~0.25 decades share a
+    # neighbourhood, and successive labels in a cluster step downward.
+    level, prev = 0, None
+    for xa, colr in sorted(crossings):
+        level = level + 1 if (prev is not None and np.log10(xa / prev) < 0.25) else 0
+        dy = 9 if level == 0 else -13 - 11 * (level - 1)
+        ax.annotate(_pct(xa), (xa, audit["theta"]), xytext=(0, dy),
+                    textcoords="offset points", ha="center", fontsize=7.5,
+                    color=colr, fontweight="bold")
+        prev = xa
     ax.axhline(audit["theta"], color="0.25", lw=1.0, ls="--")
     ax.axvline(100 * audit["a_min"], color="0.6", lw=0.8, ls=":")
     ax.set_xscale("log"); ax.set_yscale("log")
@@ -500,17 +518,41 @@ def feature_card(name, out_dir, handoff_dir=None, pu=None, audit=None):
     fig.suptitle(f"Feature card — {name}   [{row['cls']}]", fontsize=13, fontweight="bold")
     A, B, C, D, E, F = axes.ravel()
 
-    # A -- distribution
+    # A -- distribution. Two regimes, and the BINS must match the axis:
+    #   skewed (skew > 2): log-x with GEOMETRIC bins -- linear bins on a log axis render as a few
+    #     giant slabs plus a spike, which is what made half the first-draft cards unreadable.
+    #     Zeros cannot sit on a log axis, so the zero-inflated share is reported in the stats box
+    #     (and for carbon it is substantial). The axis floor is p0.1 of the positive values, with
+    #     anything smaller clipped into the first bin -- otherwise a single near-zero cell drags
+    #     the axis across empty decades.
+    #   otherwise: plain linear bins, LINEAR counts (no log-y: it turned smooth unimodal layers
+    #     like AOH richness into jagged plateaus).
     sk = float(_skew(v))
     zero_frac = float((v == 0).mean())
-    logx = sk > 2 and (v > 0).any()
-    A.hist(v[v > 0] if logx else v, bins=80, color="#4878a8", log=logx is False or None)
+    pos = v[v > 0]
+    logx = sk > 2 and pos.size > 0
     if logx:
+        lo = float(np.percentile(pos, 0.1))
+        hi = float(pos.max())
+        A.hist(np.clip(pos, lo, None), bins=np.geomspace(lo, hi, 60), color="#4878a8")
         A.set_xscale("log")
+    else:
+        # Integer-valued layers (AOH richness counts): align bins to integers, else a ~1.7-wide
+        # bin alternates between holding one and two integers and prints a sawtooth that is pure
+        # binning artifact. Step chosen so ~60 bars cover the range.
+        if v.size and np.allclose(v, np.round(v)):
+            step = max(1, int(np.ceil((v.max() - v.min()) / 60)))
+            bins = np.arange(np.floor(v.min()) - 0.5, np.ceil(v.max()) + step + 0.5, step)
+            A.hist(v, bins=bins, color="#4878a8")
+        else:
+            A.hist(v, bins=60, color="#4878a8")
     q = {p: float(np.percentile(v, p)) for p in (50, 90, 99)}
-    A.set_title("A  distribution" + ("  (log-x)" if logx else ""), loc="left", fontsize=10)
+    A.set_title("A  distribution" + ("  (log-x, geometric bins)" if logx else ""),
+                loc="left", fontsize=10)
+    A.set_ylabel("cells")
     A.text(0.97, 0.95, f"mean {v.mean():.3g}\np50 {q[50]:.3g}  p90 {q[90]:.3g}  p99 {q[99]:.3g}\n"
-                       f"skew {sk:.2f}   zeros {100*zero_frac:.1f}%",
+                       f"skew {sk:.2f}   zeros {100*zero_frac:.1f}%"
+                       + ("\n(zeros excluded from log axis)" if logx and zero_frac > 0 else ""),
            transform=A.transAxes, ha="right", va="top", fontsize=8,
            bbox=dict(fc="white", alpha=0.8, ec="0.7"))
 
@@ -544,6 +586,9 @@ def feature_card(name, out_dir, handoff_dir=None, pu=None, audit=None):
         if ab.any():
             xa, tg = float(area[ab][-1]), float(capc[ab][-1])
             C.plot([100 * xa], [th], "o", ms=5, color=colr)
+            pc = f"{100*xa:.2f}%" if 100 * xa < 1 else f"{100*xa:.1f}%"
+            C.annotate(pc, (100 * xa, th), xytext=(5, 4), textcoords="offset points",
+                       fontsize=7.5, color=colr, fontweight="bold")
             lines.append(f"{th:.0f}x: target {tg:.3f} @ {100*xa:.2f}% area")
         else:
             lines.append(f"{th:.0f}x: no crossing")

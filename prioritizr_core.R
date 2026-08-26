@@ -16,6 +16,36 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+# ---- Gurobi shim: v13 pool-field compat + NumericFocus (2026-08-26) ------
+# Two fixes, both found the first time the Gurobi path ran at scale:
+# (1) POOL FIELD RENAME. Gurobi 13's R interface renamed each pool entry's solution vector from
+#     `xn` to `poolnx`; prioritizr 8.1.0's gap portfolio still reads `out$pool[[i]]$xn` and
+#     errors. The wrapper makes every pool entry carry BOTH names -- additive, harmless once
+#     prioritizr updates.
+# NOTE on numerics (2026-08-26): a first version of this shim also injected NumericFocus, and
+# silently failed to -- prioritizr ALWAYS passes NumericFocus (default 0), so an is.null() check
+# never fires. The real lever is prioritizr's native add_gurobi_solver(numeric_focus =) argument,
+# now set in pr_build_problem. Kept here as a warning to future patchers.
+if (requireNamespace("gurobi", quietly = TRUE)) local({
+  orig <- get("gurobi", envir = asNamespace("gurobi"))
+  if (is.null(attr(orig, "y2y_pool_shim"))) {
+    patched <- function(model, params = NULL, env = NULL) {
+      out <- if (is.null(env)) orig(model, params) else orig(model, params, env)
+      if (!is.null(out$pool)) {
+        out$pool <- lapply(out$pool, function(e) {
+          if (is.null(e$xn) && !is.null(e$poolnx)) e$xn <- e$poolnx
+          e
+        })
+      }
+      out
+    }
+    attr(patched, "y2y_pool_shim") <- TRUE
+    unlockBinding("gurobi", asNamespace("gurobi"))
+    assign("gurobi", patched, envir = asNamespace("gurobi"))
+    lockBinding("gurobi", asNamespace("gurobi"))
+  }
+})
+
 # ---- Stage 0: refresh + read the manifest -------------------------------
 pr_refresh_manifest <- function(proj, analysis) {
   # Regenerate manifest.json from config.py for THIS analysis, then confirm it exists.
@@ -402,12 +432,32 @@ pr_build_problem <- function(ctx) {
   # params$threads so N concurrent solves each take a slice instead of all fighting for 10 cores
   # (HiGHS IPM scales sublinearly, so several narrow solves beat one wide one).
   n_threads <- if (!is.null(params$threads)) as.integer(params$threads) else parallel::detectCores()
-  if (ctx$use_portfolio) {
-    stopifnot("solver='gurobi' but the gurobi R package is not installed (see requirements-R.txt)" = ctx$have_gurobi)
-    p <- p |>
-      add_gap_portfolio(number_solutions = params$portfolio_n, pool_gap = params$portfolio_gap) |>
-      add_gurobi_solver(gap = params$opt_gap, time_limit = params$solver_time_limit,
-                        threads = n_threads, verbose = TRUE)
+  # Solver and portfolio decided HERE from params (2026-08-26), not from the setup-frozen
+  # ctx$use_portfolio: pr_override can legitimately switch solver/decision_type/portfolio_n after
+  # pr_setup (the Gate-0 binary re-run does exactly that), and the old coupling made
+  # "single-solution Gurobi" impossible -- Gurobi implied the gap portfolio. Now:
+  #   solver = "gurobi"                -> add_gurobi_solver (binary MILP or LP alike)
+  #   ... AND portfolio_n > 1          -> also add_gap_portfolio (needs binary decisions)
+  #   solver = anything else           -> HiGHS as before
+  use_gurobi <- identical(params$solver, "gurobi")
+  use_portfolio <- use_gurobi && isTRUE(params$portfolio_n > 1)
+  if (use_gurobi) {
+    stopifnot("solver='gurobi' but the gurobi R package is not installed (see requirements-R.txt)" =
+                requireNamespace("gurobi", quietly = TRUE))
+    if (use_portfolio) {
+      stopifnot("gap portfolio needs binary decisions (proportion LP has a unique-ish optimum)" =
+                  identical(params$decision_type, "binary"))
+      p <- p |> add_gap_portfolio(number_solutions = params$portfolio_n,
+                                  pool_gap = params$portfolio_gap)
+    }
+    # numeric_focus = TRUE by default (2026-08-26): our matrix spans [1e-11, 1e5] -- normalized
+    # feature zero-tails against the 1e5 shortfall scaling -- and without it Gurobi's root LP
+    # "converged" 0.42% above the true LP optimum on the a4 arm and CERTIFIED the wrong point
+    # optimal (caught because a4's optimum was known exactly from its integral HiGHS LP twin).
+    # Costs runtime, buys trustworthy certificates. Set params$numeric_focus FALSE to disable.
+    nf <- if (is.null(params$numeric_focus)) TRUE else isTRUE(params$numeric_focus)
+    p <- p |> add_gurobi_solver(gap = params$opt_gap, time_limit = params$solver_time_limit,
+                                threads = n_threads, numeric_focus = nf, verbose = TRUE)
   } else {
     p <- p |> add_highs_solver(gap = params$opt_gap, time_limit = params$solver_time_limit,
                                threads = n_threads, verbose = TRUE,
@@ -426,6 +476,11 @@ pr_build_problem <- function(ctx) {
 # ---- Stage 7: solve -----------------------------------------------------
 pr_solve <- function(ctx) {
   timing <- system.time(s <- solve(ctx$p))
+  # A portfolio returns a LIST of single-layer rasters (one per pool solution); the single-solve
+  # path returns a SpatRaster. Stack the list so everything downstream (names, summaries, the
+  # multi-band write) sees one multi-layer SpatRaster either way. Latent since the portfolio
+  # branch was written -- surfaced on its first execution, 2026-08-26.
+  if (is.list(s) && !inherits(s, "SpatRaster")) s <- terra::rast(s)
   n_sol <- terra::nlyr(s)
   names(s) <- sprintf("alt_%02d", seq_len(n_sol))
   cat(sprintf("solved with %s: %d solution(s) in %.1f s\n",

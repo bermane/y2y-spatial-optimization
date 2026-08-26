@@ -222,6 +222,19 @@ AUDIT = {
                              # theta or budget is interpolation on the archive, not a recompute
 }
 
+# Numerical-dust threshold (decided 2026-08-26; applied in 02 Stage 2 post-orientation).
+# A cell holding less than this SHARE of its feature's total is zeroed. Rationale: `average`
+# resampling of ~zero fine-resolution cells leaves float residue (measured: biomass 46,097 cells
+# down to 1e-16 of total; m_soc 19,262; connectivity 538; every other layer clean at >= 4e-8) that
+# carries no conservation information but stretches the LP/MILP matrix to [1e-11, 1e5] -- the
+# 16-order range behind Gurobi's false optimality certificate on the Gate-0 a4 arm and the slow,
+# numerically strained solves on the carbon-targeted arms. Zeroing trims <= 1.5e-5 of any
+# feature's mass and lifts the matrix floor to ~1e-4. NOT achievable by rescaling NORM_TOTAL
+# (the range ratio is share-based and scale-invariant). The 02 cell prints per-feature drops and
+# the audit re-freeze must show leverage/targets stable -- that invariance table is the methods
+# disclosure.
+DUST_SHARE_MIN = 1e-9
+
 # Features to exclude from the optimization (kept in the aligned stack, dropped from the
 # manifest 03 reads). Use to trial feature subsets without re-running 02's heavy warp.
 EXCLUDE_FEATURES = ["irrecoverable_carbon_sl_soc"]   # subsoil carbon; keep only m_soc for now
@@ -587,6 +600,32 @@ CORRIDORS = {
                   "include_existing_pas": True, "existing_pa_min_km2": 200, "node_min_km2": 25,
                   "dedupe_overlap_frac": 0.5},
 
+        # ---- multipart named areas (D16, addendum 2026-08-21) ---------------------------
+        # A named PA/IPCA whose rasterized mask has >1 8-connected component is split into PARTS;
+        # each part >= part_min_km2 is its own CWD seed. Seeding all parts at CWD=0 as one node
+        # means the model never asks how to move between them. Per multipart name, the treatment
+        # comes from the H7-reviewed multipart_review.csv (written by cc.node_parts into
+        # audit_objects_dir, signed by a human before any CWD runs):
+        #   merge_parts     rasterization split (river/road slivers) -- re-join into one seed
+        #   link_locked     default: intra-name MST over the parts LOCKED into the backbone
+        #   link_competing  parts enter the inter-name graph as independent units; their direct
+        #                   edge competes like any other under the D7 beta ceiling
+        #   no_link         multi-site by design (or geographic gap): independent units, and the
+        #                   direct intra-name edge is EXCLUDED from candidacy
+        # part_min_km2 mirrors node_min_km2: parts below it stay in node_union (area accounting)
+        # but are not seeds. multisite_designations feeds step-0a decision rule 2 (the PA layer
+        # carries no designation attribute, so for existing PAs the designation is derived from
+        # PA_Name -- flagged in the review file); multipart_link_km is rule 2's exception distance.
+        "part_min_km2": 25,
+        "multisite_designations": ["Ecological Reserve", "Wildlife Management Area",
+                                   "National Wildlife Area", "Migratory Bird Sanctuary"],
+        "multipart_link_km": 10,
+        # H7 artifacts (node_parts.csv/.gpkg + multipart_review.csv) live GIT-TRACKED here, not in
+        # gitignored output_data/ -- later runs must reproduce the review hash. cc.start() copies
+        # them into the run dir and records their sha256 (run-dir-is-the-only-record doctrine).
+        "audit_objects_dir": PROJECT_DIR / "analyses" / "northern_connectivity"
+                             / "audit" / "audit_objects",
+
         # ---- corridor band: ABSOLUTE cwd cutoff (D6) ------------------------------------
         # Per edge, keep cells whose (CWD_i + CWD_j) is within `cwd_cutoff_abs` COST UNITS of that
         # edge's least-cost minimum -- no dependence on edge cost. Calibrated (not guessed) so the
@@ -620,6 +659,29 @@ CORRIDORS = {
         # Tier breaks are percentiles of the non-zero priority surface, PRE-REGISTERED here before
         # the run (same doctrine as CLIMATE_SCENARIOS["rule"]).
         "priority_tiers": {"robust_core": 90, "frequent": 70, "occasional": 0},
+
+        # ---- near-optimality surface + route branches (D11/D12, addendum 2026-08-21) ----
+        # D11: near_optimality.tif = min_e slack_e in RAW COST UNITS on every routable cell. Raw
+        # units keep the surface independent of cwd_cutoff_abs (calibrated for v1 area
+        # comparability, not meaning); the cutoff enters only the binary band and area accounting.
+        # near_opt_tiers are percentiles OF SLACK over the union band at 2x cutoff (the axis-B 2x
+        # member): robust_core <= p10, frequent <= p30, occasional = the rest of the routable area
+        # -- mirrors priority_tiers' p90/p70 on the inverted scale. Cells outside the 2x union
+        # fall to "occasional" (queued clarification 3).
+        "near_opt_tiers": {"robust_core": 10, "frequent": 30, "occasional": 100},
+        # D12: the unit of "alternative" is the ROUTE BRANCH -- an 8-connected component of an
+        # edge's band at branch_mult x cwd_cutoff_abs (0.5 reuses the axis-B 0.5x member; no new
+        # CWD work). n_branches == 1 => route-irreplaceable (no alternative routing WITHIN the
+        # link), reported alongside -- never merged with -- the D7 beta-ceiling edge-irreplaceable
+        # flag (no alternative LINK). branch_min_km2 drops slivers (~111 cells at 300 m; the
+        # dropped count is reported).
+        "branch_mult": 0.5,
+        "branch_min_km2": 10,
+        # D14: Carroll 2018 current-flow centrality NEVER enters resistance (same object type as
+        # Pither current density, rejected by D1-D3). It is an audit column only:
+        # carroll2018_pctl = branch mean percentile vs the routable-area percentile baseline.
+        # Matched random strips (the Phase 6 method) are deferred.
+        "carroll_ref": "routable_area",
 
         # ---- structured ensemble (D8) ---------------------------------------------------
         # Axes B/C/D all reuse the SAME resistance, and CWD depends only on resistance + node seeds
@@ -1086,6 +1148,11 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
             # Same guard pattern as feature_weight_multipliers.
             "targets": a.get("targets", {}),
             "opt_gap": OPT_GAP,
+            # Gurobi accuracy switch (2026-08-26): TRUE = prioritizr's numeric_focus, i.e. Gurobi
+            # NumericFocus. REQUIRED for trustworthy optimality certificates on this problem: the
+            # matrix spans [1e-11, 1e5] (normalized zero-tails vs shortfall scaling) and without
+            # it Gurobi certified a provably wrong optimum on the Gate-0 a4 arm. HiGHS unaffected.
+            "numeric_focus": True,
             "portfolio_n": PORTFOLIO_N,
             "portfolio_gap": PORTFOLIO_GAP,
             "connectivity_penalty": a["connectivity_penalty"],

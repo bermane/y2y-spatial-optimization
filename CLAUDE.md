@@ -63,24 +63,20 @@ Built as Jupyter notebooks, run cell-by-cell. Pipeline: **01** inventory →
     HiGHS has no solution pool. Gurobi 13.0.2 + R `gurobi` 13.0.2 are installed
     (`/Library/gurobi1302`). Meanwhile 03 runs a **HiGHS proportion-LP prototype** — the `highs`
     package IS used.
-  - **STILL BLOCKED as of 2026-08-17, but for a NEW reason — do not re-diagnose from scratch.**
-    The old TRIAL licence (size-limited ~2000 vars, `Error 10010`) was replaced by a **"Gurobi
-    Gives Back" nonprofit WLS licence, LICENSEID 2853457, valid to 2027-08-14** (Brynn's ticket
-    #120339; named users brynn@y2y.net + ethan@earthlineanalytics.com). The size cap is gone, but
-    the licence is **capped at 8 cores and this Mac has 10 physical cores**, so Gurobi will not
-    even initialise: `Error 10009: Requested number of cores (10) is greater than allowed (8)`.
-    **It fails at environment creation, before any model loads** — `gurobi_cl --license` itself
-    fails, and a 2-variable toy model fails identically. Gurobi documents that **the `Threads`
-    parameter does NOT resolve this and there is no programmatic workaround** (verified: tried
-    `Threads=8` as a solve param and via a `gurobi.env` file). Documented options are: run on a
-    machine with fewer cores, run in a VM/container that restricts visible cores, or have the
-    licence's core limit raised. **Chosen path: ask Gurobi support to raise it** — their academic
-    WLS restrictions page lists a 2-concurrent-session limit and *no* core limit, so 8 cores looks
-    like how this one was provisioned. Draft email written 2026-08-17; awaiting Brynn.
-    Old trial file backed up at `~/gurobi.lic.trial-backup-20260817`.
-    Two WLS properties to remember once it works: it needs a **live internet connection during
-    optimization**, and academic WLS allows **2 concurrent sessions** — so `ENSEMBLE["workers"]=3`
-    would fail on checkout. Keep ensemble runs on HiGHS; reserve Gurobi for the headline solve.
+  - **UNBLOCKED 2026-08-26 — Gurobi WORKS.** History: the old TRIAL licence (size-limited
+    ~2000 vars, `Error 10010`) was replaced 2026-08-17 by a **"Gurobi Gives Back" nonprofit WLS
+    licence, LICENSEID 2853457, valid to 2027-08-14** (Brynn's ticket #120339; named users
+    brynn@y2y.net + ethan@earthlineanalytics.com), which was then provisioned at 8 cores — below
+    this Mac's 10 physical cores, so environment creation itself failed (`Error 10009`; the
+    `Threads` parameter cannot work around it). Gurobi support raised the limit to **16 cores**
+    2026-08-26; propagation from the Web License Manager to the WLS token servers took ~40 min
+    (their "15 min" estimate was low), after which `gurobi_cl --license` passed and a toy LP
+    solved end-to-end using all 10 threads. `~/gurobi.lic` was re-downloaded 2026-08-26 during
+    diagnosis (fresh credentials, same LICENSEID). Old trial file backed up at
+    `~/gurobi.lic.trial-backup-20260817`.
+    Two live WLS properties: it needs a **live internet connection during optimization**, and the
+    licence allows **2 concurrent sessions** — so `ENSEMBLE["workers"]=3` would fail on checkout.
+    Keep ensemble runs on HiGHS; reserve Gurobi for the headline solve / MGA gap-portfolio.
 
 ## Data (`./input_data`, ~24.5 GB)
 
@@ -155,7 +151,10 @@ i.e. w = t so pull `w/t` stays 1.00 and only the stopping point varies; **the le
 deep-merges dict params so an arm's targets would MERGE with the config baseline instead of
 replacing it; check the printed `EFFECTIVE targets:` line, `<none>` on a0**) →
 **`03_gate0_validation.ipynb`** (verdict tables) → **`04_results.ipynb`** (the migrated 04a;
-deep-dive one arm via its `RUN` variable). Gate-0a classifications (verified in code):
+deep-dive one arm via its `RUN` variable). **02_solve has a BATCH cell at the end** (added
+2026-08-21): Run All once solves the lever's default arm then every remaining arm in a loop —
+resumable (arms with a `run_summary.json` are skipped), per-arm contexts isolated, dry-run
+verified — so the campaign is one unattended pass instead of 4–5 manual lever edits. Gate-0a classifications (verified in code):
 m_soc → concentrated-satiating (target **0.332**); **biomass REVERTED to diffuse-linear** by R2's
 tail-mass criterion (implied target 0.066 < t_min 0.15) so `config.TARGETS`' biomass entry is
 superseded by the protocol; intactness → R3-inexpressible; 36/40 EFGs rare-attainable.
@@ -169,6 +168,23 @@ portfolios need BINARY decisions → Gurobi-gated), "36/40 EFGs saturate" confla
 outcome (5 did in iter6), climate axis must be **SSP245 vs SSP585 both 2071–2100** (not
 "RCP4.5-2050s vs RCP8.5-2080s"), and Claim C's `w = influence/leverage` only holds on the linear
 arm. 06's planned plausible-range ensemble is **superseded** by this study — do not build both.
+**GATE 0 RE-WIRED TO THE PRODUCTION FORMULATION (2026-08-26, Gurobi live).** Per Ethan's
+consistency call, 02_solve's lever now carries a `MODE` switch defaulting to **binary MILP +
+Gurobi, **opt_gap 1e-4 + numeric_focus** (standard adopted 2026-08-26 after the false-certificate diagnosis: without NumericFocus, Gurobi's root LP mis-converged 0.42% high on the a4 arm and certified the wrong optimum — the [1e-11,1e5] matrix range is the cause; with the fix the same solve hit the exact optimum in 17 s, 60× faster), portfolio off → folders `iter8_y2y_<arm>`**; the solved iter7 LP arms
+(all five DONE 2026-08-21: a0 11 s / a1 70 min / a2–a3 ~11 min / a4 17 s) are KEPT as the
+relaxation-tightness record. LP results: every target bound EXACTLY at the kink under w=t; a4
+reproduced a0 with **0 differing cells** (the w/t proof); control m_soc capture rose to **54.4%**
+(dominance got WORSE under penalty-removal + 1/v); a1's freed ~21 pts went mostly to **biomass
++8.4** (weight-levered leak → S0 block-design question), birds +2.2 / mammals +1.6 /
+refugia +1.1, corridors **−1.4** (spec's freed-budget prediction partly wrong); a2 lifts the
+under-served EFGs 0.234 → 0.507. 03_gate0_validation auto-detects the generation, checks binary
+a4 by **objective-equivalence** (MILP near-ties may break differently — divergence at equal
+capture is a degeneracy datum), and gained an LP-vs-MILP tightness cell. Engine: solver/portfolio
+now decided from params at BUILD time (`pr_build_problem`), so `pr_override` can switch them;
+**two latent portfolio-path bugs fixed on first execution** — the Gurobi-13 `xn`→`poolnx` pool
+rename (documented shim wrapping `gurobi::gurobi` in prioritizr_core.R) and portfolio `solve()`
+returning a list (pr_solve now stacks) — all three solver branches verified on a toy problem
+including portfolio summaries + write round-trip.
 
 ## Structure — two notebooks + shared config
 
@@ -358,9 +374,9 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 - **PAs locked in** (counted toward budget); **EFG down-weighting** (`add_feature_weights`,
   continuous @1, each EFG @1/40); `sl_soc` carbon excluded (`EXCLUDE_FEATURES`).
 - **Solver/decisions:** `SOLVER="highs"` + `DECISION_TYPE="proportion"` (LP, ~99% integral) is
-  the **working prototype** — the binary MILP chokes HiGHS presolve at 1 km, and the real
-  **Gurobi MGA gap-portfolio** (`add_gap_portfolio`, binary) is **still blocked — now by the
-  8-core cap on the new WLS licence, not the old size cap** (see Environment). The
+  the **working prototype** — the binary MILP chokes HiGHS presolve at 1 km. The real
+  **Gurobi MGA gap-portfolio** (`add_gap_portfolio`, binary) is **licence-UNBLOCKED as of
+  2026-08-26** (see Environment) but not yet built/run — it waits on the Gate-0 review. The
   boundary-penalty LP needs `HIGHS_SOLVER="ipm"`
   (dual simplex times out). `SOLVER_TIME_LIMIT` caps the solve — **a timed-out run returns an
   infeasible point (area > budget); discard it.** With every penalty off, the 1 km LP solves in
@@ -585,8 +601,8 @@ after 03/04; it consumes the same aligned stack. Kernel `y2y-geo`.
   **Replaced by a baseline-anchored plausible-range ensemble** (baseline as a real design point,
   defensible ranges instead of ×0.25–×4, ~40–60 solves) whose per-cell **selection frequency** is
   both the robustness answer Y2Y actually asks for and the surface post-hoc delineation grows
-  candidate areas from — and a partial substitute for the MGA gap-portfolio still blocked by the
-  Gurobi licence. Note the whole ensemble is now affordable at **full 1 km** (12 s/solve without
+  candidate areas from — and a partial substitute for the MGA gap-portfolio while that was
+  licence-blocked (unblocked 2026-08-26). Note the whole ensemble is now affordable at **full 1 km** (12 s/solve without
   the neighbour penalty), so the 2 km screening compromise and the G2 scale-transfer gate are moot.
 - Requires **SALib** (added to `requirements.txt`). Phases 1b / 5 / 7 remain out of scope.
 

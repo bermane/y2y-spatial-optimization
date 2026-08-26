@@ -155,6 +155,16 @@ def _git():
     return {"sha": run("rev-parse", "HEAD"), "dirty": bool(run("status", "--porcelain"))}
 
 
+# Keys the 2026-08-21 addendum PRE-REGISTERS (spec §2). resolve() raises when one is absent --
+# the same no-dead-flags doctrine as _DEAD_KEYS, pointed the other way: a config predating the
+# addendum must not silently produce a run missing the D11/D12/D16 products.
+_REQUIRED_ADDENDUM_KEYS = [
+    "branch_mult", "branch_min_km2", "near_opt_tiers",              # D11/D12
+    "part_min_km2", "multisite_designations", "multipart_link_km",  # D16
+    "carroll_ref", "audit_objects_dir",                             # D14 / H7
+]
+
+
 def resolve(key, overrides=None, require_cutoff=True):
     """config.CORRIDORS[key] + overrides -> a validated, fully resolved run config."""
     cfg = _merge(config.CORRIDORS[key], overrides)
@@ -163,6 +173,21 @@ def resolve(key, overrides=None, require_cutoff=True):
     if dead:
         raise ValueError("config.CORRIDORS[%r] still carries v1 keys retired by the v2 rebuild:\n%s"
                          % (key, "\n".join(sorted(dead))))
+
+    def _val(dotted):
+        cur = cfg
+        for part in dotted.split("."):
+            if not isinstance(cur, dict) or part not in cur:
+                return None
+            cur = cur[part]
+        return cur
+
+    missing = [k for k in _REQUIRED_ADDENDUM_KEYS if _val(k) is None]
+    if missing:
+        raise ValueError(
+            f"config.CORRIDORS[{key!r}] is missing addendum-required keys: {missing}. These are "
+            f"pre-registered constants (spec §2 of the 2026-08-21 addendum) and must be set in "
+            f"config.py BEFORE cc.start().")
 
     if require_cutoff and cfg.get("cwd_cutoff_abs") is None:
         raise ValueError(
@@ -180,11 +205,72 @@ def resolve(key, overrides=None, require_cutoff=True):
     return cfg, cost
 
 
-def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True):
-    """Create the next run dir and write its run_config.json. Refuses to clobber an existing run."""
+# ---- H7 artifacts (D16) -----------------------------------------------------------------
+# The canonical node_parts.csv/.gpkg + multipart_review.csv live GIT-TRACKED in
+# cfg["audit_objects_dir"] (output_data/ is gitignored and later runs must reproduce the review
+# hash). new_run() copies them into the run dir and pins their sha256 in run_config.json, so each
+# run dir stays self-contained; load() then reads ONLY the run-dir copies.
+_H7_FILES = ("node_parts.csv", "node_parts.gpkg", "multipart_review.csv")
+
+
+def _review_signed(path):
+    """True when the review file carries a filled `reviewed_by` line (the H7 signature)."""
+    path = pathlib.Path(path)
+    if not path.exists():
+        return False
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        s = line.lstrip("# ").strip()
+        if s.lower().startswith("reviewed_by"):
+            rest = s.split(":", 1)[-1].split(",", 1)[-1] if ":" in s or "," in s else ""
+            if rest.strip():
+                return True
+    return False
+
+
+def read_review(path):
+    """multipart_review.csv -> {name label: treatment}. Validates the treatment vocabulary."""
+    allowed = {"merge_parts", "link_locked", "link_competing", "no_link"}
+    df = pd.read_csv(path, comment="#", encoding="utf-8-sig")
+    treatments = {}
+    for r in df.itertuples():
+        t = str(r.proposed).strip()
+        if t not in allowed:
+            raise ValueError(f"multipart_review.csv: name {r.name_label!r} has treatment {t!r}, "
+                             f"expected one of {sorted(allowed)}")
+        treatments[str(r.name_label)] = t
+    return treatments
+
+
+def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True, require_review=True):
+    """Create the next run dir and write its run_config.json. Refuses to clobber an existing run.
+
+    require_review (H7): the run must not proceed to CWD until multipart_review.csv exists in
+    cfg["audit_objects_dir"] AND carries a filled `reviewed_by` line. The signed file + node_parts
+    are copied into the run dir and hash-pinned, so re-running step 0a later cannot silently
+    change what this run was built on.
+    """
     cfg, cost = resolve(key, overrides, require_cutoff)
     root = config.RESULTS_DIR / cfg["results_subdir"]
     root.mkdir(parents=True, exist_ok=True)
+
+    audit_dir = pathlib.Path(cfg["audit_objects_dir"])
+    review = audit_dir / "multipart_review.csv"
+    h7 = {}
+    if require_review:
+        if not (audit_dir / "node_parts.csv").exists():
+            raise FileNotFoundError(
+                f"{audit_dir / 'node_parts.csv'} not found -- run step 0a first: "
+                f"cc.node_parts({key!r}) (notebook 01), then review + sign multipart_review.csv (H7).")
+        if not _review_signed(review):
+            raise ValueError(
+                f"H7 GATE: {review} is missing or unsigned. Edit the `proposed` column where the "
+                f"step-0a rules got it wrong, then fill in the `# reviewed_by:` line. The run does "
+                f"not proceed to CWD until the file is signed.")
+        read_review(review)                      # vocabulary check before anything is written
+    for f in _H7_FILES:
+        src = audit_dir / f
+        if src.exists():
+            h7[f] = {"path": str(_jsonable(src)), "sha256": _sha256(src)}
 
     if run_id is None:
         used = [int(p.name[6:]) for p in root.glob("v2_run[0-9][0-9][0-9]") if p.is_dir()]
@@ -194,6 +280,10 @@ def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True):
         raise FileExistsError(f"{run_dir} already exists -- pass a new run_id, or delete it first")
     run_dir.mkdir(parents=True)
     (run_dir / "figures").mkdir()
+
+    import shutil
+    for f in h7:
+        shutil.copy2(audit_dir / f, run_dir / f)
 
     rec = {
         "run_id": run_id, "key": key, "label": label,
@@ -210,6 +300,7 @@ def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True):
             "audit_template": str((config.HANDOFF_DIR / AUDIT_TEMPLATE).relative_to(config.PROJECT_DIR)),
             "pa_vector": str(config.PA_VECTOR.relative_to(config.PROJECT_DIR)),
             "proposed_pa": cfg["nodes"]["proposed"],
+            **h7,                       # H7 artifacts, hash-pinned (D16)
         },
         "overrides": overrides or {},
         "cfg": _jsonable(cfg),
@@ -288,7 +379,7 @@ def _dedupe_nodes(raw, frac, cell_km2):
     groups = defaultdict(list)
     for i in range(len(raw)): groups[_find(i)].append(i)
 
-    nodes, kinds = [], []
+    nodes, kinds, n_merges = [], [], 0
     for members in groups.values():
         members.sort(key=lambda i: -idx[i].size)             # largest member names the merged node
         lbl, m, kind = raw[members[0]]
@@ -298,23 +389,17 @@ def _dedupe_nodes(raw, frac, cell_km2):
             print(f"  merged node: {lbl} absorbs {', '.join(absorbed)} "
                   f"({idx[members[1]].size * cell_km2:,.0f} km² nested)")
             lbl = f"{lbl} (+{len(members)-1})"
+            n_merges += 1
         nodes.append((lbl, m)); kinds.append(kind)
-    return nodes, kinds
+    return nodes, kinds, n_merges
 
 
-def load(run_dir):
-    """Open a run dir: read run_config.json, build the 300 m routing grid cropped to the anchors,
-    and assemble + rasterize the nodes.
+def _grid_nodes(cfg, cost_path):
+    """The 300 m routing grid cropped to the anchors + the rasterized, deduped NAMED areas.
 
-    Reads ONLY run_config.json, never config.CORRIDORS -- so re-opening an old run reproduces that
-    run's parameters rather than today's config.py.
+    Shared by load() and node_parts() (step 0a) so the two can never disagree on the name set.
+    Returns a namespace with NAME-level masks; the D16 part split happens on top (_apply_parts).
     """
-    run_dir = pathlib.Path(run_dir)
-    rec = json.loads((run_dir / "run_config.json").read_text())
-    cfg = rec["cfg"]
-    key = rec["key"]
-    cost_path = config.PROJECT_DIR / rec["inputs"]["movement_cost"]["path"]
-
     full = rioxarray.open_rasterio(cost_path, masked=True).squeeze()
     crs_full = full.rio.crs
 
@@ -359,17 +444,22 @@ def load(run_dir):
         return rasterize([(geom, 1)], out_shape=shape, transform=transform, fill=0,
                          dtype="uint8").astype(bool) & pu
 
+    # designation evidence (D16 step 0a): the IPCA layer carries PA_TYPE; the PA layer has NO
+    # designation attribute, so existing-PA designations are name-derived downstream (flagged).
+    desig = {}
     nodes, dropped = [], []
     for _, row in ipca.iterrows():
         m = _rast(row.geometry)
-        (nodes if m.sum() >= min_cells else dropped).append((f"IPCA · {row[nfield]}", m, "ipca"))
+        lbl = f"IPCA · {row[nfield]}"
+        desig[lbl] = str(row["PA_TYPE"]) if "PA_TYPE" in ipca.columns and pd.notna(row.get("PA_TYPE")) else ""
+        (nodes if m.sum() >= min_cells else dropped).append((lbl, m, "ipca"))
     if pas is not None:
         for _, row in pas.iterrows():
             m = _rast(row.geometry)
             if m.sum() >= min_cells:
                 nodes.append((f"PA · {row['PA_Name']}", m, "pa"))
 
-    nodes, kinds = _dedupe_nodes(nodes, nc.get("dedupe_overlap_frac", 0.5), cell_km2)
+    nodes, kinds, n_merges = _dedupe_nodes(nodes, nc.get("dedupe_overlap_frac", 0.5), cell_km2)
     n_ipca = sum(k == "ipca" for k in kinds)
     print(f"nodes: {len(nodes)} ({n_ipca} IPCAs + {len(nodes)-n_ipca} existing PAs "
           f">= {nc['existing_pa_min_km2']} km²)  [min node size {nc['node_min_km2']} km² "
@@ -383,23 +473,134 @@ def load(run_dir):
         node_union |= m
     print(f"  node land: {int(node_union.sum()) * cell_km2:,.0f} km² (excluded from the corridor)")
 
-    # ---- the 1 km AUDIT grid (pinned; see AUDIT_TEMPLATE) -----------------------------
-    audit_template = rioxarray.open_rasterio(config.HANDOFF_DIR / AUDIT_TEMPLATE,
-                                             masked=True).squeeze()
-
     outline = gpd.read_file(config.CORRIDOR_REF).to_crs(crs)
-    return _NS(
-        key=key, cfg=cfg, rec=rec, run_id=rec["run_id"], run_dir=run_dir,
-        fig_dir=run_dir / "figures", region_label=cfg["region_label"],
-        template=template, audit_template=audit_template, cost=cost,
-        crs=crs, transform=transform, shape=shape, pu=pu,
-        cell_km2=cell_km2, cell_km=cell_km, nodes=nodes, kinds=kinds, node_union=node_union,
-        outline=outline)
+    return _NS(cfg=cfg, template=template, cost=cost, crs=crs, transform=transform, shape=shape,
+               pu=pu, cell_km2=cell_km2, cell_km=cell_km,
+               names_raw=nodes, kinds_raw=kinds, n_dedupe_merges=n_merges, desig=desig,
+               node_union=node_union, outline=outline)
 
 
-def start(key="north", overrides=None, label="", run_id=None, require_cutoff=True):
+def _name_designation(label, kind, desig, multisite):
+    """Designation string for a name. IPCAs carry PA_TYPE from the source; the PA layer has no
+    designation attribute, so for existing PAs the designation is DERIVED from PA_Name by matching
+    the multisite list (flagged as name-derived in the review file)."""
+    base = label.split(" (+", 1)[0]                     # strip the dedupe "(+n)" suffix
+    if kind == "ipca":
+        return desig.get(base, "")
+    nm = base.split(" · ", 1)[-1].lower()
+    for d in multisite:
+        if d.lower() in nm:
+            return f"{d} (name-derived)"
+    return ""
+
+
+def _split_parts(mask, min_cells):
+    """A name's mask -> (all 8-connected components, the SEED components >= part_min_km2)."""
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3), int))
+    comps = [lab == k for k in range(1, n + 1)]
+    comps.sort(key=lambda m: -int(m.sum()))
+    seeds = [m for m in comps if int(m.sum()) >= min_cells]
+    return comps, seeds
+
+
+def _apply_parts(A, treatments):
+    """D16: split every name into parts, apply the H7-reviewed treatment, build the ROUTING UNITS.
+
+    Data model layered on the v1 one so everything downstream keeps working:
+      A.names   name-level dicts (label, kind, full mask, treatment, part indices)
+      A.parts   [(part label, mask)] -- the CWD SEEDS (each cached as its own field)
+      A.nodes   [(label, seed-union mask)] per ROUTING UNIT -- the graph's node set, exactly the
+                shape the whole engine already consumes
+      Treatments: merge_parts -> one seed (the full mask; the split was a rasterization artefact);
+      link_locked -> one unit holding several seed parts, intra-name MST locked at network build;
+      link_competing -> each part its own unit (the direct edge competes like any other);
+      no_link -> each part its own unit AND the direct intra-name edges are excluded from
+      candidacy (D set to inf in corridor_network).
+    A.node_union stays the union of FULL name masks: parts < part_min_km2 remain area-accounted
+    but are never seeds (spec §2).
+    """
+    part_min = max(1, int(round(A.cfg["part_min_km2"] / A.cell_km2)))
+    names, parts, part_name = [], [], []
+    units, unit_kinds, unit_name, unit_parts = [], [], [], []
+
+    for k, ((lbl, mask), kind) in enumerate(zip(A.names_raw, A.kinds_raw)):
+        comps, seeds = _split_parts(mask, part_min)
+        multi = len(seeds) > 1
+        if multi and lbl not in treatments:
+            raise ValueError(
+                f"D16: {lbl!r} has {len(seeds)} seed parts but no row in multipart_review.csv -- "
+                f"re-run step 0a (cc.node_parts) and get the review re-signed (H7).")
+        t = treatments.get(lbl, "single") if multi else "single"
+
+        if t in ("single", "merge_parts"):
+            seed_masks = [mask if t == "merge_parts" else (seeds[0] if seeds else mask)]
+        else:
+            seed_masks = seeds
+
+        p0 = len(parts)
+        for pi, m in enumerate(seed_masks):
+            plbl = lbl if len(seed_masks) == 1 else f"{lbl} [part {pi+1}]"
+            parts.append((plbl, m)); part_name.append(k)
+        pidx = list(range(p0, len(parts)))
+        names.append(dict(label=lbl, kind=kind, mask=mask, treatment=t,
+                          parts=pidx, n_comps=len(comps), n_seeds=len(seed_masks)))
+
+        if t in ("single", "merge_parts", "link_locked"):
+            union = np.zeros(A.shape, bool)
+            for pi in pidx:
+                union |= parts[pi][1]
+            units.append((lbl, union)); unit_kinds.append(kind)
+            unit_name.append(k); unit_parts.append(pidx)
+        else:                                        # link_competing / no_link: one unit per part
+            for pi in pidx:
+                units.append((parts[pi][0], parts[pi][1]))
+                unit_kinds.append(kind); unit_name.append(k); unit_parts.append([pi])
+
+    A.names, A.parts, A.part_name = names, parts, part_name
+    A.nodes, A.kinds, A.unit_name, A.unit_parts = units, unit_kinds, unit_name, unit_parts
+    multi = [n for n in names if n["n_seeds"] > 1]
+    if multi or len(units) != len(names):
+        print(f"D16 parts: {len(names)} names -> {len(parts)} seed parts -> {len(units)} routing "
+              f"units  ({len(multi)} multipart: "
+              + "; ".join(f"{n['label'].split(' · ')[-1]} {n['n_seeds']}p/{n['treatment']}"
+                          for n in multi) + ")")
+    return A
+
+
+def load(run_dir):
+    """Open a run dir: read run_config.json, build the 300 m routing grid cropped to the anchors,
+    assemble + rasterize the nodes, and apply the D16 part treatments from the run's own signed
+    multipart_review.csv copy.
+
+    Reads ONLY run_config.json + the run-dir H7 copies, never config.CORRIDORS or the tracked
+    audit_objects/ originals -- so re-opening an old run reproduces that run's parameters and
+    review rather than today's.
+    """
+    run_dir = pathlib.Path(run_dir)
+    rec = json.loads((run_dir / "run_config.json").read_text())
+    cfg = rec["cfg"]
+    key = rec["key"]
+    cost_path = config.PROJECT_DIR / rec["inputs"]["movement_cost"]["path"]
+
+    A = _grid_nodes(cfg, cost_path)
+    A.key, A.rec, A.run_id, A.run_dir = key, rec, rec["run_id"], run_dir
+    A.fig_dir = run_dir / "figures"
+    A.region_label = cfg["region_label"]
+
+    review = run_dir / "multipart_review.csv"
+    treatments = read_review(review) if review.exists() else {}
+    _apply_parts(A, treatments)
+
+    # ---- the 1 km AUDIT grid (pinned; see AUDIT_TEMPLATE) -----------------------------
+    A.audit_template = rioxarray.open_rasterio(config.HANDOFF_DIR / AUDIT_TEMPLATE,
+                                               masked=True).squeeze()
+    return A
+
+
+def start(key="north", overrides=None, label="", run_id=None, require_cutoff=True,
+          require_review=True):
     """new_run + load, so the notebook's first cell stays one line."""
-    return load(new_run(key, overrides, label, run_id, require_cutoff))
+    return load(new_run(key, overrides, label, run_id, require_cutoff, require_review))
 
 
 # ================= resistance =================
@@ -467,8 +668,8 @@ def resistance_report(A, v1_path=None, save=True):
 
 
 # ================= network primitives =================
-def _cwd_all(A, res, cache_dir=None):
-    """Least-cost accumulated distance from each node over resistance `res`.
+def _cwd_all(A, res, masks, cache_dir=None, prefix="node"):
+    """Least-cost accumulated distance from each seed mask over resistance `res`.
 
     Returns (cwd, mcp) where `cwd` is an indexable sequence of 2-D arrays. At 300 m one field is
     ~200 MB in float64, so 42 nodes would be 8.3 GB in RAM. When `cache_dir` is given each field is
@@ -483,7 +684,7 @@ def _cwd_all(A, res, cache_dir=None):
         wrong node -- no exception, plausible-looking output. Gate G1 is what catches that.
     """
     mcp = MCP_Geometric(res)
-    seeds = [[tuple(x) for x in np.argwhere(m)] for _, m in A.nodes]
+    seeds = [[tuple(x) for x in np.argwhere(m)] for m in masks]
     if cache_dir is None:
         cwd = []
         for s in seeds:
@@ -495,7 +696,7 @@ def _cwd_all(A, res, cache_dir=None):
     cache_dir.mkdir(parents=True, exist_ok=True)
     paths = []
     for k, s in enumerate(seeds):
-        p = cache_dir / f"node_{k:03d}.npy"
+        p = cache_dir / f"{prefix}_{k:03d}.npy"
         if not p.exists():
             cum, _ = mcp.find_costs(s)
             np.save(p, cum.astype("float32"))
@@ -521,11 +722,17 @@ class _CwdCache:
 
 
 def _resistance_sha(A):
-    """Identity of the resistance surface, so a CWD cache is never reused across a different one.
-    Node seeds are part of it: the fields are per-node."""
+    """Identity of (resistance, seed structure), so a CWD cache is never reused across either a
+    different surface or a different D16 part split. Per-part seed masks + treatments are hashed
+    (spec step 1: cache keyed by resistance hash + part mask hash) -- editing multipart_review.csv
+    and re-running therefore computes fresh fields instead of silently reusing stale ones."""
     h = hashlib.sha256()
     h.update(np.ascontiguousarray(A.cost).tobytes())
     h.update(np.ascontiguousarray(A.node_union).tobytes())
+    for plbl, m in getattr(A, "parts", [(lbl, m) for lbl, m in A.nodes]):
+        h.update(np.packbits(m).tobytes())
+    for n in getattr(A, "names", []):
+        h.update(n["treatment"].encode())
     h.update(str(len(A.nodes)).encode())
     return h.hexdigest()[:16]
 
@@ -648,39 +855,218 @@ def network_mask(A, bands):
     return swath & ~A.node_union, swath
 
 
+# ================= D16 locked intra-name network =================
+def _unit_D(A):
+    """Unit-level least-cost distance matrix, with no_link intra-name pairs excluded.
+
+    For a `no_link` name the parts are independent units in the inter-name graph AND their direct
+    edge is excluded from MST/backup candidacy (a designation that is multi-site by design, or a
+    genuinely geographic gap, must not have a corridor invented between its own sites); they still
+    connect through the wider network wherever that is cheapest.
+    """
+    D = cost_matrix(A, A.cwd)
+    for n_idx, n in enumerate(A.names):
+        if n["treatment"] == "no_link":
+            us = [u for u in range(len(A.nodes)) if A.unit_name[u] == n_idx]
+            for a, b in itertools.combinations(us, 2):
+                D[a, b] = D[b, a] = np.inf
+    return D
+
+
+def _locked_edges(A, cutoff, cutoff_mode="abs"):
+    """Intra-name MSTs for link_locked multi-part units, banded on the PART fields (D16).
+
+    Locked BEFORE the inter-name MST is built -- structurally: each link_locked name is ONE unit
+    (one graph node), so the inter-name MST is automatically the contracted quotient MST, and
+    these edges are the pre-committed internal spanning structure. A part is therefore never
+    connected to its sibling only via a third park.
+    """
+    rows = []
+    for u in range(len(A.nodes)):
+        pidx = A.unit_parts[u]
+        if len(pidx) < 2:
+            continue
+        n = A.names[A.unit_name[u]]
+        k = len(pidx)
+        Dp = np.full((k, k), np.inf)
+        for a in range(k):
+            fa = np.asarray(A.cwd_parts[pidx[a]], dtype="float64")
+            for b in range(k):
+                if a != b:
+                    Dp[a, b] = np.nanmin(fa[A.parts[pidx[b]][1]])
+        np.fill_diagonal(Dp, 0.0)
+        Dp = np.minimum(Dp, Dp.T)
+        for a, b, c in cg.mst_edges(Dp):
+            p, q = pidx[a], pidx[b]
+            rows.append(dict(edge_id=f"L{p:03d}_{q:03d}", i=p, j=q,
+                             label_i=A.parts[p][0], label_j=A.parts[q][0],
+                             kind_pair=f"{n['kind']}-{n['kind']}", cost=float(c),
+                             in_mst=True, is_adjacency=False,
+                             # centrality on the unit quotient is undefined for an edge INSIDE a
+                             # supernode (same reasoning as adjacency edges). Consequence: locked
+                             # edges contribute NO linkage-priority weight -- their land shows in
+                             # corridors.tif and the near-optimality surface but not
+                             # linkage_priority.tif. OPEN METHODS QUESTION flagged for review.
+                             ecfb_raw=np.nan, ecfb_norm=np.nan,
+                             edge_class="intra_name", name_label=n["label"]))
+    if not rows:
+        return None, {}, {}, {}, {}
+    df = pd.DataFrame(rows).set_index("edge_id")
+    parts_ns = _NS(nodes=A.parts, shape=A.shape)
+    bands, slack, paths, meta = edge_bands(parts_ns, A.cwd_parts, A.mcp, df, cutoff, cutoff_mode)
+    return df, bands, slack, paths, meta
+
+
+def _unit_edge_parts(A, ui, uj):
+    """Map a built unit edge to its closest part pair (the argmin cell), for the extended
+    part-level graph that prices locked-edge failures."""
+    fi = np.asarray(A.cwd[ui])
+    mj = A.nodes[uj][1]
+    cells = np.argwhere(mj)
+    cell = cells[int(np.nanargmin(fi[mj]))]
+    pj = next(p for p in A.unit_parts[uj] if A.parts[p][1][cell[0], cell[1]])
+    pi_ = min(A.unit_parts[ui],
+              key=lambda p: float(np.asarray(A.cwd_parts[p])[cell[0], cell[1]]))
+    return pi_, pj
+
+
+def _locked_criticality(A, locked_df, beta):
+    """Failure enumeration for locked intra-name edges (spec step 2: they are real corridor land).
+
+    Runs on the EXTENDED part-level graph: parts as nodes, locked edges + every built unit edge
+    attached to its closest part pair. Per locked edge: does cutting it disconnect the network,
+    how many PART pairs strand (column is part-level for intra_name rows), the detour ratio when
+    it survives, and -- mirroring augment()'s candidate semantics -- the cheapest single part-pair
+    edge that would reconnect the sides, tested against the same beta ceiling for the
+    irreplaceable flag. The backup is PRICED but never ADDED: augmentation policy for internal
+    links is the review's call (H7), not the engine's.
+    """
+    EG = nx.Graph()
+    EG.add_nodes_from(range(len(A.parts)))
+    for eid, e in locked_df.iterrows():
+        EG.add_edge(int(e["i"]), int(e["j"]), cost=float(e["cost"]))
+    for eid, e in A.edges.iterrows():
+        pi_, pj = _unit_edge_parts(A, int(e["i"]), int(e["j"]))
+        if pi_ != pj and (not EG.has_edge(pi_, pj) or float(e["cost"]) < EG[pi_][pj]["cost"]):
+            EG.add_edge(pi_, pj, cost=float(e["cost"]))
+
+    out = {}
+    for eid, e in locked_df.iterrows():
+        p, q, c = int(e["i"]), int(e["j"]), float(e["cost"])
+        attrs = dict(EG[p][q])
+        EG.remove_edge(p, q)
+        if nx.has_path(EG, p, q):
+            detour = nx.shortest_path_length(EG, p, q, weight="cost")
+            out[eid] = dict(disconnects=False, n_pairs_lost=0,
+                            cost_inflation=detour / c if c > 0 else np.inf,
+                            mean_pair_inflation=np.nan,
+                            backup_edge_id=None, backup_ratio=None, irreplaceable=False)
+        else:
+            side = nx.node_connected_component(EG, p)
+            other = set(EG.nodes) - side
+            src = side if len(side) <= len(other) else other
+            dst = other if src is side else side
+            best, best_c = None, np.inf
+            for a in src:
+                fa = np.asarray(A.cwd_parts[a], dtype="float64")
+                for b in dst:
+                    v = float(np.nanmin(fa[A.parts[b][1]]))
+                    if np.isfinite(v) and v > 0 and v < best_c and {a, b} != {p, q}:
+                        best, best_c = (a, b), v
+            irrep = not (best is not None and best_c <= beta * c)
+            out[eid] = dict(disconnects=True, n_pairs_lost=len(side) * len(other),
+                            cost_inflation=np.inf, mean_pair_inflation=np.inf,
+                            backup_edge_id=(f"P{min(best):03d}_{max(best):03d}" if best else None),
+                            backup_ratio=(best_c / c if best is not None and c > 0 else None),
+                            irreplaceable=irrep)
+        EG.add_edge(p, q, **attrs)
+    return out
+
+
 # ================= baseline network =================
 def cost_distances(A, cache=True):
-    """Cost-weighted distance from every node. The expensive stage: one MCP pass per node.
+    """Cost-weighted distance from every SEED PART; unit fields derived on top. The expensive
+    stage: one MCP pass per part.
 
-    Cached to disk by resistance identity, because the whole ensemble (axes B/C/D) reuses exactly
-    these fields -- axis C drops a node, which removes a row and column from the distance matrix
-    but leaves every remaining node's field untouched, and axes B/D never touch resistance at all.
-    So the ensemble costs one CWD computation plus cheap re-derivations.
+    Cached to disk by (resistance, part-structure) identity, because the whole ensemble (axes
+    B/C/D) reuses exactly these fields -- axis C drops a NAME, which removes rows and columns from
+    the distance matrix but leaves every remaining field untouched, and axes B/D never touch
+    resistance at all. So the ensemble costs one CWD computation plus cheap re-derivations.
+
+    D16 field semantics (queued clarification 1): a multi-part unit's field is the POINTWISE MIN
+    over its seed parts' fields -- identical to multi-seed CWD from the part union -- and is what
+    bands, near-optimality and branches all read. It is materialised once per multi-part unit
+    (`unit_XXX.npy`) so edge_bands can memmap it like any other field; single-part units alias
+    their part's file with no copy.
     """
     cache_dir = None
     if cache:
-        cache_dir = A.cfg["grid"]["dir"] / "cwd_cache" / _resistance_sha(A)
-        cache_dir = pathlib.Path(cache_dir)
-        hit = cache_dir.exists() and len(list(cache_dir.glob("node_*.npy"))) == len(A.nodes)
-        print(f"cost-weighted distance from {len(A.nodes)} nodes "
+        # A.cfg comes back from run_config.json as strings; joining under PROJECT_DIR keeps
+        # absolute paths absolute (pathlib: an absolute right side wins) and fixes relative ones.
+        gdir = config.PROJECT_DIR / pathlib.Path(A.cfg["grid"]["dir"])
+        cache_dir = pathlib.Path(gdir) / "cwd_cache" / _resistance_sha(A)
+        hit = cache_dir.exists() and len(list(cache_dir.glob("part_*.npy"))) == len(A.parts)
+        print(f"cost-weighted distance from {len(A.parts)} seed parts "
               f"({'cache HIT' if hit else 'computing'}: {cache_dir.name})")
-    A.cwd, A.mcp = _cwd_all(A, A.resistance_arr, cache_dir)
+    A.cwd_parts, A.mcp = _cwd_all(A, A.resistance_arr, [m for _, m in A.parts],
+                                  cache_dir, prefix="part")
+
+    # ---- derive per-UNIT fields (min over the unit's parts) ---------------------------
     if cache:
-        print(f"  cache {A.cwd.nbytes_on_disk/1e9:.1f} GB on disk, one field resident at a time")
+        upaths = []
+        for u in range(len(A.nodes)):
+            pidx = A.unit_parts[u]
+            if len(pidx) == 1:
+                upaths.append(A.cwd_parts.paths[pidx[0]])
+            else:
+                p = cache_dir / f"unit_{u:03d}.npy"
+                if not p.exists():
+                    fld = np.asarray(A.cwd_parts[pidx[0]], dtype="float32").copy()
+                    for pi in pidx[1:]:
+                        np.minimum(fld, np.asarray(A.cwd_parts[pi], dtype="float32"), out=fld)
+                    np.save(p, fld)
+                upaths.append(p)
+        A.cwd = _CwdCache(upaths)
+        print(f"  cache {A.cwd_parts.nbytes_on_disk/1e9:.1f} GB on disk, one field resident at a time")
+    else:
+        fields = []
+        for u in range(len(A.nodes)):
+            pidx = A.unit_parts[u]
+            fld = np.asarray(A.cwd_parts[pidx[0]], dtype="float64")
+            for pi in pidx[1:]:
+                fld = np.minimum(fld, np.asarray(A.cwd_parts[pi], dtype="float64"))
+            fields.append(fld)
+        A.cwd = fields
     return A
 
 
 def corridor_network(A, cutoff=None, cutoff_mode="abs", beta=None, verbose=True):
-    """Cost matrix -> graph (MST + bridge backup) -> per-edge bands -> masks."""
+    """Cost matrix -> locked intra-name MSTs (D16) + inter-name graph (MST + bridge backup) ->
+    per-edge bands -> masks."""
     cutoff = A.cfg["cwd_cutoff_abs"] if cutoff is None else cutoff
     beta = A.cfg.get("beta") if beta is None else beta
 
-    A.D = cost_matrix(A, A.cwd)
+    A.D = _unit_D(A)
     labels = [lbl for lbl, _ in A.nodes]
     A.graph, A.edges = cg.build(A.D, labels, A.kinds, beta=beta, verbose=verbose)
+    A.edges["edge_class"] = np.where(A.edges["is_adjacency"], "adjacency", "inter")
 
     A.bands, A.slack, A.paths, A.band_meta = edge_bands(
         A, A.cwd, A.mcp, A.edges, cutoff, cutoff_mode)
+
+    # D16: locked intra-name edges appended -- real corridor land with its own bands + criticality,
+    # reported as a separate area line (never folded into MST/augmentation area).
+    lk_df, lk_bands, lk_slack, lk_paths, lk_meta = _locked_edges(A, cutoff, cutoff_mode)
+    if lk_df is not None:
+        crit = _locked_criticality(A, lk_df, beta)
+        for col in ("disconnects", "n_pairs_lost", "cost_inflation", "mean_pair_inflation",
+                    "backup_edge_id", "backup_ratio", "irreplaceable"):
+            lk_df[col] = [crit[e][col] for e in lk_df.index]
+        A.edges = pd.concat([A.edges, lk_df])
+        A.bands.update(lk_bands); A.slack.update(lk_slack)
+        A.paths.update(lk_paths); A.band_meta.update(lk_meta)
+    A.locked_edge_ids = list(lk_df.index) if lk_df is not None else []
+
     A.corridor, A.swath = network_mask(A, A.bands)
     A.cutoff, A.cutoff_mode = cutoff, cutoff_mode
 
@@ -693,11 +1079,16 @@ def corridor_network(A, cutoff=None, cutoff_mode="abs", beta=None, verbose=True)
 
     if verbose:
         n_adj = int(A.edges.is_adjacency.sum())
-        print(f"network: {len(A.edges)} edges ({len(A.edges)-n_adj} between separated nodes, "
-              f"{n_adj} adjacencies) | band cutoff {cutoff:g} ({cutoff_mode})")
+        n_lk = len(A.locked_edge_ids)
+        print(f"network: {len(A.edges)} edges ({len(A.edges)-n_adj-n_lk} between separated nodes, "
+              f"{n_adj} adjacencies, {n_lk} locked intra-name) | band cutoff {cutoff:g} "
+              f"({cutoff_mode})")
         print(f"  corridor (NEW land) {int(A.corridor.sum()):,} cells = "
               f"{int(A.corridor.sum())*A.cell_km2:,.0f} km²  |  raw swath incl. node land "
               f"{int(A.swath.sum())*A.cell_km2:,.0f} km²")
+        by = A.edges.groupby("edge_class")["band_km2"].sum()
+        print("  band area by class (incl. node land): "
+              + "  ".join(f"{k} {v:,.0f} km²" for k, v in by.items()))
         print(f"  anchors connected: {len(A.nodes)} nodes in {A.n_groups} network group(s) "
               f"(1 = fully connected)")
         # G3: two independent implementations of one quantity -- a raster flood fill over the
@@ -762,7 +1153,7 @@ def gate_g1(key="north", v1_dir=None, frac=0.05, tol=0.999, verbose=True):
         m = _rast(row.geometry)
         if m.sum() >= min_cells:
             raw.append((f"PA · {row['PA_Name']}", m, "pa"))
-    nodes, kinds = _dedupe_nodes(raw, nc.get("dedupe_overlap_frac", 0.5), cell_km2)
+    nodes, kinds, _ = _dedupe_nodes(raw, nc.get("dedupe_overlap_frac", 0.5), cell_km2)
 
     node_union = np.zeros(shape, bool)
     for _, m in nodes:
@@ -775,7 +1166,7 @@ def gate_g1(key="north", v1_dir=None, frac=0.05, tol=0.999, verbose=True):
 
     print(f"G1: replaying the v1 network on v1's own resistance ({shape[1]}x{shape[0]} @ "
           f"{A.cell_km:.0f} km, {len(nodes)} nodes)")
-    A.cwd, A.mcp = _cwd_all(A, A.resistance_arr, cache_dir=None)
+    A.cwd, A.mcp = _cwd_all(A, A.resistance_arr, [m for _, m in A.nodes], cache_dir=None)
     D = cost_matrix(A, A.cwd)
     _, edges = cg.build(D, [l for l, _ in nodes], kinds, beta=0, verbose=False)
     bands, _, _, meta = edge_bands(A, A.cwd, A.mcp, edges, frac, "frac", want_slack=False)
@@ -816,9 +1207,12 @@ def calibrate_cutoff(A, target_km2=None, edges="mst", lo=0.0, hi=None, tol_km2=5
     target_km2 = cal.get("target_km2") if target_km2 is None else target_km2
     edges = cal.get("edges", edges)
 
+    # INTER-NAME MST only (spec step 1): _unit_D contracts link_locked names into single units, so
+    # cg.build's MST is the quotient MST; locked intra-name bands never enter -- calibrating
+    # against them would let the cutoff absorb D16 and conflate it with D6.
     D = getattr(A, "D", None)
     if D is None:
-        D = A.D = cost_matrix(A, A.cwd)
+        D = A.D = _unit_D(A)
     labels = [lbl for lbl, _ in A.nodes]
     _, df = cg.build(D, labels, A.kinds, beta=0 if edges == "mst" else A.cfg["beta"], verbose=False)
 
@@ -841,9 +1235,26 @@ def calibrate_cutoff(A, target_km2=None, edges="mst", lo=0.0, hi=None, tol_km2=5
             break
         lo, hi = (mid, hi) if a < target_km2 else (lo, mid)
     print(f"\ncwd_cutoff_abs = {best[0]:,.1f}  reproduces {best[1]:,.0f} km² "
-          f"(target {target_km2:,}, {edges} edges)")
-    print(f"  -> write this into config.CORRIDORS[{A.key!r}]['cwd_cutoff_abs'] with the area it hits")
+          f"(target {target_km2:,}, {edges} edges; residual {best[1]-target_km2:+,.0f} km²)")
+    print(f"  -> cc.set_cutoff(A, {best[0]:.1f}, {best[1]:.0f}) writes it into run_config.json "
+          f"(and mirror it into config.CORRIDORS[{A.key!r}] for future runs)")
     return best
+
+
+def set_cutoff(A, cutoff, area_km2=None):
+    """Write the calibrated cwd_cutoff_abs into THIS run's run_config.json (spec step 1).
+
+    The run dir is the engine's only input after cc.start(), so the calibrated value must land
+    there -- notebooks 03/04 re-attach via cc.load() and read it back. Mirroring the value into
+    config.CORRIDORS is a separate, manual act (it changes the baseline for FUTURE runs)."""
+    A.cfg["cwd_cutoff_abs"] = float(cutoff)
+    A.rec["cfg"]["cwd_cutoff_abs"] = float(cutoff)
+    A.rec["calibration_result"] = {"cwd_cutoff_abs": float(cutoff),
+                                   "area_km2": (None if area_km2 is None else float(area_km2)),
+                                   "target_km2": A.cfg.get("calibration", {}).get("target_km2")}
+    (A.run_dir / "run_config.json").write_text(json.dumps(A.rec, indent=2, ensure_ascii=False))
+    print(f"cwd_cutoff_abs = {cutoff:,.1f} written into {A.run_id}/run_config.json")
+    return A
 
 
 # ================= linkage priority (D9) =================
@@ -905,6 +1316,486 @@ def priority_surface(A):
             (name, t[name])) + 1)
         print(f"  {name:12s} (>= p{t[name]:>2}): {int(m.sum())*A.cell_km2:>8,.0f} km²")
     return A
+
+
+# ================= near-optimality surface (D11) =================
+def _edge_fields(A, eid):
+    """(field_i, field_j) for an edge row -- unit fields for inter edges, part fields for locked
+    intra-name edges (D16 clarification 1)."""
+    e = A.edges.loc[eid]
+    if e["edge_class"] == "intra_name":
+        return A.cwd_parts[int(e["i"])], A.cwd_parts[int(e["j"])]
+    return A.cwd[int(e["i"])], A.cwd[int(e["j"])]
+
+
+def near_optimality(A):
+    """D11 -- the wall-to-wall near-optimality surface: min over baseline edges of slack, in RAW
+    COST UNITS, defined on every routable cell.
+
+    A least-cost model has no solution pool; the band IS the closed-form near-optimal set and
+    slack is its continuous degree. Raw units keep the surface independent of cwd_cutoff_abs
+    (calibrated for v1 area comparability, not meaning) -- the cutoff enters only the binary band
+    and area accounting. Never label this or the ensemble fraction "frequency".
+
+    Zero-cost adjacency edges contribute nothing (consistent with §7 of the methods doc). Streams
+    edge by edge from the memmaps with a running minimum + argmin owner (step 4a).
+    """
+    eids = [e for e in A.edges.index
+            if A.edges.loc[e, "cost"] > 0 and not A.edges.loc[e, "is_adjacency"]]
+    no = np.full(A.shape, np.inf, "float64")
+    owner = np.full(A.shape, -1, "int16")
+    order = {e: k for k, e in enumerate(A.edges.index)}
+    for eid in eids:
+        fi, fj = _edge_fields(A, eid)
+        field = np.asarray(fi, dtype="float64") + np.asarray(fj, dtype="float64")
+        slack = field - A.band_meta[eid]["lcp"]
+        upd = np.isfinite(slack) & (slack < no)
+        no[upd] = slack[upd]
+        owner[upd] = order[eid]
+    no[~A.pu] = np.nan
+    owner[~A.pu] = -1
+
+    # G10 -- exact-zero on every baseline least-cost path cell (float32 field storage allows a
+    # tiny relative residual), and tier classes monotone in slack.
+    worst = 0.0
+    for eid in eids:
+        pth = A.paths.get(eid)
+        if pth is None or not len(pth):
+            continue
+        res = np.nanmax(no[pth[:, 0], pth[:, 1]])
+        worst = max(worst, float(res))
+        eps = 1e-4 * max(A.band_meta[eid]["lcp"], 1.0)
+        assert res <= eps, (
+            f"G10 FAILED: near_optimality reaches {res:g} on the least-cost path of {eid} "
+            f"(lcp {A.band_meta[eid]['lcp']:g}) -- slack must be ~0 there by construction.")
+    print(f"G10 OK: max residual on baseline least-cost paths = {worst:.3g} cost units")
+
+    # Tiers: percentiles OF SLACK over the union band at 2x cutoff (== cells with min-slack
+    # <= 2x cutoff, exactly the axis-B 2x member's union). Cells outside that domain but routable
+    # fall to "occasional" (queued clarification 3).
+    t = A.cfg["near_opt_tiers"]
+    dom = no[np.isfinite(no) & (no <= 2.0 * A.cutoff)]
+    thr = {k: float(np.percentile(dom, v)) for k, v in t.items() if v < 100}
+    ordered = sorted(thr.items(), key=lambda kv: kv[1])
+    assert all(a[1] <= b[1] for a, b in zip(ordered, ordered[1:])), f"G10: tiers not monotone {thr}"
+    cls = np.zeros(A.shape, "uint8")
+    cls[A.pu] = len(ordered) + 1                                   # occasional = rest of routable
+    # assign the tightest tier last so the smallest threshold wins
+    for c, (name, v) in list(enumerate(ordered, start=1))[::-1]:
+        cls[np.isfinite(no) & (no <= v)] = c
+    cls[~A.pu] = 0
+
+    A.near_opt, A.near_opt_owner, A.near_opt_class, A.near_opt_thresholds = \
+        no.astype("float32"), owner, cls, thr
+    print(f"near-optimality surface over {int(A.pu.sum()):,} routable cells "
+          f"(tier domain = union band at 2x cutoff, {dom.size:,} cells)")
+    for c, (name, v) in enumerate(ordered, start=1):
+        print(f"  {name:12s} (slack <= {v:>12,.0f} = p{t[name]:>2}): "
+              f"{int((cls == c).sum())*A.cell_km2:>9,.0f} km²")
+    print(f"  {'occasional':12s} (rest of routable):        "
+          f"{int((cls == len(ordered)+1).sum())*A.cell_km2:>9,.0f} km²")
+
+    dst = A.run_dir
+    _tif(A, np.where(np.isfinite(A.near_opt), A.near_opt, -1), dst / "near_optimality.tif",
+         "float32", -1)
+    _tif(A, A.near_opt_owner, dst / "near_opt_owner.tif", "int16", -1)
+    _tif(A, A.near_opt_class, dst / "near_optimality_class.tif", "uint8", 0)
+    pd.DataFrame({"owner_code": [order[e] for e in eids], "edge_id": eids}) \
+        .to_csv(dst / "near_opt_owner_legend.csv", index=False)
+    print(f"  wrote near_optimality.tif, near_opt_owner.tif, near_optimality_class.tif "
+          f"(+ owner legend)")
+    return A
+
+
+# ================= route branches (D12) =================
+def route_branches(A):
+    """D12 -- the unit of "alternative" is the ROUTE BRANCH: an 8-connected component of an edge's
+    band at cutoff_branch = branch_mult x cwd_cutoff_abs.
+
+    Band components are provably genuine i->j alternatives (G9): a band cell c has slack(c) <=
+    cutoff, and every cell on the least-cost i->c->j path has slack <= slack(c), so each component
+    is connected to both endpoints inside the band -- a failing assert means a masking or
+    seed-handling bug, not a legitimate outcome. Per edge, n_branches == 1 => ROUTE-irreplaceable
+    (no alternative routing within the link), reported alongside -- never merged with -- the D7
+    beta-ceiling EDGE-irreplaceable flag. Locked intra_name edges get branches too (queued
+    clarification 2), carrying edge_class through.
+
+    Components are formed BEFORE node subtraction (an intermediate node splitting a route does not
+    make it two alternatives), then node land is removed and slivers < branch_min_km2 dropped
+    (count reported).
+    """
+    bm, bmin = A.cfg["branch_mult"], A.cfg["branch_min_km2"]
+    cutoff_b = bm * A.cutoff
+    min_cells = max(1, int(round(bmin / A.cell_km2)))
+    eids = [e for e in A.edges.index
+            if A.edges.loc[e, "cost"] > 0 and not A.edges.loc[e, "is_adjacency"]]
+
+    lab_out = np.zeros(A.shape, "int32")
+    lab_pri = np.full(A.shape, np.inf, "float32")     # overlap resolution: lower min_slack wins
+    rows, idx_store = [], {}
+    n_dropped = 0
+    bid = 0
+    struct = np.ones((3, 3), int)
+    for eid in eids:
+        e = A.edges.loc[eid]
+        idx, sl = A.bands[eid], A.slack[eid]
+        keep = idx[sl <= cutoff_b]
+        m = np.zeros(A.shape[0] * A.shape[1], bool)
+        m[keep] = True
+        m = m.reshape(A.shape)
+
+        if e["edge_class"] == "intra_name":
+            mi, mj = A.parts[int(e["i"])][1], A.parts[int(e["j"])][1]
+        else:
+            mi, mj = A.nodes[int(e["i"])][1], A.nodes[int(e["j"])][1]
+
+        lab, n = ndimage.label(m, structure=struct)
+        comps = []
+        for k in range(1, n + 1):
+            cm = lab == k
+            # G9 -- hard assert: every component touches BOTH endpoint seed masks.
+            assert (cm & mi).any() and (cm & mj).any(), (
+                f"G9 FAILED on {eid}: a branch-band component does not reach both endpoints. "
+                f"By the slack-monotonicity property this cannot happen on a correct band -- "
+                f"suspect masking or seed handling, not the landscape.")
+            comps.append(cm)
+
+        for cm in comps:
+            cm2 = cm & ~A.node_union
+            cells = int(cm2.sum())
+            if cells < min_cells:
+                n_dropped += 1
+                continue
+            fidx = np.flatnonzero(cm2.ravel())
+            sl_sel = A.slack[eid][np.isin(A.bands[eid], fidx)]
+            rr, cc = np.nonzero(cm2)
+            # length proxy: extent along the component's principal axis (NOT a path length)
+            xy = np.stack([cc - cc.mean(), rr - rr.mean()])
+            w, v = np.linalg.eigh(np.cov(xy) if cells > 1 else np.eye(2))
+            proj = v[:, -1] @ xy
+            bid += 1
+            rows.append(dict(
+                branch=bid, branch_id=f"{eid}_{bid}", edge_id=eid,
+                edge_class=e["edge_class"], label_i=e["label_i"], label_j=e["label_j"],
+                area_km2=round(cells * A.cell_km2, 1), cells=cells,
+                min_slack=float(sl_sel.min()) if sl_sel.size else 0.0,
+                mean_slack=float(sl_sel.mean()) if sl_sel.size else 0.0,
+                length_proxy_km=round(float(np.ptp(proj)) * A.cell_km, 1) if cells > 1 else round(A.cell_km, 1),
+                bbox=[int(rr.min()), int(cc.min()), int(rr.max()), int(cc.max())]))
+            idx_store[bid] = fidx
+            pri = rows[-1]["min_slack"]
+            win = cm2 & (pri < lab_pri)
+            lab_out[win] = bid
+            lab_pri[win] = pri
+
+    br = pd.DataFrame(rows)
+    if len(br):
+        # branch numbering per edge, ordered by min slack (spec step 4b.4)
+        br["k"] = br.groupby("edge_id")["min_slack"].rank(method="first").astype(int)
+        br["branch_id"] = br["edge_id"] + "_" + br["k"].astype(str)
+        per_edge = br.groupby("edge_id").size()
+        A.edges["n_branches"] = per_edge.reindex(A.edges.index).fillna(0).astype(int)
+        A.edges["route_irreplaceable"] = A.edges["n_branches"] == 1
+    A.branches, A.branch_idx = br, idx_store
+    A.branch_label = lab_out
+
+    n_multi = int((A.edges.get("n_branches", pd.Series(dtype=int)) > 1).sum())
+    n_route_irr = int(A.edges.get("route_irreplaceable", pd.Series(dtype=bool)).sum())
+    print(f"route branches @ {bm:g}x cutoff ({cutoff_b:,.0f}): {len(br)} branches over "
+          f"{len(eids)} edges | {n_route_irr} ROUTE-irreplaceable edges, {n_multi} with "
+          f"alternatives | {n_dropped} slivers < {bmin} km² dropped")
+    print("  route-irreplaceable (D12, within-link) vs edge-irreplaceable (D7, no alternative "
+          "link) are DIFFERENT senses -- always reported together, never merged")
+
+    dst = A.run_dir
+    _tif(A, A.branch_label, dst / "branches.tif", "int32", 0)
+    polys = []
+    for r in br.itertuples():
+        m = np.zeros(A.shape[0] * A.shape[1], bool)
+        m[idx_store[r.branch]] = True
+        m = m.reshape(A.shape)
+        geom = [_shape(s) for s, v in shapes(m.astype("uint8"), mask=m, transform=A.transform)
+                if v == 1]
+        polys.append(dict(branch_id=r.branch_id, edge_id=r.edge_id, edge_class=r.edge_class,
+                          area_km2=r.area_km2, min_slack=r.min_slack,
+                          geometry=gpd.GeoSeries(geom, crs=A.crs).union_all()))
+    if polys:
+        gpd.GeoDataFrame(polys, crs=A.crs).to_file(dst / "branches.gpkg", driver="GPKG")
+    br.drop(columns=["branch"]).to_csv(dst / "branches.csv", index=False, encoding="utf-8-sig")
+    print(f"  wrote branches.tif, branches.gpkg, branches.csv")
+    return A
+
+
+# ================= per-branch values table (D13/D14) =================
+def alternatives_table(A):
+    """Step 4c -- the per-branch values table, SAME column specification as the Y2Y-wide
+    alternatives (consequences) tables: display names, units and normalisations are IMPORTED from
+    results_core.RAW_SPEC / mask_profile, never redefined here (D13). Row unit differs -- edge x
+    route branch, not a solution cluster -- and the caption says so.
+
+    D14: Carroll 2018 current-flow centrality enters ONLY as the audit column carroll2018_pctl
+    (branch mean percentile vs the routable-area percentile baseline, carroll_ref). H6-guarded:
+    an absent layer logs the gap and the table ships without the column, rather than failing.
+    """
+    assert getattr(A, "branches", None) is not None and len(A.branches), \
+        "run cc.route_branches(A) first"
+    P = A.profile["P"] if getattr(A, "profile", None) else _profile_stacks(A)
+
+    # routable area on the audit grid = the Carroll percentile reference (carroll_ref)
+    routable_1k = _to_audit(A, A.pu)
+    carroll_k = P.cont.index("climate_corridors") if "climate_corridors" in P.cont else None
+    if carroll_k is None:
+        print("H6: climate_corridors not in the audit stack -- carroll2018_pctl SKIPPED "
+              "(logged, not fatal)")
+        pct_grid = None
+    else:
+        raw = P.cont_raw[carroll_k]
+        ref = raw[routable_1k & np.isfinite(raw)]
+        order = np.argsort(ref)
+        # percentile transform over the ROUTABLE audit area
+        def _pctl(vals):
+            v = vals[np.isfinite(vals)]
+            if not v.size:
+                return np.nan
+            return float(100.0 * np.searchsorted(ref[order], v, side="right").mean() / ref.size)
+        pct_grid = _pctl
+
+    rows, g11 = [], []
+    for r in A.branches.itertuples():
+        m = np.zeros(A.shape[0] * A.shape[1], bool)
+        m[A.branch_idx[r.branch]] = True
+        m = m.reshape(A.shape)
+        audit = _to_audit(A, m)
+        a300 = r.cells * A.cell_km2
+        a1k = int(audit.sum()) * P.cell_km2
+        rel = abs(a1k - a300) / max(a300, 1e-9)
+        g11.append((r.branch_id, a300, a1k, rel))
+        if not audit.any():
+            print(f"  {r.branch_id}: too narrow for the 1 km audit grid -- values row skipped")
+            continue
+        prof, contrib, eff, rawv = rc.mask_profile(P, audit)
+        e = A.edges.loc[r.edge_id]
+        row = dict(branch_id=r.branch_id, edge_id=r.edge_id, edge_class=r.edge_class,
+                   label_i=e["label_i"], label_j=e["label_j"],
+                   area_km2=round(a300, 1), area_km2_audit=round(a1k, 1),
+                   min_slack=r.min_slack, mean_slack=r.mean_slack,
+                   n_branches=int(e.get("n_branches", 1)),
+                   route_irreplaceable=bool(e.get("route_irreplaceable", False)),
+                   edge_irreplaceable=bool(e.get("irreplaceable", False)),
+                   edge_cost=float(e["cost"]), ecfb_raw=e.get("ecfb_raw"))
+        for j, ax in enumerate(P.axes_labels):
+            row[f"{ax} | richness"] = round(prof[j], 3)
+            row[f"{ax} | contribution %"] = round(contrib[j], 4)
+            row[f"{ax} | efficiency"] = round(eff[j], 4)
+        if pct_grid is not None:
+            vals = P.cont_raw[carroll_k][audit]
+            row["carroll2018_pctl"] = round(pct_grid(vals), 1)
+            row["carroll2018_pctl_ref"] = 50.0       # routable-area baseline, by construction
+        rows.append(row)
+
+    # G11 -- audit-crossing discrepancy <= 5% for branches >= 50 km²; ALL discrepancies logged.
+    print("G11 audit-crossing check (300 m -> 1 km):")
+    bad = []
+    for bid, a300, a1k, rel in g11:
+        flag = "OK " if (a300 < 50 or rel <= 0.05) else "FAIL"
+        if flag == "FAIL":
+            bad.append(bid)
+        print(f"  {flag} {bid:24s} {a300:8,.0f} km² -> {a1k:8,.0f} km²  ({rel:+.1%})")
+    assert not bad, (f"G11 FAILED for {bad}: audit-grid area drifts > 5% on branches >= 50 km² -- "
+                     f"contribution/efficiency would be computed on a different footprint than "
+                     f"the map shows.")
+
+    df = pd.DataFrame(rows)
+    dst = A.run_dir
+    df.to_csv(dst / "alternatives_branches.csv", index=False, encoding="utf-8-sig")
+    caption = ("Row unit is edge x route branch, not a solution cluster; columns follow the "
+               "Y2Y-wide alternatives table for readability only. carroll2018_pctl is an audit "
+               "column (D14): RCP 8.5 late-century only, shares anthropogenic signal with the "
+               "cost surface; no routing is climate-informed.")
+    (dst / "alternatives_branches.meta.json").write_text(json.dumps(
+        dict(caption=caption, row_unit="edge x route branch",
+             column_spec="results_core.RAW_SPEC / mask_profile (imported, not redefined)",
+             carroll_ref=A.cfg["carroll_ref"]), indent=2))
+    print(f"  wrote alternatives_branches.csv (+ .meta.json caption) -- {len(df)} branch rows")
+    A.alternatives = df
+    return A
+
+
+def tiebreak(A):
+    """Step 4d -- for edges with n_branches >= 2, rank branches by the audit columns, with both
+    the connectivity-equivalence evidence (slack difference) and the values evidence. RANKING
+    ONLY: no automated "recommended" flag -- the recommendation is a human read of the table."""
+    df = getattr(A, "alternatives", None)
+    assert df is not None, "run cc.alternatives_table(A) first"
+    multi = df[df["n_branches"] >= 2].copy()
+    if not len(multi):
+        print("tiebreak: no edges with >= 2 branches -- nothing to write")
+        return A
+    contrib_cols = [c for c in df.columns if c.endswith("| contribution %")]
+    multi["slack_delta_vs_best"] = multi.groupby("edge_id")["min_slack"].transform(
+        lambda s: s - s.min())
+    multi["mean_contrib_rank"] = (multi.groupby("edge_id")[contrib_cols]
+                                  .rank(ascending=False).mean(axis=1).round(2))
+    cols = (["edge_id", "branch_id", "area_km2", "min_slack", "slack_delta_vs_best",
+             "mean_contrib_rank"] + contrib_cols
+            + (["carroll2018_pctl"] if "carroll2018_pctl" in df.columns else []))
+    out = multi[cols].sort_values(["edge_id", "mean_contrib_rank"])
+    out.to_csv(A.run_dir / "tiebreak.csv", index=False, encoding="utf-8-sig")
+    print(f"tiebreak.csv: {len(out)} branch rows over {out.edge_id.nunique()} edges with "
+          f"alternatives (ranking only; recommendation is a human read)")
+    return A
+
+
+# ================= step 0a -- part split + multipart review (D16) =================
+def node_parts(key="north", force=False):
+    """Step 0a: rasterize the names at 300 m, split into parts, write node_parts.csv/.gpkg and
+    the PROPOSED multipart_review.csv into the git-tracked audit_objects dir.
+
+    Standalone (no run dir): runs BEFORE any run exists, in notebook 01. The analysis proposes a
+    treatment per multipart name from decision rules 1-4 (spec step 0a) with the evidence beside
+    it; H7 is then a CONFIRMATION -- the human edits `proposed` where the rules got it wrong and
+    signs the `# reviewed_by:` line. Refuses to overwrite an already-SIGNED review unless
+    force=True (re-running 0a must not silently discard a human's edits).
+    """
+    cfg, cost_path = resolve(key, require_cutoff=False)
+    audit_dir = pathlib.Path(cfg["audit_objects_dir"])
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    review_path = audit_dir / "multipart_review.csv"
+    if _review_signed(review_path) and not force:
+        raise FileExistsError(
+            f"{review_path} is already SIGNED. Re-running step 0a would discard the human "
+            f"review -- pass force=True only if that is intended (H7 must then re-sign).")
+
+    A = _grid_nodes(cfg, cost_path)
+    A.cfg = cfg
+    part_min = max(1, int(round(cfg["part_min_km2"] / A.cell_km2)))
+    res = np.where(A.pu, A.cost, np.inf)
+
+    # ---- node_parts.csv/.gpkg: every name, every component ---------------------------
+    prows, polys = [], []
+    per_name = {}
+    for (lbl, mask), kind in zip(A.names_raw, A.kinds_raw):
+        comps, seeds = _split_parts(mask, part_min)
+        per_name[lbl] = (comps, seeds, kind)
+        for k, cm in enumerate(comps, 1):
+            cells = int(cm.sum())
+            prows.append(dict(name_label=lbl, kind=kind, part_id=k,
+                              area_km2=round(cells * A.cell_km2, 1),
+                              is_seed=cells >= part_min))
+            geom = [_shape(s) for s, v in shapes(cm.astype("uint8"), mask=cm,
+                                                 transform=A.transform) if v == 1]
+            polys.append(dict(name_label=lbl, part_id=k, is_seed=cells >= part_min,
+                              area_km2=round(cells * A.cell_km2, 1),
+                              geometry=gpd.GeoSeries(geom, crs=A.crs).union_all()))
+    pd.DataFrame(prows).to_csv(audit_dir / "node_parts.csv", index=False, encoding="utf-8-sig")
+    gpd.GeoDataFrame(polys, crs=A.crs).to_file(audit_dir / "node_parts.gpkg", driver="GPKG")
+    multi = {lbl: v for lbl, v in per_name.items() if len(v[1]) > 1}
+    print(f"node_parts: {len(per_name)} names -> {len(prows)} components, "
+          f"{sum(r['is_seed'] for r in prows)} seed parts | {len(multi)} multipart names to review")
+    print(f"  wrote node_parts.csv, node_parts.gpkg -> {audit_dir.relative_to(config.PROJECT_DIR)}")
+
+    # ---- evidence + proposed treatment per multipart name ----------------------------
+    mcp = MCP_Geometric(res)
+    max_cost = max(cfg["resistance"]["expect_classes"])
+    multisite = cfg["multisite_designations"]
+    link_km = cfg["multipart_link_km"]
+    name_masks = {lbl: m for (lbl, m), _ in zip(A.names_raw, A.kinds_raw)}
+
+    rrows = []
+    for lbl, (comps, seeds, kind) in multi.items():
+        areas = sorted((round(int(m.sum()) * A.cell_km2, 1) for m in seeds), reverse=True)
+        desig = _name_designation(lbl, kind, A.desig, multisite)
+
+        # min cell gap between any two seed parts (EDT per part, min over the others)
+        min_gap = np.inf
+        for a in range(len(seeds)):
+            d = ndimage.distance_transform_edt(~seeds[a])
+            for b in range(len(seeds)):
+                if a != b:
+                    min_gap = min(min_gap, float(d[seeds[b]].min()))
+        cents = [np.argwhere(m).mean(axis=0) for m in seeds]
+        max_eu = max(np.hypot(*(ca - cb)) for ca, cb in itertools.combinations(cents, 2))
+
+        # CWD between the parts on the O'Brien surface (parts only -- cheap), with the traceback
+        # path giving intervening names, the cost-1000 crossing flag, AND the per-pair barrier
+        # evidence: highways/rail are the cost-10 CLASS (not 1000), so "no cost-1000 on the path"
+        # alone cannot rule out a road crossing -- path_max_cost / path_cells_cost10plus measure it
+        # directly instead of leaving it to be inferred from cost-per-cell arithmetic.
+        pair_costs, pair_max, pair_n10, intervening, crosses = [], [], [], set(), False
+        for a in range(len(seeds)):
+            cum, _ = mcp.find_costs([tuple(x) for x in np.argwhere(seeds[a])])
+            for b in range(a + 1, len(seeds)):
+                c = float(np.nanmin(cum[seeds[b]]))
+                pair_costs.append(round(c, 1))
+                cells_b = np.argwhere(seeds[b])
+                tgt = tuple(cells_b[int(np.nanargmin(cum[seeds[b]]))])
+                mcp.find_costs([tuple(x) for x in np.argwhere(seeds[a])])   # re-seed (traceback trap)
+                pth = np.asarray(mcp.traceback(tgt), dtype=np.int32)
+                if len(pth):
+                    on = res[pth[:, 0], pth[:, 1]]
+                    crosses = crosses or bool((on == max_cost).any())
+                    pair_max.append(int(np.nanmax(on)))
+                    pair_n10.append(int((on >= 10).sum()))
+                    for other_lbl, om in name_masks.items():
+                        if other_lbl != lbl and om[pth[:, 0], pth[:, 1]].any():
+                            intervening.add(other_lbl)
+                else:
+                    pair_max.append(0); pair_n10.append(0)
+
+        # decision rules, in order (spec step 0a), recorded verbatim in `reason`
+        gap_km = min_gap * A.cell_km
+        if min_gap < 3:
+            prop, why = "merge_parts", f"rule 1: min gap {min_gap:.0f} cells < 3 -- rasterization split"
+        elif desig and any(d.lower() in desig.lower() for d in multisite):
+            if gap_km <= link_km and not intervening:
+                prop, why = "link_locked", (f"rule 2 exception: multi-site designation but parts "
+                                            f"within {link_km} km and nothing intervenes")
+            else:
+                prop, why = "no_link", f"rule 2: designation {desig!r} is multi-site by design"
+        elif intervening:
+            prop, why = "link_competing", (f"rule 3: intra-name path crosses "
+                                           f"{sorted(intervening)} -- the inter-name network "
+                                           f"already carries the connection")
+        else:
+            prop, why = "link_locked", "rule 4: default -- a named area is a management unit"
+
+        rrows.append(dict(
+            name_label=lbl, kind=kind, designation=desig, n_parts=len(seeds),
+            part_areas_km2=";".join(str(a) for a in areas),
+            min_gap_cells=(int(min_gap) if np.isfinite(min_gap) else None),
+            max_euclid_km=round(max_eu * A.cell_km, 1),
+            cwd_between_parts=";".join(str(c) for c in pair_costs),
+            path_max_cost=";".join(str(v) for v in pair_max),
+            path_cells_cost10plus=";".join(str(v) for v in pair_n10),
+            intervening_nodes=";".join(sorted(intervening)),
+            crosses_cost_1000=crosses, proposed=prop, reason=why))
+        print(f"  {lbl.split(' · ')[-1][:40]:40s} {len(seeds)}p  -> {prop:15s} ({why.split(':')[0]})")
+
+    hdr = ("# multipart_review.csv -- D16/H7 (spec step 0a). Edit `proposed` where the rules got\n"
+           "# it wrong (merge_parts | link_locked | link_competing | no_link), then SIGN below.\n"
+           "# PA designations are name-derived (the PA layer has no designation attribute).\n")
+    body = pd.DataFrame(rrows).to_csv(index=False) if rrows else \
+        "name_label,kind,designation,n_parts,part_areas_km2,min_gap_cells,max_euclid_km," \
+        "cwd_between_parts,intervening_nodes,crosses_cost_1000,proposed,reason\n"
+    review_path.write_text(hdr + body + "# reviewed_by: \n", encoding="utf-8")
+    print(f"  wrote multipart_review.csv ({len(rrows)} names to review) -- H7: edit `proposed` "
+          f"where needed, then fill in the `# reviewed_by:` line. NOTHING downstream runs "
+          f"until it is signed.")
+    return pd.DataFrame(rrows)
+
+
+def gate_g0(A, expect_names=42, expect_merges=3):
+    """G0, re-baselined by D16: name set unchanged (42 names, same 3 dedupe merges) PLUS the part
+    count and the multipart_review.csv hash this run was built on (pinned by new_run)."""
+    assert len(A.names) == expect_names, \
+        f"G0 FAILED: {len(A.names)} names, expected {expect_names}"
+    assert A.n_dedupe_merges == expect_merges, \
+        f"G0 FAILED: {A.n_dedupe_merges} dedupe merges, expected {expect_merges}"
+    rev = A.rec["inputs"].get("multipart_review.csv", {})
+    print(f"G0 OK (re-baselined): {len(A.names)} names ({A.n_dedupe_merges} dedupe merges) | "
+          f"{len(A.parts)} seed parts -> {len(A.nodes)} routing units | "
+          f"review sha256 {rev.get('sha256', 'MISSING')[:12]}")
+    return True
 
 
 # ================= outputs =================
@@ -974,10 +1865,10 @@ def write_run(A):
 
     A.edges.to_csv(dst / "corridor_edges.csv", encoding="utf-8-sig")
     written.append("corridor_edges.csv")
-    crit_cols = ["label_i", "label_j", "cost", "in_mst", "is_adjacency", "ecfb_raw",
+    crit_cols = ["label_i", "label_j", "edge_class", "cost", "in_mst", "is_adjacency", "ecfb_raw",
                  "disconnects", "n_pairs_lost", "cost_inflation", "mean_pair_inflation",
                  "backup_edge_id", "backup_ratio", "irreplaceable", "insures_edge_id",
-                 "band_km2", "centreline_km"]
+                 "n_branches", "route_irreplaceable", "band_km2", "centreline_km"]
     (A.edges[[c for c in crit_cols if c in A.edges.columns]]
      .sort_values(["irreplaceable", "n_pairs_lost", "ecfb_raw"], ascending=False)
      .to_csv(dst / "criticality.csv", encoding="utf-8-sig"))
@@ -987,18 +1878,24 @@ def write_run(A):
     written.append("corridor_edges.gpkg")
 
     n_adj = int(A.edges.is_adjacency.sum())
+    n_lk = len(getattr(A, "locked_edge_ids", []))
     summary = dict(
         schema="05.v2",
         run_id=A.run_id, region=A.region_label,
+        n_names=len(getattr(A, "names", [])) or None,
+        n_seed_parts=len(getattr(A, "parts", [])) or None,
         n_nodes=len(A.nodes),
         n_ipca=sum(k == "ipca" for k in A.kinds),
         n_existing_pa=sum(k == "pa" for k in A.kinds),
         n_edges=len(A.edges),
-        n_edges_mst=int(A.edges.in_mst.sum()),
+        n_edges_mst=int(A.edges.in_mst.sum()) - n_lk,
         n_edges_backup=int((~A.edges.in_mst).sum()),
         n_edges_adjacency=n_adj,
-        n_edges_separated=len(A.edges) - n_adj,
+        n_edges_intra_name=n_lk,
+        n_edges_separated=len(A.edges) - n_adj - n_lk,
         n_irreplaceable=int(A.edges.irreplaceable.sum()),
+        n_route_irreplaceable=(int(A.edges["route_irreplaceable"].sum())
+                               if "route_irreplaceable" in A.edges.columns else None),
         n_network_groups=A.n_groups,
         # corridor_km2 is the NEW land only; the raw swath additionally covers node interiors,
         # which are already protected or proposed (see network_mask).
@@ -1110,8 +2007,12 @@ def map(A):
 
 
 def _node_masks(A):
+    # FULL name masks where available (D16): maps and the G5 audit rows show whole named areas,
+    # not just the seed parts. gate_g1's context has no A.names and falls back to A.nodes.
     pa_mask = np.zeros(A.shape, bool); anch = np.zeros(A.shape, bool)
-    for (lbl, m), k in zip(A.nodes, A.kinds):
+    src = ([(n["mask"], n["kind"]) for n in A.names] if getattr(A, "names", None)
+           else [(m, k) for (lbl, m), k in zip(A.nodes, A.kinds)])
+    for m, k in src:
         (anch if k == "ipca" else pa_mask)[m] = True
     return pa_mask, anch
 

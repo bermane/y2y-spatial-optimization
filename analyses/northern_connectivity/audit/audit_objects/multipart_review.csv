@@ -1,0 +1,10 @@
+# multipart_review.csv -- D16/H7 (spec step 0a). Edit `proposed` where the rules got,,,,,,,,,,,,,
+# it wrong (merge_parts | link_locked | link_competing | no_link), then SIGN below.,,,,,,,,,,,,
+# PA designations are name-derived (the PA layer has no designation attribute).,,,,,,,,,,,,,
+name_label,kind,designation,n_parts,part_areas_km2,min_gap_cells,max_euclid_km,cwd_between_parts,path_max_cost,path_cells_cost10plus,intervening_nodes,crosses_cost_1000,proposed,reason
+IPCA · Dene Kʼéh Kusān,ipca,IPCA,3,37090.2;2064.3;79.5,44,130.5,85.8;121.4;48.8,1;1;1,0;0;0,,FALSE,link_locked,rule 4: default -- a named area is a management unit
+PA · Liard River Corridor Park,pa,,3,481.9;251.9;79.1,5,62,6.0;5.2;133.1,1;1;1,0;0;0,,FALSE,link_locked,rule 4: default -- a named area is a management unit
+PA · Nahanni National Park Reserve Of Canada,pa,,2,30020.7;43.2,34,177.1,36.5,1,0,,FALSE,link_locked,rule 4: default -- a named area is a management unit
+PA · Nááts’Ihch’Oh National Park Reserve Of Canada,pa,,2,4382.7;515.9,36,55.4,36.8,1,0,,FALSE,link_locked,rule 4: default -- a named area is a management unit
+PA · Tombstone Natural Environment Park,pa,,2,1705.3;343.5,2,24,2.8,1,0,,FALSE,merge_parts,rule 1: min gap 2 cells < 3 -- rasterization split
+# reviewed_by: ,"than Berman, 2026-08-26",,,,,,,,,,,,
