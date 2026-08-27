@@ -137,8 +137,18 @@ is a disclosed miscount — its own input list is 8 continuous + EFG block = 9).
 review checkpoint BEFORE any Gate-0 solve. NOTE v0.8 did NOT absorb the five corrections this repo
 already measured (Gurobi-gated pools, capacity-vs-outcome, SSP climate axis, Claim C linear-arm
 limit, and the "capture lands at target (not above)" pass criterion that co-capture refutes) — they
-remain owed to a future revision; the validation notebook keeps the measured-corrected verdicts. **Implemented scope = through Gate 0 ONLY, then report back** — Gate 1+, manifest
-freeze, and all Gurobi work wait on that review. **The whole campaign lives in `analyses/y2y/` (self-contained, 2026-08-18)** — the old `03a_y2y` /
+remain owed to a future revision; the validation notebook keeps the measured-corrected verdicts.
+**SPEC NOW v0.9.1 (2026-08-27): Gate 0a/0 ratified COMPLETE; the owed corrections were absorbed
+(w=t RETIRED as a Gate-0-only convention; S4 = θ 3× → m_soc t 0.552; E5 HiGHS arm dropped;
+climate axis SSP245 vs SSP585 both 2071–2100 → 14 serial cells). GATE 1 BUILT, awaiting Ethan's
+run:** `analyses/y2y/05_s0_construction.ipynb` (zero solves) runs the v0.9.1 pre-registered
+biomass θ-tail diagnostic (mass-weighted a1 capture ≥0.90→mass-proportional split / 0.50–0.90→
+equal / <0.50→STOP to chat; SPLIT checkpoint) then derives S0–S4 by block-level influence
+budgeting (`config.BLOCKS`, `leverage_core.swing_per_unit_w`/`scenario_weights`; EFGs 1/40 +
+intactness w=1 OUTSIDE, disclosed) and freezes `spec/scenarios_v1.json`; 02_preprocess gained a
+STANDALONE closing section building `aligned_stack/climate_realizations/` (orient 1/v → dust →
+PU mask; 585 must reproduce the stack layer — provenance QA). Run order: 02 closing section →
+05 top-to-bottom → report §A + T1 back before Gate 2 (first 1 km pool run: S0, k=50, g=5%). **The whole campaign lives in `analyses/y2y/` (self-contained, 2026-08-18)** — the old `03a_y2y` /
 `04a_y2y` root notebooks were MIGRATED here (outputs preserved; root-finding bootstraps added so
 they run from the subfolder; `03b/03c`, `04b/04c` stay at root). Each notebook runs top-to-bottom
 by Ethan, in numeric order: **`01_feature_audit.ipynb`** (Gate 0a: the §2.5 protocol over
@@ -168,6 +178,16 @@ portfolios need BINARY decisions → Gurobi-gated), "36/40 EFGs saturate" confla
 outcome (5 did in iter6), climate axis must be **SSP245 vs SSP585 both 2071–2100** (not
 "RCP4.5-2050s vs RCP8.5-2080s"), and Claim C's `w = influence/leverage` only holds on the linear
 arm. 06's planned plausible-range ensemble is **superseded** by this study — do not build both.
+
+**LIVING PUBLICATION LOGS (added 2026-08-27, binding on every session touching this analysis):**
+`analyses/y2y/spec/methods_log.md` (M-numbered: every methods-relevant decision, data
+manipulation — e.g. the dust threshold, orientation changes — formulation, solver/numerics, QA
+rules) and `analyses/y2y/spec/results_log.md` (R-numbered: every quantitative result destined for
+the paper, with run provenance) are the cumulative methods + results sections of the publication.
+**Any change to data, formulation, solver config, or QA rules → a methods_log entry in the SAME
+session, including reversals (supersede, never delete); any new measured result → a results_log
+entry.** Both are git-tracked in `spec/` so they persist across chats/restarts; keep them current
+the way this file is kept current.
 **GATE 0 RE-WIRED TO THE PRODUCTION FORMULATION (2026-08-26, Gurobi live).** Per Ethan's
 consistency call, 02_solve's lever now carries a `MODE` switch defaulting to **binary MILP +
 Gurobi, **opt_gap 1e-4 + numeric_focus** (standard adopted 2026-08-26 after the false-certificate diagnosis: without NumericFocus, Gurobi's root LP mis-converged 0.42% high on the a4 arm and certified the wrong optimum — the [1e-11,1e5] matrix range is the cause; with the fix the same solve hit the exact optimum in 17 s, 60× faster), portfolio off → folders `iter8_y2y_<arm>`**; the solved iter7 LP arms

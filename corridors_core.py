@@ -811,6 +811,20 @@ def edge_bands(A, cwd, mcp, edges, cutoff, cutoff_mode="abs", want_slack=True, n
     for _, e in edges.iterrows():
         i, j, cost_ij = nm(int(e["i"])), nm(int(e["j"])), float(e["cost"])
         eid = e.name
+
+        # ADJACENCY EDGES GET NO BAND (methods doc §4: "no corridor to build between areas that
+        # already touch"). Under v1's RELATIVE band this fell out for free (allow = frac x 0 = 0);
+        # under D6's ABSOLUTE cutoff a zero-cost edge would otherwise grow a `cutoff`-deep lens
+        # around the contact zone -- 10,644 km² of invented band on the first real run
+        # (v2_run002), silently absorbed into the D6 calibration and narrowing every separated
+        # edge's band to compensate. Skipping them here restores the documented semantics for
+        # banding, calibration, the priority surface and the ensemble alike.
+        if cost_ij <= cg.ADJACENCY_COST and cutoff_mode == "abs":
+            bands[eid] = np.empty(0, np.int32)
+            if want_slack:
+                slack[eid] = np.empty(0, "float32")
+            meta[eid] = dict(lcp=0.0, allow=0.0, centreline_cells=0)
+            continue
         fi, fj = cwd[i], cwd[j]
 
         # Centre-line: an explicit traceback, kept from v1. With an absolute cutoff it is no longer
@@ -2154,9 +2168,26 @@ def _profile_stacks(A):
     P.axes_labels = [n.replace("_", " ") for n in P.cont] + ["EFG (mean)"]
     print(f"  building {len(cont)} continuous + {len(efg)} EFG stacks on the "
           f"{abs(rx):.0f} m AUDIT grid…")
-    P.cont_stack = np.stack([rc._scaled(P, L["path"]) for L in cont])      # 0-1, scaled over WINDOW
+
+    # RICHNESS STRETCH DOMAIN = THE ROUTING WINDOW, not the full Y2Y audit grid. The audit grid
+    # is full-Y2Y for the "% of Y2Y" DENOMINATORS only; the 0-1 richness stretch is "relative to
+    # the north" (corridor_profile's stated scaling, and what v1 did -- gate G5 encodes it).
+    # Stretching over full Y2Y instead silently rescaled every gradient-bearing axis: measured on
+    # v2_run001, macrorefugia -0.33 / climate corridors +0.25 / AOH -0.1..-0.2 while every
+    # contribution reproduced v1 to 0.01 -- the G5 failure that exposed this.
+    win = _to_audit(A, np.ones(A.shape, bool))          # routing-window rectangle on the audit grid
+
+    def _scaled_win(path):
+        a = rc._read_match(P, path)
+        v = a[win & np.isfinite(a)]
+        if not v.size:
+            return np.zeros_like(a)
+        lo, hi = np.percentile(v, 5), np.percentile(v, 95)
+        return np.clip((a - lo) / (hi - lo if hi > lo else 1.0), 0, 1)
+
+    P.cont_stack = np.stack([_scaled_win(L["path"]) for L in cont])        # 0-1 over the WINDOW
     P.cont_raw = np.stack([rc._read_match(P, L["path"]) for L in cont])    # native units
-    P.efg_stack = np.stack([rc._scaled(P, L["path"]) for L in efg])
+    P.efg_stack = np.stack([_scaled_win(L["path"]) for L in efg])
     P.efg_raw = np.stack([rc._read_match(P, L["path"]) for L in efg])
     P.cont_region = np.array([rc._region_total(P, L["path"]) for L in cont])   # FULL-Y2Y denominators
     P.cont_region[P.cont_region == 0] = np.nan

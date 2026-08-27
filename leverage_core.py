@@ -766,3 +766,81 @@ def report(tbl, leverage_min=None):
     else:
         print(f"\nno feature below LEVERAGE_MIN = {leverage_min}.")
     return flagged
+
+
+# ---- Gate 1: two-regime swing + scenario derivation (spec v0.9 Claim C, s3.1) ------------
+def swing_per_unit_w(cap_min, cap_max, t=1.0):
+    """Achievable objective swing per unit weight -- the two-regime influence CURRENCY.
+
+    (min(cap_max, t) - cap_min) / t.  At t = 1 this is exactly the feature's leverage (the
+    linear arm); for a satiating target t < cap_max it caps at the target's claim, because the
+    min-shortfall term stops moving once capture reaches t and shortfall is measured RELATIVE
+    to t (prioritizr scales the constraint row by the absolute target). The v0.2 spec formula
+    w = influence / leverage is the t = 1 special case and is used nowhere influence is
+    computed for satiating features (spec v0.9, Claim C)."""
+    t = float(t)
+    assert 0.0 < t <= 1.0, f"target must be in (0, 1], got {t}"
+    return (min(cap_max, t) - cap_min) / t
+
+
+def scenario_weights(block_shares, within_block=None, targets=None,
+                     handoff_dir=None, budget_pct=None, blocks=None, normalize=True):
+    """Derive a scenario's weight vector from an intended influence profile (Gate 1, s3.1).
+
+    Block-level influence budgeting (spec D1, BINDING): `block_shares` assigns each PROACT
+    block (config.BLOCKS) its share of DISCRETIONARY influence; `within_block` splits a block's
+    share across its members (default: equal within block -- the standing convention for the
+    connectivity and biodiversity pairs; the carbon split is decided by the v0.9.1 theta-tail
+    diagnostic in analyses/y2y/05_s0_construction). A feature's intended swing share is then
+    block_share x within-block fraction, and because swing is LINEAR in w, the weight follows
+    directly: w_f = intended_share_f / swing_per_unit_w(cap_min_f, cap_max_f, t_f).
+
+    `targets` maps feature -> t (absent = 1.0, the linear arm). `normalize` rescales the
+    derived weights to mean 1 -- the objective is scale-invariant, but mean-1 keeps the blocked
+    features on the same scale as the OUTSIDE features, which stay at their baselines and are
+    deliberately NOT budgeted here: gHM intactness at w = 1 (R3-inexpressible, disclosed) and
+    the EFGs at the engine's 1/40 (locked adequacy foundation). Their realized influence is
+    reported in T1, never derived.
+
+    Returns a DataFrame (the T1 skeleton): feature, block, intended_share, t, per_unit_swing,
+    w, realized_share -- with realized == intended asserted (an identity by construction; its
+    failure means a wiring bug, not a modelling problem). The caveat stays the spec's: this is
+    FIRST-ORDER calibration ignoring competition and spatial correlation; intended-vs-realized
+    is verified per solved cell and the biomass weight iterated once if the miss is large."""
+    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    blocks = blocks if blocks is not None else config.BLOCKS
+    targets = targets or {}
+    within_block = within_block or {}
+    cont = set(continuous_features())
+
+    assert set(block_shares) == set(blocks), (
+        f"block_shares keys {sorted(block_shares)} != blocks {sorted(blocks)}")
+    assert abs(sum(block_shares.values()) - 1.0) < 1e-9, (
+        f"block shares must sum to 1, got {sum(block_shares.values()):.6f}")
+    for f in targets:
+        assert any(f in m for m in blocks.values()), f"target for non-block feature: {f}"
+
+    pu = pu_mask(handoff_dir)
+    rows = []
+    for block, members in blocks.items():
+        wb = within_block.get(block, {m: 1.0 / len(members) for m in members})
+        assert set(wb) == set(members), (
+            f"within_block[{block}] keys {sorted(wb)} != members {sorted(members)}")
+        assert abs(sum(wb.values()) - 1.0) < 1e-9, (
+            f"within_block[{block}] must sum to 1, got {sum(wb.values()):.6f}")
+        for m in members:
+            assert m in cont, f"unknown or excluded feature in blocks: {m}"
+            v = _read(handoff_dir / f"{m}.tif")[pu]
+            cap_min, cap_max, _ = leverage_of(v, budget_pct)
+            t = float(targets.get(m, 1.0))
+            s = swing_per_unit_w(cap_min, cap_max, t)
+            share = block_shares[block] * wb[m]
+            rows.append(dict(feature=m, block=block, intended_share=share,
+                             t=t, per_unit_swing=s, w=share / s))
+    df = pd.DataFrame(rows)
+    if normalize:
+        df["w"] = df["w"] / df["w"].mean()
+    df["realized_share"] = df.w * df.per_unit_swing / (df.w * df.per_unit_swing).sum()
+    assert np.allclose(df.realized_share, df.intended_share, atol=1e-9), (
+        "derived weights do not reproduce the intended shares -- wiring bug")
+    return df

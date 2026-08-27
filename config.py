@@ -239,6 +239,23 @@ DUST_SHARE_MIN = 1e-9
 # manifest 03 reads). Use to trial feature subsets without re-running 02's heavy warp.
 EXCLUDE_FEATURES = ["irrecoverable_carbon_sl_soc"]   # subsoil carbon; keep only m_soc for now
 
+# ---- PROACT value blocks (frequency-ensemble spec s3.1 -- Gate 1, D1 binding) -------------
+# The influence-accounting hierarchy confirmed at spec v0.5 and made BINDING at v0.9: scenarios
+# budget DISCRETIONARY influence equally across these four blocks in two-regime swing currency
+# (leverage_core.swing_per_unit_w), and each block's share is allocated JOINTLY across its
+# members -- for carbon, m_soc's target claim plus biomass's weighted influence together equal
+# the block share (the +8.4-pt biomass leak under the retired w=t convention is why joint
+# accounting is not optional). Two feature sets sit OUTSIDE the accounting on purpose:
+# the EFGs (locked adequacy foundation at 1/40 weights) and gHM intactness (R3-inexpressible,
+# w = 1, published as a Claim B finding) -- their realized influence is reported in T1, never
+# budgeted. Consumed by leverage_core.scenario_weights and, later, the E-experiment code.
+BLOCKS = {
+    "core_habitat": ["climate_type_macrorefugia"],
+    "connectivity": ["transboundary_connectivity", "climate_corridors"],
+    "carbon":       ["irrecoverable_carbon_m_soc", "irrecoverable_carbon_biomass"],
+    "biodiversity": ["aoh_richness_birds", "aoh_richness_mammals"],
+}
+
 # ---- Sub-regional analyses (03a / 03b / 03c) ----------------------------
 # Three prioritizr analyses share ONE preprocessing step (02's aligned stack); they differ
 # only in configuration, collected here. Each 03x notebook selects its key; prioritizr_core.R
@@ -946,6 +963,19 @@ CLIMATE_SCENARIOS = {
         # anything else -> AMBIGUOUS: enters the design; Phase 1b decided at the screening gate.
     },
 }
+
+# ---- Climate realization layers (frequency-ensemble spec s3.2, D6 -- Gate 1) --------------
+# The ensemble's climate axis: SSP245 vs SSP585, BOTH 2071-2100, so the axis means EMISSIONS
+# (horizon held fixed -- varying both at once, as the pre-v0.9 spec did, confounds them).
+# Unlike CLIMATE_SCENARIOS above (raw velocity, diagnostic-only), these two are STACK-GRADE
+# feature layers: oriented 1/v, dust-thresholded, PU-masked -- built by 02's closing section
+# into their own namespace below. write_manifest never globs that folder, so the canonical
+# manifest is untouched; Gate-3/4 ensemble cells point the macrorefugia layer path here per
+# cell (patch-a-copy, ensemble_core-style). The 1/v orientation is per-realization -- no shared
+# anchor parameter exists (the six-realization leverage span is 0.42-0.52; the additive
+# `vmax - v` flip that NEEDED a shared anchor is superseded).
+CLIMATE_REALIZATIONS = ("245_2071_2100", "585_2071_2100")
+REALIZATIONS_DIR = HANDOFF_DIR / "climate_realizations"
 
 
 # ---- ROI + hand-off helpers ----------------------------------------------

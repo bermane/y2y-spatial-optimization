@@ -1,0 +1,247 @@
+# Methods log — Y2Y frequency-ensemble flagship (living document)
+
+**Purpose.** The cumulative record of every methods-relevant decision, data manipulation, and
+measured finding in this analysis, in enough detail to write the paper's methods section without
+archaeology. Each entry carries: what was done, exact parameters, the justification, the
+evidence, where it is implemented, and its status.
+
+**Maintenance rule (binding on every working session):** any change that alters the data, the
+formulation, the solver configuration, or a QA rule gets an entry HERE in the same session it is
+made — including reversals. Supersessions are marked, never deleted: the paper may need to say
+"we initially X, then Y because Z."
+
+Scope: paper 1 (the hierarchical selection-frequency ensemble) and the leverage redesign it
+inherits. Companion documents: **`results_log.md` (the corresponding RESULTS register — same
+maintenance rule; quantitative outcomes live there, methods decisions here)**,
+`frequency_ensemble_study_plan.md` (the spec), `gate0_reportback.md` (checkpoint summaries),
+`feature_characterization.csv` (the frozen T2).
+
+---
+
+## 1. Study system and grid
+
+- **M1.1** Grid: ESRI:102008 (North America Albers equal-area), **1 km**, Y2Y boundary buffered
+  20 km. Planning units = cells valid in ALL continuous features: **1,272,914** (≈1.27 M km²).
+  Rationale: most inputs ~1 km native; minimizes resampling distortion; tractable. (2026-06-10)
+- **M1.2** Resampling: finer-than-1 km → `average`; coarser → `bilinear`; categorical (EFG) →
+  `nearest`. gHM (~90 m) and AOH (~100 m) down-sampled — accepted for iteration 1; 300 m is the
+  stated ceiling, 100 m out of scope.
+- **M1.3** PU-footprint caveat (disclosed, not acted on): the PU mask is set by
+  `irrecoverable_carbon_biomass`'s footprint (1,274,564 km²); every other continuous layer covers
+  ~1,551,000+ km² — one layer's coverage excludes ~18% of the buffered study area from every
+  solve. (2026-08-07)
+
+## 2. Input data manipulations (chronological; ALL tweaks to data live here)
+
+- **M2.1** Orientation doctrine: every feature oriented so higher = more conservation value,
+  BEFORE any solve; no normalization at the data stage.
+- **M2.2** gHM → intactness as `1 − gHM`, clipped [0,1]. KEPT despite known consequence (M6.4):
+  no interpretable transform recovers its leverage (p1–p99 stretch reaches only 0.084 vs raw
+  0.742), and rank/percentile stretches are ruled inadmissible (M4.3). (decided 2026-08-17)
+- **M2.3** Backward climatic velocity → refugia: **`vmax − v` REPLACED by `1/v`** (refugial
+  residence time, yr/km). Justification: 03 sum-normalizes features, so an ADDITIVE flip does
+  not cancel — it compressed the layer toward a constant, destroying 75% of its leverage
+  (0.353 → 0.090) and making macrorefugia the least influential factor in the Morris screening:
+  an artefact of preprocessing read as a finding. `1/v` restores leverage to **0.422** (above
+  raw 0.353); tail verified safe (min v over PU = 0.097 km/yr → max 10.3; top 100 cells = 0.1%
+  of total); loud assert on v ≤ 0 rather than a silent epsilon floor. Side benefit: makes the
+  six climate realizations comparable without shared anchors (leverage 0.422–0.516 across all
+  six vs 0.079–0.106 under per-layer vmax subtraction). (2026-08-17/18)
+- **M2.4** EFG value recode: IUCN source 1=major/2=minor SWAPPED to major=2/minor=1 so the
+  optimizer weights major occurrences above minor. 40 of 109 EFGs occur in the PU. (verified
+  2026-07-16)
+- **M2.5** **Numerical-dust threshold (the carbon floor tweak): cells holding < 1e-9 of a
+  feature's total set to 0** (`config.DUST_SHARE_MIN`; 02 Stage 2, post-orientation).
+  Justification: `average`-resampling near-zero fine cells leaves float residue (min share
+  1e-16) that carries no information but stretched the optimizer matrix to [1e-11, 1e5] — the
+  proximate cause of a false Gurobi optimality certificate (M5.4) and slow, numerically
+  strained solves. Measured drops: biomass 46,097 cells / 1.5e-5 of mass; m_soc 19,262 /
+  8.4e-6; connectivity 538 / 3.9e-7; all other layers clean (min share ≥ 4e-8). Matrix range
+  after: **[1e-4, 1e5]** (verified in every solve log). **Invariance demonstrated:** the re-run
+  audit reproduces every classification and the 0.332 target; PU count unchanged (zeroing
+  changes values, never validity). NOT achievable by rescaling NORM_TOTAL (share-based ratio,
+  scale-invariant). (2026-08-26)
+- **M2.6** No urban/converted mask (gHM already down-weights converted land); `sl_soc` subsoil
+  carbon excluded from the solve (near-collinear with m_soc); connectivity tail NOT capped
+  (CONNECTIVITY_CAP_PCTILE=None; surfaced in QA instead).
+- **M2.7** Climate realization: single layer `bwvel 585_2071_2100` in the stack. The choice is
+  MATERIAL by pre-registered rule (six realizations, worst top-30% Jaccard 0.460 vs 0.11–0.24
+  between genuinely different inputs). Climate axis for the ensemble: **SSP245 vs SSP585, both
+  2071–2100** — horizon fixed so the axis means emissions uncertainty; per-year velocity
+  denominators are horizon-dependent, so mixing horizons confounds. (QA 2026-07-30; axis
+  decided 2026-08-18; ratified spec v0.9 D6)
+- **M2.8** **Climate realization layers built as stack-grade features** (Gate 1, D6): both axis
+  levels (`245_2071_2100`, `585_2071_2100`) put through the identical Stage-2 pipeline — orient
+  `1/v` → non-negativity clip → dust threshold (M2.5's rule) → PU mask — and written to
+  `aligned_stack/climate_realizations/` (a namespace outside the canonical manifest; ensemble
+  cells point the macrorefugia path there per cell). Orientation is per-realization: `1/v`
+  needs NO shared anchor (six-realization leverage 0.422–0.516), which is what made the axis
+  implementable without re-anchoring every layer. QA: the 585 output must reproduce the stack's
+  canonical macrorefugia layer (tolerance 1e-5 — provenance proof that the stack layer IS the
+  ssp585 realization); PU set unchanged by construction. (built 2026-08-27; 02 closing section)
+
+## 3. Feature characterization protocol (Gate 0a; spec §2.5)
+
+- **M3.1** LEVERAGE (the organizing statistic): share of a feature's total held by its richest
+  30% of PUs minus its poorest 30% = the entire range its captured fraction can span. At
+  leverage ≈ 0 the feature's objective term is near-constant over every feasible selection —
+  no weight can move it. Reproduces the Morris μ* ranking at Spearman **+0.922 with zero
+  solves**; `w × leverage` decomposes the objective's achievable swing exactly (two-regime
+  general form under targets: `w·(min(cap_max,t) − cap_min)/t`).
+- **M3.2** Pre-registered rule-set R1–R4, constants FROZEN before the audit ran: θ = 5× regional
+  mean, a_min = 0.5% of region, t_min = 0.15, λ = 0.10. Disclosures: θ generalized from carbon
+  (E10 sensitivity at 3×/10× is the backstop); t_min chosen knowing the data but classification
+  insensitive across 0.07–0.33; λ sits in the wide gap between mammals (0.181) and intactness
+  (0.042).
+- **M3.3** Transform admissibility (R1): screening universal ({identity, log1p, sqrt} + flip/
+  reciprocal where cost-oriented) but ADOPTION requires a value-model claim; rank/percentile
+  stretches inadmissible (contrast without meaning manufactures influence from noise). The
+  concavity distinction is binding: a concave transform asserts diminishing value per CELL, a
+  target asserts it at the PORTFOLIO level. Measured support: log1p flips m_soc to
+  diffuse-linear (0.884→0.486 — destroys the very tail that earns the target) and drops AOH
+  birds below the floor (0.232→0.059). Carbon: per-cell linearity physically mandated
+  (identity + target). AOH: open case disclosed, identity retained.
+- **M3.4** Frozen classifications (invariant across the dust threshold): m_soc
+  concentrated-satiating (target 0.332 = 5×-rule crossing @ 4.06% of region, cutoff 304 t/ha);
+  biomass REVERTED to diffuse-linear by the t_min tail-mass criterion (implied target 0.066);
+  connectivity diffuse-linear via a_min (0.20% pinch-point spike); macrorefugia diffuse-linear
+  (near-miss a_min at 0.47% but fails t_min — robust to either leg); intactness R3
+  inexpressible; 36/40 EFGs rare-attainable (unsaturated four disclosed).
+- **M3.5** Audit outputs: T2 table, per-feature 6-panel cards + EFG block card + summary sheet,
+  F8 marginal-density trajectories (log-x with color-matched area-% labels at θ crossings),
+  budget-independent archive (Lorenz + marginal curves; target at any θ or budget = lookup;
+  layer sha256s pin the stack version).
+
+## 4. Optimization formulation
+
+- **M4.1** `min_shortfall` objective, 30%-of-area budget (381,874 cells), existing PAs locked in
+  and counted (191,029 = 15.0%), uniform cost = 1 (area), features sum-normalized to 1e5
+  (conditioning only; scale-invariant), weights: continuous @1, EFG group shares 1.0 (1/40
+  each). t = 1.0 is NOT a target — it is unreachable by 1.1–3.2× for every continuous feature
+  and encodes "no satiation point".
+- **M4.2** Influence identity: below target the solver maximizes Σ (w_f/t_f)·h_f — weight and
+  target enter ONLY as the ratio (pull), plus a reachable stopping point. Consequences: (a)
+  equal weights silently chose an influence profile (carbon 39.7% of achievable swing, captured
+  1.52×/1.39× area share vs 0.96–1.06× for all else); (b) not fixable by objective choice (all
+  three families linear in captured fraction); (c) a low target at w=1 RAISES pull (0.332 →
+  3.0×) — hence the **w = t discipline**: every targeted feature gets weight = target so pull
+  stays 1.00 and the target acts ONLY as a stopping rule. Empirical proof: the a4 arm
+  (connectivity w=t=0.6, unreachable) reproduces the control EXACTLY — LP: 0 differing cells;
+  binary MILP on exact certificates: 0 differing cells.
+- **M4.3** Warrant test for a stopping rule: only features over-served relative to their
+  intended role. Carbon qualifies; EFG targets were examined and REJECTED on measurement (the
+  5 over-served EFGs span 736 cells → capping frees ≤0.13% of budget; the 9 under-served span
+  61.7% of the region → lifting them costs ≥12.7%).
+- **M4.4** Compactness penalty REMOVED from the optimizer (was neighbor penalty 1e-5,
+  uncalibrated): Morris ranked it 3rd of 12 drivers; it relocated a third of the selection
+  (Jaccard 0.662 vs unpenalized); the unpenalized solution is already 66.6% clustered by area;
+  it cost 400× solve time. Compactness moves to post-hoc delineation from the ensemble's
+  selection-frequency surface. (2026-08-17)
+- **M4.5** Decision types: proportion-LP (HiGHS) was the prototype; production = **binary MILP
+  (Gurobi)**. Relaxation tightness MEASURED, not assumed: LP ~100% integral; LP-vs-MILP Jaccard
+  0.97–1.00; capture deltas ≤ 1.4 pts.
+- **M4.6** Gate-0 pass criterion corrected by measurement: min-shortfall never penalizes
+  EXCEEDING a target (w=1 run: biomass 0.259 vs 0.066 target by incidental co-capture), so
+  "capture lands at target (not above)" is wrong as written; only BELOW target fails. Under
+  w = t no overshoot occurred (all targets bound to 4 decimals).
+
+- **M4.7** **Spec v0.9/v0.9.1 ratified (2026-08-27); block-level influence budgeting adopted
+  (D1, BINDING).** Scenarios are specified as influence profiles over four PROACT blocks
+  (`config.BLOCKS`: core habitat {macrorefugia}; connectivity {transboundary, corridors};
+  carbon {m_soc, biomass}; biodiversity {AOH ×2}) in **two-regime swing currency**
+  `w·(min(cap_max,t) − cap_min)/t` (`leverage_core.swing_per_unit_w`; reduces to w×leverage at
+  t=1). Each block's discretionary share is allocated JOINTLY across members; weights follow
+  from linearity, `w_f = share_f / per-unit-swing_f`, mean-1 normalized
+  (`leverage_core.scenario_weights`). Motivating measurement: under the retired w=t convention
+  a1's implicit profile gave biomass ~29% of discretionary swing (the largest single share) —
+  the mechanism of the +8.4-pt leak (M6.2); block accounting closes it by construction.
+  OUTSIDE the accounting, disclosed: EFGs (locked foundation, 1/40) and gHM intactness
+  (R3-inexpressible, w=1); realized influence reported in T1, never budgeted. **w = t is
+  RETIRED** — it was itself an influence profile, valid only as the Gate-0 stopping-point
+  isolator; S0 weights will not satisfy it. (spec §3.1, §2.7)
+- **M4.8** **Carbon within-block split: decided by pre-registered diagnostic, not convention**
+  (v0.9.1). Statistic: the a1 biomass θ-tail capture rate (fraction of ≥5×-mean biomass cells
+  selected), mass-weighted, decomposed into SOC-claim co-capture (tail ∩ m_soc θ-tail) vs
+  independent selection — computed from the archived a1/a0 portfolios, zero solves. Thresholds
+  FROZEN in `analyses/y2y/05_s0_construction.ipynb` before the numbers were seen: ≥0.90 → (a)
+  mass-proportional split (regional SOC/biomass mass shares); 0.50–0.90 → (b) equal 50/50;
+  <0.50 → STOP (escalation to a combined total-carbon feature is a spec amendment decided with
+  the chat, never a notebook branch). Rationale recorded: weight sets DEPTH not ORDER (any
+  positive w buys a feature's tail first), so the design question is effective pull depth. The
+  θ-tail capture rate joins T1/E7 as a standing per-cell diagnostic. Connectivity and
+  biodiversity pairs: equal-within-block default. (2026-08-27)
+- **M4.9** **Scenario family derivation (Gate 1):** S0 = equal block shares (0.25 ×4), targets
+  {m_soc: 0.332}; S1–S3 = named block share doubled to 0.5, others scaled to 1/6; S4 = carbon
+  doubled AND θ relaxed 5×→3× → m_soc t = **0.552** (an archive LOOKUP from the frozen
+  budget-independent curves — spec D2's requirement demonstrated, zero recomputation). Derived
+  (w,t) pairs frozen to `spec/scenarios_v1.json` (with split rule, diagnostic value, layer
+  sha256s); this file is the Gate-3 manifest's input. First-order caveat carried from the spec:
+  the translation ignores competition and spatial correlation — intended-vs-realized influence
+  is verified per solved cell, biomass weight iterated once if the miss is large. (2026-08-27)
+
+## 5. Solver configuration and numerical integrity
+
+- **M5.1** Gurobi 13.0.2, nonprofit WLS licence (16 cores; needs live internet during solves;
+  2 concurrent sessions max → ensemble cells run serially). HiGHS 1.x for LP twins.
+- **M5.2** `opt_gap = 1e-4` standard for single-solution solves (adopted after validation: the
+  exact optimum was reachable in 17 s). The POOL gap g (2–10%) is a separate, deliberately
+  loose parameter — it defines the near-optimal set that IS the estimand.
+- **M5.3** `numeric_focus = TRUE` (Gurobi NumericFocus 2) engine-wide.
+- **M5.4** **The false-certificate vignette (report in methods):** without NumericFocus, on the
+  pre-threshold stack, Gurobi's root LP mis-converged 0.42% above the true optimum on the a4
+  arm and CERTIFIED the wrong point (best bound = incumbent, gap 0.0000%), bit-identically
+  across two runs. Caught because the integral LP twin pins the true optimum exactly (5.158146
+  vs the "proven" 5.179758); model audit confirmed the intended affine-equivalent pair
+  (objective reconstruction matches Gurobi to 6e-13). Cause: matrix range [1e-11, 1e5]. With
+  NumericFocus the same solve found the exact optimum in 17 s — 60× FASTER (the un-focused
+  simplex was numerically lost, not working hard). a0–a3 audited healthy against LP bounds
+  (+3e-5..4e-4). Fix layered with M2.5. Diagnostic archive: iter8_y2y_a4_pullcheck_v2 (false
+  proof) + _v3 (fix proof) + iter7 LP arms.
+- **M5.5** **LP-twin methodology (stated, not luck):** an exactly solvable LP relaxation is kept
+  beside every certified MILP. It caught (a) the false certificate, (b) the HiGHS presolve
+  pathology (a targeted LP took 71 min on HiGHS presolve vs 24–81 s on Gurobi — solver path,
+  not problem hardness).
+- **M5.6** Engine-level compatibility fixes (disclosed for reproducibility): Gurobi 13 renamed
+  pool solution vectors `xn` → `poolnx`, breaking prioritizr 8.1.0's gap portfolio — shimmed;
+  portfolio `solve()` returns a list of rasters — stacked. Pool path verified toy-scale; first
+  1 km pool run is Gate 2.
+
+## 6. Findings register (results the paper reports; with provenance)
+
+- **M6.1** Carbon dominance under equal weights: 39.7% of achievable swing; capture 1.52×/1.39×
+  area share; control (penalty-free, 1/v) capture 54.2%/41.3% — dominance grew under the
+  cleaner formulation.
+- **M6.2** Gate-0 reallocation (a1 vs a0): m_soc −21 pts to its 0.332 target; biomass **+8.4**
+  (weight-levered leak — S0 block-design input), birds +2.2, mammals +1.6, macrorefugia +1.1,
+  connectivity +0.2, corridors −1.4 (the spec's predicted destination was corridors — partly
+  refuted). a2 (both pools 0.30) lifts under-served EFGs 0.22 → 0.53. Map movement: Jaccard vs
+  control 0.78 / 0.63 / 0.79 (a1/a2/a3).
+- **M6.3** Morris (superseded era, kept for lineage): μ* predicted by leverage (+0.922);
+  screening's real yield was the mechanism; Sobol' dropped by reasoned gate (σ contaminated by
+  the V-shaped distance metric; cost re-measured 7–51 days).
+- **M6.4** Footprint bias (disclosed limitation): the optimizer's NEW selections average gHM
+  0.074 vs 0.055 for land passed over; whole-solution figures look intact only because locked
+  PAs sit at 0.022. Mechanism: AOH richness correlates with gHM at +0.636/+0.607 and intactness
+  (1% of swing) cannot counterweight. Left uncorrected by decision; footprint-as-cost named as
+  future formulation change.
+- **M6.5** Degeneracy status: OPEN. The 68k-cell a4-vs-a0 divergence was numerics artifact
+  (exact solves agree exactly); remaining plateau evidence = LP-vs-MILP swaps ~2% of cells at
+  ≈equal objective. Gate 2's pools are the real test; §2.8's prediction is weakened.
+
+## 7. Supersession log (things we did and then undid — the paper may need to say why)
+
+| was | replaced by | why | when |
+|---|---|---|---|
+| `vmax − v` refugia orientation | `1/v` | additive flip destroyed leverage under sum-normalization | 2026-08-17 |
+| neighbor penalty 1e-5 | post-hoc delineation | uncalibrated 3rd-ranked driver; 400× cost | 2026-08-17 |
+| biomass target 0.066 | weight-levered (t=1) | R2 tail-mass criterion (protocol overrules hand treatment) | 2026-08-18 |
+| w=1 with low targets (run r1) | w = t discipline | low target at w=1 raises pull 3–15× | 2026-08-18 |
+| Sobol' (Phase 4) | baseline-anchored ensemble → this study | gate could not fire; contaminated σ; cost | 2026-08-17 |
+| opt_gap 0.10 (LP-era, inert) | 1e-4 | MIP gap became live; effect sizes ~1–3% | 2026-08-26 |
+| Gate-0 arms pre-threshold | re-solved on conditioned stack | matrix conditioning; single-generation record | 2026-08-26 |
+| w = t discipline (Gate-0 arms) | block-budgeted (w,t) via two-regime swing | w=t is itself an influence profile (gave biomass ~29% of swing); Gate-0-only isolator | 2026-08-27 (spec v0.9) |
+| E5 HiGHS-shuffle arm | Gurobi pool vs Brunel-style, both 1 km | HiGHS cannot solve the 1 km binary MILP; open-verification story = LP twins | 2026-08-27 (spec v0.9) |
+| Claim C `w = influence/leverage` | two-regime swing everywhere | linear-arm special case only; wrong for satiating features | 2026-08-27 (spec v0.9) |
+
+*Maintainer note: entries M-numbered for stable citation from drafts. Update same-session, every
+methods-relevant change. Last updated 2026-08-27 (Gate 1 build).*
