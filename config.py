@@ -256,6 +256,25 @@ BLOCKS = {
     "biodiversity": ["aoh_richness_birds", "aoh_richness_mammals"],
 }
 
+# ---- Derived theta-tail carbon features (spec v0.10 D-B -- the PLACES axis) ---------------
+# Two masked-DENSITY layers derived from the stack parents (built by analyses/y2y/
+# 08_gate2a_tails.ipynb): cell value = parent density where >= AUDIT["theta"] x the regional
+# mean, else 0 -- so a tail feature's captured fraction is the share of TAIL MASS secured, and
+# t = 1.0 secures the whole tail (0.95 fallback pre-authorized in the spec). Motivated by M6.7
+# (a total-capture target secures an AMOUNT, not places: S0's m_soc target binds exactly while
+# its tail captures only 0.435); disclosed as a post-execution addition, audited under the
+# UNCHANGED frozen s2.5 rules (expected class: rare-attainable).
+# write_manifest puts them in EVERY analysis' stack as feature_continuous at target 0.0 --
+# mathematically ABSENT (a 0-target feature's constraint row has rhs 0 and its shortfall
+# column has zero nonzeros; verified) -- and ONLY carbon-forward cells override to 1.0.
+# POSITIONAL CONSTRAINT (do not move): the manifest must list these BEFORE the EFG block,
+# because R-side pr_weights builds the weight vector positionally as
+# c(rep(1, n_cont), rep(1/n_efg, n_efg)) over manifest order.
+TAIL_FEATURES = {
+    "m_soc_tail":   "irrecoverable_carbon_m_soc",
+    "biomass_tail": "irrecoverable_carbon_biomass",
+}
+
 # ---- Sub-regional analyses (03a / 03b / 03c) ----------------------------
 # Three prioritizr analyses share ONE preprocessing step (02's aligned stack); they differ
 # only in configuration, collected here. Each 03x notebook selects its key; prioritizr_core.R
@@ -650,8 +669,13 @@ CORRIDORS = {
         # same `& ~node_union` area definition, so v1<->v2 route comparisons are not confounded by
         # band size. Augmentation adds area on top and is reported separately -- calibrating against
         # the augmented network would let the cutoff absorb the augmentation and conflate D6 with D7.
-        # None until corridors_core.calibrate_cutoff has been run (resolve() refuses to solve).
-        "cwd_cutoff_abs": None,
+        # CALIBRATED on v2_run002 (2026-08-27): 13.622951589524746 -> 18,150 km² MST-only vs the
+        # 18,188 target (tol 50), with adjacency edges correctly contributing no band (the
+        # edge_bands abs-mode fix; the earlier 13.38 pass silently included 10,644 km² of
+        # adjacency lenses and is superseded). ~13.6 cost units ≈ a 4 km detour allowance through
+        # cost-1 land. Mirrored from v2_run002/run_config.json so future runs inherit it; the
+        # per-run calibration cell still recalibrates and set_cutoff overrides per run.
+        "cwd_cutoff_abs": 13.622951589524746,
         "calibration": {"target_km2": 18188, "edges": "mst"},   # pre-registered before running
 
         # ---- network augmentation (D7) --------------------------------------------------
@@ -1116,6 +1140,23 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
             )
         )
 
+    # Derived theta-tail carbon features (spec v0.10 D-B). MUST come before the EFG block:
+    # pr_weights assigns weights positionally (all continuous rows, then all EFG rows), so a
+    # tail entry after the EFGs would silently hand weight 1.0 to the first two EFGs. Skipped
+    # with a warning while the layers are unbuilt (pre-Gate-2a stacks stay valid).
+    for tail_name, parent in TAIL_FEATURES.items():
+        tp = handoff_dir / f"{tail_name}.tif"
+        if not tp.exists():
+            print(f"NOTE: {tail_name}.tif not in the stack yet (run 08_gate2a_tails) -- omitted")
+            continue
+        layers.append(
+            layer_meta(
+                tp, tail_name, "feature_continuous",
+                citation=f"derived theta-tail mask of {parent} (spec v0.10; "
+                         f"{DATASETS[parent]['citation']})",
+            )
+        )
+
     # Categorical EFG features (kept survivors from 02; minus exclusions).
     efg_citation = DATASETS["iucn_efg"]["citation"]
     for p in sorted((handoff_dir / "iucn_efg").glob("*.tif")):
@@ -1176,7 +1217,16 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
             # problem order, so it cannot silently drift out of alignment with the feature stack
             # (a bare vector would apply the wrong target to the wrong feature with no error).
             # Same guard pattern as feature_weight_multipliers.
-            "targets": a.get("targets", {}),
+            # Tail features default to 0.0 (mathematically absent) for EVERY analysis unless
+            # the analysis (or a per-cell override) explicitly activates them -- the safety
+            # property behind "in every stack, absent outside carbon-forward" (spec v0.10).
+            # Only injected once the layers exist in the stack, so pre-Gate-2a manifests are
+            # unchanged.
+            "targets": {
+                **{t: 0.0 for t in TAIL_FEATURES
+                   if (handoff_dir / f"{t}.tif").exists()},
+                **a.get("targets", {}),
+            },
             "opt_gap": OPT_GAP,
             # Gurobi accuracy switch (2026-08-26): TRUE = prioritizr's numeric_focus, i.e. Gurobi
             # NumericFocus. REQUIRED for trustworthy optimality certificates on this problem: the

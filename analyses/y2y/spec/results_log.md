@@ -93,23 +93,100 @@ locked PAs 0.022 mask it in whole-solution averages; driver: AOH–gHM Spearman 
 **R4.3 EFG-target rejection numbers:** 5 over-served EFGs = 736 cells (cap frees ≤0.13% of
 budget); 9 under-served span 61.7% of region (lifting costs ≥12.7%).
 
-## R5. Gate 1 — S0 construction (built 2026-08-27; entries PENDING-RUN until Ethan executes)
+## R5. Gate 1 — S0 construction (run 2026-08-27, all asserts clean)
 
-**R5.1 (PENDING-RUN)** Biomass θ-tail capture diagnostic [05_s0_construction §A]: a1 and a0
-capture rates (cell-count + mass-weighted), SOC-claim co-capture vs independent selection,
-regional SOC/biomass mass split, and the pre-registered verdict (rule: ≥0.90 → mass-proportional;
-0.50–0.90 → equal; <0.50 → STOP). Fill measured numbers here.
-**R5.2 (PENDING-RUN)** Climate realization QA [02 closing section]: 585-vs-stack max |delta|
-(provenance), per-realization leverage (expect within 0.42–0.52), top-30% Jaccard between axis
-levels (expect ≈0.574).
-**R5.3 (PENDING-RUN)** Derived scenario table (T1 skeleton) [05 §B → `spec/scenarios_v1.json`]:
-S0–S4 weight vectors + targets. Dry-run values on the frozen stack (mass-proportional
-illustration, mean-1 normalized): macrorefugia w 1.460, connectivity 0.669, corridors 1.171,
-m_soc 0.463 (t 0.332), biomass 0.200, birds 1.329, mammals 1.707 — a1's implicit biomass share
-~29% of discretionary swing falls to ~6.5% by construction. Final values depend on R5.1's split.
-**R5.4** S4 target via θ=3× archive lookup = **0.552** (@ ~9.8% of region) — verified against the
-frozen `feature_audit.npz` during the build; the D2 budget-independence demonstration. [audit
-archive]
+**R5.1 Biomass θ-tail capture diagnostic — TAIL CAPTURED, (a) mass-proportional adopted by the
+pre-registered rule.** Tail = 14,919 cells (1.17% of PU, cutoff 105.6 t/ha; m_soc tail 4.06% @
+303.7 t/ha — both match frozen T2 exactly). a1 selected 14,917/14,919 tail cells: capture
+**0.9999 by cells, 1.000 by mass** (a0: 0.9979 / 0.9981). **Decomposition REFUTES the co-capture
+hypothesis:** only 1.0% of biomass-tail cells lie inside the m_soc θ-tail, so SOC-claim
+co-capture is 0.011 of tail mass and **0.989 is independent selection** — the tail is bought
+because dense biomass is attractive in its own right, not because the SOC claim overlaps it.
+Regional carbon mass split: SOC 74.2% / biomass 25.8% (spec's ~74/26 confirmed). Caveat carried
+forward by design: measured at biomass w=1; the standing T1/E7 θ-tail diagnostic verifies the
+tail stays captured under S0's w≈0.20 when cells solve (pre-stated expectation: high).
+[05_s0_construction §A]
+**R5.2 Climate realization QA:** 585 realization **bit-identical** to the stack's canonical
+macrorefugia layer (max |delta| = 0.0 — provenance proven, and the independently re-derived
+pipeline reproduces Stage 2 exactly); dust zeroed **0 cells** on both realizations (1/v of
+velocity has no near-zero residue: min v 0.097 → 1/v ≥ 0.097); leverage 245 = 0.482
+[0.116, 0.599], 585 = 0.422 [0.135, 0.558]; top-30% Jaccard = **0.574** (equals the D6
+raw-velocity measurement, as the monotone-map argument predicts). PU unchanged at 1,272,914.
+[02 closing section]
+**R5.3 Derived scenario family (frozen to `spec/scenarios_v1.json`, split_rule=mass 74.2/25.8,
+mean-1 normalized).** S0: macrorefugia **1.460**, connectivity 0.669, corridors 1.171, m_soc
+**0.465** (t 0.332), biomass **0.199**, birds 1.329, mammals 1.708 — biomass's implicit ~29%
+share under the retired w=t convention falls to 6.45% by construction. S1–S3 double their block
+(e.g. S1 macrorefugia 3.091; S3 mammals 2.743); S4 (carbon ×2 + θ=3×): m_soc 1.166 @ t 0.552,
+biomass 0.501. Realized == intended shares asserted for every scenario. [05 §B]
+**R5.4** S4 target via θ=3× archive lookup = **0.552** (@ 9.8% of region; θ=10× → 0.121) —
+recomputed live from the frozen `feature_audit.npz`, zero solves: the D2 budget-independence
+demonstration. [audit archive]
+
+## R6. Gate 2 — first 1 km pool run (RUN 2026-08-27; verdict = NEAR-BINARY, fail branch fired)
+
+**R6.1 Pool cost:** LP twin **6,516 s** (109 min — the worst HiGHS-presolve case yet, extending
+M5.5's record: targeted+weighted LPs are the pathological shape; Gurobi's LP-equivalent single
+took 55 s); certified single MILP **55 s**; pool (k=50, g=5%) **1,799 s = 32.8× the single**.
+14-cell ensemble projection: 14 × pool ≈ **7.0 h** of pools + ~13 min of single anchors (+ LP
+twins only if kept on HiGHS — 14 × 109 min ≈ 25 h, a reason to reconsider the twin's solver).
+[06 report cell]
+**R6.2 Pool integrity:** 50 returned, **50 distinct**; frequency cross-check exact (engine ==
+recomputed); objective cross-check engine-vs-CSV max |Δ| = 2.98e-05 (≈5.6e-6 relative —
+CSV-precision level, reconciled); pool best 5.362813 / worst 5.362830 → **span 3.2e-6 relative,
+vs the 5% pool gap**; single certified 5.362860 (its own gap cert 0.0009%); LP lower bound
+5.362810 → true optimum pinned in [5.362810, 5.362813]. All 50 solutions: identical size
+381,874 cells, statuses OPTIMAL. [07 §A; run_summary solver_provenance]
+**R6.3 Degeneracy verdict — NEAR-BINARY (pre-registered rule, M4.10):** k_distinct 50, but the
+50 are near-clones: discretionary union 190,926 cells, **conditional (0<f<1) cells 165 = 0.09%**
+(rule threshold: <1% fires), mean pairwise Jaccard **0.9999**. **Mechanistic reading (the finding
+that frames the pivot):** PoolSearchMode=2 returns the k BEST solutions, and the plateau at the
+optimum is so dense (≥50 solutions within 3e-6 relative) that the enumeration never leaves the
+optimum's immediate neighborhood — **the g=5% band exists as a constraint but is never sampled**.
+This is E5's enumeration-order-bias concern demonstrated maximally. The verdict is therefore
+about the ESTIMATOR as operationalized (k-best pool ⇒ within-cell frequency ≈ indicator of the
+optimum); whether the full 5% band is diverse remains unmeasured by this estimator. Pivot
+options → chat (spec §2.9): (a) diversity-controlled within-cell generation (Brunel-style MGA:
+maximize dissimilarity s.t. objective ≤ (1+g)·opt — E5's comparator becomes the estimator; at
+55 s/solve, k=50 ≈ 46 min/cell, same order as the pool); (b) accept within-cell ≈ degenerate →
+hierarchical estimand reduces toward one-solve-per-cell, pivot to Claims B+C; (c) demonstration
+problem. [07 §B]
+**R6.4 S0 realized vs intended (certified single):** biomass capture **31.0%** (prediction band
+was 30–37; anchors 25.9 floor / 41.3 a0 / 49.7 a1) — "co-benefit, not driver" achieved. Captures:
+refugia 45.2%, m_soc 33.2% (AT target), birds 33.0%, mammals 32.7%, connectivity 33.4%, corridors
+26.0%, intactness 29.9%. **θ-tail capture (standing T1/E7 diagnostic) — the pre-stated biomass
+expectation FAILED: biomass tail mass capture 0.425** (vs 1.000 at w=1 in a1), m_soc tail 0.435;
+connectivity tail 0.980, refugia tail 1.000. Design insight the diagnostic surfaced as intended:
+**a total-capture target does not protect the dense tail** — co-capture elsewhere satisfies the
+claim, letting the solver skip ~57% of both carbon tails. Reported, not buried; a dense-stand
+guarantee would need a tail-restricted feature (chat question). Realized-vs-intended influence
+shares: largest miss m_soc +0.089 (realized 0.275 vs intended 0.186) — structural, not
+miscalibration: a satiating feature realizes 100% of its claim while diffuse features realize
+only ~40–50% of their cap_max range under competition, so realized shares tilt toward the
+satiating member (Claim C's stated first-order caveat, now measured). [07 §C]
+**R6.5 LP-twin tightness on S0:** LP **100.00% integral**, LP-vs-MILP Jaccard 0.9957, max
+capture delta 0.0006 — the S0 LP relaxation is effectively exact. [07 §D]
+**R6.6 E4 seed written:** `runs/gate2_s0_ref/solutions.npz` (50 × 1,272,914) + cell_audit.json;
+frequency figure `figures/gate2_s0_frequency.png`. Note for E4's design: with a k-best pool,
+k-subsampling (10/30/50) varies only trivial perturbations — E4 is moot unless the estimator
+changes per R6.3. [07 §E]
+
+## R7. Gate 2a/2b — tail features + MGA reference run (built 2026-08-28; PENDING-RUN)
+
+**R7.1 (PENDING-RUN)** Tail-feature build + re-audit [08]: cutoffs and area/mass shares vs the
+frozen T2 (expect 303.7 t/ha @ 4.06% / 33.2% mass; 105.6 @ 1.17% / 6.6%); audit class under
+frozen rules (expected rare-attainable, both); manifest = 10 continuous features, tail targets
+0.0 everywhere by default.
+**R7.2 (PENDING-RUN)** Anchor equivalence [09]: v2-stack S0 anchor objective vs iter9's
+5.362813 (t=0 tails must be inert; assert <1e-3).
+**R7.3 (PENDING-RUN)** MGA sweeps [09]: per-g member counts, band certificates, duplicate /
+time-limited counts, Hamming-to-anchor ranges, wall time (~1 min/iterate predicted; per-cell
+ensemble cost revision).
+**R7.4 (PENDING-RUN)** Verdict rule v2 [10 §B]: D and C at g = 2/5/10%, conditional share
+(reported only), verdict at g=5% (PLATEAU-RICH / NEAR-UNIQUE / INTERMEDIATE) → the Gate-3 vs
+Claims-B+C decision with the chat.
+**R7.5 (PENDING-RUN)** f(g) core-erosion curves [10 §C] — E4's central product; figures
+`gate2b_core_erosion.png`, `gate2b_s0_frequency_mga.png`.
 
 ## Figure/table candidates (running)
 

@@ -96,8 +96,18 @@ def _member(A, row):
     kinds = [A.kinds[k] for k in keep]
 
     _, edges = cg.build(D, labels, kinds, beta=float(row["beta"]), verbose=False)
+    # cg.build's edge ids use SUBSET-LOCAL indices; translate i/j back to the ORIGINAL unit
+    # indices so edge identity is comparable ACROSS members -- without this, every leave-one-out
+    # member shifts the ids of all units above the dropped one and edge_frequency.csv reads as
+    # index noise (caught on the first real collect, 2026-08-27). With original indices restored,
+    # edge_bands needs no nmap.
+    edges = edges.reset_index()
+    edges["i"] = [keep[int(v)] for v in edges["i"]]
+    edges["j"] = [keep[int(v)] for v in edges["j"]]
+    edges["edge_id"] = [cg.edge_id(a, b) for a, b in zip(edges["i"], edges["j"])]
+    edges = edges.set_index("edge_id")
     bands, _, _, _ = cc.edge_bands(A, A.cwd, A.mcp, edges, float(row["cutoff"]), "abs",
-                                   want_slack=False, nmap=keep)
+                                   want_slack=False)
 
     # Node land is excluded relative to THIS member's name set. Dropping a name must not silently
     # hand its footprint to the corridor -- that would read as "the corridor grew" when in fact an

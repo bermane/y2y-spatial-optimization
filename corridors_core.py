@@ -1541,6 +1541,57 @@ def route_branches(A):
 
 
 # ================= per-branch values table (D13/D14) =================
+def _to_audit_frac(A, mask):
+    """A 300 m boolean mask -> COVERAGE FRACTION per 1 km audit cell (0..1).
+
+    The fractional crossing used for BRANCH profiling (M6.5): route branches at 0.5x cutoff are
+    ribbons ~1 km wide -- all boundary -- and the fixed 0.5 majority rule systematically
+    inflated 9 of 41 of them by 5-17% (the G11 failure, 2026-08-27). Weighting by actual
+    coverage is exactly area-conserving by construction. The corridor-LEVEL profile keeps the
+    fixed 0.5 majority (_to_audit): its masks are tens of km wide, and G5 anchors that path to
+    v1."""
+    src = A.template.copy(data=mask.astype("float32"))
+    src.rio.write_nodata(None, inplace=True)
+    frac = src.rio.reproject_match(A.audit_template, resampling=Resampling.average).values
+    return np.nan_to_num(frac, nan=0.0).astype("float64")
+
+
+def _profile_frac(P, w):
+    """results_core.mask_profile generalised to FRACTIONAL cell weights w (0..1).
+
+    With binary weights this reduces EXACTLY to mask_profile (asserted by the equivalence
+    test), so D13's "same column specification as the Y2Y-wide alternatives table" holds: same
+    estimands, same normalisations, same full-Y2Y denominators. The Y2Y-wide tables' masks are
+    native 1 km cells (weights always 0/1 there), so the two products remain computed
+    identically wherever both exist.
+    """
+    def wmean(a):
+        fin = np.isfinite(a)
+        d = float(np.sum(w[fin]))
+        return float(np.nansum(np.where(fin, a, 0.0) * w) / d) if d > 0 else np.nan
+
+    prof = [wmean(P.cont_stack[k]) for k in range(len(P.cont))]
+    efg_d = sum(float(np.sum(w[np.isfinite(P.efg_stack[j])])) for j in range(len(P.efg)))
+    prof.append(float(np.nansum(P.efg_stack * w[None, :, :]) / efg_d) if efg_d > 0 else np.nan)
+
+    contrib = [100.0 * float(np.nansum(P.cont_raw[k] * w)) / P.cont_region[k]
+               for k in range(len(P.cont))]
+    contrib.append(100.0 * float(np.nanmean(
+        [np.nansum(P.efg_raw[j] * w) / P.efg_region[j] for j in range(len(P.efg))])))
+    area = float(np.sum(w)) * P.cell_km2
+    eff = [x / area * 1000.0 for x in contrib]
+
+    raw = []
+    for k, name in enumerate(P.cont):
+        if rc.RAW_SPEC[name][2] == "tonnes":
+            raw.append(float(np.nansum(P.cont_raw[k] * w) * P.cell_ha))
+        else:
+            raw.append(wmean(P.cont_raw[k]))
+    raw.append(int(np.sum([bool(np.any((P.efg_raw[j] > 0) & (w > 0)))
+                           for j in range(len(P.efg))])))
+    return prof, contrib, eff, raw
+
+
 def alternatives_table(A):
     """Step 4c -- the per-branch values table, SAME column specification as the Y2Y-wide
     alternatives (consequences) tables: display names, units and normalisations are IMPORTED from
@@ -1564,14 +1615,14 @@ def alternatives_table(A):
         pct_grid = None
     else:
         raw = P.cont_raw[carroll_k]
-        ref = raw[routable_1k & np.isfinite(raw)]
-        order = np.argsort(ref)
-        # percentile transform over the ROUTABLE audit area
-        def _pctl(vals):
-            v = vals[np.isfinite(vals)]
-            if not v.size:
+        ref = np.sort(raw[routable_1k & np.isfinite(raw)])
+        # weighted mean percentile (percentile transform over the ROUTABLE audit area)
+        def _pctl(vals, wts):
+            fin = np.isfinite(vals) & (wts > 0)
+            if not fin.any():
                 return np.nan
-            return float(100.0 * np.searchsorted(ref[order], v, side="right").mean() / ref.size)
+            p = 100.0 * np.searchsorted(ref, vals[fin], side="right") / ref.size
+            return float(np.average(p, weights=wts[fin]))
         pct_grid = _pctl
 
     rows, g11 = [], []
@@ -1579,15 +1630,15 @@ def alternatives_table(A):
         m = np.zeros(A.shape[0] * A.shape[1], bool)
         m[A.branch_idx[r.branch]] = True
         m = m.reshape(A.shape)
-        audit = _to_audit(A, m)
+        w = _to_audit_frac(A, m)                       # fractional crossing (M6.5)
         a300 = r.cells * A.cell_km2
-        a1k = int(audit.sum()) * P.cell_km2
+        a1k = float(w.sum()) * P.cell_km2
         rel = abs(a1k - a300) / max(a300, 1e-9)
         g11.append((r.branch_id, a300, a1k, rel))
-        if not audit.any():
-            print(f"  {r.branch_id}: too narrow for the 1 km audit grid -- values row skipped")
+        if not (w > 0).any():
+            print(f"  {r.branch_id}: no overlap with the 1 km audit grid -- values row skipped")
             continue
-        prof, contrib, eff, rawv = rc.mask_profile(P, audit)
+        prof, contrib, eff, rawv = _profile_frac(P, w)
         e = A.edges.loc[r.edge_id]
         row = dict(branch_id=r.branch_id, edge_id=r.edge_id, edge_class=r.edge_class,
                    label_i=e["label_i"], label_j=e["label_j"],
@@ -1602,8 +1653,7 @@ def alternatives_table(A):
             row[f"{ax} | contribution %"] = round(contrib[j], 4)
             row[f"{ax} | efficiency"] = round(eff[j], 4)
         if pct_grid is not None:
-            vals = P.cont_raw[carroll_k][audit]
-            row["carroll2018_pctl"] = round(pct_grid(vals), 1)
+            row["carroll2018_pctl"] = round(pct_grid(P.cont_raw[carroll_k], w), 1)
             row["carroll2018_pctl_ref"] = 50.0       # routable-area baseline, by construction
         rows.append(row)
 
@@ -1623,12 +1673,16 @@ def alternatives_table(A):
     dst = A.run_dir
     df.to_csv(dst / "alternatives_branches.csv", index=False, encoding="utf-8-sig")
     caption = ("Row unit is edge x route branch, not a solution cluster; columns follow the "
-               "Y2Y-wide alternatives table for readability only. carroll2018_pctl is an audit "
-               "column (D14): RCP 8.5 late-century only, shares anthropogenic signal with the "
-               "cost surface; no routing is climate-informed.")
+               "Y2Y-wide alternatives table for readability only. Branch masks cross 300 m -> "
+               "1 km by FRACTIONAL cover weighting (exactly area-conserving; reduces to the "
+               "Y2Y-wide mask_profile on binary masks). carroll2018_pctl is an audit column "
+               "(D14): RCP 8.5 late-century only, shares anthropogenic signal with the cost "
+               "surface; no routing is climate-informed.")
     (dst / "alternatives_branches.meta.json").write_text(json.dumps(
         dict(caption=caption, row_unit="edge x route branch",
-             column_spec="results_core.RAW_SPEC / mask_profile (imported, not redefined)",
+             column_spec="results_core.RAW_SPEC / mask_profile estimands, fractional-weight "
+                         "generalisation (M6.5; exact on binary masks)",
+             crossing="fractional cover (0.5-majority retained for corridor-level profile)",
              carroll_ref=A.cfg["carroll_ref"]), indent=2))
     print(f"  wrote alternatives_branches.csv (+ .meta.json caption) -- {len(df)} branch rows")
     A.alternatives = df

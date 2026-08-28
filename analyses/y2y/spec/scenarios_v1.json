@@ -1,0 +1,197 @@
+{
+  "_meta": {
+    "derived_utc": "2026-08-27T18:49:16.825895+00:00",
+    "audit_created_utc": "2026-08-26T22:32:08.502910+00:00",
+    "n_pu": 1272914,
+    "budget_pct": 0.3,
+    "split_rule": "mass",
+    "frac_soc": 0.741966,
+    "diagnostic_a1_tail_capture_mass": 0.999877,
+    "normalization": "mean-1 over blocked features; outside fixed (gHM w=1, EFG 1/40)",
+    "layer_sha256": {
+      "human_modification": "7e6b5e6f5a31e09e48ff04fc8ece11b44c69178a954452058a41726ee6506295",
+      "transboundary_connectivity": "61266bfb1b5b8dce93d7b3eb686255bf4c3c806a9196282b0ea8c7086cb75e8b",
+      "climate_corridors": "64357eb2e006d01cc7893e393e4383d6eec14a4bd789a8d4e6872f8bb72476b6",
+      "climate_type_macrorefugia": "6e2084b9af5560380c3086fa92ab85a2cb08ed97f877e40f1f21994285138280",
+      "irrecoverable_carbon_biomass": "ac9f38c70010155a07a1e735d2f75811c5a34f8123c654b102cb828078edc467",
+      "irrecoverable_carbon_m_soc": "02dcade93935c5d81b7c41fda17975c51ab09aa41f2c6667d51de45e8ab245ba",
+      "aoh_richness_mammals": "b49fd3742b772596755ffd740e86597c94d82e6e11204a80e67d6b4c73c332c1",
+      "aoh_richness_birds": "53ca68b7307c1927e761fc3b752c3f90e614fd7625b0cc337f79f9c4cb71dac3"
+    }
+  },
+  "S0_balanced": {
+    "block_shares": {
+      "core_habitat": 0.25,
+      "connectivity": 0.25,
+      "carbon": 0.25,
+      "biodiversity": 0.25
+    },
+    "within_block": {
+      "carbon": {
+        "irrecoverable_carbon_m_soc": 0.741966,
+        "irrecoverable_carbon_biomass": 0.258034
+      }
+    },
+    "targets": {
+      "irrecoverable_carbon_m_soc": 0.332
+    },
+    "weights": {
+      "climate_type_macrorefugia": 1.460018,
+      "transboundary_connectivity": 0.669317,
+      "climate_corridors": 1.171387,
+      "irrecoverable_carbon_m_soc": 0.464639,
+      "irrecoverable_carbon_biomass": 0.198559,
+      "aoh_richness_birds": 1.328571,
+      "aoh_richness_mammals": 1.707509
+    },
+    "intended_shares": {
+      "climate_type_macrorefugia": 0.25,
+      "transboundary_connectivity": 0.125,
+      "climate_corridors": 0.125,
+      "irrecoverable_carbon_m_soc": 0.185492,
+      "irrecoverable_carbon_biomass": 0.064508,
+      "aoh_richness_birds": 0.125,
+      "aoh_richness_mammals": 0.125
+    }
+  },
+  "S1_core_habitat": {
+    "block_shares": {
+      "core_habitat": 0.5,
+      "connectivity": 0.166667,
+      "carbon": 0.166667,
+      "biodiversity": 0.166667
+    },
+    "within_block": {
+      "carbon": {
+        "irrecoverable_carbon_m_soc": 0.741966,
+        "irrecoverable_carbon_biomass": 0.258034
+      }
+    },
+    "targets": {
+      "irrecoverable_carbon_m_soc": 0.332
+    },
+    "weights": {
+      "climate_type_macrorefugia": 3.090752,
+      "transboundary_connectivity": 0.472299,
+      "climate_corridors": 0.826581,
+      "irrecoverable_carbon_m_soc": 0.327869,
+      "irrecoverable_carbon_biomass": 0.140112,
+      "aoh_richness_birds": 0.937496,
+      "aoh_richness_mammals": 1.204891
+    },
+    "intended_shares": {
+      "climate_type_macrorefugia": 0.5,
+      "transboundary_connectivity": 0.083333,
+      "climate_corridors": 0.083333,
+      "irrecoverable_carbon_m_soc": 0.123661,
+      "irrecoverable_carbon_biomass": 0.043006,
+      "aoh_richness_birds": 0.083333,
+      "aoh_richness_mammals": 0.083333
+    }
+  },
+  "S2_connectivity": {
+    "block_shares": {
+      "core_habitat": 0.166667,
+      "connectivity": 0.5,
+      "carbon": 0.166667,
+      "biodiversity": 0.166667
+    },
+    "within_block": {
+      "carbon": {
+        "irrecoverable_carbon_m_soc": 0.741966,
+        "irrecoverable_carbon_biomass": 0.258034
+      }
+    },
+    "targets": {
+      "irrecoverable_carbon_m_soc": 0.332
+    },
+    "weights": {
+      "climate_type_macrorefugia": 0.956814,
+      "transboundary_connectivity": 1.3159,
+      "climate_corridors": 2.302985,
+      "irrecoverable_carbon_m_soc": 0.304498,
+      "irrecoverable_carbon_biomass": 0.130125,
+      "aoh_richness_birds": 0.870672,
+      "aoh_richness_mammals": 1.119006
+    },
+    "intended_shares": {
+      "climate_type_macrorefugia": 0.166667,
+      "transboundary_connectivity": 0.25,
+      "climate_corridors": 0.25,
+      "irrecoverable_carbon_m_soc": 0.123661,
+      "irrecoverable_carbon_biomass": 0.043006,
+      "aoh_richness_birds": 0.083333,
+      "aoh_richness_mammals": 0.083333
+    }
+  },
+  "S3_biodiversity": {
+    "block_shares": {
+      "core_habitat": 0.166667,
+      "connectivity": 0.166667,
+      "carbon": 0.166667,
+      "biodiversity": 0.5
+    },
+    "within_block": {
+      "carbon": {
+        "irrecoverable_carbon_m_soc": 0.741966,
+        "irrecoverable_carbon_biomass": 0.258034
+      }
+    },
+    "targets": {
+      "irrecoverable_carbon_m_soc": 0.332
+    },
+    "weights": {
+      "climate_type_macrorefugia": 0.781824,
+      "transboundary_connectivity": 0.358412,
+      "climate_corridors": 0.627265,
+      "irrecoverable_carbon_m_soc": 0.248809,
+      "irrecoverable_carbon_biomass": 0.106326,
+      "aoh_richness_birds": 2.134306,
+      "aoh_richness_mammals": 2.743057
+    },
+    "intended_shares": {
+      "climate_type_macrorefugia": 0.166667,
+      "transboundary_connectivity": 0.083333,
+      "climate_corridors": 0.083333,
+      "irrecoverable_carbon_m_soc": 0.123661,
+      "irrecoverable_carbon_biomass": 0.043006,
+      "aoh_richness_birds": 0.25,
+      "aoh_richness_mammals": 0.25
+    }
+  },
+  "S4_carbon": {
+    "block_shares": {
+      "core_habitat": 0.166667,
+      "connectivity": 0.166667,
+      "carbon": 0.5,
+      "biodiversity": 0.166667
+    },
+    "within_block": {
+      "carbon": {
+        "irrecoverable_carbon_m_soc": 0.741966,
+        "irrecoverable_carbon_biomass": 0.258034
+      }
+    },
+    "targets": {
+      "irrecoverable_carbon_m_soc": 0.552
+    },
+    "weights": {
+      "climate_type_macrorefugia": 1.228699,
+      "transboundary_connectivity": 0.563274,
+      "climate_corridors": 0.985798,
+      "irrecoverable_carbon_m_soc": 1.165871,
+      "irrecoverable_carbon_biomass": 0.501302,
+      "aoh_richness_birds": 1.118078,
+      "aoh_richness_mammals": 1.436979
+    },
+    "intended_shares": {
+      "climate_type_macrorefugia": 0.166667,
+      "transboundary_connectivity": 0.083333,
+      "climate_corridors": 0.083333,
+      "irrecoverable_carbon_m_soc": 0.370983,
+      "irrecoverable_carbon_biomass": 0.129017,
+      "aoh_richness_birds": 0.083333,
+      "aoh_richness_mammals": 0.083333
+    }
+  }
+}

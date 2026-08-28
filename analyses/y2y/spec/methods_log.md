@@ -80,6 +80,18 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   canonical macrorefugia layer (tolerance 1e-5 — provenance proof that the stack layer IS the
   ssp585 realization); PU set unchanged by construction. (built 2026-08-27; 02 closing section)
 
+- **M2.9** **θ-tail carbon features (spec v0.10 D-B, built by 08_gate2a_tails):** two derived
+  masked-DENSITY layers — `m_soc_tail`, `biomass_tail` = parent density where ≥ θ×regional
+  mean, else 0 (PU-masked) — so capture = share of TAIL MASS and t=1.0 secures the whole tail
+  (0.95 fallback pre-authorized). In EVERY analysis' manifest as feature_continuous at target
+  **0.0 = mathematically absent** (verified: a 0-target feature's constraint row has rhs 0 and
+  its shortfall column zero nonzeros); ONLY carbon-forward cells activate them at 1.0.
+  Motivated by M6.7; audited under the UNCHANGED frozen §2.5 rules (expected rare-attainable;
+  addendum records in `audit_objects/tail_addendum.csv` + bespoke cards — the frozen T2 is
+  untouched). Engineering constraints honored: manifest entries sit BEFORE the EFG block
+  (pr_weights builds its vector positionally) and `pr_targets`' range guard relaxed
+  (0,1] → [0,1]. (2026-08-28)
+
 ## 3. Feature characterization protocol (Gate 0a; spec §2.5)
 
 - **M3.1** LEVERAGE (the organizing statistic): share of a feature's total held by its richest
@@ -170,6 +182,14 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   positive w buys a feature's tail first), so the design question is effective pull depth. The
   θ-tail capture rate joins T1/E7 as a standing per-cell diagnostic. Connectivity and
   biodiversity pairs: equal-within-block default. (2026-08-27)
+  **OUTCOME (same day, Ethan's run): a1 mass-weighted tail capture = 1.000 → (a)
+  mass-proportional ADOPTED (74.2/25.8, computed live from regional mass).** The decomposition
+  refuted the motivating co-capture hypothesis: only 1.0% of biomass-tail cells overlap the
+  m_soc θ-tail, so 98.9% of the captured tail mass is INDEPENDENT selection — dense biomass is
+  bought on its own merits, not via the SOC claim. Escalation (combined total-carbon feature)
+  not triggered; concern discharged with evidence per the spec's procedure. Standing check
+  retained: the diagnostic was measured at biomass w=1, so T1/E7 verifies the tail stays
+  captured under S0's derived w≈0.20 (pre-stated expectation: high). Numbers → results_log R5.1.
 - **M4.9** **Scenario family derivation (Gate 1):** S0 = equal block shares (0.25 ×4), targets
   {m_soc: 0.332}; S1–S3 = named block share doubled to 0.5, others scaled to 1/6; S4 = carbon
   doubled AND θ relaxed 5×→3× → m_soc t = **0.552** (an archive LOOKUP from the frozen
@@ -178,6 +198,52 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   sha256s); this file is the Gate-3 manifest's input. First-order caveat carried from the spec:
   the translation ignores competition and spatial correlation — intended-vs-realized influence
   is verified per solved cell, biomass weight iterated once if the miss is large. (2026-08-27)
+
+- **M4.10** **Gate-2 design (built 2026-08-27): the first 1 km pool run, three-run structure.**
+  Reference cell = S0, k=50, g=5%. Three runs into three DISTINCT folders (`iter9_y2y_s0_lp` /
+  `_s0_single` / `_s0_pool`) because the engine's clobber guard compares only targets+weights,
+  which are identical across the three — solver params are unguarded. (1) LP twin (HiGHS ipm,
+  proportion) per M5.5; (2) certified single MILP (Gurobi, opt_gap 1e-4) — T1's
+  intended-vs-realized source and the pool-cost denominator; (3) the pool (`add_gap_portfolio`,
+  PoolSearchMode=2, number_solutions=50, pool_gap=0.05; prioritizr asserts opt_gap ≤ pool_gap).
+  **Pre-registered degeneracy verdict, frozen in 07_gate2_analysis BEFORE the pool ran**, on the
+  DEDUPLICATED pool over DISCRETIONARY (non-locked) cells only (locked PAs appear in every
+  solution and would dilute the denominator): PLATEAU-RICH (Claim A carries) iff k_distinct ≥ 10
+  AND ≥5% of ever-selected discretionary cells have 0<f<1; NEAR-BINARY (fail branch → pivot
+  decided with the chat, spec §2.9) iff k_distinct ≤ 3 OR <1% fractional; else INTERMEDIATE →
+  chat. Frequencies are computed over DISTINCT solutions (prioritizr returns main + pool, so
+  the incumbent can repeat). (2026-08-27)
+  **OUTCOME (same day, Ethan's run): NEAR-BINARY — the fail branch fired.** 50 distinct
+  solutions, but conditional cells 0.09% (<1% threshold), mean pairwise Jaccard 0.9999,
+  objective span 3.2e-6 relative. Mechanism (M6.6): PoolSearchMode=2's k-best enumeration
+  never samples the g-band. Pivot decision → chat before Gate 3; numbers in results_log R6.3.
+
+- **M4.11** **Spec v0.10 ratified (2026-08-28): the Gate-2 pivot.** (a) **Estimand
+  re-registered (D-A(a))**: within-cell f = membership fraction across k maximally-diverse
+  members of the g-band (objective ≤ (1+g)·certified optimum) — interval logic (which cells
+  survive every corner of the band), deliberately NOT volume-weighted sampling (uniform vertex
+  sampling intractable; plateau volume is geometry, not decision relevance). Estimator
+  `mga_maxham_v1`; g stays a certified hard wall + lens parameter; **f(g) at {2,5,10%} becomes
+  E4's central robustness product**. One k-best pool retained per ensemble cell
+  (optimum-uniqueness statement; the k-best-vs-MGA contrast discharges E5 by design).
+  (b) **Amount-vs-places scenario axis (D-B)**: S0 keeps amount semantics UNCHANGED (Gate-2
+  artifacts stand); S4 = amount dial (t=0.552) + places locks (tail features at t=1.0).
+  (c) **Correction: the v0.9.1 "weight sets depth, not order" rationale is REFUTED** by M6.7
+  (joint scoring lets competition invert within-feature hotspot preference); the
+  mass-proportional split stands on the S0 amount decision instead. (d) Rulings: the m_soc
+  +0.089 realized-share miss ACCEPTED as structural (no iterate-once — re-deriving against
+  realized swing chases a competition equilibrium and destroys intended-influence
+  interpretability); ensemble LP twins PRODUCED on Gurobi's LP path, HiGHS re-verification as
+  a 2-cell spot-check (open-verification = verifiable without Gurobi, not produced without it).
+- **M4.12** **Degeneracy verdict rule v2 (pre-registered, frozen in 10_gate2b_analysis BEFORE
+  the MGA run).** Statistics per spec §4, over anchor + k members at g=5%, discretionary cells
+  only, m_disc = anchor's discretionary selection: **D** = max pairwise Hamming/(2·m_disc)
+  (achieved band diameter; measured under a MAXIMIZING probe, so small D = narrow in every
+  direction), **C** = share of m_disc selected in ALL solutions (f=1 robust core).
+  PLATEAU-RICH iff D ≥ 0.10 AND C ≤ 0.90 → Gate 3; NEAR-UNIQUE iff D < 0.02 OR C > 0.98 →
+  "S0 essentially unique within g" (strong negative; pivot to Claims B+C); else INTERMEDIATE →
+  chat. Conditional-cell % reported for continuity but NOT ruled on (MGA inflates it by
+  construction). Rule hash recorded in the cell audit per spec §9. (2026-08-28)
 
 ## 5. Solver configuration and numerical integrity
 
@@ -205,6 +271,29 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   pool solution vectors `xn` → `poolnx`, breaking prioritizr 8.1.0's gap portfolio — shimmed;
   portfolio `solve()` returns a list of rasters — stacked. Pool path verified toy-scale; first
   1 km pool run is Gate 2.
+- **M5.7** **Solver provenance recorded in run_summary (engine change, 2026-08-27).** prioritizr
+  attaches per-solution `objective/status/runtime/gap/objbound` attributes to `solve()`'s return,
+  which `pr_solve`'s `terra::rast()` stacking silently discarded — so NO objective value was on
+  record for the whole Gate-0 era. `pr_solve` now harvests them before stacking and
+  `pr_write_outputs` writes them as `run_summary$solver_provenance` (optional block; absent on
+  older runs). Toy-verified on all three branches (HiGHS LP, Gurobi single, Gurobi pool n=3 —
+  per-solution objectives recorded). Matters for Gate 2+: the pool's objective span vs its 5%
+  gap is a headline estimand check, cross-validated in 07 against objectives recomputed exactly
+  from the per-solution representation CSV.
+- **M5.8** **MGA machinery (`mga_core.R`, toy-verified 2026-08-28).** prioritizr cannot
+  constrain its own objective, so the estimator works on the COMPILED model
+  (`prioritizr::compile` R6 object; pu variables are columns 1..n_pu, locked-in = lb 1):
+  one appended row `obj0·x ≤ (1+g)·z*` is the band wall; each iteration swaps in a LINEAR
+  max-sum-of-Hamming distance objective (minimize Σ_j (2·count_j − n_inc)·x_j over
+  discretionary pu columns) plus a **+1e-3·obj0 term that pins shortfall variables to their
+  true minimum**, making each member's recorded band LHS its REAL objective (honest
+  per-solution certificate; distance distortion ≤ ~6e-3 of one Hamming unit). Direct
+  `gurobi::gurobi` calls mirror prioritizr's own solver construction (LC_CTYPE workaround,
+  binary rounding, NumericFocus 2, Presolve 2); warm starts from the previous member.
+  Estimator parameters (frozen in gate2b_meta): MIPGap_dist 0.01, TimeLimit_iter 900 s
+  (a time-limited iterate is KEPT if feasible — it is a diversity probe, not a certificate).
+  Toy-verified end-to-end: anchor == prioritizr's own solve; all band certificates hold;
+  0-target absence; locked preservation; raster round-trip.
 
 ## 6. Findings register (results the paper reports; with provenance)
 
@@ -227,6 +316,25 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
 - **M6.5** Degeneracy status: OPEN. The 68k-cell a4-vs-a0 divergence was numerics artifact
   (exact solves agree exactly); remaining plateau evidence = LP-vs-MILP swaps ~2% of cells at
   ≈equal objective. Gate 2's pools are the real test; §2.8's prediction is weakened.
+- **M6.6** **Gate-2 mechanism finding (2026-08-27): a k-best solution pool does not sample the
+  g-band.** Gurobi PoolSearchMode=2 returns the k BEST solutions; on S0 the plateau at the
+  optimum is so dense (≥50 distinct solutions within 3.2e-6 relative of optimal, differing by
+  a handful of cells) that the pool never leaves the optimum's neighborhood — PoolGap=5% acts
+  as a bound, never as a sampling target. Consequence: the within-cell frequency estimand as
+  operationalized (spec §4 via `add_gap_portfolio`) measures "indicator of the optimum", not
+  "membership across the g-near-optimal set". This is E5's enumeration-order-bias concern,
+  demonstrated maximally, and is the substance of the Gate-2 pivot decision. Candidate
+  re-operationalization: Brunel-style diversity-controlled generation (maximize Hamming
+  distance from incumbents s.t. objective ≤ (1+g)·optimum), which at S0's 55 s/solve costs
+  ≈ k × 1 min per cell — affordable. Decision belongs to the chat (spec §2.9).
+- **M6.7** **A total-capture target does not protect the dense tail (2026-08-27, first T1/E7
+  reading).** In S0, m_soc lands AT its 0.332 target but only 43.5% of its θ-tail mass is
+  selected — co-capture on cells chosen for other features satisfies the claim off-tail.
+  Biomass likewise: tail capture 0.425 at w≈0.199 (vs 1.000 at w=1), refuting the pre-stated
+  "high" expectation. The standing diagnostic surfaced exactly what it was built to surface
+  (v0.9.1: "any scenario that abandons dense stands is reported, not buried"). If a dense-stand
+  guarantee is wanted, it needs a tail-restricted formulation element (e.g. a θ-tail-masked
+  carbon feature with its own target) — a design question for the chat, NOT patched silently.
 
 ## 7. Supersession log (things we did and then undid — the paper may need to say why)
 
@@ -242,6 +350,11 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
 | w = t discipline (Gate-0 arms) | block-budgeted (w,t) via two-regime swing | w=t is itself an influence profile (gave biomass ~29% of swing); Gate-0-only isolator | 2026-08-27 (spec v0.9) |
 | E5 HiGHS-shuffle arm | Gurobi pool vs Brunel-style, both 1 km | HiGHS cannot solve the 1 km binary MILP; open-verification story = LP twins | 2026-08-27 (spec v0.9) |
 | Claim C `w = influence/leverage` | two-regime swing everywhere | linear-arm special case only; wrong for satiating features | 2026-08-27 (spec v0.9) |
+| k-best pool estimator (add_gap_portfolio) | MGA max-Hamming generation (`mga_maxham_v1`) | PoolSearchMode=2 never samples the g-band (M6.6); one k-best pool kept per cell as the uniqueness statement | 2026-08-28 (spec v0.10) |
+| "weight sets depth, not order" (v0.9.1 rationale) | REFUTED — joint scoring lets competition invert within-feature hotspot preference | M6.7: biomass tail 0.425 at w=0.199; m_soc tail 0.435 with target binding | 2026-08-28 (spec v0.10) |
+| E5 as an experiment arm | discharged by design (k-best-vs-MGA contrast = ensemble by-product) | M6.6 is the maximal demonstration | 2026-08-28 (spec v0.10) |
+| pr_targets range guard (0,1] | [0,1] | t=0 = mathematically absent, carries the places axis | 2026-08-28 |
+| HiGHS-produced LP twins (ensemble) | Gurobi-path twins + HiGHS spot-check ×2 cells | 109-min worst-case presolve pathology; open-verification = verifiable, not produced, without Gurobi | 2026-08-28 (spec v0.10) |
 
 *Maintainer note: entries M-numbered for stable citation from drafts. Update same-session, every
 methods-relevant change. Last updated 2026-08-27 (Gate 1 build).*

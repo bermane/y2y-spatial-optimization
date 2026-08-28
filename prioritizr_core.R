@@ -345,7 +345,10 @@ pr_targets <- function(ctx) {
     stopifnot("targets names a feature not in the stack" = nm %in% names(targets))
     targets[nm] <- as.numeric(ov[[nm]])
   }
-  stopifnot("targets must be in (0, 1]" = all(targets > 0 & targets <= 1))
+  # [0, 1] since spec v0.10: a 0 target makes a feature mathematically ABSENT (its constraint
+  # row gets rhs 0 and its shortfall column has zero nonzeros -- verified), which is how the
+  # theta-tail features sit inert in every stack outside carbon-forward cells.
+  stopifnot("targets must be in [0, 1]" = all(targets >= 0 & targets <= 1))
   if (length(ov)) {
     # A target only bites if it is BELOW what the feature would otherwise capture; report the
     # overrides so a non-binding one (set above the achievable capture) is visible, not silent.
@@ -476,6 +479,17 @@ pr_build_problem <- function(ctx) {
 # ---- Stage 7: solve -----------------------------------------------------
 pr_solve <- function(ctx) {
   timing <- system.time(s <- solve(ctx$p))
+  # Solver provenance (per-solution objective / status / MIP gap / runtime), attached by
+  # prioritizr as attributes on the returned object. Harvested HERE, before any conversion:
+  # the terra::rast() stacking below drops list attributes, which is why run_summary.json
+  # recorded no objective value for the whole Gate-0 era (added 2026-08-27 for Gate 2 -- the
+  # pool's objective span vs its gap is a headline number). NULL-safe: solver variants may
+  # omit fields.
+  sol_attrs <- list()
+  for (a in c("objective", "status", "runtime", "gap", "objbound")) {
+    v <- attr(s, a, exact = TRUE)
+    if (!is.null(v)) sol_attrs[[a]] <- unname(v)
+  }
   # A portfolio returns a LIST of single-layer rasters (one per pool solution); the single-solve
   # path returns a SpatRaster. Stack the list so everything downstream (names, summaries, the
   # multi-band write) sees one multi-layer SpatRaster either way. Latent since the portfolio
@@ -485,7 +499,9 @@ pr_solve <- function(ctx) {
   names(s) <- sprintf("alt_%02d", seq_len(n_sol))
   cat(sprintf("solved with %s: %d solution(s) in %.1f s\n",
               ctx$params$solver, n_sol, timing[["elapsed"]]))
-  list(s = s, timing = timing, n_sol = n_sol)
+  if (length(sol_attrs$objective))
+    cat(sprintf("objective: %s\n", paste(sprintf("%.6f", sol_attrs$objective), collapse = " ")))
+  list(s = s, timing = timing, n_sol = n_sol, sol_attrs = sol_attrs)
 }
 
 # ---- Stage 8: per-alternative summaries + selection-frequency map --------
@@ -542,6 +558,11 @@ pr_write_outputs <- function(ctx) {
                     prioritizr = as.character(packageVersion("prioritizr")),
                     terra = as.character(packageVersion("terra")),
                     gurobi = if (ctx$have_gurobi) as.character(packageVersion("gurobi")) else NA))
+  # Solver provenance harvested by pr_solve (per-solution objective/status/gap/runtime).
+  # Absent on runs predating 2026-08-27 or when the notebook pipeline does not thread
+  # ctx$sol_attrs through -- readers must treat the block as optional.
+  if (!is.null(ctx$sol_attrs) && length(ctx$sol_attrs))
+    run_summary$solver_provenance <- ctx$sol_attrs
   jsonlite::write_json(run_summary, summary_json, auto_unbox = TRUE, pretty = TRUE, na = "null")
 
   cat("wrote:\n")

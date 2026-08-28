@@ -140,15 +140,55 @@ limit, and the "capture lands at target (not above)" pass criterion that co-capt
 remain owed to a future revision; the validation notebook keeps the measured-corrected verdicts.
 **SPEC NOW v0.9.1 (2026-08-27): Gate 0a/0 ratified COMPLETE; the owed corrections were absorbed
 (w=t RETIRED as a Gate-0-only convention; S4 = θ 3× → m_soc t 0.552; E5 HiGHS arm dropped;
-climate axis SSP245 vs SSP585 both 2071–2100 → 14 serial cells). GATE 1 BUILT, awaiting Ethan's
-run:** `analyses/y2y/05_s0_construction.ipynb` (zero solves) runs the v0.9.1 pre-registered
-biomass θ-tail diagnostic (mass-weighted a1 capture ≥0.90→mass-proportional split / 0.50–0.90→
-equal / <0.50→STOP to chat; SPLIT checkpoint) then derives S0–S4 by block-level influence
-budgeting (`config.BLOCKS`, `leverage_core.swing_per_unit_w`/`scenario_weights`; EFGs 1/40 +
-intactness w=1 OUTSIDE, disclosed) and freezes `spec/scenarios_v1.json`; 02_preprocess gained a
-STANDALONE closing section building `aligned_stack/climate_realizations/` (orient 1/v → dust →
-PU mask; 585 must reproduce the stack layer — provenance QA). Run order: 02 closing section →
-05 top-to-bottom → report §A + T1 back before Gate 2 (first 1 km pool run: S0, k=50, g=5%). **The whole campaign lives in `analyses/y2y/` (self-contained, 2026-08-18)** — the old `03a_y2y` /
+climate axis SSP245 vs SSP585 both 2071–2100 → 14 serial cells). GATE 1 DONE (run clean
+2026-08-27):** the pre-registered biomass θ-tail diagnostic came back **capture 1.000 → (a)
+mass-proportional split 74.2/25.8** (co-capture hypothesis REFUTED: 98.9% of tail mass is
+independent selection — only 1.0% of the biomass tail overlaps the m_soc θ-tail; caveat:
+measured at w=1, T1/E7 re-verifies at S0's w≈0.199); S0–S4 frozen in `spec/scenarios_v1.json`
+(S0: refugia 1.460 / conn 0.669 / corridors 1.171 / m_soc 0.465@t0.332 / biomass 0.199 / birds
+1.329 / mammals 1.708; EFGs 1/40 + intactness w=1 OUTSIDE, disclosed; machinery =
+`config.BLOCKS` + `leverage_core.swing_per_unit_w`/`scenario_weights`); climate realizations
+built in `aligned_stack/climate_realizations/` (585 BIT-identical to the stack layer, leverage
+0.482/0.422, top-30% Jaccard 0.574). **GATE 2 RAN 2026-08-27 — VERDICT NEAR-BINARY, FAIL BRANCH
+FIRED (pivot decision with chat before Gate 3): pool k=50 g=5% returned 50 near-clones (0.09%
+conditional cells, Jaccard 0.9999, objective span 3.2e-6) because PoolSearchMode=2's k-BEST
+enumeration never samples the g-band (M6.6; candidate fix = Brunel-style MGA ~1 min/solve);
+costs: LP twin 6,516 s (HiGHS pathology, worst yet) / single 55 s / pool 1,799 s = 32.8× →
+14-cell ensemble ≈7 h; T1: biomass capture 31.0% (co-benefit achieved) but θ-tail expectation
+FAILED (tail mass 0.425; M6.7: total-capture targets don't protect dense tails — co-capture
+satisfies claims off-tail); S0 LP 100% integral, LP-vs-MILP Jaccard 0.9957. Full numbers
+results_log R6.** **SPEC NOW v0.10 (2026-08-28), GATE 2a/2b BUILT awaiting Ethan's run:**
+D-A(a) = estimand RE-REGISTERED on MGA diversity generation (`mga_core.R`, toy-verified:
+band-wall row `obj0·x ≤ (1+g)z*` appended to the COMPILED prioritizr model, linear
+max-sum-Hamming distance objective over discretionary pu columns + 1e-3·obj0 shortfall-pinning
+for honest per-member certificates, direct gurobi calls, warm starts; k-best pool kept
+one-per-cell = E5 discharged by design); D-B = amount-vs-places axis (S0 UNCHANGED; S4 adds
+places locks: `m_soc_tail`/`biomass_tail` masked-DENSITY features in EVERY manifest at
+**t=0.0 = mathematically absent** — pr_targets now allows [0,1]; manifest emits tails BEFORE
+EFGs because pr_weights is positional; write_manifest injects 0.0 defaults for ALL analyses);
+"weight sets depth not order" REFUTED (v0.10 §2.5); no iterate-once (structural); ensemble LP
+twins on Gurobi path + HiGHS spot-check ×2. Run order: **08_gate2a_tails** (py: tails +
+frozen-rule re-audit expect rare-attainable + addendum cards + scenarios_v2.json + manifest
+10-continuous check) → **09_gate2b_mga** (R: anchor with t=0-equivalence assert vs 5.362813,
+then k=50 MGA at g=5% + 2%/10% probes, ~2.5–3 h, resumable per g, live internet, outputs →
+`runs/cell_s0_ssp585_theta5/`) → **10_gate2b_analysis** (py: **PRE-REGISTERED verdict rule v2
+frozen before the run** — D = maxHam/(2·m_disc), C = f=1 core share, over anchor+members,
+discretionary only: PLATEAU-RICH iff D≥0.10 ∧ C≤0.90; NEAR-UNIQUE iff D<0.02 ∨ C>0.98 →
+Claims-B+C pivot; conditional-% reported NOT ruled — MGA inflates it; + f(g) core-erosion =
+E4's central product) → verdict to chat = Gate 3 freeze vs pivot. Build record:**
+`analyses/y2y/06_gate2_pool.ipynb` (R) solves S0 three ways into three folders — LP twin
+`iter9_y2y_s0_lp`, certified single `iter9_y2y_s0_single` (opt_gap 1e-4), THE POOL
+`iter9_y2y_s0_pool` (portfolio_n=50, portfolio_gap=0.05; cost unknown = the measurement; needs
+live internet, fine overnight; all resumable) — then `07_gate2_analysis.ipynb` (Python):
+pool integrity cross-checks, **PRE-REGISTERED degeneracy verdict frozen before the run**
+(deduped pool, discretionary cells only: PLATEAU-RICH if k_distinct≥10 AND conditional
+cells≥5%; NEAR-BINARY if k_distinct≤3 OR <1% → pivot with chat; else INTERMEDIATE), T1
+intended-vs-realized (biomass capture vs anchors 25.9/41.3/49.7 + θ-tail rates), LP tightness,
+E4 seed → `runs/gate2_s0_ref/`. Engine gained `run_summary$solver_provenance` (per-solution
+objective/status/gap/runtime, harvested in pr_solve before stacking discards attrs;
+toy-verified all three branches). Do NOT point `ensemble_core.collect` at portfolio folders
+(it deletes selection_frequency.tif on the n_sol==1 assumption). Gate-2 verdict → chat decides
+Gate 3 freeze vs pivot. **The whole campaign lives in `analyses/y2y/` (self-contained, 2026-08-18)** — the old `03a_y2y` /
 `04a_y2y` root notebooks were MIGRATED here (outputs preserved; root-finding bootstraps added so
 they run from the subfolder; `03b/03c`, `04b/04c` stay at root). Each notebook runs top-to-bottom
 by Ethan, in numeric order: **`01_feature_audit.ipynb`** (Gate 0a: the §2.5 protocol over
@@ -416,6 +456,18 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
   `run_summary.json`.
 
 ### `05_corridors_north.ipynb` — least-cost corridors, **v2** (Python)
+
+> **CAMPAIGN MOVED (2026-08-21): the corridor analysis now runs from `analyses/northern_connectivity/`**
+> (4 notebooks: 01_prep_and_parts → H7 human sign-off → 02_calibrate_baseline → 03_ensemble →
+> 04_alternatives; spec = `spec/05_corridors_v2_addendum_run_and_alternatives.md`, D11–D16 on top of
+> D1–D10). Engine modules stay at repo root; this root notebook is superseded and gets archived after
+> the first end-to-end run. **BINDING (same convention as the y2y flagship):**
+> `analyses/northern_connectivity/spec/methods_log.md` + `spec/results_log.md` are the living paper
+> registers — update them in the SAME session as any methods change or new result; supersede, never
+> delete. Status 2026-08-27: baseline SOLVED (`v2_run002`: cutoff 13.62 → 18,150 km² MST-only,
+> 58 edges, 33,041 km² new corridor land, 7 β-irreplaceable links); NB03 ensemble + NB04
+> alternatives pending. Two fixes this session live in the logs (adjacency-band abs-mode M4.3,
+> richness stretch-domain M6.2).
 
 Standalone corridor analysis, NOT prioritizr: it **routes** between anchor areas, which the
 prioritizr connectivity penalty could not do (that aggregates permeable land; it cannot answer "how

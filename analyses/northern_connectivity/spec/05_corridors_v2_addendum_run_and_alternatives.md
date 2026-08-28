@@ -5,7 +5,14 @@
 > Claude Code: patch `docs/05_methods_v2.md` with the new sections and append to its changelog;
 > do not rewrite the existing document.
 
-**Status:** approved in design discussion 2026-08-21. Implementation not started.
+**Status:** approved in design discussion 2026-08-21. Implemented 2026-08-21; NB01+H7 done
+2026-08-26; NB02 baseline done 2026-08-27 (`v2_run002`); NB03/NB04 pending.
+
+> **Living paper documents (BINDING maintenance rule):** `spec/methods_log.md` and
+> `spec/results_log.md` are the cumulative methods and results registers for the publication.
+> Any session that changes data, formulation, parameters, or a QA rule — or lands/changes a
+> quantitative result — updates the corresponding log IN THAT SAME SESSION. Supersede, never
+> delete. Same convention as the y2y flagship's spec/ logs.
 
 **Changelog**
 - 2026-08-21 — addendum: execute the v2 production run; define the wall-to-wall near-optimality
@@ -18,6 +25,11 @@
   H7 artifacts git-tracked in `audit/audit_objects/`) + §9 four-notebook run breakdown; §3
   preamble amended accordingly; three clarifications queued for the methods-doc patch (multipart
   field semantics, intra-name branches, tier domain).
+- 2026-08-27 — **living paper docs created**: `spec/methods_log.md` (M-entries: decisions,
+  data manipulations, fixes — incl. the adjacency-band abs-mode fix M4.3 and the richness
+  stretch-domain fix M6.2) + `spec/results_log.md` (R-entries: gates, step-0a review outcome,
+  calibration 13.62 → 18,150 km², baseline network, 7 irreplaceable links). Binding same-session
+  maintenance rule added above.
 
 ---
 
