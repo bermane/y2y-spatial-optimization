@@ -74,7 +74,7 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   levels (`245_2071_2100`, `585_2071_2100`) put through the identical Stage-2 pipeline — orient
   `1/v` → non-negativity clip → dust threshold (M2.5's rule) → PU mask — and written to
   `aligned_stack/climate_realizations/` (a namespace outside the canonical manifest; ensemble
-  cells point the macrorefugia path there per cell). Orientation is per-realization: `1/v`
+  formulations point the macrorefugia path there per formulation). Orientation is per-realization: `1/v`
   needs NO shared anchor (six-realization leverage 0.422–0.516), which is what made the axis
   implementable without re-anchoring every layer. QA: the 585 output must reproduce the stack's
   canonical macrorefugia layer (tolerance 1e-5 — provenance proof that the stack layer IS the
@@ -85,12 +85,28 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   mean, else 0 (PU-masked) — so capture = share of TAIL MASS and t=1.0 secures the whole tail
   (0.95 fallback pre-authorized). In EVERY analysis' manifest as feature_continuous at target
   **0.0 = mathematically absent** (verified: a 0-target feature's constraint row has rhs 0 and
-  its shortfall column zero nonzeros); ONLY carbon-forward cells activate them at 1.0.
+  its shortfall column zero nonzeros); ONLY carbon-forward formulations activate them at 1.0.
   Motivated by M6.7; audited under the UNCHANGED frozen §2.5 rules (expected rare-attainable;
   addendum records in `audit_objects/tail_addendum.csv` + bespoke cards — the frozen T2 is
   untouched). Engineering constraints honored: manifest entries sit BEFORE the EFG block
   (pr_weights builds its vector positionally) and `pr_targets`' range guard relaxed
   (0,1] → [0,1]. (2026-08-28)
+  **STATUS (v0.11, same day): DEMOTED to escalation contingency — see M4.13.** The machinery
+  was incidentally EXECUTED end-to-end before v0.11 landed (Ethan ran the v0.10 notebook):
+  tails built and audited under the frozen rules — **both rare-attainable exactly as
+  predicted** (leverage 1.0, cap_max 1.0; m_soc_tail cutoff 303.7 t/ha @ 4.06% area / 33.2%
+  of parent mass; biomass_tail 105.6 @ 1.17% / 6.6% — all matching the frozen T2/archive) —
+  then STOOD DOWN: layers moved to `aligned_stack/_v010_tails_quarantine/`, manifest restored
+  to the original 8 continuous features, audit addendum + cards kept as the pre-verification
+  record. The escalation itself was subsequently RESCINDED (M4.14) — the record stays as
+  backup knowledge only.
+
+- **M2.10** Shared-code LABEL fix (2026-08-31, made from the northern-connectivity
+  campaign): `results_core.RAW_SPEC`'s macrorefugia unit string still described the
+  retired `vmax − v` orientation; corrected to "yr/km (mean; refugial residence =
+  1/backward velocity)" per M2.3. Values were always computed from the hand-off layer
+  and are unaffected — only the unit column of `consequences_raw.csv` (and any table
+  importing RAW_SPEC) changes on its next regeneration.
 
 ## 3. Feature characterization protocol (Gate 0a; spec §2.5)
 
@@ -180,7 +196,7 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   <0.50 → STOP (escalation to a combined total-carbon feature is a spec amendment decided with
   the chat, never a notebook branch). Rationale recorded: weight sets DEPTH not ORDER (any
   positive w buys a feature's tail first), so the design question is effective pull depth. The
-  θ-tail capture rate joins T1/E7 as a standing per-cell diagnostic. Connectivity and
+  θ-tail capture rate joins T1/E7 as a standing per-formulation diagnostic. Connectivity and
   biodiversity pairs: equal-within-block default. (2026-08-27)
   **OUTCOME (same day, Ethan's run): a1 mass-weighted tail capture = 1.000 → (a)
   mass-proportional ADOPTED (74.2/25.8, computed live from regional mass).** The decomposition
@@ -200,7 +216,7 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   is verified per solved cell, biomass weight iterated once if the miss is large. (2026-08-27)
 
 - **M4.10** **Gate-2 design (built 2026-08-27): the first 1 km pool run, three-run structure.**
-  Reference cell = S0, k=50, g=5%. Three runs into three DISTINCT folders (`iter9_y2y_s0_lp` /
+  Reference formulation = S0, k=50, g=5%. Three runs into three DISTINCT folders (`iter9_y2y_s0_lp` /
   `_s0_single` / `_s0_pool`) because the engine's clobber guard compares only targets+weights,
   which are identical across the three — solver params are unguarded. (1) LP twin (HiGHS ipm,
   proportion) per M5.5; (2) certified single MILP (Gurobi, opt_gap 1e-4) — T1's
@@ -219,7 +235,7 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   never samples the g-band. Pivot decision → chat before Gate 3; numbers in results_log R6.3.
 
 - **M4.11** **Spec v0.10 ratified (2026-08-28): the Gate-2 pivot.** (a) **Estimand
-  re-registered (D-A(a))**: within-cell f = membership fraction across k maximally-diverse
+  re-registered (D-A(a))**: within-formulation f = membership fraction across k maximally-diverse
   members of the g-band (objective ≤ (1+g)·certified optimum) — interval logic (which cells
   survive every corner of the band), deliberately NOT volume-weighted sampling (uniform vertex
   sampling intractable; plateau volume is geometry, not decision relevance). Estimator
@@ -235,7 +251,100 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   realized swing chases a competition equilibrium and destroys intended-influence
   interpretability); ensemble LP twins PRODUCED on Gurobi's LP path, HiGHS re-verification as
   a 2-cell spot-check (open-verification = verifiable without Gurobi, not produced without it).
-- **M4.12** **Degeneracy verdict rule v2 (pre-registered, frozen in 10_gate2b_analysis BEFORE
+- **M4.13** **Spec v0.11 (2026-08-28): S4's places mechanism simplified — pilot over locks.**
+  Per Ethan's review ("I don't need the entire tails — can't w and t capture a lot of it?"):
+  S4 = pure (w, t) on the EXISTING 8-feature stack (m_soc t=0.552 + block-doubled carbon
+  weights, exactly the Gate-1 derivation), and its places claim is TESTED, not engineered —
+  **one certified pilot solve scored against a pre-registered acceptance band: θ-tail mass
+  capture ≥ 0.75 for BOTH pools** (S0 reference 0.435/0.425). Rationale: (i) sufficient pull
+  demonstrably captures tails (biomass 1.000 at w=1); S0's skip was a low-pull condition
+  carbon-forward reverses; (ii) at t=0.552 off-tail co-capture becomes area-expensive, making
+  dense-first the cheap shortfall path; (iii) raised weights also buy diffuse biomass broadly
+  — a cost elsewhere but ON-MESSAGE in carbon-forward; (iv) min-shortfall targets are
+  pressure, not locks — v0.10's t=1.0 over-specified the places reading ("a lot of the tail,"
+  not completeness). PASS → no formulation change, full stack symmetry (the original 8 + EFGs
+  in every formulation). FAIL (either pool, incl. required w_bio exceeding the doubled block share) →
+  pre-authorized escalation: masked tails at **t=0.8** (not 1.0), re-audited, disclosed,
+  re-piloted. E7's S4 expectation updated from ≈1.0-by-construction to the band. Implemented:
+  `08_gate2a_pilot.ipynb` (R: writes scenarios_v2 = v1 verbatim + band meta; solves
+  `iter10_y2y_s4_pilot`; scores in-notebook); the v0.10 tail notebook reworked to
+  `08b_contingency_tails.ipynb` (fires only on failure; writes scenarios_v3 with S4 tails
+  at 0.8).
+- **M4.14** **Tail-feature escalation RESCINDED (Ethan, 2026-08-28, after v0.11).** The
+  carbon θ-tail masks will NOT enter the formulation as separate features under any standing
+  authorization — v0.10's t=1.0 locks and v0.11's pre-authorized t=0.8 contingency are both
+  withdrawn. If the S4 pilot fails its acceptance band, the response is a design discussion
+  (chat), not an automatic formulation change. The knowledge is preserved as backup, not live
+  machinery: the executed verification (M2.9 STATUS, R7.1), the quarantined layers, the
+  archived notebook (`analyses/y2y/archive/08b_contingency_tails_RESCINDED.ipynb`), and git
+  history for the removed config wiring (TAIL_FEATURES registry, manifest emission, target
+  injection). The `pr_targets` [0,1] relaxation stays (a correct generalization; t=0 semantics
+  documented). NOTE for the spec: v0.11's §2.5/§3.1 contingency language predates this ruling
+  — carry the rescission into the next spec revision via the chat.
+- **M4.15** **Gate-3 freeze design (spec v0.12; built 2026-08-30, 11_gate3_freeze).** 14 formulations
+  = {S0…S5} × {ssp585, ssp245} + 2 crossed @ ssp585, frozen to `spec/manifest.csv` +
+  `manifest_freeze.sha256` (git commit = the pre-registration). Definitions settled at build:
+  **S5 intactness-forward** = S0 weights + `human_modification` ×10 — solving the
+  R3-inexpressible push turns the classification into a measurement (Claim B / F5; audit
+  predicts near-null response). **Crossed cells** (`s1x`, `s3x`) = S1/S3 block shares held,
+  carbon regime flipped alone (m_soc t=0.552, weight re-derived at the same intended share) —
+  one axis at a time for E3. **ssp245 formulations** = constant-intended-influence (§3.2): weights
+  re-derived per formulation with macrorefugia's swing from the 245 realization
+  (`scenario_weights(layer_paths=...)`; verified: 585 path reproduces frozen S0 exactly;
+  245 moves only macrorefugia's w 1.460→1.313 with slight re-normalization). Reference formulation's
+  kbest/twin recorded as POINTERS to the Gate-2 artifacts (its HiGHS twin is exact and 100%
+  integral — more authoritative than a Gurobi LP would be). (2026-08-30)
+- **M4.16** **E11 design (spec v0.12.1, Ethan's addition; implemented in 13).** Two-level
+  solution-space spread in matched currency: between-anchor pairwise Jaccard (discretionary)
+  vs within-formulation diameters D_s — **envelope comparison only** (MGA members are extremes by
+  construction; anchor-vs-mean comparisons are forbidden) — plus the cross-objective
+  suboptimality matrix Δ(s,s′) = (obj_{s′}(anchor_s) − z*_{s′})/z*_{s′}, computed with zero
+  solves from anchor captures × each cell's frozen (w,t) (diagonal ≈ 0 is the built-in
+  self-check). Readings: anchors mutually inside each other's 5% bands = certified no-regrets
+  value pluralism; large-Δ pairs = measured value conflict, localized by E3. F10. (2026-08-30)
+- **M5.9** **Gate-4 runner architecture (12_gate4_ensemble).** Serial over the frozen
+  manifest, which is hash-verified against `manifest_freeze.sha256` before any solve. TWO
+  ingested base contexts (one per climate level; the 245 context patches
+  `ctx$layers$path` for macrorefugia BEFORE `pr_ingest` — the actually-loaded path is recorded
+  in each `formulation_meta.json`). Per-cell artifacts land in `analyses/y2y/runs/<formulation_id>/` via the
+  engine's `results_dir` + `results_subdir` overrides: `kbest/` (binary pool 50@5%), `twin/`
+  (Gurobi **proportion** LP, per the v0.10 twin ruling), plus flat `anchor.tif` +
+  `mga_g05.tif` + `certificates_g05.csv` + `formulation_meta.json` (the realized layout keeps
+  Gate 2b's flat cell root rather than §10's nominal anchor/ mga/ subdirs — disclosed here).
+  Every artifact independently resumable; per-formulation integrity print: twin LP objective ≤
+  anchor MILP objective. Optional HiGHS spot-check twin cell (flag-gated). (2026-08-30)
+
+- **M4.17** **Terminology convention (Ethan, 2026-08-30): "formulation", never "cell", for the
+  14 ensemble design points.** In a raster analysis "cell" reads as pixel; the spec's
+  "formulation" collides. Repo convention: **formulation** = one (scenario, climate,
+  regime) design point (manifest column `formulation_id`, dirs `runs/<formulation_id>/`,
+  `formulation_meta.json`); **cell / planning unit** stays reserved for pixels. Applied to
+  notebooks 11–13 and the logs going forward; the spec's own wording is flagged for the next
+  chat revision. The rename REVIEW flushed two latent reference-formulation bugs, both fixed:
+  the Gate-2b directory (`runs/s0_ssp585_theta5`, renamed → `runs/s0_ssp585_theta5`)
+  would not have matched the manifest id, so 12 would have re-solved the reference's MGA; and
+  its meta file (`gate2b_meta.json`) was not the name 13 reads — 12 now derives
+  `formulation_meta.json` from it once. Notebook 10's path constant updated for the rename.
+- **M5.11** **E11 layer-consistency bug, caught by the designed self-check (2026-09-01).**
+  The Δ(s,s′) recomputation initially measured macrorefugia captures on the canonical (585)
+  layer for ALL formulations; ssp245 objectives are defined on the 245 realization, so every
+  ssp245 diagonal came out positive (up to 3.9e-2) while every ssp585 diagonal was exactly 0 —
+  the diagonal self-check localized the bug precisely. Fixed (per-formulation layer selection
+  in `objective_of`); corrected diagonal ≤ 9.3e-6, which simultaneously validates the whole
+  capture-based objective reconstruction. E11 CSVs + F10 regenerated; notebook 13 patched.
+- **M5.10** **JSON-precision incident + rule (2026-08-30).** `08_gate2a_pilot`'s
+  `jsonlite::write_json` (default `digits = 4` — significant digits, not decimals) silently
+  truncated every numeric in `scenarios_v2.json`; the Gate-3 freeze then failed loudly
+  (doubled-scenario block shares read 0.1667×3 + 0.5 = 1.0001, tripping `scenario_weights`'
+  sum-to-1 assert — the guard did its job). Fixes: (a) scenarios_v2 regenerated at full
+  precision from scenarios_v1 (repair note in its `_meta`); (b) the R writer now passes
+  `digits = 10` (rule: any R cell serializing spec numerics must); (c) `11_gate3_freeze`
+  re-normalizes shares/within-block on load (serialization residue at ANY precision — even
+  6-decimal v1 sums to 1.000001 — is recovered to the exact intended fractions; a >5e-3
+  deviation still stops as real corruption). DISCLOSED consequence: the Gate-2b anchor/MGA
+  and the S4 pilot solved with the 4-digit weight vectors — ≤1e-4 relative weight
+  perturbation, within every tolerance in use (anchor matched iter9's optimum inside the
+  1e-3 assert); the frozen manifest carries the full-precision derivation. (pre-registered, frozen in 10_gate2b_analysis BEFORE
   the MGA run).** Statistics per spec §4, over anchor + k members at g=5%, discretionary cells
   only, m_disc = anchor's discretionary selection: **D** = max pairwise Hamming/(2·m_disc)
   (achieved band diameter; measured under a MAXIMIZING probe, so small D = narrow in every
@@ -248,7 +357,7 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
 ## 5. Solver configuration and numerical integrity
 
 - **M5.1** Gurobi 13.0.2, nonprofit WLS licence (16 cores; needs live internet during solves;
-  2 concurrent sessions max → ensemble cells run serially). HiGHS 1.x for LP twins.
+  2 concurrent sessions max → ensemble formulations run serially). HiGHS 1.x for LP twins.
 - **M5.2** `opt_gap = 1e-4` standard for single-solution solves (adopted after validation: the
   exact optimum was reachable in 17 s). The POOL gap g (2–10%) is a separate, deliberately
   loose parameter — it defines the near-optimal set that IS the estimand.
@@ -320,13 +429,13 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   g-band.** Gurobi PoolSearchMode=2 returns the k BEST solutions; on S0 the plateau at the
   optimum is so dense (≥50 distinct solutions within 3.2e-6 relative of optimal, differing by
   a handful of cells) that the pool never leaves the optimum's neighborhood — PoolGap=5% acts
-  as a bound, never as a sampling target. Consequence: the within-cell frequency estimand as
+  as a bound, never as a sampling target. Consequence: the within-formulation frequency estimand as
   operationalized (spec §4 via `add_gap_portfolio`) measures "indicator of the optimum", not
   "membership across the g-near-optimal set". This is E5's enumeration-order-bias concern,
   demonstrated maximally, and is the substance of the Gate-2 pivot decision. Candidate
   re-operationalization: Brunel-style diversity-controlled generation (maximize Hamming
   distance from incumbents s.t. objective ≤ (1+g)·optimum), which at S0's 55 s/solve costs
-  ≈ k × 1 min per cell — affordable. Decision belongs to the chat (spec §2.9).
+  ≈ k × 1 min per formulation — affordable. Decision belongs to the chat (spec §2.9).
 - **M6.7** **A total-capture target does not protect the dense tail (2026-08-27, first T1/E7
   reading).** In S0, m_soc lands AT its 0.332 target but only 43.5% of its θ-tail mass is
   selected — co-capture on cells chosen for other features satisfies the claim off-tail.
@@ -355,6 +464,8 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
 | E5 as an experiment arm | discharged by design (k-best-vs-MGA contrast = ensemble by-product) | M6.6 is the maximal demonstration | 2026-08-28 (spec v0.10) |
 | pr_targets range guard (0,1] | [0,1] | t=0 = mathematically absent, carries the places axis | 2026-08-28 |
 | HiGHS-produced LP twins (ensemble) | Gurobi-path twins + HiGHS spot-check ×2 cells | 109-min worst-case presolve pathology; open-verification = verifiable, not produced, without Gurobi | 2026-08-28 (spec v0.10) |
+| S4 places locks (tails t=1.0 in every stack) | pure (w,t) + pre-registered pilot band ≥0.75 both pools; tails = contingency @ t=0.8 | targets are pressure, not locks; "a lot of the tail," not completeness; sufficient pull demonstrably captures tails | 2026-08-28 (spec v0.11) |
+| v0.11 pre-authorized tail contingency (t=0.8) | RESCINDED — no tail features as separate values, ever, without a new decision; pilot failure → chat | Ethan's ruling: no separate tail values in the problem; knowledge kept as backup (M4.14) | 2026-08-28 |
 
 *Maintainer note: entries M-numbered for stable citation from drafts. Update same-session, every
 methods-relevant change. Last updated 2026-08-27 (Gate 1 build).*

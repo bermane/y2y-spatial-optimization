@@ -128,7 +128,7 @@ demonstration. [audit archive]
 **R6.1 Pool cost:** LP twin **6,516 s** (109 min — the worst HiGHS-presolve case yet, extending
 M5.5's record: targeted+weighted LPs are the pathological shape; Gurobi's LP-equivalent single
 took 55 s); certified single MILP **55 s**; pool (k=50, g=5%) **1,799 s = 32.8× the single**.
-14-cell ensemble projection: 14 × pool ≈ **7.0 h** of pools + ~13 min of single anchors (+ LP
+14-formulation ensemble projection: 14 × pool ≈ **7.0 h** of pools + ~13 min of single anchors (+ LP
 twins only if kept on HiGHS — 14 × 109 min ≈ 25 h, a reason to reconsider the twin's solver).
 [06 report cell]
 **R6.2 Pool integrity:** 50 returned, **50 distinct**; frequency cross-check exact (engine ==
@@ -144,11 +144,11 @@ that frames the pivot):** PoolSearchMode=2 returns the k BEST solutions, and the
 optimum is so dense (≥50 solutions within 3e-6 relative) that the enumeration never leaves the
 optimum's immediate neighborhood — **the g=5% band exists as a constraint but is never sampled**.
 This is E5's enumeration-order-bias concern demonstrated maximally. The verdict is therefore
-about the ESTIMATOR as operationalized (k-best pool ⇒ within-cell frequency ≈ indicator of the
+about the ESTIMATOR as operationalized (k-best pool ⇒ within-formulation frequency ≈ indicator of the
 optimum); whether the full 5% band is diverse remains unmeasured by this estimator. Pivot
-options → chat (spec §2.9): (a) diversity-controlled within-cell generation (Brunel-style MGA:
+options → chat (spec §2.9): (a) diversity-controlled within-formulation generation (Brunel-style MGA:
 maximize dissimilarity s.t. objective ≤ (1+g)·opt — E5's comparator becomes the estimator; at
-55 s/solve, k=50 ≈ 46 min/cell, same order as the pool); (b) accept within-cell ≈ degenerate →
+55 s/solve, k=50 ≈ 46 min/formulation, same order as the pool); (b) accept within-formulation ≈ degenerate →
 hierarchical estimand reduces toward one-solve-per-cell, pivot to Claims B+C; (c) demonstration
 problem. [07 §B]
 **R6.4 S0 realized vs intended (certified single):** biomass capture **31.0%** (prediction band
@@ -166,28 +166,114 @@ only ~40–50% of their cap_max range under competition, so realized shares tilt
 satiating member (Claim C's stated first-order caveat, now measured). [07 §C]
 **R6.5 LP-twin tightness on S0:** LP **100.00% integral**, LP-vs-MILP Jaccard 0.9957, max
 capture delta 0.0006 — the S0 LP relaxation is effectively exact. [07 §D]
-**R6.6 E4 seed written:** `runs/gate2_s0_ref/solutions.npz` (50 × 1,272,914) + cell_audit.json;
+**R6.6 E4 seed written:** `runs/gate2_s0_ref/solutions.npz` (50 × 1,272,914) + formulation_audit.json;
 frequency figure `figures/gate2_s0_frequency.png`. Note for E4's design: with a k-best pool,
 k-subsampling (10/30/50) varies only trivial perturbations — E4 is moot unless the estimator
 changes per R6.3. [07 §E]
 
-## R7. Gate 2a/2b — tail features + MGA reference run (built 2026-08-28; PENDING-RUN)
+## R7. Gate 2a/2b — S4 pilot + MGA reference run (spec v0.11; built 2026-08-28)
 
-**R7.1 (PENDING-RUN)** Tail-feature build + re-audit [08]: cutoffs and area/mass shares vs the
-frozen T2 (expect 303.7 t/ha @ 4.06% / 33.2% mass; 105.6 @ 1.17% / 6.6%); audit class under
-frozen rules (expected rare-attainable, both); manifest = 10 continuous features, tail targets
-0.0 everywhere by default.
-**R7.2 (PENDING-RUN)** Anchor equivalence [09]: v2-stack S0 anchor objective vs iter9's
-5.362813 (t=0 tails must be inert; assert <1e-3).
-**R7.3 (PENDING-RUN)** MGA sweeps [09]: per-g member counts, band certificates, duplicate /
-time-limited counts, Hamming-to-anchor ranges, wall time (~1 min/iterate predicted; per-cell
-ensemble cost revision).
-**R7.4 (PENDING-RUN)** Verdict rule v2 [10 §B]: D and C at g = 2/5/10%, conditional share
-(reported only), verdict at g=5% (PLATEAU-RICH / NEAR-UNIQUE / INTERMEDIATE) → the Gate-3 vs
-Claims-B+C decision with the chat.
-**R7.5 (PENDING-RUN)** f(g) core-erosion curves [10 §C] — E4's central product; figures
-`gate2b_core_erosion.png`, `gate2b_s0_frequency_mga.png`.
+**R7.1 Tail contingency PRE-VERIFIED (executed 2026-08-28 under v0.10, then stood down per
+v0.11):** both masked-density tail features audited under the unchanged frozen rules came back
+**rare-attainable exactly as predicted** — leverage 1.0, cap_max 1.0; m_soc_tail cutoff
+303.7 t/ha @ 4.06% of PU / 33.2% of parent mass; biomass_tail 105.6 @ 1.17% / 6.6% — all
+matching the frozen T2/archive to the printed digits. Layers quarantined
+(`aligned_stack/_v010_tails_quarantine/`); addendum CSV + cards kept. The escalation path, if
+it ever fires, starts from a verified mechanism. [08b run record; tail_addendum.csv]
+**R7.2 S4 pilot — PASS (run 2026-08-28, `iter10_y2y_s4_pilot`, certified OPTIMAL, 54 s,
+objective 5.0144).** θ-tail mass capture vs the pre-registered ≥0.75 band: **m_soc 0.960,
+biomass 0.772** (S0 reference 0.435 / 0.425). Totals: m_soc **0.552 exactly at target**;
+biomass 0.329 (vs S0's 0.310). **The mechanism finding:** carbon-forward pressure redirected
+rather than expanded biomass capture — total +1.9 pts while tail capture nearly doubled
+(0.425 → 0.772) — validating v0.11's places-through-pressure claim with zero formulation
+change. Other captures under S4: refugia 0.418 (S0 0.452), corridors 0.284, birds 0.308,
+mammals 0.310, connectivity 0.321, intactness 0.302. The S0→S4 tail contrast is the
+amount-vs-places panel (F9). No escalation question arises (and none exists — M4.14).
+**R7.3 MGA anchor (run 2026-08-28):** objective 5.3628, **gap 0 (exact), 8.1 s** — reproduces
+iter9's certified optimum (assert passed). The direct-Gurobi compiled-model path is faster
+than the engine path (8 s vs 55 s; no prioritizr build overhead).
+**R7.4 MGA sweeps (run 2026-08-28, all three g levels clean):** 50/50 members per g, **zero
+duplicates, zero time-limits, every band certificate binding EXACTLY at its wall** (2.00 /
+5.00 / 10.00% over optimum — the distance maximizer pushes to the boundary, as designed).
+**Iterations averaged 10–16 s (not the predicted ~55 s); whole Gate 2b = ~32 min** (g02 10.0 /
+g05 13.3 / g10 8.4 min). **Headline raw signal: the band is WIDE.** Hamming-to-anchor ranges:
+g02 135k–260k; g05 **180k–359k**; g10 121k–**381,691** — against a theoretical same-size
+maximum of 2×m_disc ≈ 381,690, i.e. at g=10% a member exists sharing essentially ZERO
+discretionary cells with the anchor, and even at 2% up to 68% of the discretionary selection
+can be swapped. Together with R6.3 (k-best: 50 near-clones), the shape is now clear: **a
+sharp, essentially unique optimum sitting on a very wide, shallow near-optimal bowl** — the
+two instruments measured different properties, and both are paper results. Formal D/C verdict
+(rule v2, frozen) → 10_gate2b_analysis. Ensemble cost re-projection: ≈13 min MGA + ~10 s
+anchor per cell (+ one k-best pool + Gurobi-path twin) ⇒ ~45–60 min/formulation, ~10–14 h for the
+14-formulation ensemble, serial. [certificates_g*.csv; gate2b_meta.json]
+**R7.5 Verdict rule v2 — PLATEAU-RICH (run 2026-08-30; rule hash v2_8db80fed1c702638;
+"Claim A carries; proceed to Gate 3").** At g=5%: **D = 0.953, C = 0.020** — decisively past
+the frozen thresholds (D ≥ 0.10, C ≤ 0.90). All 51 solutions per g; every band certificate
+holds; diversity does not collapse over the sweep (g05 Hamming-to-anchor trajectory: 359k
+first member, stabilizing ~250k by the tail). Conditional share 96.9–100% (reported, not
+ruled — MGA inflates it by construction). D at g10 = 1.0000052 (>1 by 5e-6: members are not
+forced to identical size under the ≤-budget row; trivial). [formulation_audit.json]
+**R7.6 Core erosion f(g) — E4's central product, and a headline finding:** the f=1 always-core
+among the 51 solutions is **22,866 discretionary cells (12.0% of the selection) at g=2% →
+3,829 (2.0%) at g=5% → 0 (ZERO) at g=10%**. At 10% tolerance no individual discretionary cell
+appears in every near-optimal plan; even at 5% only ~3.8k cells are unconditional. The union
+runs the other way: 737k discretionary cells appear in SOME 2%-optimal plan, 1.07M at 5%,
+**1,081,885 at 10% ≈ every discretionary cell in the landscape** (1,082,069 exist). Paper
+sentences this buys: "essentially any cell can be part of a near-optimal plan; almost no cell
+is required by one" — the strongest possible motivation for frequency surfaces over single
+maps, and the exact geometry (sharp unique optimum, wide shallow bowl, vanishing core) the
+two-instrument pair measured. Figures: `gate2b_core_erosion.png`,
+`gate2b_s0_frequency_mga.png`; seed `solutions_g05.npz`. [10 §B–§D]
 
+## R8. Gate 3 freeze + Gate 4 ensemble (built 2026-08-30; PENDING-RUN)
+
+**R8.1 The freeze EXECUTED (2026-08-30, 11_gate3_freeze):** `spec/manifest.csv` (14
+formulations, all frozen=true, ids unique) + `manifest_freeze.sha256` = d45668bb… (hash
+verified). Roster: {S0–S5} × {ssp585, ssp245} + s1x/s3x crossed @ ssp585-θ3. Measured ssp245
+re-derivations (constant intended influence): S0's macrorefugia w 1.460→1.313 (leverage
+0.422→0.482), all others re-normalize upward slightly; crossed formulations reproduce their
+parents' vectors with only the m_soc t=0.552 re-derivation (w 0.328→0.326 in s1x). S5 = S0 +
+gHM×10. Commit of the two spec files = the pre-registration timestamp. [11 outputs]
+**R8.2 Ensemble EXECUTED (2026-08-31→09-01, 13 open formulations + reference pointers; all
+artifacts complete).** Anchors 44–58 s (all exact/1e-4); twins 10–14 s (Gurobi LP; every
+LP ≤ MILP check passed); MGA 36–50 min per formulation (~55 s/iteration; the reference's
+13 min was the outlier); k-best pools 549–1,822 s with full 50 — EXCEPT `s3_ssp585_theta5`,
+which hit the 12 h solver_time_limit (43,210 s) with 38/50 (same scenario on the 245 layer:
+1,067 s — pool difficulty is formulation-specific, spread 79×; disclosed: a time-limited pool
+holds certified in-gap incumbents, not a proven top-38). Wall ≈ 22 h including that solve.
+**R8.3 F (Claim A) + E1 + E2:** ensemble bands over discretionary land — **always (F≥0.95):
+0 km²**; frequent (0.70–0.95): **6,816**; conditional: 93,408; rare: 951,972; never: 29,689.
+Across 14 value/climate positions × 51 diverse plans each, NO discretionary cell is universal
+— the strongest ensemble tier is "frequent," 6,816 km². `runs/ensemble_v1/F_surface.tif`
+written (the deliverable surface). **E1: the hierarchical correction is large — mean |F −
+F_naive| = 0.169, max 0.755, 726,287 cells shifted by >0.1** (under the k-best estimator this
+would have been ≈0; Claim A's motivating effect is real at full scale). E2: equal k across
+formulations ⇒ flat pooling ≡ hierarchical mean (definitional; divergence requires unequal k).
+**R8.4 E3 variance decomposition (per-PU, estimator-conditional — within = MGA band breadth,
+not sampling noise):** within-formulation **95.2%**, scenario 4.4%, climate **0.2%**; crossed
+regime contrast mean |Δf|: s1 0.017, s3 0.002. Reading: near-optimal freedom dwarfs value
+disagreement, and the climate axis barely moves the frequency surface at all (despite the
+realizations' own top-30% Jaccard of 0.574 — the objective's economics dominate the refugia
+pattern shift). Per-formulation diameters D_s = 0.809–1.000: EVERY formulation is
+plateau-rich; both S5 formulations hit D = 1.000 exactly (a full discretionary-turnover plan
+exists within 5% when the pushed feature is inexpressible).
+**R8.5 E7 (T1/T3):** anchor captures move in NARROW ranges across the 14 formulations —
+refugia 0.397–0.486, connectivity 0.306–0.388, biomass 0.271–0.329, birds 0.308–0.344,
+mammals 0.310–0.339 (m_soc 0.332–0.552 by target design) — while anchor MAPS differ at
+Jaccard down to 0.373: **value scenarios reallocate places far more than outcomes.** θ-tail
+rates: S4_ssp585 0.959/0.774 (pilot band HELD); S4_ssp245 0.974/**0.716** (biomass marginally
+below the 0.75 band under the 245 layer — the pilot was registered on 585; finding, not
+gate-fail); crossed s1x 0.697/0.302, s3x 0.584/0.353 — **a deep target WITHOUT the doubled
+carbon weights does not hold the tails** (dose-response completing M6.7: places semantics
+needs target + weights together). S3 gHM audits consistent with R4.1's bias. T1 CSVs in spec/.
+**R8.6 E11 (F10):** between-anchor discretionary Jaccard 0.373–0.931 (mean 0.520); envelope
+comparison: within-formulation diameters (0.81–1.00) EXCEED between-anchor distances — value
+disagreement fits INSIDE the near-optimal freedom of any single value position. Δ(s,s′)
+matrix (diagonal ≤ 9.3e-6 after the layer-consistency fix, M5.11): **156/182 ordered pairs
+sit inside each other's 5% bands — the certified no-regrets form of value pluralism** — and
+all 26 out-of-band pairs are other anchors under CARBON-FORWARD objectives (Δ 0.085–0.093):
+the deep m_soc target is the one value position whose demands other near-optimal plans
+genuinely fail. E11 CSVs in spec/; F10 regenerated.
 ## Figure/table candidates (running)
 
 - F8 marginal-density trajectories (θ crossings + area labels) — rendered, final stack.

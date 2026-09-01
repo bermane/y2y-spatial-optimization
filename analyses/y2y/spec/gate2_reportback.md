@@ -36,7 +36,7 @@ Measured: k_distinct = **50** (no duplicates), BUT — discretionary union 190,9
 PoolSearchMode=2 returns the k **best** solutions. S0's plateau at the optimum is so dense
 (≥50 distinct solutions within 3.2e-6 of optimal, differing by a handful of cells) that the
 enumeration never leaves the optimum's immediate neighborhood: **PoolGap acts as a bound,
-never as a sampling target — the g=5% band was never sampled.** The within-cell estimand as
+never as a sampling target — the g=5% band was never sampled.** The within-formulation estimand as
 operationalized (§4 via add_gap_portfolio) therefore measures "indicator of the optimum," not
 "membership across the g-near-optimal set." This is E5's enumeration-order-bias concern
 demonstrated maximally, by the estimator itself, before E5 ran. Whether the 5% band is
@@ -69,11 +69,11 @@ stated first-order caveat, now measured. Invoke the iterate-once rule?
 - S0 LP relaxation effectively exact: 100.00% integral, LP-vs-MILP Jaccard 0.9957, max
   capture delta 0.0006.
 - HiGHS-presolve pathology, worst case yet: the S0 LP twin took 109 min (Gurobi's equivalent:
-  55 s). At 14 cells, HiGHS twins ≈ 25 h — should the ensemble's LP twins run on Gurobi's LP
+  55 s). At 14 formulations, HiGHS twins ≈ 25 h — should the ensemble's LP twins run on Gurobi's LP
   path instead, keeping HiGHS re-verification as a spot-check? (The open-verification story
   only needs the twin to be *verifiable* without Gurobi, not *produced* without it.)
-- 14-cell ensemble cost under the current estimator: ≈ 7 h of pools + minutes of anchors.
-- E4 seed written (runs/gate2_s0_ref/solutions.npz + cell_audit.json) either way.
+- 14-formulation ensemble cost under the current estimator: ≈ 7 h of pools + minutes of anchors.
+- E4 seed written (runs/gate2_s0_ref/solutions.npz + formulation_audit.json) either way.
 
 ## 6. The two decisions (requesting both in one pass — they bundle into ONE rebuild + re-run)
 
@@ -82,14 +82,14 @@ stated first-order caveat, now measured. Invoke the iterate-once rule?
       distance from incumbents subject to objective ≤ (1+g)·optimum. Feasible now: prioritizr
       cannot constrain its own objective, but the compiled-model extraction machinery from the
       false-certificate diagnosis lets us add the bound row + swap the objective in direct
-      Gurobi calls; ~55 s/solve ⇒ k=50 ≈ 50 min/cell ≈ same order as the current pool.
+      Gurobi calls; ~55 s/solve ⇒ k=50 ≈ 50 min/formulation ≈ same order as the current pool.
       DESIGN CAVEAT to decide deliberately: max-dissimilarity samples the g-band's EXTREMES,
       not uniformly — f becomes "membership breadth across extreme members," a different,
       defensible estimand that must be pre-registered as such (uniform vertex sampling is
       intractable). A new degeneracy-verdict rule would be pre-registered with it.
-  (b) **Accept within-cell degeneracy**: hierarchical estimand reduces toward
+  (b) **Accept within-formulation degeneracy**: hierarchical estimand reduces toward
       one-solve-per-cell; Claim A collapses; pivot the paper to Claims B+C.
-  (c) Add a demonstration problem where the within-cell correction matters.
+  (c) Add a demonstration problem where the within-formulation correction matters.
 
 **D-B. Does carbon get a tail-restricted feature?** If dense stands need a guarantee, the
 formulation needs a θ-tail-masked carbon feature with its own target (re-audited under the
