@@ -162,6 +162,7 @@ _REQUIRED_ADDENDUM_KEYS = [
     "branch_mult", "branch_min_km2", "near_opt_tiers",              # D11/D12
     "part_min_km2", "multisite_designations", "multipart_link_km",  # D16
     "carroll_ref", "audit_objects_dir",                             # D14 / H7
+    "squeeze_ratio", "squeeze_cf_min_cost",                         # D17
 ]
 
 
@@ -1540,6 +1541,125 @@ def route_branches(A):
     return A
 
 
+# ================= D17 -- the squeezed class (counterfactual band) =================
+def counterfactual_squeeze(A, cache=True, tol=0.02):
+    """D17 (H8 closed 2026-09-03): per link, how wide is the real band relative to the band the
+    SAME link would have on a surface with nothing constraining it?
+
+    The counterfactual surface sets every cost class >= squeeze_cf_min_cost to 1 (all barriers
+    -- water/ice, roads, converted land -- become intact ground); CWD is recomputed once per
+    seed part on it (cached under cwd_cache/<sha>_cf), unit fields derived exactly as in
+    cost_distances, and every baseline edge is banded at the SAME cwd_cutoff_abs. Then
+        squeeze_ratio_obs = band_new_km2 / band_cf_km2      (both on NEW land, & ~node_union)
+        squeezed          = squeeze_ratio_obs < squeeze_ratio   (non-adjacency edges only)
+    Why this and not the analytic ellipse index (M4.6, kept as `squeeze_idx`): no straight-link
+    assumption, and both bands are clipped by the same study-window cutline, so the boundary
+    artefact cancels in the ratio. G13: band_cf_km2 >= band_new_km2 (within `tol`) for every
+    edge -- the counterfactual can only widen a band. Writes the counterfactual band polygons
+    (bands_counterfactual.gpkg, the M3 'natural width' outline) and the D17 columns into A.edges;
+    write_run/finish carry them into corridor_edges.csv. Records the constants in run_config.
+    """
+    thr, rmax = float(A.cfg["squeeze_cf_min_cost"]), float(A.cfg["squeeze_ratio"])
+    cf_cost = np.where(A.cost >= thr, 1.0, A.cost).astype("float32")
+    res_cf = np.where(A.pu, cf_cost, np.inf)
+    n_changed = int(((A.cost >= thr) & A.pu).sum())
+    print(f"D17 counterfactual: {n_changed:,} cells ({100*n_changed/A.pu.sum():.1f}% of routable) "
+          f"with cost >= {thr:g} set to 1; banding every edge at cutoff {A.cutoff:g}")
+
+    # ---- CWD on the counterfactual surface (per part -> unit min-fields), cached ------------
+    A_cf = _NS(cost=cf_cost, node_union=A.node_union, parts=A.parts, names=A.names, nodes=A.nodes)
+    cache_dir = None
+    if cache:
+        gdir = config.PROJECT_DIR / pathlib.Path(A.cfg["grid"]["dir"])
+        cache_dir = gdir / "cwd_cache" / f"{_resistance_sha(A_cf)}_cf"
+        hit = cache_dir.exists() and len(list(cache_dir.glob("part_*.npy"))) == len(A.parts)
+        print(f"  counterfactual CWD from {len(A.parts)} seed parts "
+              f"({'cache HIT' if hit else 'computing -- expect ~the cost_distances runtime'}: "
+              f"{cache_dir.name})")
+    cwd_parts_cf, mcp_cf = _cwd_all(A, res_cf, [m for _, m in A.parts], cache_dir, prefix="part")
+    if cache:
+        upaths = []
+        for u in range(len(A.nodes)):
+            pidx = A.unit_parts[u]
+            if len(pidx) == 1:
+                upaths.append(cwd_parts_cf.paths[pidx[0]])
+            else:
+                p = cache_dir / f"unit_{u:03d}.npy"
+                if not p.exists():
+                    fld = np.asarray(cwd_parts_cf[pidx[0]], dtype="float32").copy()
+                    for pi in pidx[1:]:
+                        np.minimum(fld, np.asarray(cwd_parts_cf[pi], dtype="float32"), out=fld)
+                    np.save(p, fld)
+                upaths.append(p)
+        cwd_cf = _CwdCache(upaths)
+    else:
+        cwd_cf = []
+        for u in range(len(A.nodes)):
+            pidx = A.unit_parts[u]
+            fld = np.asarray(cwd_parts_cf[pidx[0]], dtype="float64")
+            for pi in pidx[1:]:
+                fld = np.minimum(fld, np.asarray(cwd_parts_cf[pi], dtype="float64"))
+            cwd_cf.append(fld)
+
+    # ---- bands at the same cutoff: unit edges on unit fields, locked edges on part fields ---
+    unit_rows = A.edges[A.edges["edge_class"] != "intra_name"]
+    bands_cf, _, _, _ = edge_bands(A, cwd_cf, mcp_cf, unit_rows, A.cutoff, "abs", want_slack=False)
+    lk_rows = A.edges[A.edges["edge_class"] == "intra_name"]
+    if len(lk_rows):
+        b2, _, _, _ = edge_bands(_NS(nodes=A.parts, shape=A.shape), cwd_parts_cf, mcp_cf,
+                                 lk_rows, A.cutoff, "abs", want_slack=False)
+        bands_cf.update(b2)
+
+    flat_nodes = A.node_union.ravel()
+    new_km2, cf_km2 = {}, {}
+    for eid in A.edges.index:
+        idx = A.bands.get(eid, np.empty(0, np.int32))
+        new_km2[eid] = float((~flat_nodes[idx]).sum()) * A.cell_km2
+        idc = bands_cf.get(eid, np.empty(0, np.int32))
+        cf_km2[eid] = float((~flat_nodes[idc]).sum()) * A.cell_km2
+    A.edges["band_new_km2"] = pd.Series(new_km2)
+    A.edges["band_cf_km2"] = pd.Series(cf_km2)
+    eligible = (A.edges["cost"] > 0) & (~A.edges["is_adjacency"]) & (A.edges["band_cf_km2"] > 0)
+    A.edges["squeeze_ratio_obs"] = np.where(
+        eligible, A.edges["band_new_km2"] / A.edges["band_cf_km2"].replace(0, np.nan), np.nan)
+    A.edges["squeezed"] = eligible & (A.edges["squeeze_ratio_obs"] < rmax)
+
+    # ---- G13 ----------------------------------------------------------------------------
+    viol = A.edges.index[eligible & (A.edges["band_cf_km2"] < A.edges["band_new_km2"] * (1 - tol))]
+    assert len(viol) == 0, (
+        f"G13 FAILED: counterfactual band narrower than the real band on {list(viol)} -- removing "
+        f"barriers can only widen the near-optimal set; suspect the cutoff or the cache key.")
+    n_sq = int(A.edges["squeezed"].sum())
+    print(f"  G13 OK: counterfactual band >= real band on all {int(eligible.sum())} eligible edges")
+    print(f"  SQUEEZED (ratio < {rmax:g}): {n_sq} links -- "
+          + ", ".join(f"{_short_node_name(r.label_i, 14)}↔{_short_node_name(r.label_j, 14)} "
+                      f"{r.squeeze_ratio_obs:.2f}"
+                      for r in A.edges[A.edges["squeezed"]].sort_values("squeeze_ratio_obs")
+                      .itertuples()))
+
+    # ---- outputs: counterfactual band polygons (M3 outline) + constants into run_config ------
+    rows = []
+    for eid, idc in bands_cf.items():
+        m = np.zeros(A.shape[0] * A.shape[1], bool); m[idc] = True
+        m = m.reshape(A.shape) & ~A.node_union
+        if not m.any():
+            continue
+        polys = [_shape(s) for s, v in shapes(m.astype("uint8"), mask=m, transform=A.transform)
+                 if v == 1]
+        rows.append(dict(edge_id=eid, band_cf_km2=cf_km2[eid], band_new_km2=new_km2[eid],
+                         squeeze_ratio_obs=float(A.edges.loc[eid, "squeeze_ratio_obs"])
+                         if pd.notna(A.edges.loc[eid, "squeeze_ratio_obs"]) else None,
+                         geometry=gpd.GeoSeries(polys, crs=A.crs).union_all()))
+    gpd.GeoDataFrame(rows, crs=A.crs).to_file(A.run_dir / "bands_counterfactual.gpkg",
+                                              driver="GPKG")
+    A.rec.setdefault("d17", {}).update(dict(squeeze_ratio=rmax, squeeze_cf_min_cost=thr,
+                                            n_squeezed=n_sq, cells_relaxed=n_changed))
+    A.rec["cfg"]["squeeze_ratio"] = rmax; A.rec["cfg"]["squeeze_cf_min_cost"] = thr
+    (A.run_dir / "run_config.json").write_text(json.dumps(A.rec, indent=2, ensure_ascii=False))
+    print(f"  wrote bands_counterfactual.gpkg ({len(rows)} edges) + D17 constants into run_config")
+    return A
+
+
 # ================= per-branch values table (D13/D14) =================
 def _to_audit_frac(A, mask):
     """A 300 m boolean mask -> COVERAGE FRACTION per 1 km audit cell (0..1).
@@ -1940,7 +2060,8 @@ def write_run(A):
     crit_cols = ["label_i", "label_j", "edge_class", "cost", "in_mst", "is_adjacency", "ecfb_raw",
                  "disconnects", "n_pairs_lost", "cost_inflation", "mean_pair_inflation",
                  "backup_edge_id", "backup_ratio", "irreplaceable", "insures_edge_id",
-                 "n_branches", "route_irreplaceable", "band_km2", "centreline_km"]
+                 "n_branches", "route_irreplaceable", "band_new_km2", "band_cf_km2",
+                 "squeeze_ratio_obs", "squeezed", "band_km2", "centreline_km"]
     (A.edges[[c for c in crit_cols if c in A.edges.columns]]
      .sort_values(["irreplaceable", "n_pairs_lost", "ecfb_raw"], ascending=False)
      .to_csv(dst / "criticality.csv", encoding="utf-8-sig"))
@@ -2542,6 +2663,8 @@ def load_results(run_dir):
     R.edge_freq = pd.read_csv(ef, index_col=0) if ef.exists() else None
     alt = run_dir / "alternatives_branches.csv"
     R.alternatives = pd.read_csv(alt) if alt.exists() else None
+    cfb = run_dir / "bands_counterfactual.gpkg"
+    R.cf_bands = gpd.read_file(cfb) if cfb.exists() else None       # D17 outline (M3)
 
     # node overlays from the H7 gpkg; IPCA/PA kind from the label prefix
     parts = gpd.read_file(run_dir / "node_parts.gpkg").to_crs(R.crs)
@@ -2984,11 +3107,20 @@ def _routing_classes(R, squeeze_max=0.5):
     ri = e.get("route_irreplaceable", pd.Series(False, index=e.index))
     both = e.index[(e["irreplaceable"] == True) & (ri == True)]
     irr = e.index[(e["irreplaceable"] == True) & ~e.index.isin(both)]
-    sq = e.index[(e["squeeze_idx"] < squeeze_max) & (e["irreplaceable"] != True)]
+    if "squeezed" in e.columns and e["squeezed"].notna().any():
+        # D17 (H8 closed): the counterfactual band ratio from corridor_edges.csv
+        rmax = float(R.cfg.get("squeeze_ratio", squeeze_max))
+        sq = e.index[(e["squeezed"] == True) & (e["irreplaceable"] != True)]
+        sq_label = f"squeezed (D17: band < {rmax:g}× its no-barrier counterfactual)"
+    else:
+        print("  H8 OPEN: 'squeezed' drawn from the analytic screening index (M4.6), not D17 -- "
+              "re-run notebook 04 (counterfactual_squeeze) before this class ships")
+        sq = e.index[(e["squeeze_idx"] < squeeze_max) & (e["irreplaceable"] != True)]
+        sq_label = f"squeezed (screening: band < {squeeze_max:g}× open-ground ellipse; H8 OPEN)"
     return e, [
         ("both-senses irreplaceable (no alternative link OR routing)", both, "#d73027"),
         ("edge-irreplaceable (D7, cheapest alternative > β)", irr, "#fc8d59"),
-        (f"squeezed (band < {squeeze_max:g}× open-ground width)", sq, "#dfb515"),
+        (sq_label, sq, "#dfb515"),
     ]
 
 

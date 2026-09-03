@@ -41,6 +41,11 @@ FOOTHILLS_VECTOR = INPUT_DIR / "ab_foothills" / "foothills.gpkg"
 #   HANDOFF_DIR  : final oriented + masked COGs on the canonical grid (R reads these)
 ALIGNED_DIR = INPUT_DIR / "cleaned_aligned"
 HANDOFF_DIR = INPUT_DIR / "aligned_stack"
+# Alberta prioritization (analyses/alberta_prioritization, spec v0.4.1 / methods_log M2.2): the
+# parent stack MASKED to the Alberta extent on the SAME grid -- identical layout, no crop, no
+# re-snap, so cell IDs match the parent and every module runs unchanged via handoff_dir.
+# Built by analyses/alberta_prioritization/01_ab_extent_stack.ipynb; its own manifest.json.
+AB_HANDOFF_DIR = INPUT_DIR / "aligned_stack_ab"
 
 # Prioritizr results from 03 (R) land here; 04 (Python) reads them back.
 #   RESULTS_DIR    : root for all optimization outputs
@@ -359,6 +364,23 @@ ANALYSES = {
         "decision_type": DECISION_TYPE, "solver": SOLVER, "highs_solver": HIGHS_SOLVER,
         "connectivity_penalty": 0.0, "boundary_penalty": 0.0, "neighbor_penalty": 0.0,
         "lock_in": {"source": "pa_mask", "vector_path": None},
+        "feature_weight_multipliers": {},
+    },
+    "ab_y2y": {
+        # Alberta Y2Y prioritization (analyses/alberta_prioritization/, spec v0.4.1) -- the
+        # scale-transfer MIRROR of the y2y flagship. Runs on AB_HANDOFF_DIR (the parent stack
+        # masked to Alberta on the same grid), so roi is "full": PU = the non-NaN cost cells.
+        # Every value below is the parent's documented baseline; the notebooks apply the
+        # frozen deltas via pr_override -- in particular budget_pct, which D-AB5 re-registers as
+        # locked + X*unlocked (X = the parent's realized fill rate, spec/ab_extent_v1.json),
+        # and solver/decision_type (gurobi binary, as the parent's Gate-3/4 runner).
+        "results_subdir": "ab_y2y",
+        "roi": {"mode": "full", "sources": None, "buffer_km": 0, "mask": False},
+        "objective": OBJECTIVE, "budget_pct": BUDGET_PCT, "target_pct": TARGET_PCT,
+        "targets": {},          # derived per formulation from the AB audit (scenarios_ab_v1.json)
+        "decision_type": DECISION_TYPE, "solver": SOLVER, "highs_solver": HIGHS_SOLVER,
+        "connectivity_penalty": 0.0, "boundary_penalty": 0.0, "neighbor_penalty": 0.0,
+        "lock_in": {"source": "pa_mask", "vector_path": None},   # inherited (D-AB2)
         "feature_weight_multipliers": {},
     },
 }
@@ -714,6 +736,16 @@ CORRIDORS = {
         # carroll2018_pctl = branch mean percentile vs the routable-area percentile baseline.
         # Matched random strips (the Phase 6 method) are deferred.
         "carroll_ref": "routable_area",
+        # D17 (addendum 2026-09-03, H8 closed 2026-09-03): the SQUEEZED link class. Per link,
+        # squeeze_ratio_obs = (real band, new land) / (COUNTERFACTUAL band, new land), where the
+        # counterfactual band is the same edge banded at the same cutoff on a surface with every
+        # cost class >= squeeze_cf_min_cost set to 1 -- "how wide would the near-optimal set be if
+        # nothing constrained it". squeezed = ratio < squeeze_ratio. Chosen over the analytic
+        # ellipse index (kept as the M4.6 screening diagnostic) because it needs no straight-link
+        # assumption and both bands share the cutline clipping, so the SE-corner artefact cancels.
+        # Costs one extra CWD set (cached under cwd_cache/<sha>_cf).
+        "squeeze_ratio": 0.5,
+        "squeeze_cf_min_cost": 10,
 
         # ---- structured ensemble (D8) ---------------------------------------------------
         # Axes B/C/D all reuse the SAME resistance, and CWD depends only on resistance + node seeds

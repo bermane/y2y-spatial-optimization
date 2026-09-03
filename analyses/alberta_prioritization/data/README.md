@@ -1,0 +1,19 @@
+# Acquired layers — provenance contract (spec §8, D-AB3/D-AB4)
+
+Sources scouted 2026-09-03 (Claude, WebFetch-verified unless marked *unverified*). Run
+`acquire.py` from the repo root with the project venv; it downloads the OPEN items below into
+`tenure/`, `aoi/`, `pa/` and records every file's sha256 + URL + timestamp in `provenance.json`.
+Nothing here enters a solve: tenure and AOI layers are **post-hoc reporting only** (D-AB3, D-AB4).
+
+| # | Layer | Use | Source (verified) | Status |
+|---|---|---|---|---|
+| 4 | **Green/White Area** (Alberta EPA, OGL-A, EPSG:3400) | tenure: `crown_green` vs settled | ArcGIS REST, no token: `https://geospatial.alberta.ca/titan/rest/services/boundary/asrd_administrative_area/MapServer/1` (field `GWA_NAME` ∈ {"Green Area","White Area"}) | `acquire.py` (REST → `tenure/green_white_area.gpkg`) |
+| 5 | **Public land dispositions** (DIDs: `DISP_TYPE` GRL/PGL/GRP/PGP/FGL/FGA/GRR/FDL/CUP/PHP) | tenure: `crown_disposition` | GeoDiscover records are **Protected A / restricted**; REST token-gated (499). Distributed by Altalis as "DIDs / DIDs+" (**for-fee**). Open partials only: Crown Land Reservations (`.../srd_pub/boundaries/CrownlandReservations_SHP.zip`, reservations not leases) and Grazing Rental Zone (rate zones). | **BLOCKED — decision needed.** Options: (a) Y2Y/partner licensed copy → place at `tenure/dids_dispositions.gpkg`; (b) Altalis purchase; (c) request via `PGC.Data@gov.ab.ca`; (d) fall back to White-Area-minus-PA as `private_presumed` with the crown-lease contamination disclosed. |
+| 6a | **Grassland Vegetation Inventory (GVI)** (Alberta EPA, OGL-A, FGDB, EPSG:3400) | `private_ranchland` classifier, southern White Area only (48.9–52.5°N) | `https://extranet.gov.ab.ca/srd/geodiscover/srd_pub/biota/Vegetation/GrasslandVegetationInventory.zip` — Sites table joined to polygons (`LANDSCAPE_POLYGON_GUID`→`GLOBALID`), `SITE_TYPE`: native upland IDs 11–24 + PN/PI tame pasture = ranchland | `acquire.py` |
+| 6b | **AAFC Annual Crop Inventory 2024, Alberta** (OGL-Canada, GeoTIFF 30 m) | `private_ranchland` fallback north of GVI coverage: classes 110 Grassland, 122 Pasture/forages, 50 Shrubland | `https://agriculture.canada.ca/atlas/data_donnees/annualCropInventory/data_donnees/tif/2024/aci_2024_ab_v2.zip` (109 MB) | `acquire.py` |
+| 7 | **Upper Smoky Sub-Regional Plan spatial data** (Alberta EPA, OGL-A, SHP, EPSG:3400; revised 2026-07-17) | AOI-2 Nature-First Zone (NFZ minus PA compilation) | `https://extranet.gov.ab.ca/srd/geodiscover/srd_pub/environment/SRP/US_SRP_Zones.zip` (+ `US_SRP_ConservationAreasParks.zip`, `US_SRP_PlanningBoundary.zip`, `US_SRP_PLUZ.zip` same folder). Zone-name field *unverified* until opened. | `acquire.py` |
+| 3 | **PLUZ** (Alberta EPA, OGL-A, EPSG:3400) | PA completeness check | REST `https://geospatial.alberta.ca/titan/rest/services/base/land_use_management_10tm_nad83_aep/MapServer/1` | `acquire.py` (REST → `pa/pluz.gpkg`) |
+| 3 | **CPCAD** (ECCC, OGL-Canada, FGDB, EPSG:3978; release Dec 2025) | PA completeness check vs the parent PA layer | directory `https://data-donnees.az.ec.gc.ca/data/species/protectrestore/canadian-protected-conserved-areas-database/Databases` (zip name *unverified*); REST `https://maps-cartes.ec.gc.ca/arcgis/rest/services/CWS_SCF/CPCAD/MapServer/0` | manual: place the FGDB zip at `pa/cpcad.zip` |
+| 8 | AltaLIS cadastral / title (ETM) | parcel-level ranchland | paywalled; the inventory's "might be free for UBC" is unconfirmed — the AltaLIS Post-Secondary Education Data Partnership (cadastral, title AND DIDs) is held by ALBERTA institutions only (U of A, U of C, U of L, SAIT), licence "educational use only", per-user agreement, "cannot be shared with 3rd parties"; no UBC listing found (checked 2026-09-03) | DEFERRED (spec §8); same academic-route conditions as D-AB8(e) |
+
+Naming: the plan is the **Upper Smoky Sub-Regional Plan** (not "Upper Little Smoky").

@@ -1,0 +1,23 @@
+{
+ "constants": {
+  "theta": 5.0,
+  "a_min": 0.005,
+  "t_min": 0.15,
+  "leverage_min": 0.1,
+  "rare_cap": 0.999,
+  "curve_points": 10001
+ },
+ "budget_pct": 0.3,
+ "n_pu": 85133,
+ "created_utc": "2026-09-03T18:11:20.572250+00:00",
+ "layer_sha256": {
+  "human_modification": "25412ff8ff9946d453faf85ccd681fad9a4b2f0cc93f419432a4da8fea6d3933",
+  "transboundary_connectivity": "5b2abbebddd734d733eaa625c0e7690cb1bbbbd7de83a3cf5e76c99acbbd7033",
+  "climate_corridors": "ecd96fe7f2659c81c0d8cd85ec18b6bade2dd0b4e6fa835823172eb50d2b1e56",
+  "climate_type_macrorefugia": "73ae969dd3064a41a1e6a110e4050c39262477a6ac419a2bd157cfd51fc2909c",
+  "irrecoverable_carbon_biomass": "33cf20e0b2adb115e7ad4d755490136930b138e998759c04cb87c92fddf470c8",
+  "irrecoverable_carbon_m_soc": "b34186921d77bfc98b664d5bbf2ee896010c21bc4b049135358ef540cc5fb1a2",
+  "aoh_richness_mammals": "b85a1511e118deb16539c165bef93be270c3c7042f03424900879bae0ec31849",
+  "aoh_richness_birds": "6e9f8e8a8894af775297ba2f18b5b4a777047837ed2a086c7bf090010f39526b"
+ }
+}

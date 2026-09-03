@@ -134,6 +134,17 @@ rule; quantitative outcomes live there, methods decisions here);
   reading stands on more than width alone (2026-08-31). Serves M1.4's reporting rule —
   `routing_problem_map` paints corridor land by regime (both-senses irreplaceable /
   edge-irreplaceable / squeezed < 0.5 / securing).
+- **M4.7 D17 — the squeezed class, CONFIRMED definition (2026-09-03, H8 closed; supersedes
+  M4.6 as the class definition).** `squeeze_ratio_obs` = real band NEW-land area ÷ the same
+  edge's band on a COUNTERFACTUAL surface with every cost class ≥ 10 set to 1, both at
+  `cwd_cutoff_abs`; `squeezed` = ratio < 0.5. Chosen (Ethan) over the analytic ellipse index
+  because it needs no straight-link assumption, both bands share the cutline clipping (the
+  M4.6 SE-corner caveat cancels), and it produces a drawable natural width. One extra CWD set
+  per seed part (cached `_cf`). Gate G13: counterfactual band ≥ real band (2% tolerance).
+  `squeeze_idx` (M4.6) retained as a screening diagnostic column only; `_routing_classes`
+  prefers the D17 column and prints 'H8 OPEN' while it is absent. Implemented
+  `corridors_core.counterfactual_squeeze`, notebook 04 step 2b; synthetic-verified.
+  Measured on v2_run002: PENDING the notebook-04 re-run.
 - **M4.5 Irreplaceable-flag semantics (for the paper):** the flag records "no affordable DIRECT
   backup existed when the bridge was processed" — affordable = within β; an alternative always
   exists at SOME price, and `backup_ratio` is that price. Later backups can close cycles that
@@ -201,6 +212,18 @@ rule; quantitative outcomes live there, methods decisions here);
   completing the Y2Y-wide three-table spec (contribution/efficiency/raw, units from
   RAW_SPEC); in passing, RAW_SPEC's stale macrorefugia unit label (still describing
   vmax − v) corrected to the 1/v orientation (also logged y2y M2.10).
+- **M5.11 Director package (2026-09-03, PRESENTATION ONLY — spec 06 v1.2):**
+  `corridors_director.py` + `06_director_package.ipynb` over a loaded run; zero new solves.
+  Renames (director legend strings), selects (top-k by rule), renders (flat swaths, CVD
+  palette — squeezed in purple), assembles (profiles, T1/T2, draft .pptx). Two items that are
+  METHODS-ADJACENT and therefore logged here: (i) axis-C attribution for T1 is computed over
+  members that drop a PROPOSAL that is not an endpoint of the link (bins ≥0.95 / ≥0.75 /
+  else) — 'we took every proposal as given; here is what depends on which one'; (ii) T2 and
+  the profile chips use framing-1 link profiles (owner cells, majority crossing; M5.9), so
+  every flagged link — including the near-touching ones with zero branches — has a row;
+  chips are percentiles among all profiled links, never raw values. Jurisdictions from
+  Natural Earth admin-1 polygons (display + 'who's at the table' only); settlement lands
+  pending an authoritative layer. H8 gate enforced in code.
 - **M5.10 Background reference layers (2026-09-01, DISPLAY-ONLY):** the zoom figures
   (routing_problem_zoom / _cost_zoom / _cost_overlay, priority_links_map) carry
   provincial borders (Natural Earth 10m admin-1 lines, public domain, in

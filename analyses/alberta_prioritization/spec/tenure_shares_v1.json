@@ -1,0 +1,50 @@
+{
+ "created_utc": "2026-09-03T19:08:50.176449+00:00",
+ "equation": "spec v0.4.4 D-AB3",
+ "dispositions_present": false,
+ "ranch_frac_threshold": 0.5,
+ "ranch_frac_sensitivity_km2": {
+  "0.3": 5973,
+  "0.5": 5393,
+  "0.7": 4836
+ },
+ "gvi_covered_cells": 6949,
+ "classes": {
+  "pa_locked": {
+   "code": 1,
+   "km2": 27972,
+   "pct_extent": 32.86,
+   "pct_discretionary": 0.0
+  },
+  "crown_green": {
+   "code": 2,
+   "km2": 47716,
+   "pct_extent": 56.05,
+   "pct_discretionary": 83.48
+  },
+  "crown_white_ind": {
+   "code": 3,
+   "km2": 1992,
+   "pct_extent": 2.34,
+   "pct_discretionary": 3.48
+  },
+  "private_presumed (non-ranch)": {
+   "code": 4,
+   "km2": 1943,
+   "pct_extent": 2.28,
+   "pct_discretionary": 3.4
+  },
+  "private_ranchland": {
+   "code": 5,
+   "km2": 5393,
+   "pct_extent": 6.33,
+   "pct_discretionary": 9.43
+  },
+  "unclassified (neither Green nor White)": {
+   "code": 6,
+   "km2": 117,
+   "pct_extent": 0.14,
+   "pct_discretionary": 0.2
+  }
+ }
+}

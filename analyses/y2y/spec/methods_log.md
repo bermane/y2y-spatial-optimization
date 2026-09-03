@@ -368,6 +368,78 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   chat. Conditional-cell % reported for continuity but NOT ruled on (MGA inflates it by
   construction). Rule hash recorded in the cell audit per spec §9. (2026-08-28)
 
+**M4.18 — Spec v0.14/.14.1 ratification of the E-round (2026-09-03; rulings, all logged here as
+binding):** (i) E12: the 3-formulation MAA bracket is ACCEPTED as the estimator-conditionality
+statement — no full-14 MAA; f is instrument-robust (corr 0.851–0.964), D is estimator-sensitive by
+definition and is quoted from MGA only; E3's conditionality caveat now cites the bracket. (ii) E15:
+the guardrailed band (per-block capture floors capture_b ≥ (1−g)·anchor_b, g = 0.05) is PROMOTED to
+the APPLIED HEADLINE ("no value theme left more than 5% behind") — a presentational promotion
+legitimized by E14's pre-registered trigger; the aggregate band REMAINS the Claim-A estimand and
+F is reported under both semantics. E15b's saturation (per-value floors ≈ block floors) is read as a
+retroactive validation of block-level accounting. (iii) E17 remedy = quantitative main-text
+disclosure + scenario reading + an explicit Y2Y endorsement decision on the representativeness
+anchor (applied-paper alternative: regionally stratified representation targets); nothing deleted.
+(iv) E10's MEANINGFUL-TARGET-WINDOW concept enters Methods (targets below the co-capture + lock-in
+floor are decorations; window priced by the Lorenz curve). (v) E16 resolved: the sanctioned F-guided
+post-hoc clustering is now the PRIMARY delineation route (min-boundary MILP fails the compute gate).
+(vi) M3.6 lock-in disclosure adopted. Empirical phase CLOSED except the E15 completion run (M4.19).
+
+**M4.19 — E15 guarded-sweep COMPLETION (director package spec v1.1 step 0; built 2026-09-03,
+`18_guarded_sweep.ipynb`):** the per-block-floor MGA sweeps are extended from {S0, S4} to all 14
+frozen formulations (k = 50, g = 5%, floors on the four PROACT blocks at 0.95×anchor), plus ONE
+guarded MAA spot-check on S0 (E12 seed 20260902; `maa_generate` gained a `floors` argument mirroring
+`mga_generate`, toy-verified: unguarded MAA breached a floor on 6/6 toy members, guarded held every
+floor, seeded-reproducible). Protocol: anchors, k-best pools and LP twins STAND (floors are
+anchor-relative); the anchor is re-solved only to obtain the compiled model + x, asserted within
+1e-3 relative of the frozen `formulation_meta.json` objective (the 4-digit echo precision), and the
+Hamming distance to the frozen `anchor.tif` is recorded (near-tie disclosure). Guarded f_s = mean
+over {anchor + 50 guarded members}, guarded F = one vote per formulation — the SAME hierarchical
+estimator as the unguarded surface (13). Cost: the spec's "8–10 h serial" is SUPERSEDED by
+measurement — floors shrink the feasible set, so guarded sweeps took 11.2 (S0) / 12.0 (S4) min
+against 13.3 / 46.1 min for the plain sweeps ⇒ ~3 h for the 12 open formulations.
+
+**M4.20 — Director-package procedures, pre-stated (spec v1.1; `director_core.py`,
+`19_director_surfaces`, `20_director_figures`; presentation decisions live in the package spec,
+this entry records what was FIXED before the run):** clustering = guarded surface ≥ 0.70 →
+morphological closing r = 1 cell → 8-connected components → min 100 km² (the 04-era
+`CLUSTER_MIN_CELLS = 25` is NOT used) → scenario clusters minus the Act-1 core footprint with %
+overlap reported → sensitivity companion at 0.60/0.80; deck selection = top-k by area (tie-break
+mean guarded F; k = 6 for Act 1, 2 per scenario for Act 2) is PRESENTATIONAL and the full register
+ships — the threshold is never tuned to a cluster count. Climate levels are POOLED per scenario iff
+the Jaccard of the two levels' frequent tiers ≥ 0.80 (else shown per level; verdict printed).
+Hex aggregation (~250 km² default, ~800 km² variant; flat-top lattice built directly in
+ESRI:102008, hex value = mean guarded F over DISCRETIONARY cells) is presentation-only — clustering
+always runs at 1 km (E13: S4's high-f set is 80.8% inside a ~4%-of-region mask). Star axes = cluster
+mean percentile of each hand-off layer over the DISCRETIONARY landscape (0.5 = typical unprotected
+land): carbon = 0.742·m_soc + 0.258·biomass (the Gate-1 mass split), biodiversity = mean(birds,
+mammals), connectivity = mean(transboundary, corridors), core = macrorefugia, intactness dashed/grey
+(disclosed, not a driver), representativeness = EFG classes present ÷ 40 (different construction,
+footnoted). Driver attribution: the spec's "rare-EFG footprint" is AMBIGUOUS — the rare-ATTAINABLE
+set (36/40, Gate-0a rule cap_max ≥ 0.999) unions to 79% of the region and reads ~100% for every
+cluster, so a discriminating companion (EFGs with presence ≤ 1% of the PU; 13 layers, 2.9% of the
+region) is reported alongside it; both columns ship. T-D1's "% overlapping existing PAs" is 0 by
+construction (clusters are discretionary), so "% within 5 km of a PA" is reported instead.
+Proposed-IPCA overlay (decision h, pending Ethan): the Indigenous-led rows of
+`input_data/y2y_proposed_pa/proposed_pa_v2.shp` (PA_TYPE = IPCA or GOV_TYPE = 5, plus the Ross
+River NPR proposal; 9 polygons, 102,457 km² of PU) — never analyst-drawn, never locked in, so
+cluster ∩ proposal = independent convergence; the binding language rule is ALIGNMENT, not
+assignment. Placeholder cluster names = nearest named PA/proposal + bearing (Ethan renames).
+**Addendum (spec v1.3 presentation conventions + study plan v0.14.2, 2026-09-03):** adopted zero-solve
+additions — tier-achievement view (block capture by CUMULATIVE tier: PAs → + core → + scenario tiers → +
+opportunity, incl. locked land, against the balanced anchor and the min–max across all 14 anchors),
+Act 1 rendered as the Currie-style (a) frequency-alone / (b) with-PAs pair with an inset histogram of
+guarded F over unprotected cells, % of unprotected land annotated on every scenario map, the anchor
+agreement matrix (E11 Jaccard record) in the appendix, and **T-D4 tier area by ecoregion — DATA
+DEPENDENCY: no ecozone/ecoregion layer exists in `input_data/`; `19` reads the first vector in
+`input_data/ecoregions/` (CEC North American Level II/III recommended, seamless US+Canada) and reports
+T-D4 PENDING until one is supplied.** Positioning only (no methods change): Currie, Liang & Snider 2025
+(CSP 7:e70087) as the closest Canadian precedent — selection frequency across a 4-level target sweep at
+100 km² hexbins, one solve per level — cited on the how-to-read slide (display hex ≈ their planning
+unit; analysis at 1 km²; 51 × 14 plans vs 4), the E17 one-pager (same north–south tension, here
+decomposed causally) and the IPCA slide (alignment, not assignment). Step 0 (18) unaffected. Added at Ethan's request (same day): **T-D5 protected baseline** — per value, % of the
+regional total inside existing PAs, % of the S0 target already banked, points still needed from unprotected
+land (M3.6 accounting made director-legible; numbers in R10.4).
+
 ## 5. Solver configuration and numerical integrity
 
 - **M5.1** Gurobi 13.0.2, nonprofit WLS licence (16 cores; needs live internet during solves;
@@ -480,6 +552,7 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
 | HiGHS-produced LP twins (ensemble) | Gurobi-path twins + HiGHS spot-check ×2 cells | 109-min worst-case presolve pathology; open-verification = verifiable, not produced, without Gurobi | 2026-08-28 (spec v0.10) |
 | S4 places locks (tails t=1.0 in every stack) | pure (w,t) + pre-registered pilot band ≥0.75 both pools; tails = contingency @ t=0.8 | targets are pressure, not locks; "a lot of the tail," not completeness; sufficient pull demonstrably captures tails | 2026-08-28 (spec v0.11) |
 | v0.11 pre-authorized tail contingency (t=0.8) | RESCINDED — no tail features as separate values, ever, without a new decision; pilot failure → chat | Ethan's ruling: no separate tail values in the problem; knowledge kept as backup (M4.14) | 2026-08-28 |
+| Director-spec step-0 cost "~8–10 h serial" | measured ~3 h (11–15 min per guarded sweep; floors shrink the search) | certificates_guard.csv S0/S4 vs plain g05 | 2026-09-03 (M4.19) |
 
 *Maintainer note: entries M-numbered for stable citation from drafts. Update same-session, every
-methods-relevant change. Last updated 2026-08-27 (Gate 1 build).*
+methods-relevant change. Last updated 2026-09-03 (spec v0.14.1 + director package build).*

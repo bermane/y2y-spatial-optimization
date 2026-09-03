@@ -231,3 +231,24 @@ route drill-down). Companion map: `priority_links_map.png`.
 **R8.9 Campaign complete [runs.csv]:** v2_run002 done = TRUE — first full end-to-end v2
 production run (calibration → baseline → 47-member ensemble → near-optimality → branches →
 values → tiebreak), 2026-08-27.
+
+
+## R9. D17 squeezed class + director package (2026-09-03) — PENDING the notebook-04 re-run
+
+**R9.1 D17 (counterfactual) — pending.** `counterfactual_squeeze` lands `band_new_km2`,
+`band_cf_km2`, `squeeze_ratio_obs`, `squeezed` and G13's verdict when notebook 04 re-runs;
+until then the draft map's 5 squeezed links (analytic M4.6) are the only measurement and are
+NOT citable as D17. Expected: the Peace-cluster links stay squeezed (their squeeze was
+corroborated by cost-per-km and the mapped barrier field, R8.7a); the SE-corner values may
+move because the cutline artefact cancels.
+
+**R9.2 Director package smoke-run [run002/director_package, H8 open]:** classes both 4 / edge
+3 / securing 33 (+5 analytic-squeezed withheld). Examples: N1 Dene Kʼéh Kusān pair — with
+**33,041 km²**, without **37,412 km²** (+4,371 km² of corridor need when the largest proposal
+is not realised; the network reroutes around the gap); N2 Liard River Corridor ↔ Nahanni
+(2 route options, attribution 1.0, spans BC / Yukon / NWT); N3 Dene Kʼéh Kusān ↔ Liard River
+Corridor (2 routes); S1 Gwillim Lake ↔ Pine Le Moray, S2 Tthetäwndëk ↔ Nj ‘Iinlii” Jjik, S3
+Wilps Gwininitxw ↔ Swan Lake Kispiox (both-senses, by criticality); Wədzih Yiné' ↔ Chase to
+the appendix. **Every flagged link reads 'Unaffected' on the proposal-drop test** — no
+flagged link's existence depends on a non-endpoint proposal. T2: 12 flagged links × 19
+columns. Final numbers/figures land when 04 → 06 run.

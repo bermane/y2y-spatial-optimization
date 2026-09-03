@@ -34,8 +34,18 @@ Rplots.pdf
 # the feature-card PDFs, figures, and -- later -- the per-cell solution matrices (spec s10 runs/).
 analyses/*/figures/
 analyses/*/audit/feature_cards/
+analyses/*/audit/feature_cards_ab/
 analyses/*/audit/audit_objects/feature_audit.npz
+analyses/*/audit/audit_objects_ab/feature_audit.npz
 analyses/*/runs/
+# Alberta prioritization acquired layers (analyses/alberta_prioritization/data/): the raw downloads
+# (multi-GB: GVI FGDB, ACI GeoTIFF, SRP zips, REST pulls) are NOT tracked -- data/README.md,
+# data/acquire.py and data/provenance.json (URL + sha256 per file) are the record; re-acquire locally.
+# The small derived extent polygon (data/ab_extent_v1.gpkg) stays tracked.
+analyses/*/data/tenure/
+analyses/*/data/aoi/
+analyses/*/data/pa/
+analyses/*/data/derived/
 
 # Tracked on purpose (NOT ignored): config.py, *.ipynb, requirements.txt,
 # requirements-R.txt, CLAUDE.md, .claude/settings.json,
@@ -43,3 +53,10 @@ analyses/*/runs/
 # analyses/*/audit/audit_objects/{feature_characterization.csv,audit_constants.json},
 # archive/ (frozen v1 notebooks; their outputs live in gitignored output_data/),
 # configs/ (frozen run configs, e.g. corridors v1 baseline)
+
+# Director package (analyses/y2y/director_package/): the CSV tables + deck outline are tracked (small,
+# the record); regenerable rasters, figures, cluster vectors, the draft deck and dev smoke runs are not.
+analyses/*/director_package/geotiffs/
+analyses/*/director_package/figures/
+analyses/*/director_package/*.pptx
+analyses/*/director_package/_smoke/

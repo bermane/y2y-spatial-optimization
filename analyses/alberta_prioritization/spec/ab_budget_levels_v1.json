@@ -1,0 +1,24 @@
+{
+  "_meta": {
+    "created_utc": "2026-09-03T20:08:50.934161+00:00",
+    "rule": "D-AB5 v2: S0 nesting test at AB-1/AB-2; N = |core_B & core_A| / |core_B| >= 0.80 => A primary, else B primary",
+    "nesting_threshold": 0.8,
+    "extent_id": "ab_y2y_v1"
+  },
+  "levels": {
+    "A": {
+      "x_of_unlocked": 0.1764004492159518,
+      "budget_cells": 38055,
+      "budget_pct": 0.4470064487331587,
+      "additions_cells": 10083,
+      "role": "mirror (parent realized fill rate)"
+    },
+    "B": {
+      "x_of_unlocked": 0.0882002246079759,
+      "budget_cells": 33014,
+      "budget_pct": 0.38779321767117336,
+      "additions_cells": 5042,
+      "role": "realistic envelope (X/2)"
+    }
+  }
+}

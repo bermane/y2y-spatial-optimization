@@ -152,7 +152,7 @@ mga_generate <- function(cm, anchor, g, k, mip_gap_dist = 0.01, time_limit_iter 
 # "no RNG" seed_policy carries a documented E12 exception). The 1e-3*obj0 shortfall-pin keeps
 # band_lhs = each member's TRUE objective, as in mga_generate.
 maa_generate <- function(cm, anchor, g, k, seed, mip_gap_dist = 0.01, time_limit_iter = 900,
-                         threads = parallel::detectCores()) {
+                         threads = parallel::detectCores(), floors = NULL) {
   set.seed(seed)
   o <- cm$o$copy()
   ncol_o <- o$ncol()
@@ -163,6 +163,11 @@ maa_generate <- function(cm, anchor, g, k, seed, mip_gap_dist = 0.01, time_limit
   o$append_linear_constraints(rhs = band_rhs, sense = "<=", A = A_band,
                               row_ids = "mga_band")
   cat(sprintf("MAA band wall: obj0 . x <= %.6f (g = %g) | seed %d\n", band_rhs, g, seed))
+  # E15 guardrails (optional; mirrors mga_generate): floors = list(ctx=, blocks=, g=) ->
+  # per-block capture floors appended after the band wall (director-package step 0:
+  # the guarded MAA spot-check on S0)
+  if (!is.null(floors))
+    mga_block_floors(o, floors$ctx, cm, anchor$x, floors$g, floors$blocks)
   disc <- which(!cm$locked)
   members <- matrix(FALSE, nrow = k, ncol = cm$n_pu)
   cert <- vector("list", k)

@@ -464,8 +464,11 @@ def trajectory_figure(fig_path=None, handoff_dir=None, audit=None):
     # 4.1% sits visually close to 0.47% while being 9x the area, so the number rides the dot).
     # Collision detection works in LOG space: crossings within ~0.25 decades share a
     # neighbourhood, and successive labels in a cluster step downward.
+    # A crossing at exactly 0% area (theta cleared only by the single densest archived point --
+    # seen on the Alberta extent, never on Y2Y) has no shelf to label and cannot sit on the
+    # log axis; it also made the xa/prev ratio below divide by zero.
     level, prev = 0, None
-    for xa, colr in sorted(crossings):
+    for xa, colr in sorted(c for c in crossings if c[0] > 0):
         level = level + 1 if (prev is not None and np.log10(xa / prev) < 0.25) else 0
         dy = 9 if level == 0 else -13 - 11 * (level - 1)
         ax.annotate(_pct(xa), (xa, audit["theta"]), xytext=(0, dy),

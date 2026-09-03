@@ -1,0 +1,168 @@
+{
+ "created_utc": "2026-09-03T20:55:33.824914+00:00",
+ "verdict_rule": "v2: D=maxHam/(2*m_disc), C=all-selected/m_disc, over anchor+k at g, discretionary; PLATEAU-RICH iff D>=0.10 and C<=0.90; NEAR-UNIQUE iff D<0.02 or C>0.98; else INTERMEDIATE",
+ "verdict_rule_hash": "v2_8db80fed1c702638",
+ "verdicts": [
+  {
+   "level": "A",
+   "semantics": "aggregate",
+   "m_disc": 10083,
+   "D": 0.9999,
+   "C": 0.0,
+   "verdict": "PLATEAU-RICH",
+   "frequent_km2": 2,
+   "always_km2": 0,
+   "union_km2": 57161,
+   "members_sacrificing_a_block": 1,
+   "k": 50
+  },
+  {
+   "level": "A",
+   "semantics": "guarded",
+   "m_disc": 10083,
+   "D": 0.9999,
+   "C": 0.0,
+   "verdict": "PLATEAU-RICH",
+   "frequent_km2": 2,
+   "always_km2": 0,
+   "union_km2": 57161,
+   "members_sacrificing_a_block": 1,
+   "k": 50
+  },
+  {
+   "level": "B",
+   "semantics": "aggregate",
+   "m_disc": 5042,
+   "D": 1.0,
+   "C": 0.0,
+   "verdict": "PLATEAU-RICH",
+   "frequent_km2": 0,
+   "always_km2": 0,
+   "union_km2": 57161,
+   "members_sacrificing_a_block": 0,
+   "k": 50
+  },
+  {
+   "level": "B",
+   "semantics": "guarded",
+   "m_disc": 5042,
+   "D": 1.0,
+   "C": 0.0,
+   "verdict": "PLATEAU-RICH",
+   "frequent_km2": 0,
+   "always_km2": 0,
+   "union_km2": 57161,
+   "members_sacrificing_a_block": 0,
+   "k": 50
+  }
+ ],
+ "nesting": {
+  "threshold": 0.8,
+  "primary_level": "B",
+  "guarded": {
+   "N": 0.0,
+   "core_A_km2": 2,
+   "core_B_km2": 0,
+   "overlap_km2": 0
+  },
+  "aggregate": {
+   "N": 0.0,
+   "core_A_km2": 2,
+   "core_B_km2": 0,
+   "overlap_km2": 0
+  },
+  "by_band": {
+   "g02": {
+    "N": 1.0,
+    "core_A_km2": 1488,
+    "core_B_km2": 404,
+    "always_A": 876,
+    "always_B": 84
+   },
+   "g05": {
+    "N": 0.0,
+    "core_A_km2": 2,
+    "core_B_km2": 0,
+    "always_A": 0,
+    "always_B": 0
+   }
+  },
+  "vacuous_at_g05": true
+ },
+ "fg_level_A": {
+  "0.02": {
+   "always": 876,
+   "frequent": 1488,
+   "union": 50824
+  },
+  "0.05": {
+   "always": 0,
+   "frequent": 2,
+   "union": 57161
+  },
+  "0.1": {
+   "always": 0,
+   "frequent": 0,
+   "union": 57161
+  }
+ },
+ "s4_pilot": {
+  "target": 0.772,
+  "capture": 0.772,
+  "binds": true,
+  "tail_msoc": 0.8772,
+  "tail_biomass": 1.0
+ },
+ "t1_analog": [
+  {
+   "level": "A",
+   "formulation": "s0_ssp585_theta5",
+   "core_habitat_capture": 0.557,
+   "connectivity_capture": 0.993,
+   "carbon_capture": 1.141,
+   "biodiversity_capture": 0.862,
+   "gHM": 0.463,
+   "EFG mean": 0.699
+  },
+  {
+   "level": "A",
+   "formulation": "s0_ssp245_theta5",
+   "core_habitat_capture": 0.576,
+   "connectivity_capture": 0.99,
+   "carbon_capture": 1.143,
+   "biodiversity_capture": 0.863,
+   "gHM": 0.463,
+   "EFG mean": 0.696
+  },
+  {
+   "level": "A",
+   "formulation": "s4_ssp585_theta2",
+   "core_habitat_capture": 0.555,
+   "connectivity_capture": 0.988,
+   "carbon_capture": 1.177,
+   "biodiversity_capture": 0.863,
+   "gHM": 0.464,
+   "EFG mean": 0.692
+  },
+  {
+   "level": "B",
+   "formulation": "s0_ssp585_theta5",
+   "core_habitat_capture": 0.499,
+   "connectivity_capture": 0.861,
+   "carbon_capture": 1.055,
+   "biodiversity_capture": 0.741,
+   "gHM": 0.408,
+   "EFG mean": 0.6
+  },
+  {
+   "level": "B",
+   "formulation": "s0_ssp245_theta5",
+   "core_habitat_capture": 0.517,
+   "connectivity_capture": 0.86,
+   "carbon_capture": 1.056,
+   "biodiversity_capture": 0.741,
+   "gHM": 0.408,
+   "EFG mean": 0.598
+  }
+ ]
+}

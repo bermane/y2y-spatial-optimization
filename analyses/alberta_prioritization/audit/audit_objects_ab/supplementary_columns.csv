@@ -1,0 +1,9 @@
+feature,cls,target,banked_capture,residual_target,pre_satisfied,window_floor_proxy,target_in_window
+human_modification,low-contrast-inexpressible,1.0,0.3557,0.6443,False,0.4693,
+transboundary_connectivity,diffuse-linear,1.0,0.385,0.615,False,0.4935,
+climate_corridors,diffuse-linear,1.0,0.3599,0.6401,False,0.4728,
+climate_type_macrorefugia,diffuse-linear,1.0,0.4556,0.5444,False,0.5516,
+irrecoverable_carbon_biomass,diffuse-linear,1.0,0.2391,0.7609,False,0.3733,
+irrecoverable_carbon_m_soc,concentrated-satiating,0.322,0.7142,0.0,True,0.7646,False
+aoh_richness_mammals,low-contrast-inexpressible,1.0,0.3252,0.6748,False,0.4442,
+aoh_richness_birds,diffuse-linear,1.0,0.2984,0.7016,False,0.4222,

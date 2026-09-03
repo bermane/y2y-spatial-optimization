@@ -1,0 +1,9 @@
+feature,leverage_y2y,cap_max_y2y,theta_target_y2y,cls_y2y,target_y2y,leverage_ab,cap_max_ab,theta_target_ab,cls_ab,target_ab,leverage_eff,flip
+human_modification,0.042,0.314,0.0,low-contrast-inexpressible,1.0,0.086,0.331,0.0,low-contrast-inexpressible,1.0,0.094,False
+transboundary_connectivity,0.461,0.552,0.013,diffuse-linear,1.0,0.523,0.592,0.022,diffuse-linear,1.0,0.594,False
+climate_corridors,0.263,0.419,0.0,diffuse-linear,1.0,0.1,0.356,0.0,diffuse-linear,1.0,0.114,False
+climate_type_macrorefugia,0.422,0.558,0.031,diffuse-linear,1.0,0.309,0.478,0.0,diffuse-linear,1.0,0.358,False
+irrecoverable_carbon_biomass,0.801,0.803,0.066,diffuse-linear,1.0,0.606,0.636,0.003,diffuse-linear,1.0,0.702,False
+irrecoverable_carbon_m_soc,0.884,0.889,0.332,concentrated-satiating,0.332,0.916,0.92,0.322,concentrated-satiating,0.322,0.953,False
+aoh_richness_mammals,0.181,0.39,0.0,diffuse-linear,1.0,0.07,0.333,0.0,low-contrast-inexpressible,1.0,0.08,True
+aoh_richness_birds,0.232,0.413,0.0,diffuse-linear,1.0,0.116,0.344,0.0,diffuse-linear,1.0,0.125,False

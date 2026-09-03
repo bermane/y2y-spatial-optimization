@@ -1,0 +1,24 @@
+{
+ "extent_id": "ab_y2y_v1",
+ "mirror_spec_version": "v0.14.1",
+ "n_pu": 85133,
+ "n_locked": 27972,
+ "locked_share": 0.32856824028285153,
+ "n_unlocked": 57161,
+ "buffer_only_cells": 938,
+ "budget_semantics": "locked + X * unlocked (additions semantics, D-AB5)",
+ "x_of_unlocked": 0.1764004492159518,
+ "x_source": "parent realized fill rate (381874 - 191029) / (1272914 - 191029)",
+ "budget_cells": 38055,
+ "budget_pct_effective": 0.4470064487331587,
+ "additions_cells": 10083,
+ "inherited_30pct_budget_cells": 25540,
+ "inherited_30pct_feasible": false,
+ "parent": {
+  "n_pu": 1272914,
+  "n_locked": 191029,
+  "budget_cells": 381874,
+  "discretionary": 1081885
+ },
+ "created_utc": "2026-09-03T18:05:10.307315+00:00"
+}

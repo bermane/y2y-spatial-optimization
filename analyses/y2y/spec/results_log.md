@@ -347,6 +347,50 @@ paper sentence gets stronger, not weaker. Same swap appears in spec v0.12 change
 ("1,081,885/1,082,069") and AB-spec v0.2's changelog ("1,082,069 discretionary cells");
 AB-spec v0.3's D-AB5 numbers (191,029 locked / 190,845 discretionary selected) are correct.
 
+## R10. E15 completion + director package (built 2026-09-03; 18 PENDING-RUN, 19/20 follow)
+
+**R10.1 Guarded-sweep cost, measured on the two existing sweeps (S0/S4 certificates):** guarded
+MGA 11.2 min (S0, median iterate 14.1 s) / 12.0 min (S4, 15.8 s) vs the plain band's 13.3 / 46.1 min;
+per-value floors 15.1 / 15.3 min; MAA 13.2 / 18.0 min. Floors SHRINK the feasible set — S4's plain
+sweep was the slow one, its guarded sweep is not. Projection for the 12 open formulations ≈ 2.5–3 h
+serial (director spec's 8–10 h superseded).
+**R10.2 Guarded ensemble — PENDING 18:** guarded F bands (never/rare/conditional/frequent/always,
+discretionary km²) side by side with the unguarded record (R8: frequent 6,816 km², always 0);
+Act tiers (core / scenario-specific / opportunity / never); per-formulation guarded frequent tiers
+and D (plain → guarded); pooling verdict per scenario (Jaccard of frequent tiers, rule ≥ 0.80);
+guarded MAA spot-check on S0 (corr f_guardMGA vs f_guardMAA, tier Jaccard). All printed
+results_log-ready by 19 (`director_package/summary.json` + `tables/`).
+**R10.3 Cluster register — PENDING 19:** Act-1 core clusters ≥ 100 km² (count, total km², largest),
+sensitivity at 0.60/0.80, Act-2 residual clusters per scenario after core subtraction (mean core
+overlap), driver attribution per cluster (θ-tail / spike / rarest-EFG), IPCA-proposal overlap.
+(A partial smoke-run on S0+S4 only — NOT a result — exercised every cell end-to-end.)
+**R10.4 Protected baseline (T-D5; zero-solve, measured 2026-09-03 from the hand-off stack under M3.6
+accounting):** the locked PA estate (191,029 km² = 15.0% of the PU = 50.0% of the 30% budget) already
+holds **12.3% (biomass) – 19.2% (refugia)** of every value's regional total — intactness 15.5, transboundary
+connectivity 14.9, climate corridors 14.3, m_soc 17.6, mammals 15.9, birds 15.3 — and **35/40 EFG
+classes are present inside PAs**. Against the S0 targets that is 12–19% of each t = 1.0 target banked and
+**53% of m_soc's 0.332 target** (15.6 points still needed from unprotected land). Director reading: the
+PA half of the budget delivers roughly one-sixth of each value; the tiers are about the other half.
+**Enrichment (capture share ÷ area share, PAs = 15.0% of the PU): the existing estate is VALUE-PROPORTIONAL
+for the mission values — 0.82× (biomass) to 1.28× (refugia); m_soc 1.18, mammals 1.06, intactness 1.03,
+birds 1.02, connectivity 0.99, corridors 0.95.** The optimizer's discretionary half (S0 anchor minus the
+banked share, over the remaining 15% of area) works at 0.78× (corridors) – 1.74× (refugia); biomass 1.25,
+connectivity 1.23, birds 1.18, mammals 1.12, m_soc 1.04 (target-limited), intactness 0.96 (inexpressible).
+Caveat: intactness ≈ 1.0× because 1−gHM saturates near 1 almost everywhere (leverage 0.042) — in RAW gHM
+the PAs ARE cleaner (0.022 vs 0.053 regional, 04a footprint audit); the share-of-sum currency cannot see
+it, which is the R3-inexpressibility story in one number. Paper-worthy disclosure: a 2025 PA estate
+that is average for every PROACT value, i.e. it was not built for them.
+**R10.5 T-D5b enrichment by scenario (capture share ÷ area share; anchors FINAL, frequent tiers for
+S0/S4 FINAL (already guarded, from 16), the other 12 tiers + the ensemble core PENDING 18):** every
+anchor's new half concentrates its lead value modestly — S1 refugia 1.97×, S2 connectivity 1.59×, S3
+birds 1.27×, S4 m_soc 2.51× — while the guarded FREQUENT tiers concentrate the BINDING value far harder:
+S0's frequent tier is 4.11× on refugia (1.02× connectivity, 0.85× corridors, 0.93× biomass), S1's 3.29×
+refugia, S4's **7.13× on m_soc and 0.53× on biomass** (0.80× birds); the 2-formulation ensemble core
+3.92× refugia. Reading (E13 in enrichment currency): an optimal plan spreads its 15% across everything
+at ~1–2×, but the cells that RECUR across near-optimal plans are the ones a binding claim cannot
+substitute — the promise tier is a scarcity map, not a value map. Refugia's dominance in the frequent
+tiers = its θ-tail-like concentration (leverage 0.422, reciprocal orientation) under the guarded band.
+
 ## Figure/table candidates (running)
 
 - F8 marginal-density trajectories (θ crossings + area labels) — rendered, final stack.
@@ -356,4 +400,4 @@ AB-spec v0.3's D-AB5 numbers (191,029 locked / 190,845 discretionary selected) a
 - LP-vs-MILP tightness table — R2.5.
 - Numerics vignette box/figure — R3.1–R3.3 (matrix-range before/after; 60× speedup).
 
-*Last updated 2026-08-27.*
+*Last updated 2026-09-03 (R10 placeholders; R9.7 E15b).*

@@ -1,12 +1,12 @@
 # 05 corridors (north) — v2 addendum: production run, near-optimality surface, route-branch alternatives
 
 > Addendum to `docs/05_methods_v2.md`. Surgical: nothing in D1–D10 or A1–A4 is reopened.
-> Adds D11–D15, Phases 4b/4c, gates G9–G12, and the run sequence. Written 2026-08-21.
+> Adds D11–D17, Phases 4b/4c, gates G9–G13, and the run sequence. Written 2026-08-21.
 > Claude Code: patch `docs/05_methods_v2.md` with the new sections and append to its changelog;
 > do not rewrite the existing document.
 
 **Status:** approved in design discussion 2026-08-21. Implemented 2026-08-21; NB01+H7 done
-2026-08-26; NB02 baseline done 2026-08-27 (`v2_run002`); NB03/NB04 pending.
+2026-08-26; NB02 baseline done 2026-08-27 (`v2_run002`); NB03/NB04 done 2026-08-27; 05_results figures incl. the draft regime map as of 2026-08-31. **Subordinate build spec for the director package: `06_corridors_north_director_package_spec.md` (v1.1) — consumes this addendum's artifacts; presentation decisions live there, methods decisions here, ambiguous items logged in both.**
 
 > **Living paper documents (BINDING maintenance rule):** `spec/methods_log.md` and
 > `spec/results_log.md` are the cumulative methods and results registers for the publication.
@@ -15,6 +15,21 @@
 > delete. Same convention as the y2y flagship's spec/ logs.
 
 **Changelog**
+- 2026-09-03 — **D17 CONFIRMED / H8 CLOSED** (counterfactual band-area ratio, Ethan's
+  call over the analytic index), `squeeze_cf_min_cost` constant, G13 restated for the
+  implemented definition, §5 output names as implemented, §9 gains notebook-04 step 2b and
+  the 06 director-package notebook.
+- 2026-09-03 (merge note) — the chat-regenerated copy of this spec dropped §8 (file
+  structure), §9 (notebook breakdown + clarifications), the living-docs binding block and
+  the 2026-08-21/27 changelog entries; restored from git HEAD and the chat's additions
+  (D17 stub, `squeeze_ratio`, G13, H8, §5/§6 rules, 06 cross-reference) spliced in.
+  NOTE the source-artifact pointer in 06 (`v2_run001`) is stale: the production run is
+  `v2_run002` (run001 was an aborted first pass, deleted 2026-08-27).
+- 2026-09-03 — cross-reference to `06_corridors_north_director_package_spec.md` added. D17
+  stub: the "squeezed" link class (band width < `squeeze_ratio` × open-ground width) appears
+  in the draft regime map and in 06's legend but had no methods definition here; definition,
+  constant, and gate G13 added pending confirmation against what the engine actually
+  computed (H8). Logged in both documents.
 - 2026-08-21 — addendum: execute the v2 production run; define the wall-to-wall near-optimality
   surface; define route-branch alternatives and the per-branch values table (same column spec
   as the Y2Y-wide alternatives table); Carroll 2018 enters as an audit column only; Phase 7
@@ -64,6 +79,7 @@ grizzly work remains a separate unapproved plan.
 | D14 | **Carroll 2018 (climate corridors) never enters resistance.** It is a post-hoc audit column (`carroll2018_pctl`) and the input to the Phase 8 tie-break among near-equivalent branches. **Phase 7 (velocity-modified routing) is deferred** pending the baseline + axis C results and is recorded as a claim-scope extension requiring its own justification. | Carroll 2018 is current-flow centrality — a derived flow quantity, same object type as Pither current density, rejected as a routing input by D1–D3 for circularity, pinch-point/permeability conflation, and footprint double-counting. The 05 claim scope is structural only; any climate term in resistance changes the claim. Caveats travel with the column: RCP 8.5 late-century only, shares anthropogenic signal with the cost surface. |
 | D15 | Ensemble member fraction (cell in member's corridor union / members) is written as `ensemble_attribution.tif` and used for the robust-core threshold (0.9) and per-axis attribution rasters only. | ~42 of ~49 members are leave-one-out; the fraction is "share of dropped nodes that didn't matter," not a near-optimal sampling frequency. |
 | D16 | **Multipart named areas are routed internally.** A named PA/IPCA whose rasterized mask has >1 8-connected component is split into **parts**; each part ≥ `part_min_km2` is its own seed/routing unit. For each multipart name, the MST over its parts (on CWD) is **locked into the backbone** before the inter-name MST is built. Parts < `part_min_km2` remain in `node_union` (area accounting) but are not seeds. Leave-one-out (axis C) drops a **name** (all parts), not a part. Calibration (`calibrate_cutoff`) uses the **inter-name MST only**; intra-name corridor area is reported separately, as augmentation area is. | Seeding all parts at CWD = 0 as one node means the model never asks how to move between them. A named area is a management unit, so connecting its parts is a defensible default — but it is an assertion about intent for multi-site designations, so the part list is reviewed by a human before the run (H7). Locked rather than competing so a part is never connected to its sibling only via a third park. |
+| D17 (CONFIRMED 2026-09-03, H8 closed) | **Squeezed link class.** A non-adjacency edge is `squeezed` when `squeeze_ratio_obs = band_new_km2 / band_cf_km2 < squeeze_ratio` (0.5), where `band_new_km2` is the edge's real band on NEW land (`& ~node_union`) at `cwd_cutoff_abs`, and `band_cf_km2` is the SAME edge banded at the SAME cutoff on a COUNTERFACTUAL surface with every cost class ≥ `squeeze_cf_min_cost` (10) set to 1 — 'how wide would the near-optimal set be if nothing constrained it'. One extra CWD set per seed part (cached `cwd_cache/<sha>_cf`), unit fields derived as in step 1. Reported per edge in `corridor_edges.csv` as `band_new_km2`, `band_cf_km2`, `squeeze_ratio_obs`, `squeezed`; counterfactual band polygons in `bands_counterfactual.gpkg` (the M3 natural-width outline). Class is **disjoint from** the two irreplaceability senses for presentation (irreplaceable takes precedence; the ratio stays in the table). The analytic ellipse index (`squeeze_idx`, methods_log M4.6) that produced the draft map is RETAINED as a screening diagnostic column only. | H8 outcome: the draft map used an analytic index (mean band width ÷ the straight-link open-ground ellipse width); the counterfactual replaces it because it needs no straight-link assumption, both bands share the study-window clipping (the boundary artefact cancels), and it yields a drawable natural width. Area ratio rather than median perpendicular width: equivalent for ribbons, robust, no path-normal geometry. Implemented as `corridors_core.counterfactual_squeeze` (notebook 04 step 2b); synthetic-verified (a cost-1000 wall drives the ratio down monotonically; G13 holds). Measured count on `v2_run002` lands when notebook 04 re-runs. |
 
 ---
 
@@ -81,6 +97,8 @@ grizzly work remains a separate unapproved plan.
 | `multisite_designations` | `["Ecological Reserve", "Wildlife Management Area", "National Wildlife Area", "Migratory Bird Sanctuary"]` | step 0a rule 2; extend from the reviewed list |
 | `multipart_link_km` | `10` | step 0a rule 2 exception distance |
 | intra-name treatment | per name, from reviewed `multipart_review.csv` (`merge_parts` / `link_locked` / `link_competing` / `no_link`) | `link_competing` uses the D7 β ceiling against the cheapest inter-name path between the parts; `no_link` parts are independent nodes in the inter-name graph |
+| `squeeze_ratio` | `0.5` | D17; matches the draft map. Confirmed 2026-09-03 (H8 closed). |
+| `squeeze_cf_min_cost` | `10` | D17: cost classes at or above this are relaxed to 1 on the counterfactual surface (roads, converted land, water/ice). |
 
 These go into `run_config.json` via `resolve()`. `resolve()` should raise if `branch_mult`,
 `branch_min_km2`, or `near_opt_tiers` are absent (same no-dead-flags doctrine as D2).
@@ -203,6 +221,7 @@ evidence (slack difference) and the values evidence. Ranking only — no automat
 | G10 | `near_optimality == 0` exactly on every baseline least-cost path cell; tier classes monotone in slack | step 4a |
 | G11 | per-branch `audit_area_check` discrepancy ≤ 5% for branches ≥ 50 km²; all discrepancies logged | step 4c |
 | G12 | ensemble member count = 1 baseline + 2 (B, excluding the 1× duplicate) + 42 (C) + 2 (D, excluding the 2.5 duplicate) = 47 distinct members; duplicates resolved by config-hash equality, not by name | step 3 |
+| G13 | `band_cf_km2 ≥ band_new_km2 × (1 − 0.02)` for every eligible edge (relaxing barriers can only widen the near-optimal set; the 2% tolerance covers band-edge ties); the `squeezed` count on the baseline is reported and, if it differs from the draft map's 5, the director package's M1/M3/S4 regenerate from the confirmed definition (never the reverse) | notebook 04 step 2b, hard assert |
 
 G1 stays the gate that matters; none of the above replaces it.
 
@@ -214,7 +233,9 @@ G1 stays the gate that matters; none of the above replaces it.
 originals live git-tracked in `audit/audit_objects/`, hash-pinned by `run_config.json`; see
 step 0a and §8), `near_optimality.tif`, `near_optimality_class.tif`, `near_opt_owner.tif`,
 `ensemble_attribution.tif` (+ per-axis), `branches.tif/.gpkg/.csv`,
-`alternatives_branches.csv`, `tiebreak.csv`. All rasters COG, ESRI:102008 at 300 m (audit
+`alternatives_branches.csv`, `tiebreak.csv`; `corridor_edges.csv` gains
+`band_new_km2`, `band_cf_km2`, `squeeze_ratio_obs`, `squeezed` (D17) and
+`bands_counterfactual.gpkg` is written (D17 natural-width polygons). All rasters COG, ESRI:102008 at 300 m (audit
 crossings stay internal), Dublin Core+ metadata written at creation. Every product that is not a
 frequency is named so it cannot be read as one.
 
@@ -227,6 +248,9 @@ frequency is named so it cannot be read as one.
 - Two irreplaceability senses are always reported together and never merged: edge-irreplaceable
   (D7, β ceiling — no alternative link) and route-irreplaceable (D12 — no alternative routing
   within a link).
+- The four presentation classes (securing / both-senses irreplaceable / edge-irreplaceable /
+  squeezed) are derived, disjoint, and defined here (D7, D12, D17), not in the director package.
+  The package renames them; it does not redefine them.
 - Zero-cost adjacency caveat (§7) applies to branch counts: "no corridor needed between touching
   areas" is conditional on IPCA proposals being realised.
 - The climate dimension in this product is audit-only (macrorefugia and `carroll2018_pctl`
@@ -242,6 +266,11 @@ frequency is named so it cannot be read as one.
   until signed.
 - **H6 (new)** — confirm Carroll 2018 current-flow centrality raster is on disk and catalogued;
   if absent, step 4c runs without the column and logs the gap rather than failing.
+- **H8 (new, blocking for the director package)** — Claude Code reports how `squeezed` and
+  "open-ground width" were actually computed for the draft regime map. If it matches D17,
+  mark D17 confirmed; if not, replace D17's definition with the implemented one, update the
+  rationale, and re-check G13. The director package's "already narrowing" class does not ship
+  until this is closed.
 - Decision after step 3: whether to open Phase 7 at all, based on axis C stability.
 
 ---
@@ -356,12 +385,25 @@ Run top-to-bottom, in numeric order, by Ethan. **One run (`v2_runNNN`) spans not
   (H6-guarded: an absent layer logs the gap, doesn't fail) → `alternatives_branches.csv` with
   its caption.
 - **Step 4d** `tiebreak.csv` (ranking only, no recommended flag).
+- **Step 2b (D17, added 2026-09-03)** `cc.counterfactual_squeeze(A)` — one extra CWD set on
+  the relaxed surface (cached), bands at the same cutoff, **G13**, `bands_counterfactual.gpkg`,
+  D17 columns into the edge table; placed before `finish` so `corridor_edges.csv` carries them.
 - `cc.finish(A)` + the `runs.csv` index. The two irreplaceability senses are reported side by
   side per §6. (Absorbs cells 37–39.)
 
 The "decision after step 3" (whether to open Phase 7, based on axis-C stability) sits between
 notebooks 03 and 04 in wall-clock terms but does **not** block 04 — steps 4a–4d are
 climate-free by construction (D14).
+
+### `06_director_package.ipynb` — the October-workshop package (added 2026-09-03)
+
+Read-only over the run via `cc.load_results` + `corridors_director.py` (root module; zero new
+solves): `cd.package` (disjoint D7/D12/D17 classes, axis-C attribution over PROPOSAL drops,
+endpoint classes, jurisdictions, top-k example selection) → `link_profiles` (percentile
+chips) → M1–M4 → profile pages → T1/T2 → draft .pptx via `director_core.build_deck`.
+Outputs → `<run>/director_package/`. The squeezed class is withheld (M1/M3/S4) while
+`corridor_edges.csv` lacks the D17 columns (H8 gate enforced in code). Presentation
+decisions live in the 06 spec.
 
 ### `05_results.ipynb` — deliverable figures + the headline table (added 2026-08-27)
 

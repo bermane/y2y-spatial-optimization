@@ -1,0 +1,58 @@
+{
+ "tenure/GrasslandVegetationInventory.zip": {
+  "url": "https://extranet.gov.ab.ca/srd/geodiscover/srd_pub/biota/Vegetation/GrasslandVegetationInventory.zip",
+  "sha256": "1dc9372c5bf81374aff6ed81cba9fb790909ef334aa3637fe77db967d1ca613b",
+  "bytes": 2230521500,
+  "fetched_utc": "2026-09-03T18:45:42.844750+00:00",
+  "note": ""
+ },
+ "tenure/aci_2024_ab_v2.zip": {
+  "url": "https://agriculture.canada.ca/atlas/data_donnees/annualCropInventory/data_donnees/tif/2024/aci_2024_ab_v2.zip",
+  "sha256": "784c19cd4a7e2f89f0c322f2a0ee1fb7f112aa41da37637e233f905e7b119b4f",
+  "bytes": 114678985,
+  "fetched_utc": "2026-09-03T18:45:57.054567+00:00",
+  "note": ""
+ },
+ "tenure/CrownlandReservations_SHP.zip": {
+  "url": "https://extranet.gov.ab.ca/srd/geodiscover/srd_pub/boundaries/CrownlandReservations_SHP.zip",
+  "sha256": "dca90596ab70916987120250e68fe90f3a4d8771f448b787594f8f0b71455101",
+  "bytes": 29218125,
+  "fetched_utc": "2026-09-03T18:46:01.131450+00:00",
+  "note": ""
+ },
+ "aoi/US_SRP_Zones.zip": {
+  "url": "https://extranet.gov.ab.ca/srd/geodiscover/srd_pub/environment/SRP/US_SRP_Zones.zip",
+  "sha256": "33b1bf812abe92622fe3c1a994fd6724f99f70c6628915c059003844a88b6ba4",
+  "bytes": 220081,
+  "fetched_utc": "2026-09-03T18:46:01.695346+00:00",
+  "note": ""
+ },
+ "aoi/US_SRP_ConservationAreasParks.zip": {
+  "url": "https://extranet.gov.ab.ca/srd/geodiscover/srd_pub/environment/SRP/US_SRP_ConservationAreasParks.zip",
+  "sha256": "a6a32b8710f175214c0a6a658468ee089d21a515c0d26c128073303b7a604923",
+  "bytes": 145157,
+  "fetched_utc": "2026-09-03T18:46:02.258002+00:00",
+  "note": ""
+ },
+ "aoi/US_SRP_PlanningBoundary.zip": {
+  "url": "https://extranet.gov.ab.ca/srd/geodiscover/srd_pub/environment/SRP/US_SRP_PlanningBoundary.zip",
+  "sha256": "1a72faf6f4020ab3fc49900c73a3b536d8ab8cb17787d3d339149ac4db704bec",
+  "bytes": 140497,
+  "fetched_utc": "2026-09-03T18:46:02.865389+00:00",
+  "note": ""
+ },
+ "tenure/green_white_area.gpkg": {
+  "url": "https://geospatial.alberta.ca/titan/rest/services/boundary/asrd_administrative_area/MapServer/1",
+  "sha256": "1f8bfd6fa105c58204b0b2f09a38687599eb120b3b051fad7cd0300af2c5ee08",
+  "bytes": 1875968,
+  "fetched_utc": "2026-09-03T18:46:09.337469+00:00",
+  "note": "39 features, paged REST -> GeoJSON (EPSG:4326)"
+ },
+ "pa/pluz.gpkg": {
+  "url": "https://geospatial.alberta.ca/titan/rest/services/base/land_use_management_10tm_nad83_aep/MapServer/1",
+  "sha256": "855ca44ac94182f70286aa80f50d7fc044a62ea05b24b832f248ddb67144b9b7",
+  "bytes": 856064,
+  "fetched_utc": "2026-09-03T18:46:11.546799+00:00",
+  "note": "61 features, paged REST -> GeoJSON (EPSG:4326)"
+ }
+}

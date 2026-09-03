@@ -1,0 +1,63 @@
+{
+ "H-AB1": {
+  "ghm_leverage_y2y": 0.042,
+  "ghm_leverage_ab": 0.086,
+  "ghm_crosses_lambda": false,
+  "s5_expressible": false,
+  "contrast_delta": {
+   "human_modification": 0.044,
+   "climate_type_macrorefugia": -0.113,
+   "transboundary_connectivity": 0.062,
+   "aoh_richness_birds": -0.116,
+   "aoh_richness_mammals": -0.111
+  },
+  "verdict": "NOT SUPPORTED on the strongest expectation: gHM 0.086 < lambda 0.1; see per-feature deltas"
+ },
+ "H-AB2": {
+  "efg_present": 27,
+  "efg_rare": 20,
+  "efg_unsaturated": 7,
+  "parent": {
+   "present": 40,
+   "rare": 36
+  },
+  "verdict": "SUPPORTED: 27/40 EFGs survive; unsaturated 7 vs parent 4"
+ },
+ "H-AB3": {
+  "msoc_cls_ab": "concentrated-satiating",
+  "msoc_target_ab": 0.322,
+  "msoc_theta_target_ab": 0.322,
+  "parent_target": 0.332,
+  "verdict": "m_soc concentrated-satiating (target 0.322 vs parent 0.332) -- no direction was registered; this IS the finding"
+ },
+ "H-AB5": {
+  "pre_satisfied": [
+   "irrecoverable_carbon_m_soc"
+  ],
+  "banked": {
+   "human_modification": 0.356,
+   "transboundary_connectivity": 0.385,
+   "climate_corridors": 0.36,
+   "climate_type_macrorefugia": 0.456,
+   "irrecoverable_carbon_biomass": 0.239,
+   "irrecoverable_carbon_m_soc": 0.714,
+   "aoh_richness_mammals": 0.325,
+   "aoh_richness_birds": 0.298
+  },
+  "top_residual": [
+   [
+    "irrecoverable_carbon_biomass",
+    0.7609
+   ],
+   [
+    "aoh_richness_birds",
+    0.7016
+   ],
+   [
+    "aoh_richness_mammals",
+    0.6748
+   ]
+  ],
+  "verdict": "1 feature(s) pre-satisfied at lock: ['irrecoverable_carbon_m_soc']; highest residual pull: irrecoverable_carbon_biomass (0.761)"
+ }
+}
