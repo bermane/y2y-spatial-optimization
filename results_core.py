@@ -68,7 +68,7 @@ RAW_SPEC = {
     "human_modification":           ("Intactness",             "intactness 0-1 (mean; 1-gHM)",              "mean",       3),
     "transboundary_connectivity":   ("Connectivity",           "current density, amperes (mean)",          "mean",       2),
     "climate_corridors":            ("Climate corridors",      "current-flow centrality, amperes (mean)",  "mean",       2),
-    "climate_type_macrorefugia":    ("Climate refugia",        "km/yr (mean; refugial value = vmax - backward velocity)", "mean", 2),
+    "climate_type_macrorefugia":    ("Climate refugia",        "yr/km (mean; refugial residence = 1/backward velocity)", "mean", 2),
     "irrecoverable_carbon_biomass": ("Carbon: biomass",        "t C (total)",                              "tonnes",     0),
     "irrecoverable_carbon_m_soc":   ("Carbon: mineral soil",   "t C (total)",                              "tonnes",     0),
     "aoh_richness_mammals":         ("Mammal richness",        "species/cell (mean)",                      "mean",       1),

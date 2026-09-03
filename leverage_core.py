@@ -784,8 +784,14 @@ def swing_per_unit_w(cap_min, cap_max, t=1.0):
 
 
 def scenario_weights(block_shares, within_block=None, targets=None,
-                     handoff_dir=None, budget_pct=None, blocks=None, normalize=True):
+                     handoff_dir=None, budget_pct=None, blocks=None, normalize=True,
+                     layer_paths=None):
     """Derive a scenario's weight vector from an intended influence profile (Gate 1, s3.1).
+
+    `layer_paths` (optional, {feature: path}) substitutes an alternate raster for a feature's
+    swing computation — the CLIMATE-CELL mechanism (spec s3.2, constant-intended-influence):
+    ssp245 cells hold every intended share fixed and re-derive w from the 245 realization's
+    own cap_min/cap_max, so the axis varies the DATA, never the value profile.
 
     Block-level influence budgeting (spec D1, BINDING): `block_shares` assigns each PROACT
     block (config.BLOCKS) its share of DISCRETIONARY influence; `within_block` splits a block's
@@ -830,7 +836,7 @@ def scenario_weights(block_shares, within_block=None, targets=None,
             f"within_block[{block}] must sum to 1, got {sum(wb.values()):.6f}")
         for m in members:
             assert m in cont, f"unknown or excluded feature in blocks: {m}"
-            v = _read(handoff_dir / f"{m}.tif")[pu]
+            v = _read((layer_paths or {}).get(m, handoff_dir / f"{m}.tif"))[pu]
             cap_min, cap_max, _ = leverage_of(v, budget_pct)
             t = float(targets.get(m, 1.0))
             s = swing_per_unit_w(cap_min, cap_max, t)

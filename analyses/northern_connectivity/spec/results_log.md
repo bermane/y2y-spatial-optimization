@@ -29,7 +29,10 @@ Routable 9,696,945 cells = 872,725 km² (v1: 751,614 — v1 inherited the priori
 M6.4). Class shares of in-corridor cells: cost-1 **88.2%**, cost-10 5.4%, cost-100 0.3%,
 cost-1000 6.1%. Effective spread p95/p5 = 1,000× (v1 blend: 10.9×). Log-log correlation with
 the v1 blend over 8.33 M shared cells: **r = +0.270** — the two surfaces are genuinely
-different objects.
+different objects. Figure: `cost_surface_map.png` (05_results; full-extent cost surface BESIDE raw 1 km gHM —
+the D2/A2 visual case: roads survive as continuous barriers at 300 m while 1 km gHM smears
+them; gHM panel power-scaled with the heavy-tail reading note in the notebook caption;
+named-area outlines + provincial borders/towns on both panels).
 
 ## R3. Step 0a — multipart names and the H7 review [0a]
 
@@ -147,5 +150,84 @@ With a 4-class surface and a tight calibrated band, most links offer exactly one
 300 m → 1 km at the fixed 0.5 areal-fraction majority — all positive (systematic inflation on
 ribbons a few cells wide relative to a 1 km cell; the known non-conservation regime of the
 majority rule). Decision 2026-08-27: branch profiling switches to fractional cover weighting
-(exactly area-conserving; reduces to `mask_profile` on binary masks — see M6.5). Steps 4c/4d +
-`finish` to re-run under the new crossing; their results land in R8.4+ when they do.
+(exactly area-conserving; reduces to `mask_profile` on binary masks — see M6.5).
+**Re-run clean same day: G11 max |drift| = 0.04%** (tolerance 5%) — a ~150× improvement on the
+worst branch.
+
+**R8.4 Values table (4c) [run002/alternatives_branches.csv]:** 41 branch rows × 43 cols
+(Y2Y-wide column spec + slack/criticality/Carroll). `carroll2018_pctl` vs the routable-area
+baseline (50): median **42.9**, range 5.8–99.6 — branches as a population sit near the
+baseline; individual links span nearly the full range.
+
+**R8.5 Tie-break (4d) [run002/tiebreak.csv]:** 6 rows over the 3 edges with alternatives.
+Dene Kʼéh Kusān ↔ Liard: primary branch wins on BOTH slack (0 vs 2.8) and values (rank 1.11 vs
+1.89, Carroll 96.3 vs 87.8) — no tension. Liard ↔ Nahanni: primary wins values outright
+(rank 1.00, slack 0); alternative's only edge is Carroll (73.3 vs 68.2). **Tsey Dëk ↔ Tintina
+Trench is the genuine judgment call:** the 152 km² alternative ranks better on values (1.22 vs
+1.78) but costs +3.9 slack; Carroll is identical (6.4 — both routes sit in the lowest decile
+of the Carroll surface). Ranking only; recommendation is a human read (M5.5).
+
+**R8.6 Both-senses irreplaceability [run002/irreplaceability_summary.csv]:** joining the D7
+flag with the D12 branch count, **4 links are irreplaceable in BOTH senses** — no alternative
+link at any price within β AND a single physical route within the link: Gwillim Lake ↔ Pine Le
+Moray, Tatonduk ↔ Fishing Branch, Wilps Gwininitxw ↔ Swan Lake Kispiox, Wədzih Yiné' ↔ Chase.
+The strongest criticality statement the analysis makes. (Edziza↔Stikine and Gladys Lake↔
+Spatsizi are edge-irreplaceable at cost 1.0 — near-touching pairs whose 0.5×-cutoff band left
+no branch ≥ 10 km², so `n_branches` = 0 there; read as trivially-connected neighbours, not as
+having alternatives.)
+
+**Absolute vs relative price of the alternative (added 2026-08-30, `backup_extra_km_equiv`;
+M4.5):** every flagged link HAS an alternative — at a price. In intact-land-km equivalent:
+Gwillim↔Pine Le Moray +116 km (2.6×), Wilps Gwininitxw↔Swan Lake +77 km (4.0×), Wədzih
+Yiné'↔Chase +60 km (16×), Tatonduk↔Fishing Branch +49 km (19×), Edziza↔Stikine +42 km (141×),
+Gladys Lake↔Spatsizi +14 km (47×), Liard internal +6 km (4.6×). The ratio ranking and the
+absolute ranking nearly INVERT — the near-touching pairs have huge ratios but modest absolute
+detours; the long southern links have modest ratios but the largest real replacement costs.
+Report both, always.
+
+**R8.7 The routing-problem geography (M4.6 squeeze index; 2026-08-30)
+[run002/irreplaceability_summary.csv].** The routing regime is geographically coherent, not
+scattered — two clusters + four point chokepoints:
+- **Peace/Hart Ranges cluster (SE corner) — the clearest routing-problem region:** Gwillim
+  Lake↔Monkman squeeze **0.35**, Graham Laurier↔Pine Le Moray **0.38**, Carp Lake↔Pine Le
+  Moray **0.44** (cost/km 5.3, the network's highest), Gwillim↔Kakwa **0.44** — corridors at a
+  third of open-ground width paying 30–60% cost premiums. Corroborated by three independent
+  products: Gwillim↔Pine Le Moray is both-senses irreplaceable (R8.6), and Pine Le Moray is
+  the articulation name whose removal splits the network (R7.2).
+- **Skeena cluster:** Mount Blanchet↔Sustut 0.48, Wilps Gwininitxw↔Mount Blanchet 0.70; plus
+  the both-senses Wilps Gwininitxw↔Swan Lake Kispiox link.
+- **Point chokepoints (irreplaceability without squeeze — replacement geography, not width):**
+  Edziza↔Stikine 141×, Gladys Lake↔Spatsizi 47×, Tatonduk↔Fishing Branch 19×, Wədzih
+  Yiné'↔Chase 16×.
+Everything else — the large majority of corridor land — sits in the securing regime (M1.4).
+Figures: `routing_problem_map.png` (full extent) + `routing_problem_zoom.png` (southern
+cluster, named areas + numbered links with squeeze/ratio/absolute-km legend; Tatonduk↔Fishing
+Branch remains on the full-extent map) + `routing_problem_cost_zoom.png` (triptych: cost |
+links | overlay on the same frame) + `routing_problem_cost_overlay.png` (single figure:
+anchors + flagged links hard-coloured over the live cost ramp — candidate headline figure)
+(05_results).
+
+**R8.7a Cause, visualised (2026-08-31):** in the zoom window the region-wide class mix does NOT
+hold — the Peace-country cost-10 road/seismic network saturates the frame and **Williston
+Reservoir forms a contiguous cost-1000 wall through the middle of the cluster**, which links
+4/5/7 (Mount Blanchet↔Sustut aside, i.e. the Pine Le Moray feeders) visibly route around. The
+squeeze there is driven by real, mapped barrier structure, corroborating R8.7's regime reading
+(with the M4.6 cutline caveat still standing for the SE-corner links).
+
+**R8.8 Priority-link value profiles (2026-08-31, M5.9)
+[run002/priority_links_profile.csv + priority_links_stars_*.png].** The nine numbered links
+star-profiled on the corridor co-benefit axes, with IPCA/PA reference stars. Composite mean
+richness: **link 2 (Wilps Gwininitxw↔Swan Lake) highest at 0.598** (strong macrorefugia,
+corridors, connectivity), link 9 (Gwillim↔Kakwa) 0.525, link 4 (Mount Blanchet↔Sustut) 0.515
+(the biomass-carbon + birds standout); the Peace-cluster links 5–8 run 0.45–0.48,
+mammal/bird-dominated (valley-bottom AOH). References: proposed IPCAs 0.384, existing PAs
+0.433 — **the priority links are on average RICHER land than the anchors they connect**
+(low-elevation permeable valleys vs protected high country), the same gap-analysis pattern the
+corridor-segment stars showed. Link 1 (Edziza↔Stikine, 12 km² contact zone) indicative only.
+Purpose: the consequences input for the PROACT read over the link alternatives (FRAMING 1,
+links-as-alternatives, per the 2026-08-31 decision; branch-level values remain the nested
+route drill-down). Companion map: `priority_links_map.png`.
+
+**R8.9 Campaign complete [runs.csv]:** v2_run002 done = TRUE — first full end-to-end v2
+production run (calibration → baseline → 47-member ensemble → near-optimality → branches →
+values → tiebreak), 2026-08-27.

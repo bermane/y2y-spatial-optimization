@@ -363,6 +363,19 @@ The "decision after step 3" (whether to open Phase 7, based on axis-C stability)
 notebooks 03 and 04 in wall-clock terms but does **not** block 04 — steps 4a–4d are
 climate-free by construction (D14).
 
+### `05_results.ipynb` — deliverable figures + the headline table (added 2026-08-27)
+
+Read-only over a completed run dir via `cc.load_results` — no engine state, no CWD, no
+re-attach; loads in ~a minute so figures iterate freely during writing without touching the
+production pipeline (01–04). Renders the addendum-product figures into the run dir's
+`figures/` — `near_opt_map` + `near_opt_tiers_map` (D11, split; IPCAs burnt orange there, the house
+teal vanishes into viridis/tier greens), `attribution_map` (D15), `branches_map` (D12), and
+the routing-regime set (`routing_problem_map` / `_zoom` / `_cost_zoom` / `_cost_overlay`,
+M1.4/M4.6) — and writes `irreplaceability_summary.csv` (D7 flag + D12 branch count + ensemble
+presence + squeeze/cost-intensity + absolute replacement cost, one row per non-adjacency
+edge). Presentation only: no new estimands (the M4.6 screening index is defined in the
+methods log).
+
 ### Clarifications (structural review 2026-08-21)
 
 Three ambiguities surfaced while mapping the run sequence onto notebooks; each is a proposal to

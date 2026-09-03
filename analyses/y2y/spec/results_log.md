@@ -266,6 +266,13 @@ below the 0.75 band under the 245 layer — the pilot was registered on 585; fin
 gate-fail); crossed s1x 0.697/0.302, s3x 0.584/0.353 — **a deep target WITHOUT the doubled
 carbon weights does not hold the tails** (dose-response completing M6.7: places semantics
 needs target + weights together). S3 gHM audits consistent with R4.1's bias. T1 CSVs in spec/.
+**R8.5b Crossed-formulation target shortfalls (surfaced by 14_gate4_results, 2026-09-01):**
+in s1x/s3x the deep m_soc target is NOT met — captures 0.442 / 0.366 vs t = 0.552 (the S4
+formulations hit 0.552 exactly). A real, correctly-signed shortfall, not a QA failure: with
+S1/S3's low carbon weights, the solver accepts m_soc shortfall rather than pay the area cost.
+Completes the lever picture: **a target binds only as far as its weight makes pursuit
+worthwhile** — under-weighted deep targets are aspirations, not guarantees (pairs with M6.7
+and the tail dose-response). [T1_anchor_captures.csv]
 **R8.6 E11 (F10):** between-anchor discretionary Jaccard 0.373–0.931 (mean 0.520); envelope
 comparison: within-formulation diameters (0.81–1.00) EXCEED between-anchor distances — value
 disagreement fits INSIDE the near-optimal freedom of any single value position. Δ(s,s′)
@@ -274,6 +281,72 @@ sit inside each other's 5% bands — the certified no-regrets form of value plur
 all 26 out-of-band pairs are other anchors under CARBON-FORWARD objectives (Δ 0.085–0.093):
 the deep m_soc target is the one value position whose demands other near-optimal plans
 genuinely fail. E11 CSVs in spec/; F10 regenerated.
+## R9. v0.13 post-R8 round (15 run 2026-09-02; 16/17 PENDING-RUN)
+
+**R9.1 E13 — binding-scarcity mechanism CONFIRMED (zero solves):** S4's f≥0.70 set lies
+**80.8% inside the m_soc θ-tail**; S0's and S2's high-f sets sit only 4–5% on the tail and
+1–4% on the connectivity spike — high frequency follows BINDING CLAIMS, not valued layers
+(the Q2 explanation may now enter Discussion). The EFG-presence mask is uninformative as an
+overlay (EFGs cover ~100% of every high-f set). Decile fingerprints figure written.
+**R9.2 E14 — the aggregate band is NOT a per-value band; E15 trigger FIRED:** in EVERY
+formulation, ~100% of members carry at least one value block below 0.95× its anchor capture
+(e.g., S0 members drop the core-habitat block 0.428 → 0.364, ~15% below anchor). The 5%
+aggregate tolerance is routinely financed by sacrificing whole blocks — itself a paper
+finding about band semantics. E15 (guardrailed band, S0 + S4) authorized by the
+pre-registered rule.
+**R9.3 E17-T2 — the representativeness foundation is strongly southern:** 20/40 EFGs have
+>90% of their footprint south of 53°N; median EFG mean-latitude 48.6°N (several classes
+entirely at 42–44°N). A representativeness-adequacy disclosure regardless of other results;
+per-EFG table in `spec/e17_efg_geography.csv`. T1 latitude profiles figure written.
+**R9.4 E12 bracket — f is estimator-robust; only the diameter is estimator-sensitive (run
+2026-09-02):** corr(f_MGA, f_MAA) = 0.916 / 0.851 / 0.964 (S0/S2/S4); frequent-band sizes
+agree within ~5% (11.2k vs 10.8k; 4.7k vs 4.9k; 28.7k vs 30.1k km²); f=1 cores essentially
+identical. D is lower under MAA (0.66–0.79 vs 0.88–0.98) — expected: random directions do
+not find the extreme diameter, which is precisely why MGA is the right instrument for D
+(a maximizing probe) while f is instrument-independent. **Recommendation: bracket is narrow —
+full-14 MAA unnecessary; report the 3-formulation bracket.**
+**R9.5 E17-T3 — every pre-stated direction confirmed; the EFG foundation is the biggest
+latitudinal force:** vs the S0 anchor's mean discretionary latitude 50.96°N — biodiversity-out
+**+1.18°** north (as pre-stated: AOH mass is southern); carbon-out −1.18° south (as
+pre-stated); connectivity-out −0.96°; core-habitat-out −0.17°; **EFG-out +2.11° north,
+Jaccard 0.695 — the largest single mover.** Combined with R9.3 (20/40 EFGs >90% southern):
+the representativeness foundation is a ~2-degree southern anchor on every plan — the
+formulation's strongest un-chosen geographic lean, now measured causally. → chat (disclosure
++ scenario-reading remedy ladder per spec).
+**R9.6 E8/E9/E10 (run 2026-09-02):** **E8** — m_soc ×10 → Jaccard vs anchor 0.996/0.994 (S0/
+S3), capture identical 0.3320: satiation-inertness CONFIRMED at scale. **E9** — the lever
+justification in one table: weights-only drifts (capture 0.462, uncontrolled, densest-decile
+0.632); the target is the precision instrument (0.332 exact, densest-decile 0.392);
+**log-carbon is the value-destroying instrument (capture 0.266, densest-decile 0.236 — worst
+per-hectare, exactly as the frozen screening predicted).** **E10** — θ3 parks exactly
+(0.5520); **θ10 does NOT bind: capture 0.229 vs target 0.121** — below the incidental
+co-capture level (~0.23 under S0 shares) a target is a non-binding decoration; the corrected
+pass criterion observed in the wild. Capture-vs-θ curve: 0.229 / 0.332 / 0.552 at t = 0.121 /
+0.332 / 0.552.
+**R9.7 E15 — guardrails DOUBLE the nameable land at almost no flexibility cost:** with
+per-block floors (capture_b ≥ 0.95·anchor_b), S0's frequent tier grows **11,247 → 23,108 km²**
+while D falls only 0.953 → 0.913 (C 0.020 → 0.042); S4: 28,748 → 34,787 km² (D 0.875 → 0.854).
+"No value block left behind" buys ~2× the committed area for ~4% of the diameter. **E15b MEASURED (2026-09-03):
+per-VALUE floors add almost nothing beyond the block floors — the commitment curve SATURATES
+at the theme level.** S0: value-guarded frequent 23,996 km² vs block-guarded 23,108 (+4%),
+D 0.909 vs 0.913; S4: 34,427 vs 34,787 (within noise), D 0.850 vs 0.854. Both sweeps clean
+(50/50 members, all certificates, 15 min each — the extra floors also make the solves FASTER,
+~15 vs ~50 min, by shrinking the feasible set). Reading: the plain→block step is the whole
+effect (11.2k→23.1k km² at S0); block→value is marginal — the guardrail dial's natural
+resting point is the elicited theme level, and finer granularity is free but redundant. — the honest
+commitment dial the force-targets discussion was groping toward, at pre-registered secondary
+semantics. → chat: promote to a headline product?
+**R9.8 ERRATUM to R7.6 (found 2026-09-02 during AB-spec verification; supersedes the R7.6
+denominator, strengthens the finding):** the discretionary-cell count is **1,081,885**
+(= 1,272,914 PU − 191,029 locked; matches nb 10's own printed header), not the 1,082,069 in
+R7.6 and `gate2b_reportback.md` — that figure is 1,272,914 − 190,845, i.e. the anchor's
+discretionary-SELECTION size mistaken for the locked count. Re-measured from
+`runs/s0_ssp585_theta5/mga_g10.tif` (all 50 bands) + `anchor.tif`: union at g=10% =
+**1,081,885 of 1,081,885 — EXACTLY every discretionary cell (100.000%), not "≈ every"**. The
+paper sentence gets stronger, not weaker. Same swap appears in spec v0.12 changelog item (4)
+("1,081,885/1,082,069") and AB-spec v0.2's changelog ("1,082,069 discretionary cells");
+AB-spec v0.3's D-AB5 numbers (191,029 locked / 190,845 discretionary selected) are correct.
+
 ## Figure/table candidates (running)
 
 - F8 marginal-density trajectories (θ crossings + area labels) — rendered, final stack.

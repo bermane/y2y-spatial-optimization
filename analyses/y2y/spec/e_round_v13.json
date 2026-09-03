@@ -1,0 +1,106 @@
+{
+  "created_utc": "2026-09-02T20:09:47.043511+00:00",
+  "e14": {
+    "trigger": true,
+    "rule": ">=20% of members below 0.95*anchor block capture in >=1 formulation"
+  },
+  "e9": {
+    "infweights": {
+      "weights": {
+        "climate_type_macrorefugia": 1.449063,
+        "transboundary_connectivity": 0.664295,
+        "climate_corridors": 1.162598,
+        "irrecoverable_carbon_m_soc": 0.513676,
+        "irrecoverable_carbon_biomass": 0.19707,
+        "aoh_richness_birds": 1.318602,
+        "aoh_richness_mammals": 1.694697
+      },
+      "targets": {}
+    },
+    "logcarbon": {
+      "weights": {
+        "climate_type_macrorefugia": 1.367112,
+        "transboundary_connectivity": 0.626726,
+        "climate_corridors": 1.096848,
+        "irrecoverable_carbon_m_soc": 0.880506,
+        "irrecoverable_carbon_biomass": 0.185925,
+        "aoh_richness_birds": 1.24403,
+        "aoh_richness_mammals": 1.598854
+      },
+      "targets": {},
+      "layer_patch": {
+        "irrecoverable_carbon_m_soc": "input_data/aligned_stack/e9_log_msoc.tif"
+      }
+    }
+  },
+  "e10": {
+    "theta10": {
+      "weights": {
+        "climate_type_macrorefugia": 1.457332,
+        "transboundary_connectivity": 0.668086,
+        "climate_corridors": 1.169232,
+        "irrecoverable_carbon_m_soc": 0.476662,
+        "irrecoverable_carbon_biomass": 0.198194,
+        "aoh_richness_birds": 1.326127,
+        "aoh_richness_mammals": 1.704367
+      },
+      "targets": {
+        "irrecoverable_carbon_m_soc": 0.121
+      }
+    },
+    "theta3": {
+      "weights": {
+        "climate_type_macrorefugia": 1.460613,
+        "transboundary_connectivity": 0.66959,
+        "climate_corridors": 1.171864,
+        "irrecoverable_carbon_m_soc": 0.461975,
+        "irrecoverable_carbon_biomass": 0.198641,
+        "aoh_richness_birds": 1.329113,
+        "aoh_richness_mammals": 1.708205
+      },
+      "targets": {
+        "irrecoverable_carbon_m_soc": 0.552
+      }
+    }
+  },
+  "e17_t3": {
+    "expectations": {
+      "biodiversity": "selection shifts NORTH (AOH mass is southern)",
+      "efg": "UNKNOWN -- that is the point of the run",
+      "carbon": "selection shifts SOUTH-of-current? pre-stated: south (tail is southern-interior)",
+      "core_habitat": "shifts toward richness/carbon country (refugia mass is northern-interior)",
+      "connectivity": "small shift (diffuse)"
+    },
+    "blocks": {
+      "core_habitat": [
+        "climate_type_macrorefugia"
+      ],
+      "connectivity": [
+        "transboundary_connectivity",
+        "climate_corridors"
+      ],
+      "carbon": [
+        "irrecoverable_carbon_m_soc",
+        "irrecoverable_carbon_biomass"
+      ],
+      "biodiversity": [
+        "aoh_richness_birds",
+        "aoh_richness_mammals"
+      ]
+    }
+  },
+  "e12": {
+    "formulations": [
+      "s0_ssp585_theta5",
+      "s2_ssp585_theta5",
+      "s4_ssp585_theta3"
+    ],
+    "k": 50,
+    "g": 0.05,
+    "seeds": {
+      "s0_ssp585_theta5": 20260902,
+      "s2_ssp585_theta5": 20260903,
+      "s4_ssp585_theta3": 20260904
+    }
+  }
+}

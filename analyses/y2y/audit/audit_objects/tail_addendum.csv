@@ -1,0 +1,3 @@
+feature,cls,lever,target,leverage,cap_min,cap_max,theta_area,theta_target,derived_from,provenance
+m_soc_tail,rare-attainable,none (saturates free),1.0,1.0,0.0,1.0,0.0406,1.0,irrecoverable_carbon_m_soc,"post-execution addendum (v0.10 D-B, motivated by M6.7); frozen v0.3 constants"
+biomass_tail,rare-attainable,none (saturates free),1.0,1.0,0.0,1.0,0.0117,0.998,irrecoverable_carbon_biomass,"post-execution addendum (v0.10 D-B, motivated by M6.7); frozen v0.3 constants"

@@ -256,24 +256,15 @@ BLOCKS = {
     "biodiversity": ["aoh_richness_birds", "aoh_richness_mammals"],
 }
 
-# ---- Derived theta-tail carbon features (spec v0.10 D-B -- the PLACES axis) ---------------
-# Two masked-DENSITY layers derived from the stack parents (built by analyses/y2y/
-# 08_gate2a_tails.ipynb): cell value = parent density where >= AUDIT["theta"] x the regional
-# mean, else 0 -- so a tail feature's captured fraction is the share of TAIL MASS secured, and
-# t = 1.0 secures the whole tail (0.95 fallback pre-authorized in the spec). Motivated by M6.7
-# (a total-capture target secures an AMOUNT, not places: S0's m_soc target binds exactly while
-# its tail captures only 0.435); disclosed as a post-execution addition, audited under the
-# UNCHANGED frozen s2.5 rules (expected class: rare-attainable).
-# write_manifest puts them in EVERY analysis' stack as feature_continuous at target 0.0 --
-# mathematically ABSENT (a 0-target feature's constraint row has rhs 0 and its shortfall
-# column has zero nonzeros; verified) -- and ONLY carbon-forward cells override to 1.0.
-# POSITIONAL CONSTRAINT (do not move): the manifest must list these BEFORE the EFG block,
-# because R-side pr_weights builds the weight vector positionally as
-# c(rep(1, n_cont), rep(1/n_efg, n_efg)) over manifest order.
-TAIL_FEATURES = {
-    "m_soc_tail":   "irrecoverable_carbon_m_soc",
-    "biomass_tail": "irrecoverable_carbon_biomass",
-}
+# ---- Theta-tail carbon features: RESCINDED (Ethan, 2026-08-28) ----------------------------
+# The v0.10 "places locks" and v0.11's pre-authorized escalation are BOTH withdrawn: tail
+# masks will NOT enter the formulation as separate features. S4 expresses places through pure
+# (w, t) on the existing stack, scored by the pilot's pre-registered acceptance band; if the
+# pilot fails, the response is a design discussion, not an automatic formulation change.
+# The knowledge is kept as backup, not as live machinery: methods_log M2.9/M4.13/M4.14,
+# audit_objects/tail_addendum.csv (both tails verified rare-attainable), the two built layers
+# in aligned_stack/_v010_tails_quarantine/, and the archived notebook
+# analyses/y2y/archive/08b_contingency_tails_RESCINDED.ipynb (git history has the wiring).
 
 # ---- Sub-regional analyses (03a / 03b / 03c) ----------------------------
 # Three prioritizr analyses share ONE preprocessing step (02's aligned stack); they differ
@@ -994,8 +985,8 @@ CLIMATE_SCENARIOS = {
 # Unlike CLIMATE_SCENARIOS above (raw velocity, diagnostic-only), these two are STACK-GRADE
 # feature layers: oriented 1/v, dust-thresholded, PU-masked -- built by 02's closing section
 # into their own namespace below. write_manifest never globs that folder, so the canonical
-# manifest is untouched; Gate-3/4 ensemble cells point the macrorefugia layer path here per
-# cell (patch-a-copy, ensemble_core-style). The 1/v orientation is per-realization -- no shared
+# manifest is untouched; Gate-3/4 ensemble formulations point the macrorefugia layer path here
+# per formulation (patch-a-copy, ensemble_core-style). The 1/v orientation is per-realization -- no shared
 # anchor parameter exists (the six-realization leverage span is 0.42-0.52; the additive
 # `vmax - v` flip that NEEDED a shared anchor is superseded).
 CLIMATE_REALIZATIONS = ("245_2071_2100", "585_2071_2100")
@@ -1140,23 +1131,6 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
             )
         )
 
-    # Derived theta-tail carbon features (spec v0.10 D-B). MUST come before the EFG block:
-    # pr_weights assigns weights positionally (all continuous rows, then all EFG rows), so a
-    # tail entry after the EFGs would silently hand weight 1.0 to the first two EFGs. Skipped
-    # with a warning while the layers are unbuilt (pre-Gate-2a stacks stay valid).
-    for tail_name, parent in TAIL_FEATURES.items():
-        tp = handoff_dir / f"{tail_name}.tif"
-        if not tp.exists():
-            print(f"NOTE: {tail_name}.tif not in the stack yet (run 08_gate2a_tails) -- omitted")
-            continue
-        layers.append(
-            layer_meta(
-                tp, tail_name, "feature_continuous",
-                citation=f"derived theta-tail mask of {parent} (spec v0.10; "
-                         f"{DATASETS[parent]['citation']})",
-            )
-        )
-
     # Categorical EFG features (kept survivors from 02; minus exclusions).
     efg_citation = DATASETS["iucn_efg"]["citation"]
     for p in sorted((handoff_dir / "iucn_efg").glob("*.tif")):
@@ -1217,16 +1191,7 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
             # problem order, so it cannot silently drift out of alignment with the feature stack
             # (a bare vector would apply the wrong target to the wrong feature with no error).
             # Same guard pattern as feature_weight_multipliers.
-            # Tail features default to 0.0 (mathematically absent) for EVERY analysis unless
-            # the analysis (or a per-cell override) explicitly activates them -- the safety
-            # property behind "in every stack, absent outside carbon-forward" (spec v0.10).
-            # Only injected once the layers exist in the stack, so pre-Gate-2a manifests are
-            # unchanged.
-            "targets": {
-                **{t: 0.0 for t in TAIL_FEATURES
-                   if (handoff_dir / f"{t}.tif").exists()},
-                **a.get("targets", {}),
-            },
+            "targets": a.get("targets", {}),
             "opt_gap": OPT_GAP,
             # Gurobi accuracy switch (2026-08-26): TRUE = prioritizr's numeric_focus, i.e. Gurobi
             # NumericFocus. REQUIRED for trustworthy optimality certificates on this problem: the

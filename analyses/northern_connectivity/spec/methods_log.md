@@ -35,6 +35,17 @@ rule; quantitative outcomes live there, methods decisions here);
   signal); the co-benefit audit at 1 km (every value layer is natively 1 km; profiling a 300 m
   mask would inflate "% of Y2Y" ~11×). Masks cross via areal-fraction ≥ 0.5
   (`corridors_core._to_audit`); `audit_area_check` reports the crossing discrepancy.
+- **M1.4 Reporting rule — state the near-Euclidean mechanism (2026-08-30).** With 88% of the
+  window at cost-1, least-cost routes through intact country are near-straight lines and slack
+  ≈ distance off the direct line; the corridor ribbons are, to first order, "the direct links,
+  bent around barriers." State this plainly (same doctrine as the leverage/Morris mechanism
+  statement in the prioritizr work): the paper's claims rest on the products this does NOT
+  reduce to — the irreplaceability ratios (what the landscape offers when the best route is
+  taken away: barrier geometry × anchor constellation), the network-topology results (16/42
+  articulation names, load-bearing anchors — properties of the PA/IPCA system, not the
+  surface), and the priced exceptions where directness fails. Framing: the northern landscape
+  is permeable enough that connectivity is a SECURING problem, not a routing problem — the
+  contribution is locating and pricing where that forgiveness runs out.
 
 ## 2. Resistance surface
 
@@ -108,10 +119,31 @@ rule; quantitative outcomes live there, methods decisions here);
   is undefined inside a quotient supernode, as for adjacencies), so their land appears in
   `corridors.tif` and the near-optimality surface but contributes nothing to
   `linkage_priority.tif`.
+- **M4.6 Squeeze index (2026-08-30, screening diagnostic).** Per link: mean band width
+  (band_km2 / centreline_km) divided by the OPEN-GROUND expectation — on uniform cost-1 the
+  band is a distance-ellipse with midpoint half-width sqrt(dL/2 + d²/4), d = cutoff/3.33 km;
+  mean width = (π/4) × midpoint width. squeeze_idx ≈ 1 ⇒ geometry alone confines the corridor
+  (securing regime); ≪ 1 ⇒ the landscape has removed the alternatives (routing regime).
+  cost_per_km (3.33 = pure intact) flags barrier crossings en route. NaN for routes < 2 km
+  (near-touching pairs; ratios undefined). A SCREENING INDEX, not an estimand: the ellipse
+  normalisation assumes a straight link on uniform cost, AND width loss conflates two causes —
+  costly flanks (the signal) and clipping by the study-window cutline / NoData (an artefact for
+  links hugging the Y2Y boundary, e.g. the SE-corner Gwillim/Monkman/Kakwa group, whose squeeze
+  values are therefore somewhat overstated). Disambiguate with cost_per_km: > 3.33 means even
+  the optimal route pays crossings — the Peace cluster fires both signals, so its routing-regime
+  reading stands on more than width alone (2026-08-31). Serves M1.4's reporting rule —
+  `routing_problem_map` paints corridor land by regime (both-senses irreplaceable /
+  edge-irreplaceable / squeezed < 0.5 / securing).
 - **M4.5 Irreplaceable-flag semantics (for the paper):** the flag records "no affordable DIRECT
-  backup existed when the bridge was processed." Later backups can close cycles that cover a
-  flagged edge incidentally — its criticality row then shows `disconnects = False` with a
-  finite (large) `cost_inflation`. Always read the flag together with those columns.
+  backup existed when the bridge was processed" — affordable = within β; an alternative always
+  exists at SOME price, and `backup_ratio` is that price. Later backups can close cycles that
+  cover a flagged edge incidentally — its criticality row then shows `disconnects = False` with
+  a finite (large) `cost_inflation`. Always read the flag together with those columns, AND
+  (2026-08-30) with `backup_extra_km_equiv` = the ABSOLUTE price of the alternative in
+  intact-land-km: the ratio alone misleads for near-touching pairs (direct cost ~1 makes any
+  go-around look enormous — Edziza↔Stikine is 141× but only ~+42 km absolute; Gwillim↔Pine Le
+  Moray is 2.6× but ~+116 km; the Liard internal link 4.6× but ~+6 km). Report ratio and
+  absolute together, always.
 
 ## 5. Products
 
@@ -151,6 +183,35 @@ rule; quantitative outcomes live there, methods decisions here);
   writing; the 47 existing members' `edges.csv` were repaired mechanically from their (always
   correct) labels and `edge_frequency.csv` regenerated. First-collect edge frequencies are
   SUPERSEDED and not citable; member corridors/attribution rasters were never affected.
+
+- **M5.9 Priority-link star profiles (2026-08-31, for the PROACT consequences input):** the
+  nine numbered routing-regime links profiled through the SAME co-benefit machinery as the
+  corridor segments (`mask_profile` richness/contribution/efficiency, 1 km audit grid,
+  0.5-majority crossing — the G5-anchored path, so the stars are directly comparable with the
+  existing corridor/IPCA/PA stars; NOT the fractional crossing, which is branch-table-specific
+  M6.5). Link land = the cells each link OWNS on the priority surface (`edge_owner` partition —
+  unique attribution, no double counting between overlapping bands). IPCA/PA reference rows
+  appended. Link 1 (Edziza↔Stikine) is a 12 km² contact zone — profile flagged indicative.
+  Outputs: `priority_links_profile.csv` + `priority_links_stars_{richness,contribution,
+  efficiency}.png` + `priority_links_map.png` (the framing-1 companion map: each link's owned
+  land in its star colour, numbered — map/stars/CSV cross-reference by number AND colour;
+  PROACT uses FRAMING 1, links-as-alternatives; branch values/tiebreak stay the nested
+  route-level drill-down) (05_results). **2026-08-31: RAW native-unit columns added to
+  BOTH tables** (`priority_links_profile.csv` and `alternatives_branches.csv`) —
+  completing the Y2Y-wide three-table spec (contribution/efficiency/raw, units from
+  RAW_SPEC); in passing, RAW_SPEC's stale macrorefugia unit label (still describing
+  vmax − v) corrected to the 1/v orientation (also logged y2y M2.10).
+- **M5.10 Background reference layers (2026-09-01, DISPLAY-ONLY):** the zoom figures
+  (routing_problem_zoom / _cost_zoom / _cost_overlay, priority_links_map) carry
+  provincial borders (Natural Earth 10m admin-1 lines, public domain, in
+  `input_data/basemap/` with README) and a curated town list (hand-entered WGS84
+  coordinates in `corridors_core._TOWNS` — chosen over NE populated-places, which is
+  unreliable for small northern-BC towns). Enters NO computation; skips gracefully if
+  the shapefile is absent.
+- **M5.8 Results notebook (2026-08-27, presentation only):** `05_results.ipynb` +
+  `cc.load_results` render the addendum-product figures and the joined
+  `irreplaceability_summary.csv` read-only from a run dir — no engine state, no new estimands;
+  figures write into the run dir's `figures/` so provenance stays with the run.
 
 ## 6. Audit / profiling methods
 

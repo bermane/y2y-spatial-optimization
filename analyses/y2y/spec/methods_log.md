@@ -140,6 +140,20 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   budget-independent archive (Lorenz + marginal curves; target at any θ or budget = lookup;
   layer sha256s pin the stack version).
 
+- **M3.6** **Accounting extents, stated explicitly (2026-09-02, prompted by review):**
+  (1) ALL characterization quantities — leverage, cap_min/cap_max, θ-cutoffs and tails,
+  implied targets, archived curves — are computed over the FULL 1,272,914-cell PU extent,
+  locked PAs included. (2) The solve uses explicit lock-in (lb = 1; PA cells remain in the
+  matrix), so locked amounts COUNT toward relative targets — the PA estate pre-banks 12.3%
+  (biomass) to 19.2% (refugia) of each feature's total; m_soc's 0.332 target needs only 15.6
+  further points from discretionary land (17.6% banked). (3) The 30% budget INCLUDES locked
+  area (191,029 of 381,874 cells = 50.0%). No mixed accounting (no exclusion-plus-deduction
+  variant). DISCLOSURE: audit capacities are unconstrained-by-lock-in, while the solve is
+  lock-conditional — the feasible capture range is shifted (floor ≥ banked share; ceiling
+  from the 85% unprotected pool). Leverage/swing therefore describe budget CAPACITY;
+  realized influence operates on the lock-conditional set — one mechanism behind the R8.5
+  structural intended-vs-realized misses.
+
 ## 4. Optimization formulation
 
 - **M4.1** `min_shortfall` objective, 30%-of-area budget (381,874 cells), existing PAs locked in

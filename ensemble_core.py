@@ -247,6 +247,17 @@ def _alloc(path):
         return s.read(1, masked=True).astype("float32").filled(np.nan)
 
 
+def read_selections(path, pu):
+    """Every band of a selection raster as a boolean (n_solutions x n_pu) matrix.
+
+    `pu` = the boolean planning-unit mask (leverage_core.pu_mask()). Handles both a
+    multi-band stack (MGA members, k-best pool) and a single-band anchor/portfolio —
+    always returns 2-D. Lifted from 10_gate2b_analysis for the Gate-4 ensemble analysis."""
+    with rasterio.open(path) as s:
+        B = s.read(masked=True)
+    return (B.filled(0) > 0.5)[:, pu] if B.ndim == 3 else (B.filled(0) > 0.5)[None, pu]
+
+
 def collect(tag, design, drop_freq=None):
     """Read every finished run into (tidy DataFrame, allocation matrix, domain mask).
 

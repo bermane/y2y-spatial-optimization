@@ -140,7 +140,7 @@ limit, and the "capture lands at target (not above)" pass criterion that co-capt
 remain owed to a future revision; the validation notebook keeps the measured-corrected verdicts.
 **SPEC NOW v0.9.1 (2026-08-27): Gate 0a/0 ratified COMPLETE; the owed corrections were absorbed
 (w=t RETIRED as a Gate-0-only convention; S4 = θ 3× → m_soc t 0.552; E5 HiGHS arm dropped;
-climate axis SSP245 vs SSP585 both 2071–2100 → 14 serial cells). GATE 1 DONE (run clean
+climate axis SSP245 vs SSP585 both 2071–2100 → 14 serial formulations). GATE 1 DONE (run clean
 2026-08-27):** the pre-registered biomass θ-tail diagnostic came back **capture 1.000 → (a)
 mass-proportional split 74.2/25.8** (co-capture hypothesis REFUTED: 98.9% of tail mass is
 independent selection — only 1.0% of the biomass tail overlaps the m_soc θ-tail; caveat:
@@ -154,28 +154,72 @@ FIRED (pivot decision with chat before Gate 3): pool k=50 g=5% returned 50 near-
 conditional cells, Jaccard 0.9999, objective span 3.2e-6) because PoolSearchMode=2's k-BEST
 enumeration never samples the g-band (M6.6; candidate fix = Brunel-style MGA ~1 min/solve);
 costs: LP twin 6,516 s (HiGHS pathology, worst yet) / single 55 s / pool 1,799 s = 32.8× →
-14-cell ensemble ≈7 h; T1: biomass capture 31.0% (co-benefit achieved) but θ-tail expectation
+14-formulation ensemble ≈7 h; T1: biomass capture 31.0% (co-benefit achieved) but θ-tail expectation
 FAILED (tail mass 0.425; M6.7: total-capture targets don't protect dense tails — co-capture
 satisfies claims off-tail); S0 LP 100% integral, LP-vs-MILP Jaccard 0.9957. Full numbers
-results_log R6.** **SPEC NOW v0.10 (2026-08-28), GATE 2a/2b BUILT awaiting Ethan's run:**
+results_log R6.** **SPEC NOW v0.11 (2026-08-28); GATE 2a/2b COMPLETE 2026-08-30: S4 pilot
+PASSED (tail capture m_soc 0.960 / biomass 0.772 vs band 0.75 — pressure redirected capture
+dense-first, +1.9 pts total; F9 ready) and MGA verdict = PLATEAU-RICH (D 0.953 / C 0.020 at
+g=5%, rule hash v2_8db80fed1c702638; CORE EROSION: always-core 22,866 cells @2% → 3,829 @5% →
+ZERO @10%, union ≈ every discretionary cell — "any cell CAN, almost none is REQUIRED"; two-
+instrument geometry: sharp unique optimum on wide shallow bowl = the E5 story; MGA ~32 min
+total, iterations 10–16 s → ensemble ≈45–60 min/formulation). Report-back =
+spec/gate2b_reportback.md; **SPEC v0.12/v0.12.1 RATIFIED GATE 3 + added E11. GATES 3+4
+COMPLETE 2026-09-01 (results_log R8; gate4_reportback.md → chat for GATE 5): manifest frozen
+d45668bb… (pre-registration committed); 13 formulations solved (~22 h wall; s3_ssp585 pool hit
+the 12 h limit at 38/50 — disclosed; anchors exact 44–58 s; every LP twin ≤ MILP).
+HEADLINES: ensemble ALWAYS band EMPTY (0 km² at F≥0.95; frequent tier 6,816 km²;
+F_surface.tif = deliverable); E1 hierarchical-vs-naive bias mean 0.169 / max 0.755 (Claim A
+vindicated); E3 within-formulation 95.2% / scenario 4.4% / climate 0.2% (estimator-
+conditional); D_s 0.809–1.000 all plateau-rich, S5 = 1.000 exactly; E7 captures move ±4–9 pts
+while maps hit Jaccard 0.373 (places not outcomes; S4@245 biomass tail 0.716 marginally under
+the 585-registered band; crossed formulations prove target-without-weights fails tails);
+E11 anchors Jaccard 0.373–0.931, 156/182 ordered pairs mutually in-band (no-regrets
+pluralism), all 26 failures under carbon-forward objectives; Δ-diagonal self-check caught a
+245-layer bug, fixed, diag ≤9.3e-6 (M5.11). E8–E10 → notebook 16. **SPEC v0.13/.13.1 (2026-09-02): GATE 5 entered in
+parallel with the post-R8 round — BUILT as 15_post_r8_diagnostics (py, zero-solve: E13
+CONFIRMED binding-scarcity, S4 high-f 80.8% inside the m_soc θ-tail; E14 trigger FIRED —
+members sacrifice whole blocks inside the 5% band, so E15 runs; E17-T1/T2 latitude
+attribution, 20/40 EFGs >90% southern; E9/E10 arms + e9_log_msoc.tif derived; writes
+spec/e_round_v13.json) → 16_supplementary_solves (R: E12 MAA bracket ×3 formulations via
+seeded `maa_generate`, E17-T3 five leave-one-block-out anchors, E8 ×10-satiation, E9 two
+arms incl. log-layer patch, E10 θ-solves, E15 guardrailed MGA via `mga_block_floors` —
+~3–5 h, resumable) → 17_e_round_analysis (py verdicts). E16 resolved to the sanctioned
+F-clustering fallback (min-boundary MILP fails the compute gate). Notebook 14 =
+gate4 results/decision views (presentation-grade, results_core star standard). Logs:
+M4.18, R9.1–R9.6. Build record:** `11_gate3_freeze` (py: 14-formulation manifest.csv + sha256 =
+the pre-registration; S5 = S0 + gHM×10 Claim-B demonstration; crossed s1x/s3x = shares held,
+regime flipped alone; ssp245 = constant-intended-influence re-derivation via
+`scenario_weights(layer_paths=…)`; reference formulation points kbest/twin at the Gate-2 record) →
+`12_gate4_ensemble` (R: hash-verifies the freeze, two base contexts — 245 patches
+`ctx$layers$path` before ingest — per cell kbest 50@5% + Gurobi-proportion twin + MGA
+anchor/members into `runs/<formulation_id>/`, flat cell layout, per-artifact resumable, DRY-PLAN
+cell first, ~10 h serial, live internet) → `13_gate4_analysis` (py: F + bands +
+F_surface.tif, E1 bias, E2 definitional, E3 variance shares + crossed contrast, E7 per-cell
+captures/θ-tails/gHM audits → T1 CSVs, E11 Jaccard + Δ(s,s′) matrices → F10; helper
+`ensemble_core.read_selections`). E8–E10 = notebook 14, post-ensemble. Build record:**
 D-A(a) = estimand RE-REGISTERED on MGA diversity generation (`mga_core.R`, toy-verified:
 band-wall row `obj0·x ≤ (1+g)z*` appended to the COMPILED prioritizr model, linear
 max-sum-Hamming distance objective over discretionary pu columns + 1e-3·obj0 shortfall-pinning
 for honest per-member certificates, direct gurobi calls, warm starts; k-best pool kept
-one-per-cell = E5 discharged by design); D-B = amount-vs-places axis (S0 UNCHANGED; S4 adds
-places locks: `m_soc_tail`/`biomass_tail` masked-DENSITY features in EVERY manifest at
-**t=0.0 = mathematically absent** — pr_targets now allows [0,1]; manifest emits tails BEFORE
-EFGs because pr_weights is positional; write_manifest injects 0.0 defaults for ALL analyses);
-"weight sets depth not order" REFUTED (v0.10 §2.5); no iterate-once (structural); ensemble LP
-twins on Gurobi path + HiGHS spot-check ×2. Run order: **08_gate2a_tails** (py: tails +
-frozen-rule re-audit expect rare-attainable + addendum cards + scenarios_v2.json + manifest
-10-continuous check) → **09_gate2b_mga** (R: anchor with t=0-equivalence assert vs 5.362813,
-then k=50 MGA at g=5% + 2%/10% probes, ~2.5–3 h, resumable per g, live internet, outputs →
-`runs/cell_s0_ssp585_theta5/`) → **10_gate2b_analysis** (py: **PRE-REGISTERED verdict rule v2
-frozen before the run** — D = maxHam/(2·m_disc), C = f=1 core share, over anchor+members,
-discretionary only: PLATEAU-RICH iff D≥0.10 ∧ C≤0.90; NEAR-UNIQUE iff D<0.02 ∨ C>0.98 →
-Claims-B+C pivot; conditional-% reported NOT ruled — MGA inflates it; + f(g) core-erosion =
-E4's central product) → verdict to chat = Gate 3 freeze vs pivot. Build record:**
+one-per-formulation = E5 discharged by design). S4 = pure (w,t) on the EXISTING 8-feature stack
+(t=0.552 + block-doubled weights), judged by ONE certified pilot against the **pre-registered
+band: θ-tail mass capture ≥0.75 BOTH pools** (S0 ref 0.435/0.425). **TAIL FEATURES RESCINDED
+(Ethan 2026-08-28, M4.14): no separate tail values in the formulation, ever, without a new
+decision — v0.10's locks AND v0.11's pre-authorized t=0.8 contingency both withdrawn; pilot
+failure → chat. Knowledge kept as backup only (executed verification: both tails
+rare-attainable, exact T2 matches; layers in `aligned_stack/_v010_tails_quarantine/`;
+archived notebook `analyses/y2y/archive/08b_contingency_tails_RESCINDED.ipynb`; config wiring
+removed, in git history). pr_targets now allows [0,1] (kept — correct generalization).**
+Run order: **08_gate2a_pilot** (R: writes scenarios_v2 = v1 verbatim + band meta; solves
+`iter10_y2y_s4_pilot`; scores band in-notebook, ~2 min) → **09_gate2b_mga** (R: anchor with
+reproducibility assert vs 5.362813, then k=50 MGA at g=5% + 2%/10% probes, ~2.5–3 h,
+resumable per g, live internet, outputs → `runs/s0_ssp585_theta5/`) →
+**10_gate2b_analysis** (py: **PRE-REGISTERED verdict rule v2 frozen before the run** —
+D = maxHam/(2·m_disc), C = f=1 core share, over anchor+members, discretionary only:
+PLATEAU-RICH iff D≥0.10 ∧ C≤0.90; NEAR-UNIQUE iff D<0.02 ∨ C>0.98 → Claims-B+C pivot;
+conditional-% reported NOT ruled — MGA inflates it; + f(g) core-erosion = E4's central
+product) → verdict to chat = Gate 3 freeze vs pivot. Build record:**
 `analyses/y2y/06_gate2_pool.ipynb` (R) solves S0 three ways into three folders — LP twin
 `iter9_y2y_s0_lp`, certified single `iter9_y2y_s0_single` (opt_gap 1e-4), THE POOL
 `iter9_y2y_s0_pool` (portfolio_n=50, portfolio_gap=0.05; cost unknown = the measurement; needs
@@ -357,7 +401,7 @@ nothing reaches `aligned_stack/`, the manifest, or a solve (`write_manifest` bui
 - **Outputs = COGs** in `input_data/aligned_stack/` (`HANDOFF_DIR`; EFGs in `iucn_efg/`):
   continuous features + cost are float32/NaN-NoData; EFGs + `mask_protected_areas` are
   uint8 with `255`=NoData (so EFG `0` stays a valid value).
-- Final cell validates: identical grid, NoData consistency, **matching PU cell counts**,
+- Final cell validates: identical grid, NoData consistency, **matching PU formulation counts**,
   non-negativity, orientation spot-check. Grid = **1286 × 3312**, PU = **1,272,914 cells**;
   hand-off = 9 continuous + cost + PA mask + **40 EFGs**.
 - **Last cell writes `aligned_stack/manifest.json`** via `config.write_manifest()` — the
@@ -460,14 +504,18 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 > **CAMPAIGN MOVED (2026-08-21): the corridor analysis now runs from `analyses/northern_connectivity/`**
 > (4 notebooks: 01_prep_and_parts → H7 human sign-off → 02_calibrate_baseline → 03_ensemble →
 > 04_alternatives; spec = `spec/05_corridors_v2_addendum_run_and_alternatives.md`, D11–D16 on top of
-> D1–D10). Engine modules stay at repo root; this root notebook is superseded and gets archived after
-> the first end-to-end run. **BINDING (same convention as the y2y flagship):**
+> D1–D10). Engine modules stay at repo root; the root monolith is ARCHIVED at
+> `archive/05_corridors_north_v2_monolith.ipynb`. **BINDING (same convention as the y2y flagship):**
 > `analyses/northern_connectivity/spec/methods_log.md` + `spec/results_log.md` are the living paper
 > registers — update them in the SAME session as any methods change or new result; supersede, never
-> delete. Status 2026-08-27: baseline SOLVED (`v2_run002`: cutoff 13.62 → 18,150 km² MST-only,
-> 58 edges, 33,041 km² new corridor land, 7 β-irreplaceable links); NB03 ensemble + NB04
-> alternatives pending. Two fixes this session live in the logs (adjacency-band abs-mode M4.3,
-> richness stretch-domain M6.2).
+> delete. **Status 2026-08-27: CAMPAIGN RUN END-TO-END (`v2_run002`)** — cutoff 13.62 → 18,150 km²
+> MST-only; 58 edges, 33,041 km² new corridor land; **7 β-irreplaceable links + 35 route-irreplaceable
+> edges; 16 of 42 name-drops disconnect the network** (axis C); 41-branch values table + tiebreak
+> done. Four fixes measured into the logs during first execution: adjacency-band abs-mode (M4.3),
+> richness stretch-domain (M6.2), ensemble edge identity (M5.7), fractional branch crossing (M6.5,
+> G11 0.04%). `docs/05_methods_v2.md` patched with D11–D16 + measured gates. Remaining: deferred
+> Phases 5–8 (H1–H6) + the two flagged open methods questions (locked-edge centrality; no_link
+> direct-edge exclusion).
 
 Standalone corridor analysis, NOT prioritizr: it **routes** between anchor areas, which the
 prioritizr connectivity penalty could not do (that aggregates permeable land; it cannot answer "how

@@ -1648,10 +1648,14 @@ def alternatives_table(A):
                    route_irreplaceable=bool(e.get("route_irreplaceable", False)),
                    edge_irreplaceable=bool(e.get("irreplaceable", False)),
                    edge_cost=float(e["cost"]), ecfb_raw=e.get("ecfb_raw"))
+        units = [rc.RAW_SPEC[n][1] or "index" for n in P.cont] \
+            + [f"groups present (of {len(P.efg)})"]
+        dps = [rc.RAW_SPEC[n][3] for n in P.cont] + [0]
         for j, ax in enumerate(P.axes_labels):
             row[f"{ax} | richness"] = round(prof[j], 3)
             row[f"{ax} | contribution %"] = round(contrib[j], 4)
             row[f"{ax} | efficiency"] = round(eff[j], 4)
+            row[f"{ax} | raw [{units[j]}]"] = round(float(rawv[j]), dps[j])
         if pct_grid is not None:
             row["carroll2018_pctl"] = round(pct_grid(P.cont_raw[carroll_k], w), 1)
             row["carroll2018_pctl_ref"] = 50.0       # routable-area baseline, by construction
@@ -2100,17 +2104,80 @@ def _region_extent(A, pad=0.05):
     return (x0 - dx, x1 + dx), (y0 - dy, y1 + dy)
 
 
-def _nodes_overlay(A, ax, XL, YL, pa_mask, anch, legend=False):
-    for layer, col in [(pa_mask, PA_COLOR), (anch, ANCHOR_COLOR)]:
+def _nodes_overlay(A, ax, XL, YL, pa_mask, anch, legend=False,
+                   pa_color=PA_COLOR, anchor_color=ANCHOR_COLOR):
+    # pa_color/anchor_color overrides exist for figures whose data colormap collides with the
+    # house colours -- e.g. the near-optimality maps, where the muted-teal IPCA reads as part
+    # of the viridis ramp / tier greens (user-flagged 2026-08-31).
+    for layer, col in [(pa_mask, pa_color), (anch, anchor_color)]:
         _da(A, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
             ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
     A.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--")
     ax.set_xlim(*XL); ax.set_ylim(*YL)
     if legend:
-        ax.legend(handles=[Patch(color=PA_COLOR, label="existing PAs"),
-                           Patch(color=ANCHOR_COLOR, label="proposed IPCAs")],
+        ax.legend(handles=[Patch(color=pa_color, label="existing PAs"),
+                           Patch(color=anchor_color, label="proposed IPCAs")],
                   loc="lower left", fontsize=8, frameon=True)
     ax.set_aspect("equal"); ax.set_axis_off()
+
+
+# On the near-optimality figures the data colormaps (viridis_r ramp; green tier fills) swallow
+# the house teal, so proposed IPCAs get burnt orange there -- absent from both palettes.
+NEAR_OPT_ANCHOR_COLOR = "#d95f02"
+
+
+# ---- background reference for the zoom figures (DISPLAY-ONLY; enters no computation) ------
+# Provincial borders: Natural Earth 10m admin-1 boundary lines (public domain), downloaded
+# 2026-09-01 into input_data/basemap/ (README.txt there). Towns: a curated list of well-known
+# settlements with WGS84 coordinates -- curated rather than NE populated-places because NE is
+# unreliable for small northern-BC towns, and a transparent hand list is easier to audit.
+_TOWNS = {
+    "Fort St. John": (56.25, -120.85), "Dawson Creek": (55.76, -120.24),
+    "Fort Nelson": (58.81, -122.70), "Mackenzie": (55.34, -123.09),
+    "Chetwynd": (55.70, -121.63), "Tumbler Ridge": (55.13, -120.99),
+    "Hudson's Hope": (56.03, -121.91), "Prince George": (53.92, -122.75),
+    "Smithers": (54.78, -127.17), "Hazelton": (55.26, -127.67),
+    "Terrace": (54.52, -128.60), "Fort St. James": (54.44, -124.25),
+    "Dease Lake": (58.44, -130.01), "Telegraph Creek": (57.90, -131.16),
+    "Iskut": (57.84, -129.98), "Watson Lake": (60.06, -128.71),
+    "Whitehorse": (60.72, -135.06), "Atlin": (59.58, -133.70),
+    "Ross River": (61.98, -132.45), "Faro": (62.23, -133.35),
+    "Mayo": (63.60, -135.90), "Dawson City": (64.06, -139.43),
+    "Tsay Keh": (56.90, -124.96), "Fort Ware (Kwadacha)": (57.43, -125.63),
+}
+_ADMIN_PATH = "basemap/ne_10m_admin_1_states_provinces_lines.shp"
+
+
+def _draw_basemap(R, ax, XL, YL, towns=True, max_towns=10):
+    """Provincial borders + towns on a zoom axes. Cached on R; skips gracefully (with a note)
+    if the Natural Earth file is absent. DISPLAY-ONLY: nothing here enters any computation."""
+    import matplotlib.patheffects as pe
+    if not hasattr(R, "_admin"):
+        p = config.INPUT_DIR / _ADMIN_PATH
+        if p.exists():
+            tr = pyproj.Transformer.from_crs(R.crs, "EPSG:4326", always_xy=True)
+            xs = (float(R.template.x.min()), float(R.template.x.max()))
+            ys = (float(R.template.y.min()), float(R.template.y.max()))
+            lons, lats = zip(*[tr.transform(x, y) for x in xs for y in ys])
+            R._admin = gpd.read_file(
+                p, bbox=(min(lons) - 2, min(lats) - 2, max(lons) + 2, max(lats) + 2)
+            ).to_crs(R.crs)
+        else:
+            R._admin = None
+            print(f"  note: {p} absent -- provincial borders skipped "
+                  f"(see input_data/basemap/README.txt)")
+        tr = pyproj.Transformer.from_crs("EPSG:4326", R.crs, always_xy=True)
+        R._towns = [(n, *tr.transform(lon, lat)) for n, (lat, lon) in _TOWNS.items()]
+    if R._admin is not None and len(R._admin):
+        R._admin.plot(ax=ax, color="0.15", linewidth=1.0, linestyle=(0, (6, 3)),
+                      alpha=0.75, zorder=4)
+    if towns:
+        for n, x, y in [(n, x, y) for n, x, y in R._towns
+                        if XL[0] < x < XL[1] and YL[0] < y < YL[1]][:max_towns]:
+            ax.plot(x, y, marker="o", ms=3.5, color="0.1", mec="white", mew=0.8, zorder=6)
+            ax.annotate(n, (x, y), xytext=(4, 4), textcoords="offset points", fontsize=7.5,
+                        color="0.1", zorder=6,
+                        path_effects=[pe.withStroke(linewidth=2.0, foreground="white")])
 
 
 def compare(A, other, pad=0.05, label_a=None, label_b=None):
@@ -2431,6 +2498,802 @@ def corridor_profile(A, n_groups=10):
     print(f"  wrote {out.name}")
     A.profile = dict(P=P, C=C, table=df)
     return A
+
+
+# ================= results context (05_results notebook) =================
+# Read-only, engine-free: everything below draws from a run dir's ON-DISK artifacts (rasters,
+# tables, node_parts.gpkg) -- no resistance, no CWD cache, no MCP. That is what lets figure
+# styling iterate in minutes without ever touching the production pipeline (notebooks 01-04).
+
+def load_results(run_dir):
+    """Open a completed run for figures/tables only. Assembles a lightweight namespace from the
+    run dir alone; loads in ~a minute."""
+    run_dir = pathlib.Path(run_dir)
+    rec = json.loads((run_dir / "run_config.json").read_text())
+    summary = json.loads((run_dir / "corridor_summary.json").read_text())
+
+    def _open(name, sub=""):
+        p = run_dir / sub / name
+        return rioxarray.open_rasterio(p, masked=True).squeeze() if p.exists() else None
+
+    template = _open("corridors.tif")
+    R = _NS(run_dir=run_dir, fig_dir=run_dir / "figures", rec=rec, summary=summary,
+            run_id=rec["run_id"], region_label=rec["cfg"]["region_label"],
+            cfg=rec["cfg"], cutoff=summary["cwd_cutoff_abs"],
+            template=template, crs=template.rio.crs, transform=template.rio.transform(),
+            shape=template.shape)
+    rx, ry = template.rio.resolution()
+    R.cell_km2, R.cell_km = abs(rx * ry) / 1e6, abs(rx) / 1000.0
+
+    R.corridor = np.nan_to_num(template.values, nan=0) > 0
+    R.priority = _open("linkage_priority.tif")
+    R.near_opt = _open("near_optimality.tif")
+    R.near_opt_class = _open("near_optimality_class.tif")
+    R.attribution = _open("ensemble_attribution.tif", "ensemble")
+    R.attr_axis = {k: _open(f"attribution_{k}.tif", "ensemble")
+                   for k in ("B_cutoff", "C_loo", "D_beta")}
+    R.branch_label = _open("branches.tif")
+    R.edge_owner = _open("edge_owner.tif")
+    R.resistance = _open("resistance.tif")
+
+    R.edges = pd.read_csv(run_dir / "corridor_edges.csv", index_col=0)
+    R.branches = pd.read_csv(run_dir / "branches.csv")
+    ef = run_dir / "ensemble" / "edge_frequency.csv"
+    R.edge_freq = pd.read_csv(ef, index_col=0) if ef.exists() else None
+    alt = run_dir / "alternatives_branches.csv"
+    R.alternatives = pd.read_csv(alt) if alt.exists() else None
+
+    # node overlays from the H7 gpkg; IPCA/PA kind from the label prefix
+    parts = gpd.read_file(run_dir / "node_parts.gpkg").to_crs(R.crs)
+    R.pa_mask = np.zeros(R.shape, bool)
+    R.anch = np.zeros(R.shape, bool)
+    for _, row in parts.iterrows():
+        m = rasterize([(row.geometry, 1)], out_shape=R.shape, transform=R.transform,
+                      fill=0, dtype="uint8").astype(bool)
+        (R.anch if str(row["name_label"]).startswith("IPCA") else R.pa_mask)[m] = True
+    R.outline = gpd.read_file(config.CORRIDOR_REF).to_crs(R.crs)
+    # the 1 km audit grid (pinned; see AUDIT_TEMPLATE) -- needed by the value-profiling views
+    R.audit_template = rioxarray.open_rasterio(config.HANDOFF_DIR / AUDIT_TEMPLATE,
+                                               masked=True).squeeze()
+    print(f"{R.run_id}: results context loaded ({len(R.edges)} edges, {len(R.branches)} "
+          f"branches, corridor {int(R.corridor.sum())*R.cell_km2:,.0f} km²)")
+    return R
+
+
+def priority_links_map(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35):
+    """The framing-1 companion MAP to priority_link_stars: each numbered link's OWNED corridor
+    land (edge_owner partition -- the exact land the stars profile) in the SAME tab10 colour as
+    its star plot, so map <-> stars <-> priority_links_profile.csv cross-reference by both
+    number and colour (the 04 clusters convention). Securing-regime corridor in light grey for
+    context; named areas labelled as in the zoom."""
+    import matplotlib.patheffects as pe
+    e, classes, owner, order, links, XL, YL = _zoom_links(R, squeeze_max, south_of_frac, pad_km)
+    xs, ys = R.template.x.values, R.template.y.values
+    ordered = sorted(links, key=lambda t: t[2][:, 0].mean())
+
+    w = 12.5 * (XL[1] - XL[0]) / (YL[1] - YL[0])
+    fig, ax = plt.subplots(figsize=(w + 3.0, 13))
+    link_codes = [order[k] for k, _, _ in ordered]
+    rest = R.corridor & ~np.isin(owner, link_codes)
+    _da(R, np.where(rest, 1.0, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap=ListedColormap(["#c9d2d6"]), add_colorbar=False)
+    for layer, col in [(R.pa_mask, PA_COLOR), (R.anch, ANCHOR_COLOR)]:
+        _da(R, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    handles = []
+    for n, (k, _, cells) in enumerate(ordered, 1):
+        col = rc.CLUSTER_CMAP((n - 1) % 10)
+        m = (owner == order[k]) & R.corridor
+        if m.any():
+            _da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+        r = e.loc[k]
+        ax.annotate(str(n), (xs[int(np.median(cells[:, 1]))], ys[int(np.median(cells[:, 0]))]),
+                    fontsize=10, fontweight="bold", ha="center", va="center",
+                    bbox=dict(boxstyle="circle,pad=0.28", fc="white", ec=col, lw=1.8))
+        handles.append(Patch(color=col,
+                             label=f"{n}. {_short_node_name(r['label_i'], 16)} ↔ "
+                                   f"{_short_node_name(r['label_j'], 16)} "
+                                   f"({m.sum() * R.cell_km2:,.0f} km²)"))
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+
+    from shapely.geometry import box as _box
+    frame = _box(XL[0], YL[0], XL[1], YL[1])
+    parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+    for _, row in parts.dissolve(by="name_label").reset_index().iterrows():
+        clip = row.geometry.intersection(frame)
+        if clip.is_empty or clip.area < 25e6:
+            continue
+        pt = clip.representative_point()
+        ax.annotate(_short_node_name(row["name_label"], 20), (pt.x, pt.y),
+                    fontsize=8.5, ha="center", va="center", fontstyle="italic",
+                    color=("#1a6363" if str(row["name_label"]).startswith("IPCA") else "0.25"),
+                    path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
+
+    _draw_basemap(R, ax, XL, YL)
+    handles += [Patch(color="#c9d2d6", label="other corridor land (securing regime)"),
+                Patch(color=PA_COLOR, label="existing PAs"),
+                Patch(color=ANCHOR_COLOR, label="proposed IPCAs"),
+                plt.Line2D([0], [0], color="0.15", lw=1.0, ls=(0, (6, 3)), label="provincial border")]
+    ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.16, 0.5),
+              fontsize=8.5, frameon=True)
+    ax.set_title(f"{R.region_label} — the nine priority links (PROACT alternatives)\n"
+                 f"colours and numbers match the value-profile star plots and "
+                 f"priority_links_profile.csv", fontsize=12)
+    fig.savefig(R.fig_dir / "priority_links_map.png", dpi=160, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def priority_link_stars(R, squeeze_max=0.5, south_of_frac=0.40, include_reference=True):
+    """Value-profile STAR PLOTS for the numbered priority links (the PROACT consequences
+    input): one star per link, same estimands and machinery as the corridor co-benefit audit
+    (richness / contribution / efficiency via results_core.mask_profile on the 1 km audit
+    grid, 0.5-majority crossing -- the G5-anchored path, so these stars are directly comparable
+    with the corridor/IPCA/PA stars already produced).
+
+    Link land = the cells each link OWNS on the priority surface (edge_owner partition -- the
+    same attribution the routing-problem maps use, so no double counting between overlapping
+    bands). Numbering matches the zoom/board figures (north -> south). Reference rows for
+    proposed IPCAs and existing PAs are appended for the gap-analysis read.
+    Writes priority_links_stars_{richness,contribution,efficiency}.png + a
+    priority_links_profile.csv row per link (corridor_profile.csv format)."""
+    e, classes, owner, order, links, XL, YL = _zoom_links(R, squeeze_max, south_of_frac, 35)
+    P = _profile_stacks(R)
+
+    areas = []
+    for n, (k, col, cells) in enumerate(sorted(links, key=lambda t: t[2][:, 0].mean()), 1):
+        m = np.zeros(R.shape, bool)
+        m[cells[:, 0], cells[:, 1]] = True
+        r = e.loc[k]
+        name = (f"{n}. {_short_node_name(r['label_i'], 14)} ↔ "
+                f"{_short_node_name(r['label_j'], 14)}")
+        areas.append((name, m, rc.CLUSTER_CMAP((n - 1) % 10)))
+    if include_reference:
+        areas += [("proposed IPCAs", R.anch, ANCHOR_COLOR), ("existing PAs", R.pa_mask, PA_COLOR)]
+
+    print("  crossing masks 300 m -> 1 km for profiling:")
+    audit = {}
+    for name, m, _ in areas:
+        audit[name] = _to_audit(R, m)
+        audit_area_check(R, m, name[:38])
+
+    C = dict(ids=[n for n, _, _ in areas], colors={n: c for n, _, c in areas},
+             names={n: n for n, _, _ in areas},
+             cnt={n: int(audit[n].sum()) for n, _, _ in areas},
+             profs={}, contrib={}, eff={}, raw={})
+    for name, _, _ in areas:
+        if not audit[name].any():
+            print(f"  {name}: too narrow for the 1 km audit grid -- skipped")
+            C["ids"].remove(name)
+            continue
+        C["profs"][name], C["contrib"][name], C["eff"][name], C["raw"][name] = \
+            rc.mask_profile(P, audit[name])
+
+    for metric in ("richness", "contribution", "efficiency"):
+        rc.plot_stars(P, C, metric,
+                      f"{R.region_label} — priority-link value profiles (PROACT consequences)\n"
+                      f"links routed for permeability, never for value — low axes are findings,"
+                      f" not failures",
+                      f"priority_links_stars_{metric}.png")
+
+    # raw native units per axis, straight from RAW_SPEC (imported, not redefined -- the third
+    # table of the Y2Y-wide consequences family)
+    units = [rc.RAW_SPEC[n][1] or "index" for n in P.cont] + [f"groups present (of {len(P.efg)})"]
+    dps = [rc.RAW_SPEC[n][3] for n in P.cont] + [0]
+    rows = []
+    for name, m, _ in areas:
+        if name not in C["ids"]:
+            continue
+        rows.append(dict(area=name, km2=round(int(m.sum()) * R.cell_km2),
+                         km2_audit_grid=round(int(audit[name].sum()) * P.cell_km2),
+                         pct_y2y=round(100 * int(audit[name].sum()) / P.n_region_full, 3),
+                         **{f"{ax} | richness": round(C["profs"][name][j], 3)
+                            for j, ax in enumerate(P.axes_labels)},
+                         **{f"{ax} | contribution %": round(C["contrib"][name][j], 3)
+                            for j, ax in enumerate(P.axes_labels)},
+                         **{f"{ax} | efficiency": round(C["eff"][name][j], 3)
+                            for j, ax in enumerate(P.axes_labels)},
+                         **{f"{ax} | raw [{units[j]}]": round(float(C["raw"][name][j]), dps[j])
+                            for j, ax in enumerate(P.axes_labels)}))
+    df = pd.DataFrame(rows)
+    out = R.run_dir / "priority_links_profile.csv"
+    df.to_csv(out, index=False, encoding="utf-8-sig")
+    print(f"  wrote {out.name} ({len(df)} rows) + priority_links_stars_*.png")
+    return df
+
+
+def cost_surface_map(R, pad=0.05):
+    """Full-extent movement-cost surface beside raw gHM — the comparison behind D2/A2.
+
+    Left: the O'Brien 4-class surface at 300 m (the routing input; log ramp, class shares in
+    the title). Right: Theobald gHM at the 1 km audit resolution (power-scaled colour — the
+    layer is heavy-tailed and a linear ramp hides everything below towns). Same extent, same
+    overlays. The point the pairing makes: the cost surface carries roads as continuous linear
+    barriers at 300 m, while 1 km gHM smears them toward invisibility -- the reason 05 routes
+    on the published surface at native resolution (A2) rather than a gHM blend (D2)."""
+    from matplotlib.colors import PowerNorm
+    XL, YL = _region_extent(R, pad)
+    cost = R.resistance.values
+    fin = cost[np.isfinite(cost) & (cost > 0)]
+    shares = {int(c): 100 * float((fin == c).sum()) / fin.size for c in (1, 10, 100, 1000)}
+    parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+    bounds = parts.dissolve(by="name_label").boundary
+    handles = [plt.Line2D([0], [0], color="#2b6a6a", lw=1, label="named-area boundaries"),
+               plt.Line2D([0], [0], color="0.15", lw=1.0, ls=(0, (6, 3)),
+                          label="provincial border"),
+               plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")]
+
+    fig, axes = plt.subplots(1, 2, figsize=(21, 12.5))
+    ax = axes[0]
+    _da(R, np.where(cost > 0, cost, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap="magma_r", norm=LogNorm(vmin=1, vmax=1000), add_colorbar=True,
+        cbar_kwargs=dict(label="movement cost — 4 ordinal classes only (log colour scale; "
+                               "intermediate shades do not occur)", shrink=0.55))
+    bounds.plot(ax=ax, color="#2b6a6a", linewidth=0.6)
+    R.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--")
+    _draw_basemap(R, ax, XL, YL, max_towns=12)
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+    ax.legend(handles=handles, loc="lower left", fontsize=9, frameon=True)
+    ax.set_title(f"Movement cost (O'Brien/Pither, 300 m)\n"
+                 f"class shares: cost-1 {shares[1]:.1f}% · 10 {shares[10]:.1f}% · "
+                 f"100 {shares[100]:.1f}% · 1000 {shares[1000]:.1f}%", fontsize=12)
+
+    ax = axes[1]
+    gp = config.PROJECT_DIR / "input_data" / "cleaned_aligned" / "human_modification.tif"
+    if gp.exists():
+        ghm = rioxarray.open_rasterio(gp, masked=True).squeeze() \
+            .rio.clip_box(minx=XL[0], miny=YL[0], maxx=XL[1], maxy=YL[1])
+        ghm.plot.imshow(ax=ax, cmap="magma_r", norm=PowerNorm(0.4, vmin=0, vmax=1),
+                        add_colorbar=True,
+                        cbar_kwargs=dict(label="global human modification (raw gHM, 0–1; "
+                                               "power-scaled colour)", shrink=0.55))
+        ax.set_title("Human modification (Theobald gHM v3 at the 1 km audit grid)\n"
+                     "continuous index; linear features smear toward invisibility at 1 km",
+                     fontsize=12)
+    else:
+        ax.text(0.5, 0.5, "cleaned_aligned/human_modification.tif absent",
+                ha="center", va="center", transform=ax.transAxes)
+    bounds.plot(ax=ax, color="#2b6a6a", linewidth=0.6)
+    R.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--")
+    _draw_basemap(R, ax, XL, YL, max_towns=12)
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+
+    fig.suptitle(f"{R.region_label} — the routing input vs the footprint index it replaces "
+                 f"(D2/A2: roads survive at 300 m; 1 km gHM smears them)", fontsize=13)
+    fig.tight_layout()
+    fig.savefig(R.fig_dir / "cost_surface_map.png", dpi=150, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def near_opt_map(R, pad=0.05):
+    """D11 deliverable figure 1 of 2: the wall-to-wall near-optimality (slack) surface."""
+    XL, YL = _region_extent(R, pad)
+    slack = R.near_opt.values
+    fig, ax = plt.subplots(figsize=(12, 13))
+    lo, hi = max(R.cutoff / 10.0, 1e-2), float(np.nanpercentile(slack[slack > 0], 99.5))
+    _da(R, np.where(np.isfinite(slack), np.maximum(slack, lo), np.nan).astype("float32")) \
+        .plot.imshow(ax=ax, cmap="viridis_r", norm=LogNorm(vmin=lo, vmax=hi),
+                     add_colorbar=True,
+                     cbar_kwargs=dict(label="slack above the least-cost route "
+                                            "(raw cost units; log COLOUR scale)",
+                                      shrink=0.55))
+    _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch, legend=True,
+                   anchor_color=NEAR_OPT_ANCHOR_COLOR)
+    ax.set_title(f"{R.region_label} — near-optimality surface (D11): min slack over all links\n"
+                 f"a slack surface, NOT a frequency; cutoff {R.cutoff:,.1f} sits at the low end",
+                 fontsize=12)
+    fig.savefig(R.fig_dir / "near_optimality_map.png", dpi=150, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def near_opt_map_board(R, pad=0.05,
+                       title="Keeping the North Connected",
+                       subtitle="Searching for low-cost movement corridors between protected "
+                                "areas and proposed IPCAs",
+                       footnote="Based on landscape structure (human footprint and natural "
+                                "barriers), not tracked animal movement. Yellowstone to Yukon "
+                                "— northern BC & Yukon analysis.",
+                       label_top_n=12,
+                       label_overrides={"Tū Łī́dlini": "Tū Łī́dlini (Ross River)",
+                                        "Northern Rocky": ("Northern Rocky Mountains",
+                                                           25_000, -30_000)}):
+    """PRESENTATION variant of the near-optimality surface (board audience; separate file,
+    the science figure near_opt_map is untouched). Plain-language framing, no decision codes,
+    larger type, and the structural-claim caveat carried as a footnote instead of jargon."""
+    XL, YL = _region_extent(R, pad)
+    slack = R.near_opt.values
+    fig, ax = plt.subplots(figsize=(12, 13.5))
+    lo, hi = max(R.cutoff / 10.0, 1e-2), float(np.nanpercentile(slack[slack > 0], 99.5))
+    _da(R, np.where(np.isfinite(slack), np.maximum(slack, lo), np.nan).astype("float32")) \
+        .plot.imshow(ax=ax, cmap="viridis_r", norm=LogNorm(vmin=lo, vmax=hi),
+                     add_colorbar=True,
+                     cbar_kwargs=dict(label="extra travel cost of passing through this land\n"
+                                            "(bright = on or near a best route)",
+                                      shrink=0.5))
+    _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch, legend=False,
+                   anchor_color=NEAR_OPT_ANCHOR_COLOR)
+    ax.legend(handles=[Patch(color=PA_COLOR, label="existing protected areas"),
+                       Patch(color=NEAR_OPT_ANCHOR_COLOR, label="proposed IPCAs")],
+              loc="lower left", fontsize=11, frameon=True)
+
+    # label the biggest named areas (board readability: sparse, haloed, short names)
+    if label_top_n:
+        import matplotlib.patheffects as pe
+        names = (gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+                 .dissolve(by="name_label").reset_index())
+        names["km2"] = names.geometry.area / 1e6
+        # greedy declutter, biggest first. The exclusion zone approximates the TEXT BOX, not a
+        # point: a 9 pt label spans ~150 km of map at this scale, so the test is anisotropic
+        # (wide in x, shallow in y) -- a plain radius either drops nothing or drops everything.
+        placed = []
+        for _, row in names.sort_values("km2", ascending=False).iterrows():
+            if len(placed) >= label_top_n:
+                break
+            pt = row.geometry.representative_point()
+            if any(abs(pt.x - x) < 150_000 and abs(pt.y - y) < 32_000 for x, y in placed):
+                continue
+            placed.append((pt.x, pt.y))
+            is_ipca = str(row["name_label"]).startswith("IPCA")
+            # fragment-matched display overrides (board wording: e.g. "Ross River" for
+            # Tū Łī́dlini). A tuple value = (text, dx_m, dy_m) to nudge a long label clear of
+            # its neighbours.
+            ov = next((v for k, v in (label_overrides or {}).items()
+                       if k in str(row["name_label"])), None)
+            disp, dx, dy = (ov if isinstance(ov, tuple)
+                            else (ov or _short_node_name(row["name_label"], 18), 0, 0))
+            ax.annotate(disp, (pt.x + dx, pt.y + dy),
+                        fontsize=9, ha="center", va="center", fontstyle="italic",
+                        color=("#7a3402" if is_ipca else "0.2"),
+                        path_effects=[pe.withStroke(linewidth=2.4, foreground="white")])
+
+    fig.suptitle(title, fontsize=20, fontweight="bold", y=0.97)
+    ax.set_title(subtitle, fontsize=13, pad=12)
+    fig.text(0.5, 0.015, footnote, ha="center", fontsize=9, color="0.35")
+    fig.savefig(R.fig_dir / "near_optimality_map_board.png", dpi=180, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def near_opt_tiers_map(R, pad=0.05):
+    """D11 deliverable figure 2 of 2: the pre-registered near-optimality tiers."""
+    XL, YL = _region_extent(R, pad)
+    cls = np.nan_to_num(R.near_opt_class.values, nan=0)
+    colors = ["#1a9850", "#a6d96a", "#ffffbf"]          # robust / frequent / occasional
+    fig, ax = plt.subplots(figsize=(12, 13))
+    _da(R, np.where(cls > 0, cls, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap=ListedColormap(colors), vmin=0.5, vmax=3.5, add_colorbar=False)
+    _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch,
+                   anchor_color=NEAR_OPT_ANCHOR_COLOR)
+    km2 = {c: int((cls == c).sum()) * R.cell_km2 for c in (1, 2, 3)}
+    ax.legend(handles=[Patch(color=colors[0], label=f"robust core ({km2[1]:,.0f} km²)"),
+                       Patch(color=colors[1], label=f"frequent ({km2[2]:,.0f} km²)"),
+                       Patch(color=colors[2], label=f"occasional (rest of routable)"),
+                       Patch(color=PA_COLOR, label="existing PAs"),
+                       Patch(color=NEAR_OPT_ANCHOR_COLOR, label="proposed IPCAs")],
+              loc="lower left", fontsize=9, frameon=True)
+    ax.set_title(f"{R.region_label} — near-optimality tiers "
+                 f"(slack percentiles over the 2× union band)", fontsize=12)
+    fig.savefig(R.fig_dir / "near_optimality_tiers_map.png", dpi=150, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def attribution_map(R, pad=0.05, core=None):
+    """D15 figure: ensemble attribution + the three per-axis panels, robust-core contour on the
+    main panel. Attribution, not frequency: ~42/47 members are leave-one-out."""
+    core = core if core is not None else R.cfg["ensemble"].get("robust_core_freq", 0.9)
+    XL, YL = _region_extent(R, pad)
+    panels = [("all 47 members", R.attribution),
+              ("axis B — band cutoff × {0.5, 1, 2}", R.attr_axis["B_cutoff"]),
+              ("axis C — leave-one-out by name (42)", R.attr_axis["C_loo"]),
+              ("axis D — β ∈ {1.5, 2.5, 4}", R.attr_axis["D_beta"])]
+    fig, axes = plt.subplots(2, 2, figsize=(16.5, 19))
+    for ax, (title, da) in zip(axes.ravel(), panels):
+        a = da.values
+        _da(R, np.where(a > 0, a, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap="magma", vmin=0, vmax=1, add_colorbar=True,
+            cbar_kwargs=dict(label="share of members using the cell", shrink=0.5))
+        if title.startswith("all"):
+            ax.contour(R.template.x, R.template.y, (np.nan_to_num(a, nan=0) >= core),
+                       levels=[0.5], colors=["#00d0ff"], linewidths=0.8)
+        _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch, legend=False)
+        if title.startswith("all"):
+            # the contour is an OVERLAY, not a colour on the ramp -- it needs its own legend
+            # entry or it reads as an unexplained colour (user-reported, 2026-08-30)
+            ax.legend(handles=[
+                plt.Line2D([0], [0], color="#00d0ff", lw=1.5,
+                           label=f"robust core (attribution ≥ {core:g})"),
+                Patch(color=PA_COLOR, label="existing PAs"),
+                Patch(color=ANCHOR_COLOR, label="proposed IPCAs")],
+                loc="lower left", fontsize=9, frameon=True)
+        ax.set_title(title, fontsize=11)
+    fig.suptitle(f"{R.region_label} — ensemble ATTRIBUTION (which assumption a cell depends on;"
+                 f" not a selection frequency)", fontsize=13)
+    fig.tight_layout()
+    fig.savefig(R.fig_dir / "ensemble_attribution_map.png", dpi=140, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def branches_map(R, pad=0.05):
+    """D12 figure: route-irreplaceable branch land in a muted tone; the edges with genuine
+    alternatives highlighted, one colour per edge (primary branch solid, alternative lighter)."""
+    from matplotlib.colors import to_rgb
+    XL, YL = _region_extent(R, pad)
+    lab = np.nan_to_num(R.branch_label.values, nan=0).astype(int)
+    br = R.branches.reset_index(drop=True)
+    br["value"] = np.arange(1, len(br) + 1)             # branches.tif values follow row order
+    multi = br.groupby("edge_id").filter(lambda g: len(g) > 1)
+
+    fig, ax = plt.subplots(figsize=(13, 12))
+    base = np.isin(lab, br.loc[~br.index.isin(multi.index), "value"])
+    _da(R, np.where(base, 1.0, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap=ListedColormap(["#c9b8a0"]), add_colorbar=False)
+    handles = [Patch(color="#c9b8a0",
+                     label=f"route-irreplaceable branches "
+                           f"(n = {int(R.edges.get('route_irreplaceable', pd.Series()).sum())} edges)")]
+    for k, (eid, g) in enumerate(multi.groupby("edge_id")):
+        col = np.asarray(to_rgb(plt.get_cmap("tab10")(k)))
+        pair = f"{g.iloc[0].label_i.split(' · ')[-1]} ↔ {g.iloc[0].label_j.split(' · ')[-1]}"
+        for j, r in enumerate(g.sort_values("k").itertuples()):
+            c = tuple(col * (1 - 0.45 * j) + 0.45 * j * np.array([1, 1, 1]))
+            _da(R, np.where(lab == r.value, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap([c]), add_colorbar=False)
+            handles.append(Patch(color=c, label=f"{pair} — branch {r.k} "
+                                                f"({r.area_km2:,.0f} km², slack {r.min_slack:.1f})"))
+    _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch)
+    handles += [Patch(color=PA_COLOR, label="existing PAs"),
+                Patch(color=ANCHOR_COLOR, label="proposed IPCAs")]
+    ax.legend(handles=handles, loc="lower left", fontsize=8.5, frameon=True)
+    ax.set_title(f"{R.region_label} — route branches (D12): {len(br)} branches; "
+                 f"alternatives exist on {multi.edge_id.nunique()} links only", fontsize=12)
+    fig.savefig(R.fig_dir / "branches_map.png", dpi=150, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def _edge_squeeze(edges, cutoff, cost_per_km_intact=10.0 / 3.0):
+    """Per-link routing-constraint diagnostics (M4.6): mean band width vs the OPEN-GROUND
+    expectation, plus cost intensity.
+
+    On uniform cost-1 ground the band is a distance-ellipse: for route length L and detour
+    allowance d = cutoff / 3.33 km, the midpoint half-width is sqrt(dL/2 + d²/4), and an
+    ellipse's mean width is (π/4) x its midpoint width. squeeze_idx = actual mean width /
+    that expectation: ~1 = geometry alone confines the corridor (SECURING regime, land
+    interchangeable); << 1 = the landscape has eaten the alternatives (ROUTING regime).
+    cost_per_km ≈ 3.33 = pure intact land; higher = barrier crossings en route. The ellipse
+    normalisation assumes a straight link on uniform cost — a screening index, not an estimand.
+    """
+    e = edges.copy()
+    d = cutoff / cost_per_km_intact
+    # width/L ratios are meaningless for near-touching pairs (routes of 1-2 cells): NaN under 2 km
+    L = e["centreline_km"].where(e["centreline_km"] >= 2.0)
+    e["width_km"] = (e["band_km2"] / L).round(1)
+    e["squeeze_idx"] = (e["width_km"] /
+                        ((np.pi / 4) * 2 * np.sqrt(d * L / 2 + d * d / 4))).round(2)
+    e["cost_per_km"] = (e["cost"] / L).round(1)
+    return e
+
+
+def _routing_classes(R, squeeze_max=0.5):
+    """The routing-regime edge classes shared by routing_problem_map and its zoom panel."""
+    e = _edge_squeeze(R.edges, R.cutoff)
+    ri = e.get("route_irreplaceable", pd.Series(False, index=e.index))
+    both = e.index[(e["irreplaceable"] == True) & (ri == True)]
+    irr = e.index[(e["irreplaceable"] == True) & ~e.index.isin(both)]
+    sq = e.index[(e["squeeze_idx"] < squeeze_max) & (e["irreplaceable"] != True)]
+    return e, [
+        ("both-senses irreplaceable (no alternative link OR routing)", both, "#d73027"),
+        ("edge-irreplaceable (D7, cheapest alternative > β)", irr, "#fc8d59"),
+        (f"squeezed (band < {squeeze_max:g}× open-ground width)", sq, "#dfb515"),
+    ]
+
+
+def _zoom_links(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35):
+    """Frame selection shared by the zoom figures: the routing-regime links whose corridor land
+    lies in the lower window, plus the axis extent that frames them."""
+    e, classes = _routing_classes(R, squeeze_max)
+    owner = np.nan_to_num(R.edge_owner.values, nan=-1).astype(int)
+    order = {k: i for i, k in enumerate(R.edges.index)}
+    H = R.shape[0]
+    links = []
+    for lbl, ks, col in classes:
+        for k in ks:
+            cells = np.argwhere(owner == order[k])
+            if len(cells) and cells[:, 0].mean() >= south_of_frac * H:
+                links.append((k, col, cells))
+    assert links, "no routing-regime links in the southern window -- lower south_of_frac"
+    rr = np.concatenate([c[:, 0] for _, _, c in links])
+    cc_ = np.concatenate([c[:, 1] for _, _, c in links])
+    xs, ys = R.template.x.values, R.template.y.values
+    pad = pad_km * 1000.0
+    XL = (xs[cc_.min()] - pad, xs[cc_.max()] + pad)
+    YL = (ys[rr.max()] - pad, ys[rr.min()] + pad)
+    return e, classes, owner, order, links, XL, YL
+
+
+def routing_problem_cost_zoom(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35):
+    """Triptych on the zoom frame: (1) the movement-cost surface -- the CAUSE of the squeeze --
+    (2) the classified links, (3) both together (cost in greys under the class colours). Node
+    polygons are drawn as OUTLINES on the cost panels so the surface under and between the
+    anchors stays visible (the contact zones are exactly where the orange links live)."""
+    e, classes, owner, order, links, XL, YL = _zoom_links(R, squeeze_max, south_of_frac, pad_km)
+    parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+    outline = parts.dissolve(by="name_label").reset_index()
+
+    w = 6.2 * (XL[1] - XL[0]) / (YL[1] - YL[0])
+    fig, axes = plt.subplots(1, 3, figsize=(3 * w + 3.5, 8.5))
+    cost = R.resistance.values
+
+    ax = axes[0]
+    _da(R, np.where(cost > 0, cost, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap="magma_r", norm=LogNorm(vmin=1, vmax=1000), add_colorbar=True,
+        cbar_kwargs=dict(label="movement cost (4 ordinal classes, log colour)", shrink=0.55))
+    outline.boundary.plot(ax=ax, color="#2b6a6a", linewidth=0.7)
+    _draw_basemap(R, ax, XL, YL, towns=False)
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+    ax.set_title("Movement cost (O'Brien) — the cause", fontsize=11)
+
+    ax = axes[1]
+    rest = R.corridor & ~np.isin(owner, [order[k] for _, ks, _ in classes for k in ks])
+    _da(R, np.where(rest, 1.0, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap=ListedColormap(["#b8c4c9"]), add_colorbar=False)
+    for lbl, ks, col in classes:
+        m = np.isin(owner, [order[k] for k in ks]) & R.corridor
+        if m.any():
+            _da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    for layer, col in [(R.pa_mask, PA_COLOR), (R.anch, ANCHOR_COLOR)]:
+        _da(R, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    _draw_basemap(R, ax, XL, YL)
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+    ax.set_title("Routing-regime links — the classification", fontsize=11)
+
+    ax = axes[2]
+    _da(R, np.where(cost > 0, cost, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap="Greys", norm=LogNorm(vmin=1, vmax=1000), add_colorbar=False)
+    for lbl, ks, col in classes:
+        m = np.isin(owner, [order[k] for k in ks]) & R.corridor
+        if m.any():
+            _da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    outline.boundary.plot(ax=ax, color="#2b6a6a", linewidth=0.7)
+    xs, ys = R.template.x.values, R.template.y.values
+    for n, (k, col, cells) in enumerate(sorted(links, key=lambda t: t[2][:, 0].mean()), 1):
+        ax.annotate(str(n), (xs[int(np.median(cells[:, 1]))], ys[int(np.median(cells[:, 0]))]),
+                    fontsize=9, fontweight="bold", ha="center", va="center",
+                    bbox=dict(boxstyle="circle,pad=0.24", fc="white", ec=col, lw=1.6))
+    _draw_basemap(R, ax, XL, YL)
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+    ax.set_title("Overlay — barriers (grey) under the flagged links", fontsize=11)
+
+    handles = [Patch(color=col, label=lbl) for lbl, _, col in classes]
+    handles += [Patch(color="#b8c4c9", label="securing regime"),
+                plt.Line2D([0], [0], color="#2b6a6a", lw=1, label="named-area boundaries"),
+                plt.Line2D([0], [0], color="0.15", lw=1.0, ls=(0, (6, 3)), label="provincial border")]
+    axes[2].legend(handles=handles, loc="lower left", fontsize=8, frameon=True)
+    fig.suptitle(f"{R.region_label} — the routing-problem cluster against its cause "
+                 f"(link numbers as in routing_problem_zoom)", fontsize=13)
+    fig.tight_layout()
+    fig.savefig(R.fig_dir / "routing_problem_cost_zoom.png", dpi=150, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def routing_problem_cost_overlay(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35,
+                                 show_securing=False):
+    """One figure: the flagged links + anchors HARD-COLOURED over the live movement-cost ramp,
+    so the land IN BETWEEN reads as cost values. PAs grey / IPCAs teal / classes solid; the
+    securing-regime corridor is omitted by default (show_securing=True adds it in light grey)
+    to keep the between-land legible as cost."""
+    import matplotlib.patheffects as pe
+    e, classes, owner, order, links, XL, YL = _zoom_links(R, squeeze_max, south_of_frac, pad_km)
+    xs, ys = R.template.x.values, R.template.y.values
+
+    w = 12.5 * (XL[1] - XL[0]) / (YL[1] - YL[0])
+    fig, ax = plt.subplots(figsize=(w + 3.0, 13))
+    cost = R.resistance.values
+    _da(R, np.where(cost > 0, cost, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap="magma_r", norm=LogNorm(vmin=1, vmax=1000), add_colorbar=True,
+        cbar_kwargs=dict(label="movement cost between the hard-coloured land "
+                               "(4 ordinal classes, log colour)", shrink=0.5))
+    if show_securing:
+        rest = R.corridor & ~np.isin(owner, [order[k] for _, ks, _ in classes for k in ks])
+        _da(R, np.where(rest, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap(["#c3ced2"]), add_colorbar=False)
+    for layer, col in [(R.pa_mask, PA_COLOR), (R.anch, ANCHOR_COLOR)]:
+        _da(R, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    for lbl, ks, col in classes:
+        m = np.isin(owner, [order[k] for k in ks]) & R.corridor
+        if m.any():
+            _da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+
+    # named-area labels + numbered link markers, as in routing_problem_zoom
+    from shapely.geometry import box as _box
+    frame = _box(XL[0], YL[0], XL[1], YL[1])
+    parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+    for _, row in parts.dissolve(by="name_label").reset_index().iterrows():
+        clip = row.geometry.intersection(frame)
+        if clip.is_empty or clip.area < 25e6:
+            continue
+        is_ipca = str(row["name_label"]).startswith("IPCA")
+        pt = clip.representative_point()
+        ax.annotate(_short_node_name(row["name_label"], 20), (pt.x, pt.y),
+                    fontsize=8.5, ha="center", va="center", fontstyle="italic",
+                    color=("#0f4747" if is_ipca else "0.15"),
+                    path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
+    handles = [Patch(color=col, label=lbl) for lbl, _, col in classes]
+    if show_securing:
+        handles.append(Patch(color="#c3ced2", label="securing regime"))
+    for n, (k, col, cells) in enumerate(sorted(links, key=lambda t: t[2][:, 0].mean()), 1):
+        r = e.loc[k]
+        ax.annotate(str(n), (xs[int(np.median(cells[:, 1]))], ys[int(np.median(cells[:, 0]))]),
+                    fontsize=10, fontweight="bold", ha="center", va="center",
+                    bbox=dict(boxstyle="circle,pad=0.28", fc="white", ec=col, lw=1.8))
+        handles.append(plt.Line2D([0], [0], marker="o", color="none", markerfacecolor="white",
+                                  markeredgecolor=col, markersize=9,
+                                  label=f"{n}. {_short_node_name(r['label_i'], 16)} ↔ "
+                                        f"{_short_node_name(r['label_j'], 16)}"))
+    _draw_basemap(R, ax, XL, YL)
+    handles += [Patch(color=PA_COLOR, label="existing PAs"),
+                Patch(color=ANCHOR_COLOR, label="proposed IPCAs"),
+                plt.Line2D([0], [0], color="0.15", lw=1.0, ls=(0, (6, 3)), label="provincial border")]
+    ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.16, 0.5),
+              fontsize=8.5, frameon=True)
+    ax.set_title(f"{R.region_label} — flagged links over the movement-cost surface\n"
+                 f"(anchors + flagged corridors hard-coloured; everything between is cost)",
+                 fontsize=12)
+    fig.savefig(R.fig_dir / "routing_problem_cost_overlay.png", dpi=160, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def routing_problem_zoom(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35):
+    """Zoom on the southern highlight cluster, with NAMED areas and NUMBERED links.
+
+    Frames the routing-regime links whose corridor land lies in the lower part of the window
+    (row centroid below `south_of_frac` of the map height — a display choice, stated in the
+    caption); labels every named area intersecting the frame (IPCAs dark teal, PAs grey) and
+    marks each highlighted link with a circled number keyed to a legend row carrying the full
+    pair, squeeze, backup ratio and absolute replacement cost."""
+    import matplotlib.patheffects as pe
+    e, classes, owner, order, links, XL, YL = _zoom_links(R, squeeze_max, south_of_frac, pad_km)
+    xs, ys = R.template.x.values, R.template.y.values
+
+    fig, ax = plt.subplots(figsize=(13, 13))
+    rest = R.corridor & ~np.isin(owner, [order[k] for _, ks, _ in classes for k in ks])
+    _da(R, np.where(rest, 1.0, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap=ListedColormap(["#b8c4c9"]), add_colorbar=False)
+    for lbl, ks, col in classes:
+        m = np.isin(owner, [order[k] for k in ks]) & R.corridor
+        if m.any():
+            _da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    for layer, col in [(R.pa_mask, PA_COLOR), (R.anch, ANCHOR_COLOR)]:
+        _da(R, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    ax.set_xlim(*XL); ax.set_ylim(*YL)
+    ax.set_aspect("equal"); ax.set_axis_off()
+
+    # ---- named-area labels inside the frame ------------------------------------------
+    from shapely.geometry import box as _box
+    frame = _box(XL[0], YL[0], XL[1], YL[1])
+    parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+    names = parts.dissolve(by="name_label").reset_index()
+    for _, row in names.iterrows():
+        clip = row.geometry.intersection(frame)
+        if clip.is_empty or clip.area < 25e6:            # < 25 km² in frame: skip the sliver
+            continue
+        is_ipca = str(row["name_label"]).startswith("IPCA")
+        pt = clip.representative_point()
+        ax.annotate(_short_node_name(row["name_label"], 20), (pt.x, pt.y),
+                    fontsize=8.5, ha="center", va="center", fontstyle="italic",
+                    color=("#1a6363" if is_ipca else "0.25"),
+                    path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
+    _draw_basemap(R, ax, XL, YL)
+
+    # ---- numbered link markers + legend ----------------------------------------------
+    handles = [Patch(color=col, label=lbl) for lbl, _, col in classes]
+    handles.append(Patch(color="#b8c4c9", label="securing regime"))
+    handles.append(plt.Line2D([0], [0], color="0.15", lw=1.0, ls=(0, (6, 3)), label="provincial border"))
+    for n, (k, col, cells) in enumerate(sorted(links, key=lambda t: t[2][:, 0].mean()), 1):
+        r = e.loc[k]
+        cx, cy = xs[int(np.median(cells[:, 1]))], ys[int(np.median(cells[:, 0]))]
+        ax.annotate(str(n), (cx, cy), fontsize=10, fontweight="bold", ha="center",
+                    va="center",
+                    bbox=dict(boxstyle="circle,pad=0.28", fc="white", ec=col, lw=1.8))
+        stats = []
+        if np.isfinite(r.get("squeeze_idx", np.nan)):
+            stats.append(f"squeeze {r['squeeze_idx']:.2f}")
+        if pd.notna(r.get("backup_ratio")):
+            stats.append(f"alt {r['backup_ratio']:.1f}× (+{(r['backup_ratio']-1)*r['cost']/(10/3):,.0f} km)")
+        handles.append(plt.Line2D([0], [0], marker="o", color="none", markerfacecolor="white",
+                                  markeredgecolor=col, markersize=9,
+                                  label=f"{n}. {_short_node_name(r['label_i'], 16)} ↔ "
+                                        f"{_short_node_name(r['label_j'], 16)} — "
+                                        + ", ".join(stats)))
+    handles += [Patch(color=PA_COLOR, label="existing PAs"),
+                Patch(color=ANCHOR_COLOR, label="proposed IPCAs")]
+    ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.01, 0.5),
+              fontsize=8.5, frameon=True)
+    ax.set_title(f"{R.region_label} — the routing-problem cluster (southern window; "
+                 f"links numbered north → south)", fontsize=12)
+    fig.savefig(R.fig_dir / "routing_problem_zoom.png", dpi=160, bbox_inches="tight")
+    plt.show()
+    return R
+
+
+def routing_problem_map(R, squeeze_max=0.5, pad=0.05):
+    """THE highlight figure: where connectivity is a ROUTING problem vs a securing problem.
+
+    Corridor land painted by its owning link's regime: both-senses irreplaceable (D7 + D12) in
+    red; edge-irreplaceable in orange; SQUEEZED links (squeeze_idx < squeeze_max -- band under
+    half its open-ground width) in gold; everything else (the securing regime) muted. Uses
+    edge_owner.tif, so each cell is attributed to the link whose priority it carries."""
+    e, classes = _routing_classes(R, squeeze_max)
+    owner = np.nan_to_num(R.edge_owner.values, nan=-1).astype(int)
+    order = {k: i for i, k in enumerate(R.edges.index)}      # owner codes = edge-table row order
+    both, irr, sq = (classes[0][1], classes[1][1], classes[2][1])
+    XL, YL = _region_extent(R, pad)
+    fig, ax = plt.subplots(figsize=(13, 12))
+    rest = R.corridor & ~np.isin(owner, [order[k] for lbls, ks, _ in classes for k in ks
+                                         if k in order])
+    _da(R, np.where(rest, 1.0, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap=ListedColormap(["#b8c4c9"]), add_colorbar=False)
+    handles = [Patch(color="#b8c4c9", label="securing regime — corridor land with alternatives")]
+    for lbl, ks, col in classes:
+        codes = [order[k] for k in ks if k in order]
+        m = np.isin(owner, codes) & R.corridor
+        if m.any():
+            _da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+        handles.append(Patch(color=col, label=f"{lbl}  [{len(ks)} links]"))
+    _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch)
+    handles += [Patch(color=PA_COLOR, label="existing PAs"),
+                Patch(color=ANCHOR_COLOR, label="proposed IPCAs")]
+    ax.legend(handles=handles, loc="lower left", fontsize=9, frameon=True)
+    ax.set_title(f"{R.region_label} — where connectivity is a ROUTING problem\n"
+                 f"(everywhere grey, the landscape still offers alternatives — a securing "
+                 f"problem)", fontsize=12)
+    fig.savefig(R.fig_dir / "routing_problem_map.png", dpi=150, bbox_inches="tight")
+    plt.show()
+    return e.loc[list(both) + list(irr) + list(sq),
+                 ["label_i", "label_j", "squeeze_idx", "cost_per_km", "irreplaceable",
+                  "backup_ratio", "n_branches"]].sort_values("squeeze_idx")
+
+
+def irreplaceability_table(R, out_name="irreplaceability_summary.csv"):
+    """The paper's headline edge table: BOTH irreplaceability senses + ensemble presence, one
+    row per non-adjacency edge, sorted most-critical first. Joins criticality (D7), route
+    branches (D12) and edge presence (D8) -- currently spread across three CSVs."""
+    e = _edge_squeeze(R.edges[~R.edges["is_adjacency"]].copy(), R.cutoff)
+    if R.edge_freq is not None:
+        e = e.join(R.edge_freq, how="left")
+    # ABSOLUTE price of the cheapest alternative, in intact-land-km equivalent. The ratio alone
+    # misleads for near-touching pairs (direct cost ~1 makes any go-around look enormous):
+    # Edziza<->Stikine is 141x but only ~+42 km absolute; Gwillim<->Pine Le Moray is 2.6x but
+    # ~+120 km. Report both, always.
+    e["backup_extra_km_equiv"] = (((e["backup_ratio"] - 1) * e["cost"]) / (10 / 3)).round(0)
+    cols = ["label_i", "label_j", "edge_class", "cost", "in_mst", "ecfb_raw",
+            "irreplaceable", "backup_ratio", "backup_extra_km_equiv", "disconnects",
+            "n_pairs_lost", "cost_inflation", "n_branches", "route_irreplaceable",
+            "width_km", "squeeze_idx", "cost_per_km", "presence_freq", "band_km2"]
+    t = (e[[c for c in cols if c in e.columns]]
+         .sort_values(["irreplaceable", "route_irreplaceable", "n_pairs_lost", "ecfb_raw"],
+                      ascending=[False, False, False, False]))
+    t.to_csv(R.run_dir / out_name, encoding="utf-8-sig")
+    n_both = int((t["irreplaceable"] & t.get("route_irreplaceable", False)).sum())
+    print(f"{out_name}: {len(t)} edges | {int(t.irreplaceable.sum())} edge-irreplaceable (D7) | "
+          f"{int(t.get('route_irreplaceable', pd.Series()).sum())} route-irreplaceable (D12) | "
+          f"{n_both} BOTH -- the land with no alternative link AND no alternative routing")
+    return t
 
 
 def corridor_group_map(A, pad=0.05):

@@ -1,6 +1,21 @@
 # 05 Corridors — methods (v2)
 
-**Status:** engine rebuilt 2026-08-07. Phases 0–4 implemented; Phases 5–8 deferred (see the end).
+**Status:** engine rebuilt 2026-08-07; **addendum D11–D16 implemented and RUN END-TO-END
+2026-08-27 (`v2_run002`)** — the campaign now lives in `analyses/northern_connectivity/`
+(4 notebooks, spec = `analyses/northern_connectivity/spec/05_corridors_v2_addendum_run_and_alternatives.md`;
+the root monolith is archived at `archive/05_corridors_north_v2_monolith.ipynb`). Phases 5–8
+deferred (see the end). **The living paper registers are
+`analyses/northern_connectivity/spec/methods_log.md` + `spec/results_log.md`** (binding:
+updated in the same session as any methods change or new result); this document remains the
+D1–D10 rationale record.
+
+**Changelog**
+- 2026-08-27 — addendum ratified by execution: D11 near-optimality surface, D12 route branches,
+  D13 per-branch values table (fractional-cover crossing, M6.5), D14 Carroll audit column,
+  D15 attribution naming, D16 multipart parts + H7 review — all run in `v2_run002`. Gates
+  G9–G12 added and measured; two engine fixes during first execution (adjacency bands under the
+  absolute cutoff, M4.3-log; ensemble edge identity, M5.7-log). Decision-log rows below;
+  full sections in the addendum.
 **Scope:** northern BC + Yukon PA/IPCA network. The eastern-slopes / grizzly / highway-crossing work
 is a separate analysis (`docs/plan_ab_foothills_grizzly_corridors.md`); nothing here is built for it.
 
@@ -47,6 +62,12 @@ notebook at `archive/05_corridors_north_v1.ipynb`, resolved config at
 | D8 | **Structured ensemble** over interpretable axes replaces uniform-noise jitter | Each axis must map to a documented assumption. |
 | D9 | Primary deliverable = graded **linkage priority surface** + per-edge tables, not hard lines | Lines invite site-level readings the model cannot support. |
 | D10 | Two-track: this Python pipeline is research; a packaged Linkage Mapper workflow is operational | *(Phase 8, deferred.)* |
+| D11 | Wall-to-wall product = `near_optimality.tif`, min-slack in raw cost units; never labelled "frequency" | A least-cost model has no solution pool; the band IS the closed-form near-optimal set. *(Addendum §1.)* |
+| D12 | Unit of "alternative" = the ROUTE BRANCH (band component at 0.5× cutoff); `n_branches`=1 ⇒ route-irreplaceable, reported alongside — never merged with — D7's edge-irreplaceable | Band components are provably genuine i→j alternatives (G9). |
+| D13 | Per-branch values table imports the Y2Y-wide column spec; crossed 300 m→1 km by fractional cover weighting (exact on binary masks) | Side-by-side readability without implying a shared estimand; majority crossing inflated narrow ribbons 5–17% (G11). |
+| D14 | Carroll 2018 never enters resistance; audit column `carroll2018_pctl` only; Phase 7 deferred as a claim-scope extension | Same object type as current density — rejected as routing input by D1–D3. |
+| D15 | Ensemble member fraction = `ensemble_attribution.tif`, robust-core + attribution only | ~42/47 members are leave-one-out: "share of dropped names that didn't matter", not a sampling frequency. |
+| D16 | Multipart named areas split into parts; treatments from the H7 human-signed `multipart_review.csv` (merge_parts / link_locked / link_competing / no_link); intra-name MSTs locked into the backbone | Seeding all parts as one node never asks how to move between them; a named area is a management unit, but that is an assertion about intent — hence the human gate. |
 
 ### Amendments made during implementation
 
@@ -208,8 +229,13 @@ No pytest in this repo; the discipline is inline asserts plus named gates run as
 | **G3** | raster flood fill and graph component count agree | wired into `corridor_network` |
 | **G4** | β = 0 reproduces the MST exactly; MST ⊆ augmented | in `cg.selftest` |
 | **G5** | v1's IPCA / PA profile rows reproduce — equivalence-checks the whole audit path | notebook cell |
-| **G7** | a drop-nothing leave-one-out member reproduces the baseline exactly | `ce.gate_g7` |
-| **G8** | `resolve()` raises on every retired v1 config key | **PASS** |
+| **G7** | a drop-nothing leave-one-out member reproduces the baseline exactly | **PASS — Jaccard 1.000000** (2026-08-27) |
+| **G8** | `resolve()` raises on every retired v1 config key (and on missing addendum keys) | **PASS** |
+| **G9** | every branch-band component touches both endpoint seed masks (hard assert) | **PASS** on all 41 branches (2026-08-27) |
+| **G10** | near-optimality exactly 0 on baseline least-cost paths; tiers monotone | **PASS — max residual 6.1e-05** cost units |
+| **G11** | branch audit-crossing drift ≤ 5% for branches ≥ 50 km² | **FAILED at 0.5-majority (+5.4–16.6% on 9/41) → fractional crossing (D13) → PASS at 0.04%** |
+| **G12** | ensemble = 47 distinct members by config-hash (1 + 2 B + 42 C + 2 D) | **PASS** (2026-08-27) |
+| **G0/G3/G5** (re-measured on `v2_run002`) | 42 names / 3 merges / 48 parts; raster=graph 1 component; audit invariance Δ ≤ 0.002 on definition-unchanged axes | **PASS** |
 
 **G1 is the one that matters.** Every other v2 change moves the answer on purpose, so
 "re-run and expect the same corridors" is unavailable; G1 instead isolates the *refactor* from every

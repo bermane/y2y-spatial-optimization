@@ -1,5 +1,5 @@
 # mga_core.R -- diversity-controlled near-optimal generation (spec v0.10, estimator
-# `mga_maxham_v1`). The within-cell estimator that replaced the k-best pool after Gate 2
+# `mga_maxham_v1`). The within-formulation estimator that replaced the k-best pool after Gate 2
 # measured that PoolSearchMode=2 never samples the g-band (M6.6): generate k maximally-
 # diverse members of the band {x : objective(x) <= (1+g) * certified optimum} by iterative
 # max-Hamming MGA (Brill 1979 lineage; Brunel et al. 2023 the direct parent).
@@ -81,7 +81,7 @@ mga_anchor <- function(cm, opt_gap = 1e-4, time_limit = 43200,
 
 # ---- the generator: k maximally-diverse members of the g-band -----------
 mga_generate <- function(cm, anchor, g, k, mip_gap_dist = 0.01, time_limit_iter = 900,
-                         threads = parallel::detectCores()) {
+                         threads = parallel::detectCores(), floors = NULL) {
   o <- cm$o$copy()                            # pristine cm$o survives for other g levels
   ncol_o <- o$ncol()
   band_rhs <- (1 + g) * anchor$z
@@ -92,6 +92,9 @@ mga_generate <- function(cm, anchor, g, k, mip_gap_dist = 0.01, time_limit_iter 
                               row_ids = "mga_band")
   cat(sprintf("band wall appended: obj0 . x <= %.6f  (g = %g on z* = %.6f)\n",
               band_rhs, g, anchor$z))
+  # E15 guardrails (optional): floors = list(ctx=, blocks=, g=) -> per-block capture floors
+  if (!is.null(floors))
+    mga_block_floors(o, floors$ctx, cm, anchor$x, floors$g, floors$blocks)
 
   disc <- which(!cm$locked)                   # discretionary pu columns
   counts <- as.numeric(anchor$x)              # selections among incumbents (anchor included)
@@ -140,6 +143,98 @@ mga_generate <- function(cm, anchor, g, k, mip_gap_dist = 0.01, time_limit_iter 
   list(members = members, certificates = do.call(rbind, cert),
        band_rhs = band_rhs, g = g, k = k)
 }
+
+# ---- E12: bracketing estimator -- random-objective band sampling (MAA/SPORES lineage) ----
+# Same band wall as mga_generate, but each iteration minimizes an iid Uniform(-1, 1) random
+# objective over the DISCRETIONARY pu columns: a random direction pushed to the band's edge,
+# independent of the incumbents. Brackets the estimator-conditionality of f: MGA = adversarial
+# extremes, MAA = direction-random extremes. Seeded explicitly and recorded (the manifest's
+# "no RNG" seed_policy carries a documented E12 exception). The 1e-3*obj0 shortfall-pin keeps
+# band_lhs = each member's TRUE objective, as in mga_generate.
+maa_generate <- function(cm, anchor, g, k, seed, mip_gap_dist = 0.01, time_limit_iter = 900,
+                         threads = parallel::detectCores()) {
+  set.seed(seed)
+  o <- cm$o$copy()
+  ncol_o <- o$ncol()
+  band_rhs <- (1 + g) * anchor$z
+  nz <- which(cm$obj0 != 0)
+  A_band <- Matrix::sparseMatrix(i = rep(1L, length(nz)), j = nz, x = cm$obj0[nz],
+                                 dims = c(1L, ncol_o))
+  o$append_linear_constraints(rhs = band_rhs, sense = "<=", A = A_band,
+                              row_ids = "mga_band")
+  cat(sprintf("MAA band wall: obj0 . x <= %.6f (g = %g) | seed %d\n", band_rhs, g, seed))
+  disc <- which(!cm$locked)
+  members <- matrix(FALSE, nrow = k, ncol = cm$n_pu)
+  cert <- vector("list", k)
+  t_all <- proc.time()[["elapsed"]]
+  for (i in seq_len(k)) {
+    dist_obj <- numeric(ncol_o)
+    dist_obj[disc] <- runif(length(disc), -1, 1)
+    dist_obj[nz] <- dist_obj[nz] + 1e-3 * cm$obj0[nz]
+    o$set_obj(dist_obj)
+    model <- mga_model(o)
+    model$start <- anchor$x_full                  # feasible start; direction is random anyway
+    t0 <- proc.time()[["elapsed"]]
+    res <- mga_gurobi(model, mip_gap_dist, time_limit_iter, threads)
+    stopifnot("MAA iterate returned no solution (band infeasible?)" = !is.null(res$x))
+    x <- res$x[seq_len(cm$n_pu)] > 0.5
+    band_lhs <- sum(cm$obj0 * res$x)
+    dup <- if (i > 1) any(apply(members[seq_len(i - 1), , drop = FALSE], 1,
+                                function(m) all(m == x))) else FALSE
+    members[i, ] <- x
+    el <- proc.time()[["elapsed"]] - t0
+    cert[[i]] <- data.frame(
+      iter = i, estimator = "maa", seed = seed, status = res$status,
+      dist_objval = res$objval, band_lhs = band_lhs, band_rhs = band_rhs,
+      band_ok = band_lhs <= band_rhs + 1e-6,
+      pct_over_optimum = 100 * (band_lhs - anchor$z) / anchor$z,
+      n_selected = sum(x), hamming_to_anchor = sum(x != anchor$x),
+      duplicate = dup, mip_gap_used = mip_gap_dist, runtime_s = el)
+    cat(sprintf("maa g=%g iter %02d/%d: band %.6f (%+.2f%%) %s | ham(anchor) %s | %s%.0f s\n",
+                g, i, k, band_lhs, cert[[i]]$pct_over_optimum,
+                if (cert[[i]]$band_ok) "OK" else "VIOLATED",
+                format(cert[[i]]$hamming_to_anchor, big.mark = ","),
+                if (dup) "DUPLICATE | " else "", el))
+  }
+  cat(sprintf("maa g=%g: %d members in %.1f min (%d duplicates, %d time-limited)\n",
+              g, k, (proc.time()[["elapsed"]] - t_all) / 60,
+              sum(sapply(cert, function(d) d$duplicate)),
+              sum(sapply(cert, function(d) d$status == "TIME_LIMIT"))))
+  list(members = members, certificates = do.call(rbind, cert),
+       band_rhs = band_rhs, g = g, k = k, seed = seed)
+}
+
+
+# ---- E15: per-block capture floors (guardrailed band; run only if E14 triggers) ----------
+# Block capture_b = sum of the block's features' relative_held. The compiled spp_target rows
+# hold each feature's NORMALIZED per-cell amounts (feature rows come first, in feature order,
+# each scaled so the row total is norm_total x target machinery) -- so a block's floor row is
+# the sum of its features' pu-coefficients divided by each feature's absolute target amount x
+# t_rel... implemented directly from the raster stack instead (unambiguous): coefficients =
+# sum over block features of v_f / total_f, one >= row per block, rhs = (1 - g) * anchor_b.
+mga_block_floors <- function(o_banded, ctx, cm, anchor_x, g, blocks) {
+  n_pu <- cm$n_pu
+  idx <- cm$pu_index
+  for (b in names(blocks)) {
+    coef <- numeric(n_pu)
+    anchor_b <- 0
+    for (f in blocks[[b]]) {
+      v <- terra::values(ctx$features[[f]])[idx]
+      v[is.na(v)] <- 0
+      share <- v / sum(v)
+      coef <- coef + share
+      anchor_b <- anchor_b + sum(share[anchor_x])
+    }
+    A_row <- Matrix::sparseMatrix(i = rep(1L, sum(coef != 0)), j = which(coef != 0),
+                                  x = coef[coef != 0], dims = c(1L, o_banded$ncol()))
+    o_banded$append_linear_constraints(rhs = (1 - g) * anchor_b, sense = ">=", A = A_row,
+                                       row_ids = paste0("floor_", b))
+    cat(sprintf("  block floor %-14s anchor capture %.4f -> floor %.4f\n",
+                b, anchor_b, (1 - g) * anchor_b))
+  }
+  invisible(o_banded)
+}
+
 
 # ---- raster writer: members matrix -> k-band INT1U GeoTIFF --------------
 mga_write <- function(gen, cm, template, out_dir, tag) {
