@@ -244,6 +244,13 @@ is nearly flat in the additions.
 **R5.5 Nesting test (D-AB5 v2) is VACUOUS at g = 5%:** core A 2 km², core B 0 km² → N = 0.000 by
 arithmetic; the frozen rule returns "level B primary" with no evidence behind it (there is nothing
 to nest). Escalated to chat (M9); 07/08 patched to run and evaluate the 2% band at both levels.
+**R5.8 Nesting at g = 2% (07/08 re-run 2026-09-03, D-AB10): PERFECTLY NESTED — N = 1.000.**
+Frequent tiers (F ≥ 0.70, 51 plans): level A **1,488 km²**, level B **404 km²**, and every one of
+B's 404 cells lies inside A's tier. Always-cores (f = 1): A 876 km², B 84 km². Frozen rule (0.80)
+applied at the tightest band with non-empty cores on both levels → **level A is PRIMARY**; the
+tight-envelope answer is a strict subset of the wide envelope's tiers, so A's surfaces carry B's
+answer (the 404 km² that survive even a 5k envelope = the innermost tier for the applied report).
+Level B's g = 2% sweep: 50/50 certified, 1 duplicate, ~0.5 min.
 **R5.6 S4 pilot PASS:** m_soc capture 0.7720 = target (binds at the kink under S4 weights);
 θ5-tail mass capture **0.877 ≥ 0.75** (S0 reference 0.850); biomass tail 1.000 (vacuous, 42 cells).
 **R5.7 T1-analog block captures (Σ member captured fractions):** S0-585 A: core habitat 0.557 /

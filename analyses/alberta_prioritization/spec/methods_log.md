@@ -242,5 +242,15 @@ runner therefore sweeps every formulation at g = 2% in both semantics (aggregate
 addition to the 5% estimand sweeps (4 sweeps/formulation, ~4 min each at AB scale); 11/12 produce
 per-scenario tiers and clusters (director-package Act-2 analogue) at 2%. `manifest.csv` gains
 `applied_band_g = 0.02`.
+**M9.5 Nesting resolved at g = 2% (R5.8): N = 1.000 → level A PRIMARY.** 08's rule now reads: if
+the 5% test is vacuous, apply the unchanged 0.80 threshold at the tightest band where both levels
+have non-empty cores (g = 2%); if none, B by the realism default. The frozen verdict record was
+updated to A with a dated note (re-running 08 reproduces it). Consequence for the applied
+product: A's 2% tiers are the deliverable, with B's 404 km² tier drawn as the innermost
+"survives even a 5k envelope" ring — the two-level design collapses into one nested map.
+**M9.6 Ethan ruling (same session): LEVEL A ONLY; B SCRATCHED for now.** No level-B product,
+ring, or column in the applied outputs; the B pilot (R4.3, R5.8) stays in the record as the
+measured nesting result and can be revived by re-running 10 with `budget_level = B` if a tighter
+envelope is ever wanted. 09/10 already operate at A; 11/12 are built for A alone.
 
 *Last updated 2026-09-03.*

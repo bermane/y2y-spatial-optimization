@@ -58,7 +58,7 @@
  ],
  "nesting": {
   "threshold": 0.8,
-  "primary_level": "B",
+  "primary_level": "A",
   "guarded": {
    "N": 0.0,
    "core_A_km2": 2,
@@ -87,7 +87,9 @@
     "always_B": 0
    }
   },
-  "vacuous_at_g05": true
+  "vacuous_at_g05": true,
+  "decided_at_band": "g02",
+  "note": "D-AB10 (Ethan 2026-09-03): 5% test vacuous (empty cores); rule applied at g=2% where both cores exist: N = 1.000 >= 0.80 -> level A primary. Field updated 2026-09-03T20:56:31.684160+00:00"
  },
  "fg_level_A": {
   "0.02": {
