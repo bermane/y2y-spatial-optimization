@@ -235,7 +235,35 @@ values → tiebreak), 2026-08-27.
 
 ## R9. D17 squeezed class + director package (2026-09-03) — PENDING the notebook-04 re-run
 
-**R9.1 D17 (counterfactual) — pending.** `counterfactual_squeeze` lands `band_new_km2`,
+**R9.1 D17 (counterfactual) — first execution 2026-09-08 [run002]:** relaxing every cost
+class ≥ 10 touches **1,146,616 cells (11.8% of routable)**. The AREA-ratio G13 FIRED on 6
+links (Tʼakú↔Edziza, Tʼakú↔Stikine, Tsey Dëk↔Tintina Trench, Wədzih↔Sustut, Liard↔Nahanni,
+Dene internal part 2↔3) — the counterfactual band was smaller in area because the route
+shortened, a falsified assumption, not a bug → D17 restated as a WIDTH ratio and G13 as a
+mechanism assertion (M4.7 amendment). Second execution: the width ratio is < 1 without a
+shorter route on **Wədzih Yiné'↔Finlay Russel, Liard↔Nahanni, Nahanni internal** — the
+real-surface NEAR-TIE mechanism (barriers equalise routes into braided, wide bands;
+relaxation breaks the tie) — so G13 became the optimum relaxation invariant (M4.7, second
+amendment). Substantively: on those links the real landscape offers MORE near-optimal
+alternatives than a barrier-free one would, the opposite of a squeeze.
+
+**MEASURED (third execution, 2026-09-08) [run002/corridor_edges.csv, bands_counterfactual.gpkg]:**
+G13 OK (counterfactual optimum ≤ real optimum on all 58 banded edges); 37 edges eligible for
+the width ratio (near-touching pairs excluded). **SQUEEZED (width ratio < 0.5): 8 links** —
+Carp Lake↔Pine Le Moray **0.23**, Gwillim↔Monkman 0.32, Gwillim↔Kakwa 0.37, Graham
+Laurier↔Pine Le Moray 0.40, Gwillim↔Pine Le Moray 0.41 (already both-senses irreplaceable;
+presentation precedence keeps it red, ratio in the table), Mount Blanchet↔Sustut 0.41, Wilps
+Gwininitxw↔Mount Blanchet 0.41, Wilps Gwininitxw↔Sustut 0.49. **All 5 analytic-index links
+(M4.6) remain squeezed under D17, in the same order** — the screening index and the
+counterfactual agree on the Peace cluster; D17 adds the two Skeena links, so the Skeena
+cluster is now three squeezed links plus the both-senses Wilps Gwininitxw↔Swan Lake. Net
+presentation classes: both 4 / edge 3 / squeezed 7 (8 minus the red one) / securing 31.
+Narrower-counterfactual links (reported, not squeezed): Tʼakú↔Stikine (w 38→34 km, L 31→29),
+Tsey Dëk↔Tintina Trench (18→16, L 19→16), Wədzih↔Finlay Russel (18.6→18.2), Wədzih↔Sustut
+(11.1→10.7), **Liard↔Nahanni (w 38.5→17.0 km, L 135→137 — the braided near-tie collapsing)**,
+Nahanni internal (16.0→15.5). 44 counterfactual band polygons written. Per 06's rule the
+count moved from 5 → M1/M3/S4 regenerate from the confirmed definition (automatic: the
+package reads the D17 column). Then: `counterfactual_squeeze` lands `band_new_km2`,
 `band_cf_km2`, `squeeze_ratio_obs`, `squeezed` and G13's verdict when notebook 04 re-runs;
 until then the draft map's 5 squeezed links (analytic M4.6) are the only measurement and are
 NOT citable as D17. Expected: the Peace-cluster links stay squeezed (their squeeze was

@@ -18,6 +18,7 @@ import textwrap
 from types import SimpleNamespace
 
 import numpy as np
+import pyproj
 import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -232,31 +233,195 @@ def _node_handles():
     return [Patch(color=PA_COLOR, label=PA_LABEL), Patch(color=ANCHOR_COLOR, label=IPCA_LABEL)]
 
 
-# ================= maps M1-M4 =================
-def map_m1(P):
-    """M1 -- the four-class regime map, full extent, flat swaths, director legend strings with
-    bracket counts. Squeezed class withheld (drawn as securing) while H8 is open."""
+# ================= director basemap (y2y-wide conventions) =================
+# Coast light grey, admin-1 lines grey, Canada-US border dark, province NAMES (the y2y package
+# uses postal codes; directors asked for names), prominent cities, and the biggest named areas
+# labelled -- all from the Natural Earth admin-1 polygons already in input_data/basemap/.
+ADMIN_POLY = config.INPUT_DIR / "basemap" / "ne_10m_admin_1_states_provinces.shp"
+MAJOR_TOWNS = ["Whitehorse", "Dawson City", "Watson Lake", "Fort Nelson", "Fort St. John",
+               "Dawson Creek", "Prince George", "Terrace", "Smithers", "Mackenzie"]
+PROVINCE_LABEL = {"British Columbia": "BRITISH COLUMBIA", "Yukon": "YUKON",
+                  "Northwest Territories": "NORTHWEST\nTERRITORIES", "Alberta": "ALBERTA",
+                  "Alaska": "ALASKA"}
+
+
+def _admin(P, pad_m=150e3):
+    """Cached admin layer clipped to the routing window (+pad): coast, admin-1 lines, the shared
+    Canada-US border, and province label points inside the window."""
+    if getattr(P, "_admin", None) is not None:
+        return P._admin
+    from shapely.geometry import box as _box
     R = P.R
-    XL, YL = cc._region_extent(R, 0.05)
-    fig, ax = plt.subplots(figsize=(12, 13))
+    xs, ys = R.template.x.values, R.template.y.values
+    x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
+    bbox = _box(x0 - pad_m, y0 - pad_m, x1 + pad_m, y1 + pad_m)
+    g = gpd.read_file(ADMIN_POLY).to_crs(R.crs)
+    g = g[g.intersects(bbox)].copy(); g["geometry"] = g.geometry.intersection(bbox)
+    countries = g.dissolve(by="admin").reset_index()
+    coast = countries.geometry.boundary
+    border = None
+    if len(countries) >= 2:
+        b = [c.buffer(500) for c in countries.geometry.boundary]
+        border = b[0]
+        for bb in b[1:]:
+            border = border.intersection(bb)
+    lines = gpd.read_file(config.INPUT_DIR / "basemap" / "ne_10m_admin_1_states_provinces_lines.shp") \
+        .to_crs(R.crs)
+    lines = lines[lines.intersects(bbox)].copy(); lines["geometry"] = lines.geometry.intersection(bbox)
+    inner = _box(x0, y0, x1, y1)
+    lab = g.copy(); lab["geometry"] = lab.geometry.intersection(inner)
+    lab = lab[~lab.geometry.is_empty].copy()
+    # only provinces that occupy a meaningful share of the window (a border sliver -- Alberta
+    # here -- gets no label: it would land on whatever city sits at the window edge)
+    win_area = (x1 - x0) * (y1 - y0)
+    lab = lab[lab.geometry.area / win_area >= 0.04].copy()
+    # place each name on EMPTY land: the province clipped to the window minus a 35 km buffer
+    # around every named area, so the label never sits on the PA/IPCA cluster
+    parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+    busy = parts.geometry.buffer(35_000).union_all()
+    # the labelled cities are busy too (a 13 pt province name spans ~200 km at region scale)
+    from shapely.geometry import Point
+    tr = pyproj.Transformer.from_crs("EPSG:4326", R.crs, always_xy=True)
+    for n in MAJOR_TOWNS:
+        if n in cc._TOWNS:
+            lat, lon = cc._TOWNS[n]
+            busy = busy.union(Point(*tr.transform(lon, lat)).buffer(40_000))
+    pts = []
+    for geom in lab.geometry:
+        free = geom.difference(busy)
+        if not free.is_empty and free.area > 0.25 * geom.area:
+            # largest free piece, then its pole of inaccessibility (centre of the biggest
+            # inscribed circle) so the name sits in the MOST open country, not merely off-cluster
+            pieces = list(free.geoms) if hasattr(free, "geoms") else [free]
+            free = max(pieces, key=lambda q: q.area)
+            try:
+                import shapely
+                pts.append(Point(shapely.maximum_inscribed_circle(free, 5_000).coords[0]))
+            except Exception:
+                pts.append(free.representative_point())
+        else:
+            pts.append(geom.representative_point())
+    lab["pt"] = pts
+    nm = "name_en" if "name_en" in lab.columns else "name"
+    P._admin = SimpleNamespace(coast=coast, lines=lines, border=border,
+                               labels=lab[[nm, "pt"]].rename(columns={nm: "name"}))
+    return P._admin
+
+
+AREA_OVERRIDES = {"Tū Łī́dlini": "Tū Łī́dlini (Ross River)",
+                  "Northern Rocky": ("Northern Rocky Mountains", 25_000, -30_000),
+                  "Dune Za Keyih": "Dune Za Keyih",
+                  # the PA layer's name string is mis-encoded ("Nj ‘Iinlii” Jjik"); display the
+                  # park's spelling. DISPLAY ONLY -- the node id / tables keep the source string.
+                  "Nj ‘Iinlii": "Ni’iinlii Njik (Fishing Branch)",
+                  "Neah": "Ne’āh’"}
+# which side of the dot a city label goes (default right); left where the right side is corridor
+TOWN_LABEL_SIDE = {"Mackenzie": "left", "Prince George": "left"}
+
+
+def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, area_names=14,
+                   area_overrides=AREA_OVERRIDES):
+    """The shared director backdrop: (optional) province tint, coast/admin/border lines, PA + IPCA
+    fills, Y2Y outline, province names, prominent cities, biggest named areas."""
+    import matplotlib.patheffects as pe
+    R = P.R
+    A = _admin(P)
+    if tint and P.prov_raster is not None:
+        pal = ["#eef3f7", "#f5efe6", "#eaf2ea", "#f3eaf2", "#f7f1e1"]
+        for i in range(1, len(P.prov_names) + 1):
+            m = P.prov_raster == i
+            if m.any():
+                cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                    ax=ax, cmap=ListedColormap([pal[(i - 1) % len(pal)]]), add_colorbar=False)
+    for geom in A.coast:
+        gpd.GeoSeries([geom], crs=R.crs).plot(ax=ax, color="#b5b5b5", linewidth=0.5, zorder=0.3)
+    A.lines.plot(ax=ax, color="#8c8c8c", linewidth=0.6, zorder=0.32)
+    if A.border is not None:
+        gpd.GeoSeries([A.border], crs=R.crs).plot(ax=ax, color="#4a4a4a", linewidth=1.0, zorder=0.35)
+    for layer, col in [(R.pa_mask, PA_COLOR), (R.anch, ANCHOR_COLOR)]:
+        cc._da(R, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    R.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--", zorder=3)
+    if province_names:
+        for _, r in A.labels.iterrows():
+            if XL[0] < r.pt.x < XL[1] and YL[0] < r.pt.y < YL[1]:
+                ax.text(r.pt.x, r.pt.y, PROVINCE_LABEL.get(r["name"], str(r["name"]).upper()),
+                        fontsize=13, color="#555555", alpha=0.75, ha="center", va="center",
+                        zorder=4.5, fontweight="bold",
+                        path_effects=[pe.withStroke(linewidth=3, foreground="white", alpha=0.8)])
+    if cities:
+        if not hasattr(R, "_towns"):
+            cc._draw_basemap(R, ax, XL, YL, towns=False)     # warms R._towns; borders already drawn
+        for n, x, y in R._towns:
+            if n in MAJOR_TOWNS and XL[0] < x < XL[1] and YL[0] < y < YL[1]:
+                ax.plot(x, y, marker="o", ms=5, color="0.1", mec="white", mew=1.0, zorder=6)
+                left = TOWN_LABEL_SIDE.get(n) == "left"
+                ax.annotate(n, (x, y), xytext=(-5 if left else 5, 4), textcoords="offset points",
+                            ha="right" if left else "left", fontsize=8.5,
+                            color="0.1", zorder=6, fontweight="bold",
+                            path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
+    if area_names:
+        cc.label_named_areas(R, ax, top_n=area_names, overrides=area_overrides, fontsize=8.5,
+                             XL=XL, YL=YL, ipca_color="#1a6363", pa_color="0.25")
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+
+
+# ================= maps M1-M4 =================
+def map_m1(P, pad=0.07, area_names=14):
+    """M1 -- the four-class regime map (the main plot): flat swaths on the director basemap
+    (province names, prominent cities, biggest PA/IPCA names), legend BELOW the map so it covers
+    nothing. Squeezed class withheld (drawn as securing) while H8 is open."""
+    R = P.R
+    XL, YL = cc._region_extent(R, pad)
+    fig = plt.figure(figsize=(12, 17))
+    ax = fig.add_axes([0.02, 0.09, 0.96, 0.87])
     handles = []
-    order = ["securing", "squeezed", "edge", "both"]
-    for c in order:
-        ids = P.cls.index[P.cls == c]
+    for c in ("securing", "squeezed", "edge", "both"):
+        ids = list(P.cls.index[P.cls == c])
         if c == "squeezed" and P.h8_open:
             ids = []
+        if c == "securing" and P.h8_open:
+            ids += list(P.cls.index[P.cls == "squeezed"])
         col, lbl = CLASS[c]
-        if c == "securing":
-            ids = list(ids) + (list(P.cls.index[P.cls == "squeezed"]) if P.h8_open else [])
-        if c == "squeezed" and P.h8_open:
-            continue                          # withheld: not drawn, not in the legend
         _paint(P, ax, ids, col)
-        handles.append(Patch(color=col, label=f"{lbl}  [{len(ids)}]"))
-    _base(P, ax, XL, YL, towns=False)
+        if not (c == "squeezed" and P.h8_open):
+            handles.append(Patch(color=col, label=f"{lbl}  [{len(ids)}]"))
+    _director_base(P, ax, XL, YL, area_names=area_names)
     handles += _node_handles()
-    ax.legend(handles=handles, loc="lower left", fontsize=9, frameon=True)
-    ax.set_title("Where the land still offers choices — and where it does not", fontsize=13)
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
+               fontsize=9.5, frameon=True)
+    ax.set_title("Where the land still offers choices — and where it does not", fontsize=15,
+                 pad=12)
     fig.savefig(P.fig / "M1_regime.png", dpi=170, bbox_inches="tight"); plt.show()
+    return P
+
+
+def map_cost(P, pad=0.07, area_names=14):
+    """The movement-cost surface with existing PAs + proposed IPCAs hard-coloured and NO
+    corridors -- the 'what the land is made of' companion to M1, same basemap and legend
+    placement. Four ordinal classes on a log colour ramp; class shares in the subtitle."""
+    R = P.R
+    XL, YL = cc._region_extent(R, pad)
+    cost = R.resistance.values
+    fin = cost[np.isfinite(cost) & (cost > 0)]
+    sh = {int(c): 100 * float((fin == c).sum()) / fin.size for c in (1, 10, 100, 1000)}
+    fig = plt.figure(figsize=(12, 17))
+    ax = fig.add_axes([0.02, 0.09, 0.96, 0.87])
+    from matplotlib.colors import LogNorm
+    im = cc._da(R, np.where(cost > 0, cost, np.nan).astype("float32")).plot.imshow(
+        ax=ax, cmap="magma_r", norm=LogNorm(vmin=1, vmax=1000), add_colorbar=False)
+    _director_base(P, ax, XL, YL, area_names=area_names)
+    cb = fig.colorbar(im, ax=ax, shrink=0.45, pad=0.01)
+    cb.set_label("cost of moving through the land — 1 intact · 10 roads and cuts · "
+                 "100 converted land · 1000 water, ice, settlement\n(four classes only; "
+                 "log colour scale)", fontsize=9)
+    fig.legend(handles=_node_handles() + [
+        plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")],
+        loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2, fontsize=9.5, frameon=True)
+    ax.set_title("What the land is made of — the movement-cost surface\n"
+                 f"intact land {sh[1]:.0f}% · roads and cuts {sh[10]:.0f}% · converted "
+                 f"{sh[100]:.1f}% · water, ice and settlement {sh[1000]:.0f}%", fontsize=14, pad=12)
+    fig.savefig(P.fig / "M0_cost_surface.png", dpi=170, bbox_inches="tight"); plt.show()
     return P
 
 

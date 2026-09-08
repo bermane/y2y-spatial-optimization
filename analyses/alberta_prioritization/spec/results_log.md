@@ -258,4 +258,132 @@ connectivity 0.993 / carbon 1.141 / biodiversity 0.862 / gHM 0.463 / EFG mean 0.
 0.499 / 0.861 / 1.055 / 0.741 / 0.408 / 0.600. S4-A: carbon 1.177 (+0.036), others within
 0.005 of S0. Climate 245 moves core habitat by +0.02, nothing else.
 
-*Last updated 2026-09-03.*
+## R6. Gate AB-3 — manifest freeze (09 run + committed 2026-09-03)
+
+`spec/manifest.csv`: **14 formulations at level A** — (S0–S5) × {ssp585, ssp245} + s1x/s3x at
+585; S4/crossed regime `theta2_places` (t 0.772); `applied_band_g` 0.02, `band_gap_g` 0.05,
+`floor_g` 0.05, k 50, opt_gap 1e-4, verdict rule v2_8db80fed1c702638. Weights reproduce 05's
+frozen S0–S4 vectors at both climate levels (assert passed). Freeze sha256
+**0fc766674b2cb44a…**; pipeline pinned at git **832e76fc50c7** with the five modules clean vs
+HEAD; pre-registration commit **77d8713**. Reference formulation points at the AB-1/AB-2
+artifacts (`runs/ab_l/A/s0_ssp585_theta5/`).
+
+
+## R7. Gate AB-4 — the ensemble run (10 run 2026-09-03 20:13–22:32 UTC; analysis 11 PENDING-RUN)
+
+**R7.0 Run record.** 14/14 formulations at level A, each with engine anchor (Gurobi binary,
+gap 0.0000%, ~1 s), Gurobi-proportion twin, k-best pool (50 @ 5%), MGA anchor (drift vs the
+engine certificate 1.3e-6–1.0e-5), and four sweeps of 50 members (aggregate + guarded at g = 5%,
+aggregate + guarded at g = 2%): **every one of the 2,800 member certificates inside its band**,
+0 time-limited. **5.2–7.4 min per formulation, 2.3 h total** (parent: ~45–60 min per sweep,
+12.3 h for the guarded sweeps alone). Anchor objectives: S0 4.4609 / S1 4.3313 / S2 4.4502 /
+S3 4.6298 / S4 4.2883 / S5 9.1991 (585); 245 within ±0.03 of each; crossed s1x 4.3319, s3x
+4.6326. **Every LP twin equals its engine anchor to four decimals** — the relaxation is tight
+for all 14 (the summary cell's "VIOLATED" flags on 7 formulations were a comparison of a
+4-decimal twin against the full-precision MGA anchor; gaps ≤ 4.3e-5; M12.1).
+
+
+**R7.1 (11 run 2026-09-08 18:27 UTC; provenance `analysis/ab4/{geotiffs,tables}/`, `spec/gate_ab4_summary.json`.)
+The 5% estimand, ensemble-wide.** D_s = **0.996–1.000 for all 14 formulations** (parent 0.809–1.000);
+ensemble frequent tier **1 km²**, always-tier 0, 98.5% of unprotected land "rare" (0.05–0.30), never-band
+0 — every unprotected cell is in some near-optimal plan of some formulation. E1 bias (hierarchical −
+anchor-only F) mean 0.231 / max 0.807 (parent 0.169 / 0.755). E3 variance shares: within-formulation
+**0.997**, scenario 0.003, climate 0.000 (parent 0.952 / 0.044 / 0.002); crossed-regime contrast mean
+|Δf| 0.004 (s1), 0.001 (s3). Guarded = plain everywhere (tier Jaccard 1.000 at 2%).
+**R7.2 E11 — total no-regrets pluralism.** Between-anchor discretionary Jaccard 0.373–0.9996 (mean
+0.618); **182/182 ordered pairs mutually inside each other's 5% band** (parent 156/182, whose 26
+failures were carbon-forward); Δ-diagonal self-check max 0.0. Anchor captures move ≤ 0.02 across
+formulations for every feature (m_soc 0.751–0.773; S5's gHM push lifts intactness 0.463 → 0.478 only);
+θ5-tail mass capture m_soc 0.849–0.879 (S4 highest), biomass 0.977 (S5 0.860) — the carbon-forward
+regime is visible in the tail, not the total, as the parent found.
+**R7.3 The 2% applied band (D-AB10).** Ensemble F₂: core (≥ 0.70) **1,117 km² = 1.95% of
+unprotected land**, always (≥ 0.95) 87 km², conditional 7,018, rare 39,887, **never 9,139 km² (16%)**.
+Per-formulation frequent tiers 1,129–1,774 km² (S5: 86); D₂ 0.836–0.888 (S5 1.000). Climate levels
+pool for every scenario (tier Jaccard 0.91–1.00) **except S1 core-habitat (0.756 → shown per level)**.
+Tiers: core 1,117; value-forward minus core — S1@585 427 / S1@245 443 / S2 606 / S3 **35** / S4 310,
+union 1,121 km² (1.96%); opportunity 54,185 (94.8%); never 738 km² (1.3%). Biodiversity-forward adds
+almost nothing of its own (35 km²) — the AB echo of the parent's R10.12 ("connectivity/biodiversity
+never own tier land"); here connectivity does (606 km²).
+**R7.4 C1 — the zoom-in agrees with the zoom-out's Alberta portion.** Spearman(F_AB, F_Y2Y|AB) =
+**0.85** over 57,161 unprotected cells at the 5% band; frequent-tier overlap coefficient 1.0 (tiers of
+1–2 km², Jaccard 0.002 — degenerate, reported). Per formulation, AB's 10,083 additions lie **91–99%
+inside the Y2Y-wide anchor's selection within Alberta** (overlap coefficient 0.908–0.986), while
+the Y2Y-wide anchors select 15,426–25,377 Alberta cells (the clip's share ≠ AB's additions share, so
+Jaccard 0.385–0.560 is the set-size artifact the spec anticipated). Divergence is a matter of budget
+size, not location.
+**R7.5 C4 — AOIs.** Core inside the Upper Smoky Nature-First zone: **0 km²** (mean F₂ inside 0.27 vs
+0.18 over unprotected land — above average, no core); core inside the whole Upper Smoky planning area
+(10,028 unlocked km², 17.5% of discretionary land): **0 km²** (mean F₂ 0.19). The pre-stated C4 reading
+(zone drawn for caribou + parks, not complementarity) applies as written. AOI-3 ("west of Grande
+Cache") cannot come from the core; it reads from the value-forward surfaces (an S1 cluster at 54.0°N,
+49 km², 98% inside the NFZ) or the opportunity tier.
+**R7.6 Tenure and distance (2% tiers).** Core: crown Green 478 / crown White-notated 106 / private
+non-ranch 122 / **private ranchland 345 km² (31%)** / unclassified 66 — the OECM track holds 3.3× its
+9.4% share of unprotected land; protection track 52%. Value-forward union: crown 806 / ranchland 282.
+Core distance to the nearest park: 0–5 km 10.7% (null 16.3%), 5–10 10.2% (13.8), 10–20 11.2% (19.0),
+**> 20 km 67.9% (null 50.9%)** — the core is farther from the estate than average land, not adjacent to it.
+**R7.7 Clusters (provisional AB constants: ≥ 10 km², closing r=1).** Core tier → 65 components, **6
+kept (1,073 km²)**; min-size sensitivity 5/10/25/50 km² → 16/6/5/4 clusters (1,139/1,073/1,058/1,029
+km²). Core clusters: **412 km² at 53.4°N** (−116.8°W; mean F₂ 0.91; 99% inside the rare-EFG footprint;
+100% crown; frequent in 12/14 formulations), **307 km² at 50.3°N** (−114.2°W; F₂ 0.71; no driver mask;
+57% ranchland), 214 km² at 49.7°N (F₂ 0.92; 99% rare-EFG; 69% ranchland), 96 km² at 50.0°N (98%
+rare-EFG; 47% ranchland), 29 km² at 50.0°N (F₂ 0.95; 31% m_soc tail; frequent in 14/14), 15 km² at
+49.6°N (100% within 5 km of a park). Driver masks on the extent: m_soc θ-tail 716 unprotected cells,
+rare EFGs (≤ 1% of PU) 5 classes / 875 cells, connectivity spike (top 1%) 572. Scenario clusters after
+core subtraction: S1@585 6 (584 km²), S1@245 11 (561), S2 6 (770), S3 1 (113), S4 10 (359). Total kept 40.
+**R7.8 Reading.** Two cores, two mechanisms: the northern one (53.4°N, Foothills/Boreal edge) is the
+scarce-ecosystem claim; the southern ones (49.6–50.3°N, the ranchland fringe) are frequency without a
+single binding claim — the diffuse values agreeing. Neither touches the Upper Smoky country.
+
+
+**R7.9 The northern core is one ecosystem class — and a suspected mapping artifact (found 2026-09-08
+while explaining pick 1 to Ethan).** Pick 1 (412 km², 53.4°N, Lower Foothills NE of Whitehorse
+Wildland) is 99.3% inside the footprint of **IUCN GET F2.10 ("Subglacial lakes")**, whose ENTIRE
+footprint on the AB extent — and on the whole Y2Y region — is those 409 cells (all "major"
+occurrence, 0% inside PAs). Per-cell marginal value under S0: an F2.10 cell is worth **1.8× an
+average unprotected cell, and F2.10 alone supplies 50% of it** (9.1e-5 of a 1.8e-4 total; the
+continuous values on those cells sum to 8.5e-5, slightly BELOW the 8.9e-5 unprotected average).
+Biodiversity is not the driver: birds are 8% above the unprotected mean (p80) and mammals 3%
+(p56) — high percentiles only because AOH is nearly flat in Alberta (leverage 0.12 / 0.07);
+mammals + birds are 55% of the continuous part, which is itself average. Mechanism = the
+representativeness block's design: each EFG carries 1/27 of the block's weight regardless of
+extent, so a class's per-cell value is (1/27) ÷ footprint — 409 cells make F2.10 worth 0.9× an
+average cell's ENTIRE value on its own (T6.1 at 247 cells 1.5×; T4.4 at 1,371 cells 0.3×). Rare
+classes that fit inside the additions are bought whole by every formulation (the parent's E13
+binding-scarcity mechanism). **The Y2Y-wide F pins the same polygon** (F 0.89, guarded 0.86,
+100% ≥ 0.70). A 409 km² subglacial-lake polygon in the foothills is implausible; treated as a
+data-quality flag for the deck (not a core commitment as-is) and a formulation question (drop
+F2.10 from the EFG block?) that belongs with the parent's representativeness discussion, since
+the parent core carries it too. Picks 3–6 are also 87–99% inside the rarest-EFG footprint and
+need the same class-by-class check before the deck.
+
+
+**R7.10 Class-by-class audit of the core picks (2026-09-08): the representativeness block is being
+completed on anthropogenic and artifact classes.** Per pick (GET names from the v2.0/2.1 typology):
+- #1 (412 km², Lower Foothills): F2.10 *Subglacial lakes* — 99% of the cluster; the cluster holds 100%
+  of the class (409 cells, 0% in PAs). Artifact (R7.9).
+- #2 (275 km², Foothills Parkland/Fescue): T4.4 *Temperate woodlands* — 100% of the cluster; the
+  class covers 1,371 cells, 2.6% in PAs; the cluster holds 20% of it. Connectivity 1.20× / corridors
+  1.26× / refugia 1.06× the unprotected mean. **The one genuine multi-value core**, and a real
+  under-protected vegetation class.
+- #3 (214 km², Mixedgrass) and #4 (96 km²): T5.1 *Semi-desert steppes* (2,391 cells, 0.1% in PAs;
+  plausible for the Dry Mixedgrass) **plus SF2.2 *Flooded mines and other voids*** (341 cells, 0% in
+  PAs; the two clusters hold 62% + 28% = 90% of the class — the Lethbridge coalfield). Every other value
+  on these cells is BELOW the unprotected mean (intactness 0.67/0.47×, refugia 0.60×, carbon ≈ 0,
+  birds/mammals 0.7–0.8×): they are bought to complete a mined-void class and a steppe class.
+- #5 (29 km², Alpine/Subalpine) and #6 (15 km², Montane): F2.9 *Geothermal pools and wetlands* (450
+  cells, 73% in PAs) + F3.5 *Canals, ditches and drains* (254 cells, 68% in PAs) — 93%/87% of each
+  cluster; #5 is also 31% m_soc θ-tail with SOC 8.5× and refugia 1.8× (genuine value), #6 is not.
+**Aggregate:** 766 of the 1,073 kept core km² (71%) sit ≥ 87% inside the rarest-EFG footprint, and the
+classes doing the pinning are one artifact (F2.10), two anthropogenic (SF2.2, F3.5), one coarse envelope
+(F2.9 covers 40% of the Y2Y PU and 0.5% of Alberta), and two real vegetation classes (T4.4, T5.1).
+**The EFG block admits anthropogenic biomes by construction:** 10 of Alberta's 27 classes are T7
+(intensive land use: croplands, pastures, plantations, urban, derived pastures), F3 (artificial
+wetlands: reservoirs, constructed wetlands, canals) or SF2 (anthropogenic subterranean: pipes,
+flooded mines); 11 of the parent's 40 likewise (T7.4 *Urban and industrial* included). Mechanism = R7.9:
+per-cell class value ∝ 1/footprint, so the scarce anthropogenic/artifact classes are the cheapest
+units of "representativeness" to complete. → Decision needed (spec, and the parent's): restrict the
+representativeness block to natural biomes (and drop physically implausible classes) — a formulation
+change requiring a re-run of AB 10–13 (~2.5 h) and, for the parent, of its Gate-4/guarded sweeps.
+
+*Last updated 2026-09-08.*

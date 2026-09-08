@@ -40,6 +40,10 @@ REST = [
      "https://geospatial.alberta.ca/titan/rest/services/boundary/asrd_administrative_area/MapServer/1"),
     ("pa", "pluz.gpkg",
      "https://geospatial.alberta.ca/titan/rest/services/base/land_use_management_10tm_nad83_aep/MapServer/1"),
+    # Natural Subregions of Alberta (2005), Alberta EPA, OGL-A -- the T-D4-analogue stratification (tier area
+    # by Natural Region / Subregion; spec v0.4.2 §6 (v)). Open Alberta record gda-2f36921e-41e3-4cd8-813e-3333ea3c5983.
+    ("aoi", "natural_subregions_2005.gpkg",
+     "https://geospatial.alberta.ca/titan/rest/services/biota/natural_subregions_alberta_2005/MapServer/0"),
 ]
 
 

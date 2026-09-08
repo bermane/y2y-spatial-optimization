@@ -3,6 +3,24 @@
 **Status:** v1.2 — BUILT 2026-09-03 (`corridors_director.py` + `06_director_package.ipynb`; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
 
 ## Changelog
+- v1.2.2 (2026-09-08) — M1 promoted to the main plot and restyled to the y2y-wide basemap
+  conventions (coast / admin-1 lines / Canada–US border from Natural Earth; province NAMES rather
+  than postal codes, per Ethan; prominent cities; the biggest PA/IPCA names with the decluttered
+  labeller); legend moved BELOW the map so it covers nothing; slight zoom-out. New **M0**: the
+  movement-cost surface with PAs + IPCAs hard-coloured and no corridors — the 'what the land is
+  made of' companion, same basemap and legend placement (deck slot: before M1). Province
+  names are placed automatically in the most open country of each province (named areas +
+  labelled cities buffered out; pole of inaccessibility); Alberta (< 4% of the window) is
+  unnamed. Two display-only name fixes: Fishing Branch (mis-encoded in the PA layer) shown as
+  "Ni’iinlii Njik (Fishing Branch)", Neah Conservancy as "Ne’āh’" — Ethan to confirm both
+  spellings before the deck ships. M5.12.
+- v1.2.1 (2026-09-08) — H8 CLOSED on measured data: D17 (width ratio vs the barrier-free
+  counterfactual) yields **8 squeezed links**, not the draft map's 5 — the 5 survive in the same
+  order; Gwillim↔Pine Le Moray is also squeezed but stays red (both-senses precedence); the two
+  new ones are Skeena links (Wilps Gwininitxw↔Mount Blanchet 0.41, ↔Sustut 0.49). Presentation
+  classes now both 4 / edge 3 / squeezed 7 / securing 31; flagged links 14 (T2). M1/M3/S4
+  regenerate from the D17 column (automatic); S4 = Carp Lake↔Pine Le Moray at 0.23× ("already at
+  0.2× its natural width"). The squeezed class now SHIPS.
 - v1.2 (2026-09-03) — built. Decisions closed: (a) 7 examples incl. S4; (b) jurisdiction
   tint from Natural Earth admin-1 polygons (public domain, `input_data/basemap/`), settlement
   lands / Nations' initiatives = explicit 'pending authoritative layer' placeholder, never

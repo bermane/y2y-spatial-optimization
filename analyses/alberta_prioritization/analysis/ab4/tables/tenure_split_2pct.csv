@@ -1,0 +1,10 @@
+tier,km2,crown_green,crown_white_ind,private_presumed,private_ranchland,unclassified
+"core (F2 >= 0.70, all formulations)",1117,478,106,122,345,66
+s1@585: Core-habitat-forward (frequent minus core),427,118,139,3,161,6
+s1@245: Core-habitat-forward (frequent minus core),443,313,40,2,84,4
+s2: Connectivity-forward (frequent minus core),606,103,212,10,281,0
+s3: Biodiversity-forward (frequent minus core),35,0,3,3,29,0
+s4: Carbon-forward (frequent minus core),310,228,18,20,44,0
+any value-forward scenario (union),1121,590,216,27,282,6
+"opportunity (in >= 1 plan of >= 1 formulation, not above)",54185,46185,1617,1713,4625,45
+never (no 2%-band plan selects it),738,463,53,81,141,0

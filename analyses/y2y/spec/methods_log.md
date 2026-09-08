@@ -397,6 +397,9 @@ over {anchor + 50 guarded members}, guarded F = one vote per formulation — the
 estimator as the unguarded surface (13). Cost: the spec's "8–10 h serial" is SUPERSEDED by
 measurement — floors shrink the feasible set, so guarded sweeps took 11.2 (S0) / 12.0 (S4) min
 against 13.3 / 46.1 min for the plain sweeps ⇒ ~3 h for the 12 open formulations.
+**SUPERSEDED on execution (R10.1 correction): the 12 sweeps took 52–76 min each, 12.3 h total — the
+spec's 8–10 h was closer; the 16-era timings were not representative (uniform ~5× slowdown, environment
+not difficulty). Protocol unchanged; integrity clean (0 anchor cells differing, all certificates OK).**
 
 **M4.20 — Director-package procedures, pre-stated (spec v1.1; `director_core.py`,
 `19_director_surfaces`, `20_director_figures`; presentation decisions live in the package spec,
@@ -439,6 +442,90 @@ unit; analysis at 1 km²; 51 × 14 plans vs 4), the E17 one-pager (same north–
 decomposed causally) and the IPCA slide (alignment, not assignment). Step 0 (18) unaffected. Added at Ethan's request (same day): **T-D5 protected baseline** — per value, % of the
 regional total inside existing PAs, % of the S0 target already banked, points still needed from unprotected
 land (M3.6 accounting made director-legible; numbers in R10.4).
+**Package-spec deviation (Ethan, 2026-09-04): intactness is drawn as a PLAIN sixth star axis** — no
+dashed/grey styling, no "disclosed, not a driver" caption — because it IS in the formulation (w = 1,
+t = 1.0, every solve); its inexpressibility (leverage 0.042; S5 demonstration) is a paper finding, not
+a director-meeting caption. Presentation only; the methods record (M2.x, R3 classification) is unchanged.
+**Same ruling for the guarded-vs-unguarded contrast (Ethan, 2026-09-04):** the E15 doubling slide and every
+side-by-side unguarded column come OUT of the director package (rendered T-D2/T-D3 show the guarded
+semantics only; `tables/*.csv` keep both columns as the paper record; the promise sentence "no value theme
+left more than 5% behind" stays because it IS the semantics being presented). Paper result, not meeting content.
+**Terminology (Ethan, 2026-09-04):** in the director package the headline surface is simply **F** (per
+scenario **f**) — the word "guarded" does not appear. For the PAPER: F = the per-block-floor surface
+(the applied headline, spec v0.14 ruling) and the aggregate-band surface is written **"unguarded F"**
+(the Claim-A estimand). File and column names (`F_guarded.tif`, `F_unguarded.tif`, `frequent_km2_guarded`)
+keep both words as the analytic record.
+**Package-spec deviation (2026-09-04, R10.7): representativeness star axis = per-cell EFG-count PERCENTILE**
+over the discretionary landscape (same construction as the five block axes), not "classes present ÷ 40":
+the spec's ratio is bounded near 0.35 for any cluster-sized patch and produced a false "far below
+average" read against the 0.5 ring. Raw class counts remain in T-D1.
+**Package-spec deviation (Ethan, 2026-09-04; R10.9): the director package votes with the 12 ELICITED positions**
+(6 scenarios × 2 refugia futures); the two crossed diagnostic hybrids s1x/s3x are excluded from the package's F,
+tiers, clusters, T-D3/T-D5b and the E11 sentence. Reason: they are near-duplicate votes for S1/S3 at SSP585
+(frequent-tier Jaccard 0.84 / 0.95, corr(f) 0.97 / 0.99), so F14 double-counts two positions and skews the
+design 8:6 toward SSP585 and 4:10 toward the carbon target regime. The PAPER's registered estimand is unchanged:
+F14 (Claim A, one vote per formulation, 13_gate4_analysis) with F12 reported as the sensitivity (core Jaccard 0.94).
+**Package presentation (Ethan, 2026-09-04):** Act 2 shows ONE map per scenario with both refugia futures pooled
+(mean of the two levels' f) regardless of the divergence check — the check (R10.8: Jaccard 0.34–0.61, all
+below the 0.80 rule) is still computed and shipped in `pooling_check.csv` and the per-level cores are shown
+in Act 1 (by-future pairs + the two-way map). Declared IPCA proposals are drawn on panel (a) of every Act 1/2
+pair in orange (legible on viridis); panel (b) carries the clusters.
+**Deck picks are COMPLEXES (Ethan, 2026-09-04):** kept components (≥100 km²) within 75 km of each other
+edge-to-edge (single linkage over the 1 km label raster) are grouped for presentation; stars, T-D1 rows and
+pick areas are computed on the complex union; the number is drawn once at the largest member. The linkage
+distance is **25 km** (Ethan's reading of the map after seeing the 75 km grouping): the two Frank Church /
+Gospel Hump components (8 km apart) merge; Eagle Cap (72 km) and the cluster west of Purcell/Robson stay
+separate; Purcell–Robson (165 km) never merge. Components remain the analytic units
+(`cluster_register_all.csv`); the pre-stated clustering procedure is unchanged.
+**Basemap (Ethan, 2026-09-04):** every package map draws Natural Earth 10 m admin-1 boundaries
+(`input_data/basemap/`, internal lines thin grey; coastline light; the shared Canada–US border dark) with
+postal labels in place of the graticule; only the 53°N line is kept (E17 tie-in).
+**Decision (h) resolved (Ethan, 2026-09-04):** the IPCA overlay = PA_TYPE "IPCA" rows of `y2y_proposed_pa`
++ the Ross River NPR proposal (8 polygons). The Indigenous-governed "Great Caribou Rainforest" (Conservation
+Area; 52% already inside Wells Gray/Bowron/Cariboo Mountains parks) is excluded — not a declared IPCA.
+**Summary map:** tiers at 1 km with the Act-2 tier split by the named scenario that earns the cell (highest
+pooled f; cells frequent under 2+ scenarios are their own class) — R10.12.
+
+**M4.21 — E18, weight-vs-substitutability diagnostic for connectivity (Ethan, 2026-09-04; PRE-REGISTERED
+before the run):** one extra formulation, S2's recipe with BOTH connectivity weights × 5 (transboundary 1.316 →
+6.58, corridors 2.303 → 11.51; targets unchanged; SSP585; realized influence share of the connectivity block
+0.25 (S0) → 0.50 (S2) → 0.83), certified anchor + guarded MGA k = 50, g = 5 %, block floors — i.e. the package
+semantics. Question: connectivity-forward adds only 844 km² of its own to the promise tier — because it lacks
+WEIGHT, or because its value is SUBSTITUTABLE (no irreplaceable cells, so nothing recurs)? Verdict rule, frozen:
+SUBSTITUTABLE if, in the ×5 arm's frequent tier, refugia's enrichment still exceeds connectivity's AND the tier's
+own land (outside the core and the other scenarios' tiers) is < 3,000 km²; WEIGHT-LIMITED if connectivity's
+enrichment exceeds refugia's OR own land > 10,000 km²; else AMBIGUOUS. The anchor's connectivity capture is
+expected to rise either way (weights move the optimum; E7). Not part of the pre-registered 14-formulation
+design; a diagnostic like E8–E10, outside F. `21_e18_connectivity_weight.ipynb` (R) → `22_e18_analysis.ipynb`.
+**Outcome (same day, R10.13): WEIGHT-LIMITED.** The pre-registered rule fired against my standing explanation:
+at ×5 the connectivity tier is 34,705 km² (own land 31,780), enriched 3.09× in connectivity and 0.88× in refugia.
+Methods consequence: "binding scarcity" (E13) is weight × concentration — what recurs across a band is the value
+whose shortfall dominates the objective's slack; concentration decides at equal-ish weights, weight decides at
+dominance. Every Act-2 statement about a diffuse value is therefore a statement AT the elicited magnitude, and
+the paper must say so. 21/22 generalized (BLOCK ∈ {connectivity, biodiversity}, MULT); **all four arms ran
+2026-09-04/05 (R10.13 dose table): connectivity crosses over between share 0.67 and 0.83; biodiversity NEVER pins
+(tier 0 km², max f 0.63, D = 1.000 at ×5) — weight × concentration, with AOH richness below the concentration
+any weight can rescue. Rule gap: an empty tier yields NaN enrichment → 'AMBIGUOUS' by the letter; recorded as
+printed with the interpretation stated separately (no post-hoc re-labelling).**
+**M4.22 — lead-magnitude currency + the carbon weights-only arm (2026-09-08, R10.14):** the comparable measure of
+how hard a scenario leads with a value is the per-cell shortfall cost of that value's densest cells relative to
+refugia's under the same weights/targets (top-10k mean), because that is what makes cells too expensive to drop
+inside the g-band. It exposes the design asymmetry: carbon-forward leads through a TARGET (θ 3×), which the
+diffuse values have no analogue for (their θ-rule targets are 1.0; a lower target would REDUCE pressure, E10),
+so S4 sits at ~4.6× refugia while S1–S3 sit at 1.0–1.7×. Ruling: the registered scenarios are NOT re-tuned
+(pre-registration; the doubling is the elicited magnitude); the asymmetry is DISCLOSED with the currency and
+completed by one counterfactual — carbon-forward weights-only (S4 shares, S0 targets), fifth E18 arm — so the
+paper can state what carbon owns with the same lever the others get. Deck: E18 becomes its own slide.
+**M4.22 addendum (2026-09-08, after the arm ran; R10.14 cont.):** (i) As executed, the arm holds S4's REGISTERED weight vector
+verbatim with m_soc's target at S0's 0.332 — no re-derivation, because the influence share is target-insensitive under the swing
+normalization (0.499 vs 0.500); it is therefore exactly "S4's share at S0's targets". (ii) Scope of the lead-magnitude currency:
+the per-cell shortfall cost is charged only while a feature sits BELOW its target, so the currency ranks lead magnitude
+conditional on the target binding inside the g-band; for a target met with slack (m_soc at 0.332: members 0.332–0.380) the
+effective lead is nil whatever the score (7.63× here). Two necessary conditions beyond the score — a steep tail (S3 ×5) and a
+binding target / exhausted substitutes (this arm). The currency is not redefined; it is reported with this scope. (iii) 22 now
+computes the dose table in full (max f, Gate-2b D as max pairwise Hamming ÷ 2·discretionary-selected, the currency) so
+`spec/E18_dose_table.csv` is the single source; 20 renders it as the E18 slide (`td_e18_dose.png`) and adds the carbon-target
+caveat bullet to the carbon-forward Act-2 slide. Ruling stands: registered scenarios unchanged; the asymmetry is disclosed.
 
 ## 5. Solver configuration and numerical integrity
 
@@ -552,7 +639,7 @@ land (M3.6 accounting made director-legible; numbers in R10.4).
 | HiGHS-produced LP twins (ensemble) | Gurobi-path twins + HiGHS spot-check ×2 cells | 109-min worst-case presolve pathology; open-verification = verifiable, not produced, without Gurobi | 2026-08-28 (spec v0.10) |
 | S4 places locks (tails t=1.0 in every stack) | pure (w,t) + pre-registered pilot band ≥0.75 both pools; tails = contingency @ t=0.8 | targets are pressure, not locks; "a lot of the tail," not completeness; sufficient pull demonstrably captures tails | 2026-08-28 (spec v0.11) |
 | v0.11 pre-authorized tail contingency (t=0.8) | RESCINDED — no tail features as separate values, ever, without a new decision; pilot failure → chat | Ethan's ruling: no separate tail values in the problem; knowledge kept as backup (M4.14) | 2026-08-28 |
-| Director-spec step-0 cost "~8–10 h serial" | measured ~3 h (11–15 min per guarded sweep; floors shrink the search) | certificates_guard.csv S0/S4 vs plain g05 | 2026-09-03 (M4.19) |
+| Director-spec step-0 cost "~8–10 h serial" | projected ~3 h from S0/S4, then MEASURED 12.3 h on execution (52–76 min per sweep) — projection retracted, spec estimate was closer | certificates_guard.csv all 14 | 2026-09-03/04 (M4.19, R10.1) |
 
 *Maintainer note: entries M-numbered for stable citation from drafts. Update same-session, every
 methods-relevant change. Last updated 2026-09-03 (spec v0.14.1 + director package build).*

@@ -1,0 +1,185 @@
+{
+ "n_formulations": 12,
+ "excluded": [
+  "s1x",
+  "s3x"
+ ],
+ "threshold": 0.7,
+ "floor_g": 0.05,
+ "min_km2": 100,
+ "partial": false,
+ "missing": [],
+ "guard_runtime_h": 10.428921111111121,
+ "maa_guard_spotcheck": {
+  "formulation": "s0_ssp585_theta5",
+  "corr": 0.9604367855667945,
+  "tier_jaccard": 0.7911739471033685,
+  "freq_km2_mga": 23108,
+  "freq_km2_maa": 24908
+ },
+ "by_level": {
+  "585": {
+   "n": 6,
+   "core_km2": 17308,
+   "jaccard_vs_12": 0.6479402553601542,
+   "pct_of_12_inside": 79.59751405741343
+  },
+  "245": {
+   "n": 6,
+   "core_km2": 28612,
+   "jaccard_vs_12": 0.4810101864809451,
+   "pct_of_12_inside": 87.48150340337378
+  },
+  "jaccard_585_245": 0.3276664642784861,
+  "union_km2": 34587,
+  "intersection_km2": 11333
+ },
+ "frequent_km2": {
+  "guarded": 16895,
+  "unguarded": 6306
+ },
+ "always_km2": {
+  "guarded": 2237,
+  "unguarded": 0
+ },
+ "ever_in_band_pct": {
+  "guarded": 99.92836576900503,
+  "unguarded": 100.0
+ },
+ "s0_g10_union_pct": 100.0,
+ "e11_pairs_in_band": [
+  109,
+  132
+ ],
+ "pooling": [
+  {
+   "scenario": "s0",
+   "levels": 2,
+   "jaccard": 0.3411610167538543,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.34 < 0.8)",
+   "freq_km2_585": 23108,
+   "freq_km2_245": 35089
+  },
+  {
+   "scenario": "s1",
+   "levels": 2,
+   "jaccard": 0.40578272714717956,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.41 < 0.8)",
+   "freq_km2_585": 51032,
+   "freq_km2_245": 60940
+  },
+  {
+   "scenario": "s2",
+   "levels": 2,
+   "jaccard": 0.3567310102782652,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.36 < 0.8)",
+   "freq_km2_585": 11086,
+   "freq_km2_245": 15974
+  },
+  {
+   "scenario": "s3",
+   "levels": 2,
+   "jaccard": 0.3448382126348228,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.34 < 0.8)",
+   "freq_km2_585": 6471,
+   "freq_km2_245": 15349
+  },
+  {
+   "scenario": "s4",
+   "levels": 2,
+   "jaccard": 0.611857476635514,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.61 < 0.8)",
+   "freq_km2_585": 34787,
+   "freq_km2_245": 42479
+  },
+  {
+   "scenario": "s5",
+   "levels": 2,
+   "jaccard": 0.3436215810171888,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.34 < 0.8)",
+   "freq_km2_585": 25227,
+   "freq_km2_245": 35588
+  }
+ ],
+ "act2_owner_km2": {
+  "Core-habitat-forward": 29249,
+  "Connectivity-forward": 844,
+  "Biodiversity-forward": 407,
+  "Carbon-forward": 19937,
+  "2+ scenarios": 3549
+ },
+ "tier_area_pct_disc": {
+  "core": 1.5616262356904846,
+  "scenario": 4.989994315477153,
+  "opportunity": 93.37674521783738
+ },
+ "protected_baseline": {
+  "pa_km2": 191029,
+  "pa_pct_of_region": 15.00721965505918,
+  "pa_pct_of_budget": 50.02406551686393,
+  "efg_present_in_PAs": 35,
+  "banked_min": 12.255610701016842,
+  "banked_max": 19.16639009547981
+ },
+ "td4": "pending (no ecoregion layer)",
+ "e17": {
+  "base_lat": 50.9617919921875,
+  "n_efg_south": 20,
+  "n_efg": 40,
+  "median_efg_lat": 48.62980079650879,
+  "shifts": [
+   {
+    "block_out": "core_habitat",
+    "mean_lat": 50.791107177734375,
+    "delta_lat": -0.170684814453125,
+    "jaccard_vs_s0": 0.6802916399909358
+   },
+   {
+    "block_out": "connectivity",
+    "mean_lat": 50.005088806152344,
+    "delta_lat": -0.9567031860351562,
+    "jaccard_vs_s0": 0.8330157297761734
+   },
+   {
+    "block_out": "biodiversity",
+    "mean_lat": 52.137474060058594,
+    "delta_lat": 1.1756820678710938,
+    "jaccard_vs_s0": 0.8184692674912797
+   },
+   {
+    "block_out": "carbon",
+    "mean_lat": 49.7776985168457,
+    "delta_lat": -1.1840934753417969,
+    "jaccard_vs_s0": 0.8852668631545688
+   },
+   {
+    "block_out": "efg",
+    "mean_lat": 53.069339752197266,
+    "delta_lat": 2.1075477600097656,
+    "jaccard_vs_s0": 0.695059402139054
+   }
+  ]
+ },
+ "forms": [
+  "s0_ssp585_theta5",
+  "s1_ssp585_theta5",
+  "s2_ssp585_theta5",
+  "s3_ssp585_theta5",
+  "s4_ssp585_theta3",
+  "s5_ssp585_theta5",
+  "s0_ssp245_theta5",
+  "s1_ssp245_theta5",
+  "s2_ssp245_theta5",
+  "s3_ssp245_theta5",
+  "s4_ssp245_theta3",
+  "s5_ssp245_theta5"
+ ],
+ "pool_keys": [
+  "s0",
+  "s1",
+  "s2",
+  "s3",
+  "s4",
+  "s5"
+ ]
+}

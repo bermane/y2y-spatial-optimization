@@ -1550,7 +1550,8 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
     -- water/ice, roads, converted land -- become intact ground); CWD is recomputed once per
     seed part on it (cached under cwd_cache/<sha>_cf), unit fields derived exactly as in
     cost_distances, and every baseline edge is banded at the SAME cwd_cutoff_abs. Then
-        squeeze_ratio_obs = band_new_km2 / band_cf_km2      (both on NEW land, & ~node_union)
+        squeeze_ratio_obs = width_new_km / width_cf_km      (width = NEW-land band area / own
+                                                            least-cost route length)
         squeezed          = squeeze_ratio_obs < squeeze_ratio   (non-adjacency edges only)
     Why this and not the analytic ellipse index (M4.6, kept as `squeeze_idx`): no straight-link
     assumption, and both bands are clipped by the same study-window cutline, so the boundary
@@ -1559,7 +1560,17 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
     (bands_counterfactual.gpkg, the M3 'natural width' outline) and the D17 columns into A.edges;
     write_run/finish carry them into corridor_edges.csv. Records the constants in run_config.
     """
-    thr, rmax = float(A.cfg["squeeze_cf_min_cost"]), float(A.cfg["squeeze_ratio"])
+    # A.cfg is the run's frozen run_config.json; runs created before the addendum constants
+    # existed (v2_run002, 2026-08-27) don't carry them, so fall back to config.py and PIN the
+    # values into run_config below -- the run dir stays the record of what was actually used.
+    live = config.CORRIDORS[A.key]
+    missing = [k for k in ("squeeze_cf_min_cost", "squeeze_ratio") if k not in A.cfg]
+    if missing:
+        print(f"  D17 constants {missing} not in this run's run_config (run predates them) -- "
+              f"taken from config.CORRIDORS[{A.key!r}] and pinned into run_config.json")
+    thr = float(A.cfg.get("squeeze_cf_min_cost", live["squeeze_cf_min_cost"]))
+    rmax = float(A.cfg.get("squeeze_ratio", live["squeeze_ratio"]))
+    A.cfg["squeeze_cf_min_cost"], A.cfg["squeeze_ratio"] = thr, rmax
     cf_cost = np.where(A.cost >= thr, 1.0, A.cost).astype("float32")
     res_cf = np.where(A.pu, cf_cost, np.inf)
     n_changed = int(((A.cost >= thr) & A.pu).sum())
@@ -1603,34 +1614,67 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
 
     # ---- bands at the same cutoff: unit edges on unit fields, locked edges on part fields ---
     unit_rows = A.edges[A.edges["edge_class"] != "intra_name"]
-    bands_cf, _, _, _ = edge_bands(A, cwd_cf, mcp_cf, unit_rows, A.cutoff, "abs", want_slack=False)
+    bands_cf, _, _, meta_cf = edge_bands(A, cwd_cf, mcp_cf, unit_rows, A.cutoff, "abs",
+                                         want_slack=False)
     lk_rows = A.edges[A.edges["edge_class"] == "intra_name"]
     if len(lk_rows):
-        b2, _, _, _ = edge_bands(_NS(nodes=A.parts, shape=A.shape), cwd_parts_cf, mcp_cf,
-                                 lk_rows, A.cutoff, "abs", want_slack=False)
-        bands_cf.update(b2)
+        b2, _, _, m2 = edge_bands(_NS(nodes=A.parts, shape=A.shape), cwd_parts_cf, mcp_cf,
+                                  lk_rows, A.cutoff, "abs", want_slack=False)
+        bands_cf.update(b2); meta_cf.update(m2)
 
+    # ---- WIDTH, not area (measured 2026-09-08 on v2_run002): relaxing barriers also SHORTENS
+    # routes that detoured around water/ice, and band area ∝ length × width -- on 6 links the
+    # counterfactual band was SMALLER in area while plainly wider per km. D17's concept is
+    # narrowing, so the ratio is width = band area / own route length (the implementable
+    # analogue of the spec's cross-sectional width), each band over its OWN least-cost route.
     flat_nodes = A.node_union.ravel()
-    new_km2, cf_km2 = {}, {}
+    new_km2, cf_km2, cf_len = {}, {}, {}
     for eid in A.edges.index:
         idx = A.bands.get(eid, np.empty(0, np.int32))
         new_km2[eid] = float((~flat_nodes[idx]).sum()) * A.cell_km2
         idc = bands_cf.get(eid, np.empty(0, np.int32))
         cf_km2[eid] = float((~flat_nodes[idc]).sum()) * A.cell_km2
+        cf_len[eid] = float(meta_cf.get(eid, {}).get("centreline_cells", 0)) * A.cell_km
     A.edges["band_new_km2"] = pd.Series(new_km2)
     A.edges["band_cf_km2"] = pd.Series(cf_km2)
-    eligible = (A.edges["cost"] > 0) & (~A.edges["is_adjacency"]) & (A.edges["band_cf_km2"] > 0)
+    A.edges["centreline_cf_km"] = pd.Series(cf_len)
+    L_new = A.edges["centreline_km"].where(A.edges["centreline_km"] >= 2.0)
+    L_cf = A.edges["centreline_cf_km"].where(A.edges["centreline_cf_km"] >= 2.0)
+    A.edges["width_new_km"] = (A.edges["band_new_km2"] / L_new).round(2)
+    A.edges["width_cf_km"] = (A.edges["band_cf_km2"] / L_cf).round(2)
+    eligible = ((A.edges["cost"] > 0) & (~A.edges["is_adjacency"])
+                & A.edges["width_new_km"].notna() & (A.edges["width_cf_km"] > 0))
     A.edges["squeeze_ratio_obs"] = np.where(
-        eligible, A.edges["band_new_km2"] / A.edges["band_cf_km2"].replace(0, np.nan), np.nan)
+        eligible, A.edges["width_new_km"] / A.edges["width_cf_km"].replace(0, np.nan), np.nan)
     A.edges["squeezed"] = eligible & (A.edges["squeeze_ratio_obs"] < rmax)
 
-    # ---- G13 ----------------------------------------------------------------------------
-    viol = A.edges.index[eligible & (A.edges["band_cf_km2"] < A.edges["band_new_km2"] * (1 - tol))]
-    assert len(viol) == 0, (
-        f"G13 FAILED: counterfactual band narrower than the real band on {list(viol)} -- removing "
-        f"barriers can only widen the near-optimal set; suspect the cutoff or the cache key.")
+    # ---- G13 (restated 2026-09-08, second time -- measured on v2_run002) --------------------
+    # The counterfactual band bounds the real band in NEITHER direction. Two legitimate ways it
+    # can be narrower per km: (1) relaxing barriers SHORTENS a detouring route; (2) barriers on
+    # the real surface EQUALISE two routes into a near-tie (a braided, wide band, e.g. the two
+    # Liard<->Nahanni branches), and relaxation breaks the tie so the band collapses to one
+    # ribbon. Neither is a squeeze; both are reported. The one true relaxation invariant is on
+    # the OPTIMUM: lowering costs can never make the least-cost route costlier -- lcp_cf <=
+    # lcp_real for every banded edge. That is the gate.
+    lcp_real = pd.Series({e: A.band_meta[e]["lcp"] for e in A.edges.index if e in A.band_meta})
+    lcp_cf = pd.Series({e: meta_cf[e]["lcp"] for e in A.edges.index if e in meta_cf})
+    both = lcp_real.index.intersection(lcp_cf.index)
+    bad = [e for e in both if lcp_cf[e] > lcp_real[e] * (1 + 1e-6) + 1e-6]
+    assert not bad, (
+        f"G13 FAILED: the counterfactual least-cost route is COSTLIER than the real one on {bad} "
+        f"-- impossible under a cost relaxation; suspect the cache key or the cutoff.")
+    A.edges["lcp_real"] = lcp_real.reindex(A.edges.index)
+    A.edges["lcp_cf"] = lcp_cf.reindex(A.edges.index)
+    narrower = A.edges.index[eligible & (A.edges["width_cf_km"] < A.edges["width_new_km"] * (1 - tol))]
+    if len(narrower):
+        print(f"  G13 note: {len(narrower)} link(s) have a NARROWER counterfactual (shorter route "
+              f"and/or a real-surface near-tie broken by relaxation) -- reported, not squeezed: "
+              + ", ".join(f"{e} w {A.edges.loc[e,'width_new_km']:.1f}->{A.edges.loc[e,'width_cf_km']:.1f} km, "
+                          f"L {A.edges.loc[e,'centreline_km']:.0f}->{A.edges.loc[e,'centreline_cf_km']:.0f} km"
+                          for e in narrower))
     n_sq = int(A.edges["squeezed"].sum())
-    print(f"  G13 OK: counterfactual band >= real band on all {int(eligible.sum())} eligible edges")
+    print(f"  G13 OK: counterfactual optimum <= real optimum on all {len(both)} banded edges "
+          f"(relaxation invariant); {int(eligible.sum())} edges eligible for the width ratio")
     print(f"  SQUEEZED (ratio < {rmax:g}): {n_sq} links -- "
           + ", ".join(f"{_short_node_name(r.label_i, 14)}↔{_short_node_name(r.label_j, 14)} "
                       f"{r.squeeze_ratio_obs:.2f}"
@@ -1647,6 +1691,12 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
         polys = [_shape(s) for s, v in shapes(m.astype("uint8"), mask=m, transform=A.transform)
                  if v == 1]
         rows.append(dict(edge_id=eid, band_cf_km2=cf_km2[eid], band_new_km2=new_km2[eid],
+                         centreline_km=float(A.edges.loc[eid, "centreline_km"]),
+                         centreline_cf_km=cf_len[eid],
+                         width_new_km=(float(A.edges.loc[eid, "width_new_km"])
+                                       if pd.notna(A.edges.loc[eid, "width_new_km"]) else None),
+                         width_cf_km=(float(A.edges.loc[eid, "width_cf_km"])
+                                      if pd.notna(A.edges.loc[eid, "width_cf_km"]) else None),
                          squeeze_ratio_obs=float(A.edges.loc[eid, "squeeze_ratio_obs"])
                          if pd.notna(A.edges.loc[eid, "squeeze_ratio_obs"]) else None,
                          geometry=gpd.GeoSeries(polys, crs=A.crs).union_all()))
@@ -2061,6 +2111,7 @@ def write_run(A):
                  "disconnects", "n_pairs_lost", "cost_inflation", "mean_pair_inflation",
                  "backup_edge_id", "backup_ratio", "irreplaceable", "insures_edge_id",
                  "n_branches", "route_irreplaceable", "band_new_km2", "band_cf_km2",
+                 "centreline_cf_km", "width_new_km", "width_cf_km", "lcp_real", "lcp_cf",
                  "squeeze_ratio_obs", "squeezed", "band_km2", "centreline_km"]
     (A.edges[[c for c in crit_cols if c in A.edges.columns]]
      .sort_values(["irreplaceable", "n_pairs_lost", "ecfb_raw"], ascending=False)
@@ -2912,6 +2963,43 @@ def near_opt_map(R, pad=0.05):
     return R
 
 
+def label_named_areas(R, ax, top_n=12, overrides=None, fontsize=9, XL=None, YL=None,
+                      ipca_color="#7a3402", pa_color="0.2", dx_m=150_000, dy_m=32_000,
+                      min_frame_km2=25):
+    """Label the biggest named areas (IPCAs coloured, PAs grey; italic, white halo) with a greedy
+    anisotropic declutter: biggest first, and a label is skipped when an already-placed one sits
+    within dx_m horizontally AND dy_m vertically (a 9 pt label spans ~150 km of map at region
+    scale, so a plain radius either drops nothing or everything). `overrides` = {fragment: text
+    | (text, dx_m, dy_m)} for board wording / nudges. With XL/YL the names are clipped to the
+    frame first (zooms)."""
+    import matplotlib.patheffects as pe
+    from shapely.geometry import box as _box
+    names = (gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+             .dissolve(by="name_label").reset_index())
+    if XL is not None:
+        frame = _box(XL[0], YL[0], XL[1], YL[1])
+        names["geometry"] = names.geometry.intersection(frame)
+        names = names[~names.geometry.is_empty]
+    names["km2"] = names.geometry.area / 1e6
+    names = names[names["km2"] >= min_frame_km2]
+    placed = []
+    for _, row in names.sort_values("km2", ascending=False).iterrows():
+        if len(placed) >= top_n:
+            break
+        pt = row.geometry.representative_point()
+        if any(abs(pt.x - x) < dx_m and abs(pt.y - y) < dy_m for x, y in placed):
+            continue
+        placed.append((pt.x, pt.y))
+        is_ipca = str(row["name_label"]).startswith("IPCA")
+        ov = next((v for k, v in (overrides or {}).items() if k in str(row["name_label"])), None)
+        disp, dx, dy = (ov if isinstance(ov, tuple)
+                        else (ov or _short_node_name(row["name_label"], 18), 0, 0))
+        ax.annotate(disp, (pt.x + dx, pt.y + dy), fontsize=fontsize, ha="center", va="center",
+                    fontstyle="italic", color=(ipca_color if is_ipca else pa_color), zorder=6,
+                    path_effects=[pe.withStroke(linewidth=2.4, foreground="white")])
+    return placed
+
+
 def near_opt_map_board(R, pad=0.05,
                        title="Keeping the North Connected",
                        subtitle="Searching for low-cost movement corridors between protected "
@@ -2942,35 +3030,8 @@ def near_opt_map_board(R, pad=0.05,
                        Patch(color=NEAR_OPT_ANCHOR_COLOR, label="proposed IPCAs")],
               loc="lower left", fontsize=11, frameon=True)
 
-    # label the biggest named areas (board readability: sparse, haloed, short names)
     if label_top_n:
-        import matplotlib.patheffects as pe
-        names = (gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
-                 .dissolve(by="name_label").reset_index())
-        names["km2"] = names.geometry.area / 1e6
-        # greedy declutter, biggest first. The exclusion zone approximates the TEXT BOX, not a
-        # point: a 9 pt label spans ~150 km of map at this scale, so the test is anisotropic
-        # (wide in x, shallow in y) -- a plain radius either drops nothing or drops everything.
-        placed = []
-        for _, row in names.sort_values("km2", ascending=False).iterrows():
-            if len(placed) >= label_top_n:
-                break
-            pt = row.geometry.representative_point()
-            if any(abs(pt.x - x) < 150_000 and abs(pt.y - y) < 32_000 for x, y in placed):
-                continue
-            placed.append((pt.x, pt.y))
-            is_ipca = str(row["name_label"]).startswith("IPCA")
-            # fragment-matched display overrides (board wording: e.g. "Ross River" for
-            # Tū Łī́dlini). A tuple value = (text, dx_m, dy_m) to nudge a long label clear of
-            # its neighbours.
-            ov = next((v for k, v in (label_overrides or {}).items()
-                       if k in str(row["name_label"])), None)
-            disp, dx, dy = (ov if isinstance(ov, tuple)
-                            else (ov or _short_node_name(row["name_label"], 18), 0, 0))
-            ax.annotate(disp, (pt.x + dx, pt.y + dy),
-                        fontsize=9, ha="center", va="center", fontstyle="italic",
-                        color=("#7a3402" if is_ipca else "0.2"),
-                        path_effects=[pe.withStroke(linewidth=2.4, foreground="white")])
+        label_named_areas(R, ax, top_n=label_top_n, overrides=label_overrides)
 
     fig.suptitle(title, fontsize=20, fontweight="bold", y=0.97)
     ax.set_title(subtitle, fontsize=13, pad=12)

@@ -54,5 +54,12 @@
   "bytes": 856064,
   "fetched_utc": "2026-09-03T18:46:11.546799+00:00",
   "note": "61 features, paged REST -> GeoJSON (EPSG:4326)"
+ },
+ "aoi/natural_subregions_2005.gpkg": {
+  "url": "https://geospatial.alberta.ca/titan/rest/services/biota/natural_subregions_alberta_2005/MapServer/0",
+  "sha256": "7ea81a9207ed57679631b5117adef5024343f7ee46d83fada84516a613d2bd92",
+  "bytes": 8949760,
+  "fetched_utc": "2026-09-03T21:07:02.182722+00:00",
+  "note": "420 features, paged REST -> GeoJSON (EPSG:4326)"
  }
 }

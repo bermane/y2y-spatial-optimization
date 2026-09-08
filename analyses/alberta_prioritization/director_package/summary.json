@@ -1,0 +1,211 @@
+{
+ "n_formulations": 12,
+ "threshold": 0.7,
+ "floor_g": 0.05,
+ "min_km2": 10,
+ "complex_link_km": 10,
+ "band": "g02",
+ "level": "A",
+ "budget_pct": 0.4470064487331587,
+ "additions_km2": 10083,
+ "pa_km2": 27972,
+ "pa_pct_of_extent": 32.85682402828515,
+ "by_level": {
+  "585": {
+   "n": 6,
+   "core_km2": 1126,
+   "jaccard_vs_12": 0.9715808170515098,
+   "pct_of_12_inside": 100.0
+  },
+  "245": {
+   "n": 6,
+   "core_km2": 1055,
+   "jaccard_vs_12": 0.9643510054844607,
+   "pct_of_12_inside": 96.43510054844607
+  },
+  "jaccard_585_245": 0.9369449378330373,
+  "union_km2": 1126,
+  "intersection_km2": 1055
+ },
+ "frequent_km2": {
+  "guarded": 1094,
+  "unguarded": 1094
+ },
+ "always_km2": {
+  "guarded": 86,
+  "unguarded": 86
+ },
+ "ever_in_band_pct": {
+  "guarded": 98.64243102814856,
+  "unguarded": 98.6371826944945
+ },
+ "s0_g10_union_pct": 100.0,
+ "ever_in_5pct_band_pct": 100.0,
+ "e11_pairs_in_band": [
+  132,
+  132
+ ],
+ "pooling": [
+  {
+   "scenario": "s0",
+   "levels": 2,
+   "jaccard": 0.9070855614973262,
+   "decision": "POOLED",
+   "freq_km2_585": 1488,
+   "freq_km2_245": 1365
+  },
+  {
+   "scenario": "s1",
+   "levels": 2,
+   "jaccard": 0.755656108597285,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.76 < 0.8)",
+   "freq_km2_585": 1544,
+   "freq_km2_245": 1560
+  },
+  {
+   "scenario": "s2",
+   "levels": 2,
+   "jaccard": 0.9657303370786516,
+   "decision": "POOLED",
+   "freq_km2_585": 1774,
+   "freq_km2_245": 1725
+  },
+  {
+   "scenario": "s3",
+   "levels": 2,
+   "jaccard": 0.9535472972972973,
+   "decision": "POOLED",
+   "freq_km2_585": 1184,
+   "freq_km2_245": 1129
+  },
+  {
+   "scenario": "s4",
+   "levels": 2,
+   "jaccard": 0.9113009198423128,
+   "decision": "POOLED",
+   "freq_km2_585": 1491,
+   "freq_km2_245": 1418
+  },
+  {
+   "scenario": "s5",
+   "levels": 2,
+   "jaccard": 1.0,
+   "decision": "POOLED",
+   "freq_km2_585": 86,
+   "freq_km2_245": 86
+  }
+ ],
+ "act2_owner_km2": {
+  "Core-habitat-forward": 72,
+  "Connectivity-forward": 353,
+  "Biodiversity-forward": 0,
+  "Carbon-forward": 220,
+  "2+ scenarios": 276
+ },
+ "tier_area_pct_disc": {
+  "core": 1.9138923391823097,
+  "scenario": 1.6112384317979043,
+  "opportunity": 95.11730025716835
+ },
+ "protected_baseline": {
+  "pa_km2": 27972,
+  "pa_pct_of_region": 32.85682402828515,
+  "pa_pct_of_budget": 73.50413874655105,
+  "efg_present_in_PAs": 23,
+  "banked_min": 23.91309436373305,
+  "banked_max": 71.4207666042447
+ },
+ "td4": "Natural Regions and Subregions of Alberta (2005), NRNAME / NSRNAME",
+ "aoi": [
+  {
+   "aoi": "Upper Smoky Nature-First zone",
+   "km2_unlocked": 436,
+   "share_of_unprotected_pct": 0.7627578243907559,
+   "core_inside_km2": 0,
+   "scenario_inside_km2": 4,
+   "opportunity_inside_km2": 432,
+   "mean_F_inside": 0.2794642448425293,
+   "mean_F_unprotected": 0.17639648914337158,
+   "mean_f_s1": 0.3752923309803009,
+   "mean_f_s2": 0.3288586139678955,
+   "mean_f_s3": 0.1807204633951187,
+   "mean_f_s4": 0.268146276473999
+  },
+  {
+   "aoi": "Upper Smoky SRP planning area",
+   "km2_unlocked": 10028,
+   "share_of_unprotected_pct": 17.543429960987385,
+   "core_inside_km2": 0,
+   "scenario_inside_km2": 174,
+   "opportunity_inside_km2": 9825,
+   "mean_F_inside": 0.19133387506008148,
+   "mean_F_unprotected": 0.17639648914337158,
+   "mean_f_s1": 0.15166357159614563,
+   "mean_f_s2": 0.194086953997612,
+   "mean_f_s3": 0.19676867127418518,
+   "mean_f_s4": 0.22026170790195465
+  }
+ ],
+ "tenure_by_tier": [
+  {
+   "tier": "core",
+   "km2": 1094,
+   "crown (Green Area)": 478,
+   "crown (White Area, notated)": 96,
+   "private presumed (non-ranch)": 122,
+   "private ranchland (OECM track)": 332,
+   "unclassified": 66
+  },
+  {
+   "tier": "value-forward",
+   "km2": 921,
+   "crown (Green Area)": 371,
+   "crown (White Area, notated)": 224,
+   "private presumed (non-ranch)": 27,
+   "private ranchland (OECM track)": 295,
+   "unclassified": 4
+  },
+  {
+   "tier": "opportunity",
+   "km2": 54370,
+   "crown (Green Area)": 46366,
+   "crown (White Area, notated)": 1619,
+   "private presumed (non-ranch)": 1713,
+   "private ranchland (OECM track)": 4625,
+   "unclassified": 47
+  },
+  {
+   "tier": "never",
+   "km2": 776,
+   "crown (Green Area)": 501,
+   "crown (White Area, notated)": 53,
+   "private presumed (non-ranch)": 81,
+   "private ranchland (OECM track)": 141,
+   "unclassified": 0
+  }
+ ],
+ "forms": [
+  "s0_ssp585_theta5",
+  "s1_ssp585_theta5",
+  "s2_ssp585_theta5",
+  "s3_ssp585_theta5",
+  "s4_ssp585_theta2",
+  "s5_ssp585_theta5",
+  "s0_ssp245_theta5",
+  "s1_ssp245_theta5",
+  "s2_ssp245_theta5",
+  "s3_ssp245_theta5",
+  "s4_ssp245_theta2",
+  "s5_ssp245_theta5"
+ ],
+ "pool_keys": [
+  "s0",
+  "s1",
+  "s2",
+  "s3",
+  "s4",
+  "s5"
+ ],
+ "ranchland_pool_km2": 5393,
+ "crown_share_of_unprotected_pct": 86.9613897587516
+}

@@ -1,0 +1,19 @@
+tier,guarded km2,guarded %disc,unguarded km2,unguarded %disc
+"Act 1 core (F >= 0.70, all formulations)",1094,1.9138923391823097,1094.0,1.9138923391823097
+appendix s0: Balanced (frequent minus core),310,0.5423278109200329,310.0,0.5423278109200329
+Act 2 s1: Core-habitat-forward (frequent minus core),332,0.5808155910498417,332.0,0.5808155910498417
+Act 2 s2: Connectivity-forward (frequent minus core),629,1.1004006228022603,629.0,1.1004006228022603
+Act 2 s3: Biodiversity-forward (frequent minus core),56,0.09796889487587691,56.0,0.09796889487587691
+Act 2 s4: Carbon-forward (frequent minus core),333,0.5825650356011967,333.0,0.5825650356011967
+appendix s5: Intactness push (S0 + gHM x10) (frequent minus core),0,0.0,0.0,0.0
+Act 2 any named scenario (union),921,1.6112384317979043,921.0,1.6112384317979043
+"Act 3 opportunity (in >= 1 band, not above)",54370,95.11730025716835,54367.0,95.11205192351429
+never (no near-optimal plan selects it),776,1.3575689718514372,779.0,1.362817305505502
+Act 1 core - BOTH refugia futures (cell-level intersection),1055,1.8456640016794668,,
+climate-conditional core - SSP585 future only,71,0.12421056314620108,,
+climate-conditional core - SSP245 future only,0,0.0,,
+Act 2 by scenario - Core-habitat-forward only,72,0.12596000769755603,,
+Act 2 by scenario - Connectivity-forward only,353,0.6175539266282956,,
+Act 2 by scenario - Biodiversity-forward only,0,0.0,,
+Act 2 by scenario - Carbon-forward only,220,0.38487780129808785,,
+Act 2 by scenario - frequent under 2+ named scenarios,276,0.48284669617396475,,

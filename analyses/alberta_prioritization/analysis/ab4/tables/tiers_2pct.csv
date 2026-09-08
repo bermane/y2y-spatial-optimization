@@ -1,0 +1,10 @@
+tier,km2,pct_disc
+"core (F2 >= 0.70, all formulations)",1117,1.9541295638634733
+s1@585: Core-habitat-forward (frequent minus core),427,0.7470128234285615
+s1@245: Core-habitat-forward (frequent minus core),443,0.7750039362502406
+s2: Connectivity-forward (frequent minus core),606,1.0601633981210965
+s3: Biodiversity-forward (frequent minus core),35,0.06123055929742307
+s4: Carbon-forward (frequent minus core),310,0.5423278109200329
+any value-forward scenario (union),1121,1.961127342068893
+"opportunity (in >= 1 plan of >= 1 formulation, not above)",54185,94.79365301516768
+never (no 2%-band plan selects it),738,1.2910900788999493

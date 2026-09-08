@@ -1,0 +1,45 @@
+tier,block,feature,capture
+existing PAs,core_habitat,climate_type_macrorefugia,0.1916639009547981
+existing PAs,core_habitat,BLOCK,0.1916639009547981
+existing PAs,connectivity,transboundary_connectivity,0.14932034976347894
+existing PAs,connectivity,climate_corridors,0.14275511020887854
+existing PAs,connectivity,BLOCK,0.14603772998617875
+existing PAs,carbon,irrecoverable_carbon_m_soc,0.17637122346878273
+existing PAs,carbon,irrecoverable_carbon_biomass,0.12255610701016842
+existing PAs,carbon,BLOCK,0.14946366523947557
+existing PAs,biodiversity,aoh_richness_birds,0.15293635706775793
+existing PAs,biodiversity,aoh_richness_mammals,0.15910148413544126
+existing PAs,biodiversity,BLOCK,0.1560189206015996
++ Act 1 core,core_habitat,climate_type_macrorefugia,0.2489714509271025
++ Act 1 core,core_habitat,BLOCK,0.2489714509271025
++ Act 1 core,connectivity,transboundary_connectivity,0.16320923252529138
++ Act 1 core,connectivity,climate_corridors,0.15338845482549326
++ Act 1 core,connectivity,BLOCK,0.15829884367539232
++ Act 1 core,carbon,irrecoverable_carbon_m_soc,0.19000430127155843
++ Act 1 core,carbon,irrecoverable_carbon_biomass,0.13599954945157072
++ Act 1 core,carbon,BLOCK,0.16300192536156458
++ Act 1 core,biodiversity,aoh_richness_birds,0.16797139965319113
++ Act 1 core,biodiversity,aoh_richness_mammals,0.17392366169048576
++ Act 1 core,biodiversity,BLOCK,0.17094753067183843
++ Act 2 scenario tiers,core_habitat,climate_type_macrorefugia,0.3251220184338494
++ Act 2 scenario tiers,core_habitat,BLOCK,0.3251220184338494
++ Act 2 scenario tiers,connectivity,transboundary_connectivity,0.20904140670332777
++ Act 2 scenario tiers,connectivity,climate_corridors,0.1945377218329572
++ Act 2 scenario tiers,connectivity,BLOCK,0.20178956426814249
++ Act 2 scenario tiers,carbon,irrecoverable_carbon_m_soc,0.38482616597971964
++ Act 2 scenario tiers,carbon,irrecoverable_carbon_biomass,0.16336274911593024
++ Act 2 scenario tiers,carbon,BLOCK,0.2740944575478249
++ Act 2 scenario tiers,biodiversity,aoh_richness_birds,0.2068904884424278
++ Act 2 scenario tiers,biodiversity,aoh_richness_mammals,0.21322148206214378
++ Act 2 scenario tiers,biodiversity,BLOCK,0.2100559852522858
++ Act 3 opportunity,core_habitat,climate_type_macrorefugia,0.9997923571268427
++ Act 3 opportunity,core_habitat,BLOCK,0.9997923571268427
++ Act 3 opportunity,connectivity,transboundary_connectivity,0.9998673944068694
++ Act 3 opportunity,connectivity,climate_corridors,0.9994123393388564
++ Act 3 opportunity,connectivity,BLOCK,0.999639866872863
++ Act 3 opportunity,carbon,irrecoverable_carbon_m_soc,0.9998436756971509
++ Act 3 opportunity,carbon,irrecoverable_carbon_biomass,0.9998704285352462
++ Act 3 opportunity,carbon,BLOCK,0.9998570521161986
++ Act 3 opportunity,biodiversity,aoh_richness_birds,0.9995384865473167
++ Act 3 opportunity,biodiversity,aoh_richness_mammals,0.9996140142551787
++ Act 3 opportunity,biodiversity,BLOCK,0.9995762504012478

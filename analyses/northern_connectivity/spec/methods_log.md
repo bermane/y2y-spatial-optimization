@@ -144,7 +144,25 @@ rule; quantitative outcomes live there, methods decisions here);
   `squeeze_idx` (M4.6) retained as a screening diagnostic column only; `_routing_classes`
   prefers the D17 column and prints 'H8 OPEN' while it is absent. Implemented
   `corridors_core.counterfactual_squeeze`, notebook 04 step 2b; synthetic-verified.
-  Measured on v2_run002: PENDING the notebook-04 re-run.
+  **AMENDED 2026-09-08 after the first real execution:** the ratio is WIDTH (band NEW-land
+  area ÷ own least-cost route length), not raw area. G13's area inequality fired on 6 links
+  (E003_026, E003_036, E007_008, E009_038, E023_028, L002_003): relaxing barriers SHORTENS
+  routes that detoured around water/ice, and area ∝ length × width, so a straighter
+  counterfactual can be smaller in area while wider per km. G13 restated to assert the
+  mechanism — a narrower-per-km counterfactual is admissible only with a shorter
+  counterfactual route; such links are reported, never classed squeezed. Counterfactual CWD
+  set cached (`8487b2284c1a19a3_cf`). **Second amendment, same day:** the shorter-route
+  mechanism assertion also fired (E009_015, E023_028, L032_033: narrower counterfactual,
+  route not shorter). Cause: barriers on the real surface EQUALISE two routes into a
+  near-tie — a braided, wide band (Liard↔Nahanni's two branches) — and relaxation breaks
+  the tie, collapsing the band to one ribbon. So the counterfactual band bounds the real
+  band in neither direction; it is a comparator. G13 is now the one true relaxation
+  invariant, on the optimum: `lcp_cf ≤ lcp_real` for every banded edge (hard assert);
+  narrower-counterfactual links are reported (widths + lengths), never classed squeezed.
+  MEASURED 2026-09-08: G13 holds on all 58 banded edges; 8 squeezed (the 5 analytic-index
+  links in the same order + Gwillim↔Pine Le Moray [already red] + Wilps Gwininitxw↔Mount
+  Blanchet + Wilps Gwininitxw↔Sustut); 6 narrower-counterfactual links reported, Liard↔Nahanni
+  the textbook braided case (results_log R9.1). H8 CLOSED on measured data.
 - **M4.5 Irreplaceable-flag semantics (for the paper):** the flag records "no affordable DIRECT
   backup existed when the bridge was processed" — affordable = within β; an alternative always
   exists at SOME price, and `backup_ratio` is that price. Later backups can close cycles that
@@ -224,6 +242,20 @@ rule; quantitative outcomes live there, methods decisions here);
   chips are percentiles among all profiled links, never raw values. Jurisdictions from
   Natural Earth admin-1 polygons (display + 'who's at the table' only); settlement lands
   pending an authoritative layer. H8 gate enforced in code.
+- **M5.12 Director basemap for M1 + the new M0 cost map (2026-09-08, PRESENTATION ONLY — spec
+  06 v1.2.2):** `corridors_director._director_base` — Natural Earth coast / admin-1 lines /
+  Canada–US border, PA + IPCA fills, province NAMES, ten prominent cities (`MAJOR_TOWNS`), the
+  14 biggest PA/IPCA names via `cc.label_named_areas`. Province names are placed
+  automatically on EMPTY land: the province ∩ routing window minus a 35 km buffer around every
+  named area and a 40 km buffer around every labelled city, then the pole of inaccessibility of
+  the largest free piece (`shapely.maximum_inscribed_circle`); provinces holding < 4% of the
+  window (Alberta) get no name. City labels default to the right of the dot; Mackenzie and
+  Prince George go left (`TOWN_LABEL_SIDE`) because the right side is corridor. Two DISPLAY
+  name overrides (`AREA_OVERRIDES`): the PA layer's string for Fishing Branch is mis-encoded
+  ("Nj ‘Iinlii” Jjik") and is shown as "Ni’iinlii Njik (Fishing Branch)"; "Neah Conservancy"
+  is shown with BC Parks' spelling "Ne’āh’". Node ids, tables and every computation keep the
+  source strings. Legends sit below the map (`fig.legend`, lower centre). Nothing here enters
+  any computation.
 - **M5.10 Background reference layers (2026-09-01, DISPLAY-ONLY):** the zoom figures
   (routing_problem_zoom / _cost_zoom / _cost_overlay, priority_links_map) carry
   provincial borders (Natural Earth 10m admin-1 lines, public domain, in

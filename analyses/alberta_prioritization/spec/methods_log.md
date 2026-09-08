@@ -253,4 +253,90 @@ ring, or column in the applied outputs; the B pilot (R4.3, R5.8) stays in the re
 measured nesting result and can be revived by re-running 10 with `budget_level = B` if a tighter
 envelope is ever wanted. 09/10 already operate at A; 11/12 are built for A alone.
 
-*Last updated 2026-09-03.*
+## M10. Gate AB-4 analysis build (2026-09-03; `11_ab4_analysis` written, PENDING-RUN after 10)
+
+**M10.1 Two bands, one notebook.** Estimand block (g = 5%, plain semantics = the parent's
+`F_surface` convention): hierarchical F (one vote per formulation), spec bands, E1 bias vs the
+anchor-only F, E2 definitional note, E3 variance shares on the 12 factorial formulations +
+crossed contrast, E7 T1 (anchor captures with banked shares beside them; θ5-tail rates; gHM audit
+on S3), E11 (anchor Jaccard + Δ(s,s′) reconstructed from captures with the 245 realization for
+ssp245 formulations and EFGs at 1/27; diagonal self-check). Applied block (g = 2%, D-AB10):
+ensemble F₂ in both semantics, every formulation's f₂ written as a GeoTIFF, climate pooling per
+scenario (parent decision (g): pool iff frequent-tier Jaccard ≥ 0.80), tiers = core (F₂ ≥ 0.70) /
+per-scenario value-forward tiers for S1–S4 (pooled f₂ ≥ 0.70 minus core; S0/S5/crossed to the
+appendix) / opportunity (in ≥ 1 plan, not above) / never; coded tier raster.
+**M10.2 C1 like-for-like:** parent `ensemble_v1/F_surface.tif` (5%, plain) clipped to AB
+discretionary cells vs AB F₅ plain — Spearman on shared cells, frequent-tier overlap coefficient
+(Jaccard supplementary); per-formulation anchors by overlap coefficient with the parent's S4/crossed
+ids mapped `theta2 → theta3`; at 2% the reference formulation only (the parent has g02 there alone).
+**M10.3 C4 + tenure + distance:** AOI capture = share of the core inside the AOI vs the AOI's
+share of discretionary land (the null), plus mean F₂ / per-scenario f₂ inside; tenure split of every
+tier from the 03 estimate (over-count disclosure carries); distance-to-PA bands of the core vs the
+null (the tabled D-AB6 reading).
+**M10.4 Clusters (D-AB7, provisional constants):** the parent's procedure unchanged (threshold
+0.70 → closing r=1 → 8-connected components → minimum size → core subtraction for scenario
+clusters), with AB-scale constants `MIN_KM2_AB = 10` (parent 100) and polygon simplification 500 m
+(parent 2 km); minimum-size sensitivity 5/10/25/50 km² printed so 12 can set the constants with
+disclosure. Register columns mirror T-D1 with AB-local block percentiles (over AB discretionary
+land), representativeness = EFG classes present / 27, driver masks (m_soc θ5-tail, rare EFGs ≤ 1%
+of PU, connectivity top-1%), tenure mix, % within 5 km of a PA, % in the NFZ, n formulations frequent.
+**M10.5 Natural Subregions (2005)** added to `acquire.py` (REST, OGL-A) for the T-D4 analogue;
+consumed by 12 once on disk.
+
+## M11. Gate AB-5 report build (2026-09-03; `12_ab5_report` written, PENDING-RUN after 11)
+
+**M11.1 D-AB7 constants set (disclosed):** display unit = 1 km cells (25 km² and 100 km² hex
+variants rendered only for the how-to-read comparison; parent 250/800); minimum cluster 10 km²
+(from 11's provisional constant; parent 100; 5/25/50 sensitivity in 11's tables); polygon
+simplification 500 m (parent 2 km); deck picks top-6 core by area, top-2 per scenario
+(presentational; register ships in full); band = 2% guarded (D-AB10). Never tuned to a cluster count.
+**M11.2 Applied grammar mirrored:** (a)/(b) core pair recast per D-AB2 (additions-only view with
+the estate MASKED / context view with the estate drawn + picks + inset F histogram, % area
+annotated); value-forward small multiples with the core outlined and NFZ dashed ("alignment,
+not assignment" call-outs when a pick lies ≥ 5% inside the zone); opportunity pair (union
+membership + tier map + guardrail sentence with the R5 flatness statement); core star grid on
+AB-local percentiles (EFG classes / 27); driver bars; tier-achievement (cumulative tiers incl.
+the locked estate; block = mean of member captures, T-D3 convention; anchor reference band from
+T1); **T-D4 analogue = tier area by Natural Region and Subregion (2005) + tenure by tier**; AOI
+table (C4); agreement matrix (E11 Jaccard); deck outline + draft pptx.
+**M11.3 Names** are placeholders: bearing from the nearest PA (≥ 25 km², inside the extent) +
+Natural Subregion + latitude; Ethan/Tim rename before final render (parent decision (e)).
+**M11.4 Not mirrored:** E17 one-pager (no leave-one-block-out solves at AB; representativeness
+context reported in R2 instead); IPCA overlay (no declared proposals in the AB strip; the AOI
+overlays carry the same language rule).
+
+
+## M12. Gate AB-4 run notes (2026-09-08)
+
+**M12.1 Provenance precision.** `pr_write_outputs` writes `run_summary.json` with jsonlite's
+default 4 significant decimals, so `solver_provenance$objective` for the engine anchor and twin
+are rounded (4.3313 for 4.3312626). 10's integrity cell compared the rounded twin against the
+full-precision MGA anchor with a 1e-6 tolerance and printed VIOLATED for 7 formulations; the raw
+values show twin == engine anchor at 4 decimals in every case. Tolerance widened to 1e-4 in the
+notebook (cosmetic). The engine fix (`digits = NA` in `write_json`) is deferred so the pinned
+modules stay identical to the freeze record (R6); logged here for the parent too, whose twin
+comparisons carry the same 4-decimal limit.
+
+## M13. Director package mirror (2026-09-08; `12_director_surfaces` + `13_director_figures` built, PENDING-RUN; supersedes M11)
+
+**M13.1 Structure = the Y2Y-wide 19/20**, with the 2026-09-04/05 package rulings applied: votes with the
+**12 elicited positions** (crossed hybrids out; the paper's F14 stays in 11); Act 2 pooled per scenario
+(forced; the divergence check reported — S1 diverges at Jaccard 0.76); intactness a plain star axis;
+representativeness = per-cell EFG-count percentile (classes / 27 reported beside it); 'F' not 'guarded F'
+in director-facing text; complexes = deck picks; Natural Earth admin basemap; summary tiers map with
+Act 2 split by owning scenario; climate axis kept as the refugia realization with by-future Act 1 pairs +
+the two-way map; guarded/unguarded contrast paper-only.
+**M13.2 Alberta constants (D-AB7, disclosed):** band g = 2% guarded (D-AB10); display at 1 km (a ~25 km²
+hex how-to-read comparison only); clusters ≥ 10 km², complexes within 10 km single linkage (parent 100 km²
+/ 25 km); polygon simplification 500 m; picks top-6 core / top-2 per scenario; level A only.
+**M13.3 The alignment overlay = the Upper Smoky Nature-First zone (solid orange) + SRP planning area
+(dashed orange) on every (a) panel**, in the exact role of the declared IPCA proposals in the Y2Y-wide
+package, with call-outs on (b) when a pick lies ≥ 5% inside either, `pct_in_NFZ` / `pct_in_SRP_area`
+columns in T-D1, and a T-AOI alignment table; language rule "alignment, not assignment" (C4).
+**M13.4 T-D4 = tier area by Natural Region and Subregion (2005)** (acquired layer; the parent's is
+pending an ecoregion layer). T-D5's "new half" denominator = the level-A additions share
+(budget_pct_A − PA share = 0.118). E17 one-pager not mirrored (no leave-one-block-out at AB).
+**M13.5 Names** are the parent's placeholders (bearing from the nearest PA ≥ 25 km² in the extent or the
+nearest AOI + lat/lon tag); Ethan/Tim rename before final render.
+
+*Last updated 2026-09-08.*

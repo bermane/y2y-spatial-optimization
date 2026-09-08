@@ -271,8 +271,9 @@ estimand; E15b saturation = block accounting validated); E17 = disclosure + expl
 decision; E16 = F-guided clustering is primary. Build (all headless smoke-run on the S0/S4 artifacts):
 **`18_guarded_sweep.ipynb`** (R; step 0 — guarded MGA k=50 g=5% for the 12 open formulations + guarded
 MAA spot-check on S0; anchors/kbest/twins STAND, anchor re-solved only for the compiled model with a
-1e-3 assert vs formulation_meta; **~3 h serial measured, NOT the spec's 8–10 h** — floors shrink the
-search; `maa_generate` gained `floors=`, toy-verified) → **`19_director_surfaces.ipynb`** (py; guarded
+1e-3 assert vs formulation_meta; **RAN 2026-09-03/04: 12.3 h solve time (52–76 min per sweep — my ~3 h
+projection from the 16-era S0/S4 timings was wrong; integrity perfect, 0 anchor cells differing)**;
+`maa_generate` gained `floors=`, toy-verified) → **`19_director_surfaces.ipynb`** (py; guarded
 F + f per formulation + union membership → `director_package/geotiffs/`; T-D2 bands/acts, pooling
 check (Jaccard ≥0.80), pre-stated clustering (0.70 → closing r=1 → 8-conn → ≥100 km² → core
 subtraction; sensitivity 0.60/0.80; top-k presentational), T-D1 register with block percentiles +
@@ -289,6 +290,20 @@ Logs: M4.18–M4.20 (numbering per methods_log), R10.1–R10.3 placeholders. **S
 added presentation conventions only — built: tier-achievement figure, Act 1 (a)/(b) pair + inset histogram,
 % area on scenario maps, agreement matrix, Currie et al. 2025 precedent lines; T-D4 (tier area by
 ecoregion) is PENDING a layer in `input_data/ecoregions/` (19 auto-detects; CEC Level II/III recommended).**
+**2026-09-04 package rulings (all logged):** package votes with the 12 ELICITED formulations (crossed hybrids
+out, F12; paper keeps F14); Act 2 pooled per scenario; intactness a plain star axis; representativeness =
+per-cell EFG-count percentile; guarded/unguarded contrast paper-only; 'F' not 'guarded F'; complexes (25 km
+single linkage) = deck picks; Natural Earth admin basemap; IPCA overlay = IPCA-typed + Ross River only;
+summary map = tiers at 1 km with Act 2 split by owning scenario; climate axis KEPT (renamed refugia
+realization) with by-future Act 1 pairs + the two-way map. Findings: the core is refugia country (R10.6);
+PAs are value-average (R10.4); connectivity/biodiversity never own tier land (R10.12). **E18 RAN: WEIGHT-LIMITED (R10.13)** — connectivity ×5 (influence share 0.83) creates its own 34,705 km²
+tier (refugia 0.88×); "binding" = weight × concentration; Act-2 statements for diffuse values are dose-dependent.
+E18 dose table COMPLETE 2026-09-05: connectivity crosses over between share 0.67–0.83; biodiversity NEVER pins
+(×5: tier 0 km², max f 0.63, D = 1.000) — weight × concentration, AOH richness unrescuable by weight. **Carbon weights-only arm RAN 2026-09-08 (fifth E18 arm, `runs/e18_s4x1_wonly_ssp585` = S4's registered
+weights at S0's targets; R10.14 cont.): SUBSTITUTABLE — own land 763 km² vs S4's 20,329, tier 72% inside the 12-position core → carbon's
+Act-2 land is the TARGET's doing (members never fall below t 0.332; under t 0.552 they must). Lead-magnitude currency is conditional on the
+target binding (this arm scores 7.6× refugia yet owns nothing; M4.22 addendum). 22 now writes max f / D / lead currency into
+`spec/E18_dose_table.csv`; 20 renders it as the E18 slide (`td_e18_dose.png`) + a carbon-target caveat on the carbon-forward Act-2 slide.**
 
 **LIVING PUBLICATION LOGS (added 2026-08-27, binding on every session touching this analysis):**
 `analyses/y2y/spec/methods_log.md` (M-numbered: every methods-relevant decision, data
@@ -320,33 +335,43 @@ including portfolio summaries + write round-trip.
 ## ANALYSIS 3 — `analyses/alberta_prioritization/`: the Alberta scale-transfer mirror (added 2026-09-03)
 
 Applied decision-support run for Y2Y's Alberta program (Tim Burkhart) + a scale-transfer test of
-the flagship protocol. **Spec = `spec/alberta_prioritization_spec.md` (v0.4.1, mirror of the parent
+the flagship protocol. **Spec = `spec/alberta_prioritization_spec.md` (v0.4.6, mirror of the parent
 study plan v0.14.1 — re-pin and log the delta whenever the parent spec changes; Ethan's standing
 instruction).** Read it before touching anything here. **Binding living logs, same rule as y2y:
-`spec/methods_log.md` (M) + `spec/results_log.md` (R), update in the SAME session.** What is
-mirrored = the frozen decision procedure (R1–R4, θ=5×/λ=0.10/a_min=0.5%/t_min=0.15, block
-accounting, scenario rules, numerics, dual-semantics F: aggregate band = estimand, per-block-floor
-guarded = applied headline); what is NOT = the Y2Y-extent measurements (AB derives its own
-characterization + `scenarios_ab_v1.json`). Registered deviations: D-AB1 extent (exact grid subset),
-D-AB2 PA lock-in inherited (display masked), D-AB3 tenure as post-hoc reporting only, D-AB4 AOI
-audit columns, **D-AB5 budget = locked + X·unlocked with X anchored at the parent's realized fill
-rate 0.1764 (NOT 15%: that is the additions share of TOTAL extent; the gap scales with the locked
-share)**, D-AB6 buffer distance (open, freeze at AB-0a), **D-AB7 presentation scale — Ethan's
-directive: hexes/cluster size/opportunity framing are re-set for the AB scale at AB-5, the one
-designed divergence from the director package**, **D-AB8 (open): disposition polygons are NOT
-open data (Altalis DIDs for-fee) — `crown_disposition` waits on a decision**.
-**Engine design (M2.2): the AB hand-off stack `input_data/aligned_stack_ab/` = the parent stack
-masked to Alberta on the SAME grid** (no crop, no re-snap ⇒ cell IDs identical; C1 is a direct
-array comparison; every parent module runs unchanged via `handoff_dir`/manifest pointers —
-`config.AB_HANDOFF_DIR`, `config.ANALYSES["ab_y2y"]`, R side = `config.write_manifest(analysis=
-"ab_y2y", handoff_dir=AB, manifest_path=…)` then `pr_setup`; budget applied by `pr_override(
-budget_pct=…)` from `spec/ab_extent_v1.json`). Build record = spec §12 (10 notebooks):
-`01_ab_extent_stack` (extent, stack, dust re-run vs AB totals, EFG drop rule, lock accounting with
-the D-AB5 infeasibility check FIRST, X derived from parent artifacts) → `02_ab0a_audit` (R1–R4 at
-the parent 30% convention + leverage@effective budget, banked/residual/pre_satisfied, target-window
-proxy, F8, cards, archive, C2 flip list, H-AB1/2/3/5 verdicts) → `03_ab0a_tenure_aoi` (waits on
-`data/acquire.py` + D-AB8) → AB-0…AB-5 mirroring the y2y notebooks 05–14 + guarded sweeps.
-**Status: 01–02 BUILT 2026-09-03, PENDING-RUN (Ethan runs after his y2y final tests).**
+`spec/methods_log.md` (M1–M12) + `spec/results_log.md` (R1–R7), update in the SAME session.**
+Mirrored = the frozen decision procedure (R1–R4, θ=5×/λ=0.10/a_min=0.5%/t_min=0.15, block
+accounting, scenario rules, numerics, estimator `mga_maxham_v1` k=50); NOT mirrored = the
+Y2Y-extent measurements. **Engine design (M2.2): `input_data/aligned_stack_ab/` = the parent stack
+masked to Alberta on the SAME grid** (cell IDs identical; every parent module runs unchanged via
+`config.AB_HANDOFF_DIR` / `config.ANALYSES["ab_y2y"]`; R side = `config.write_manifest(analysis=
+"ab_y2y", handoff_dir=AB, manifest_path=…)` then `pr_setup`; budget via `pr_override(budget_pct=…)`).
+Runs live in `runs/ab_l/A/<formulation_id>/` (level directory; parent layout otherwise).
+
+**Rulings (all logged):** D-AB5 budget = locked + X·unlocked, X = the parent's realized fill rate
+0.1764 → **level A: 38,055 cells (44.7%), additions 10,083 km²; level B (X/2) was piloted for the
+nesting test and then SCRATCHED (M9.6) — A only.** D-AB9 biodiversity block kept whole (mammals
+R3-inexpressible, weight inert, disclosed). S4 = θ 2× (t 0.772) via the pre-registered ladder against
+the MEASURED co-capture floor (a1's 0.744 — a0 includes carbon pull and was the wrong reference,
+M5.7); a5 certified binding. **D-AB10: the applied band is g = 2%** (the 5% band is flat here:
+D ≈ 1, empty frequent tier, guardrails inert — R5); the 5% band stays the estimand. **Ethan's
+deliverable definition: each value-forward scenario's OWN frequency surface is a first-class
+product beside the ensemble F.** D-AB7: presentation constants re-set at AB scale (1 km display,
+10 km² clusters, 500 m simplification). D-AB6 tabled (distance-to-PA read post hoc). D-AB8 on
+hold: disposition/title polygons are not open (Altalis; academic consortium = Alberta institutions
+only) — tenure uses the White-Area-minus-crown-indicators ESTIMATE (M6.1) with the over-count disclosed.
+
+**Measured so far:** AB PU 85,133 km², **32.9% already locked** (30% referent infeasible); tenure —
+discretionary land 87% crown, private-ranchland pool 5,393 km²; audit — H-AB1 refuted (gHM 0.086 <
+λ; mammals flips inexpressible), m_soc scale-stable (t 0.322) but 71% banked; 27/40 EFGs; AB-2 —
+H-AB4 refuted opposite way (D 0.9999, C 0); nesting at 2% = 1.000; AB-4 ensemble RAN 2026-09-03
+(14/14, 2,800 certified members, 2.3 h, every twin = anchor at 4 decimals).
+**Build record (spec §12): 01 extent/stack → 02 audit → 03 tenure/AOI → 04 arms (R) → 05 scenarios →
+06 anchors (R) → 07 MGA pilots (R) → 08 AB-2 analysis → 09 freeze → 10 ensemble (R) → 11 analysis
+(py: 5% estimand block + 2% applied block, tiers, C1–C4, clusters; RUN 2026-09-08, R7) → **12 director
+surfaces + 13 director figures/deck = the mirror of the Y2Y-wide 19/20 (`director_package/`; NFZ + SRP
+planning area drawn on every (a) panel as the IPCA analogue; F12, 2% band, 10 km² clusters, T-D4 by Natural
+Region). Status 2026-09-08: 01–11 RUN; 12–13 BUILT, PENDING-RUN.** Data: `data/acquire.py`
+(provenance.json); raw/derived dirs gitignored.
 
 ## Structure — two notebooks + shared config
 
@@ -581,6 +606,12 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 > options closing; IPCAs taken as given; H8 gate enforced in code; settlement-lands layer PENDING for M2/T1).
 > Ethan runs NB04 (Run All) → 06. The 05 spec was regenerated by chat on 2026-09-03 and lost §8/§9 —
 > restored from git HEAD and merged; keep that in mind if it is regenerated again.
+> **2026-09-08: D17 MEASURED (NB04 clean: 8 squeezed links, G13 = `lcp_cf ≤ lcp_real`); M1 "Where the
+> land still offers choices" is THE main plot, restyled to the director basemap (`_director_base`:
+> NE coast/admin/border, province names auto-placed in open country, `MAJOR_TOWNS`, top-14 PA/IPCA
+> names, legend below the map) + new M0 cost-surface map (`map_cost`, no corridors) — spec 06 v1.2.2,
+> M5.12. Ethan re-runs NB06. Display-only name overrides (`AREA_OVERRIDES`) fix the PA layer's
+> mis-encoded Fishing Branch string; Ethan to confirm the Ne’āh’ spelling.**
 
 Standalone corridor analysis, NOT prioritizr: it **routes** between anchor areas, which the
 prioritizr connectivity penalty could not do (that aggregates permeable land; it cannot answer "how

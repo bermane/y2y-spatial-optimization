@@ -1,0 +1,501 @@
+{
+ "created_utc": "2026-09-08T18:27:53.162702+00:00",
+ "level": "A",
+ "n_formulations": 14,
+ "threshold": 0.7,
+ "cluster_min_km2_provisional": 10,
+ "simplify_m": 500,
+ "bands_5pct": [
+  {
+   "band": "never [0.00, 0.05)",
+   "plain km2": 0,
+   "plain %disc": 0.0,
+   "guarded km2": 0,
+   "guarded %disc": 0.0
+  },
+  {
+   "band": "rare [0.05, 0.30)",
+   "plain km2": 56287,
+   "plain %disc": 98.47098546211578,
+   "guarded km2": 56271,
+   "guarded %disc": 98.4429943492941
+  },
+  {
+   "band": "conditional [0.30, 0.70)",
+   "plain km2": 873,
+   "plain %disc": 1.5272650933328669,
+   "guarded km2": 889,
+   "guarded %disc": 1.5552562061545459
+  },
+  {
+   "band": "frequent [0.70, 0.95)",
+   "plain km2": 1,
+   "plain %disc": 0.0017494445513549447,
+   "guarded km2": 1,
+   "guarded %disc": 0.0017494445513549447
+  },
+  {
+   "band": "always [0.95, 1.00]",
+   "plain km2": 0,
+   "plain %disc": 0.0,
+   "guarded km2": 0,
+   "guarded %disc": 0.0
+  }
+ ],
+ "bands_2pct": [
+  {
+   "band": "never [0.00, 0.05)",
+   "plain km2": 9139,
+   "plain %disc": 15.988173754832841,
+   "guarded km2": 9141,
+   "guarded %disc": 15.99167264393555
+  },
+  {
+   "band": "rare [0.05, 0.30)",
+   "plain km2": 39887,
+   "plain %disc": 69.78009481989469,
+   "guarded km2": 39885,
+   "guarded %disc": 69.77659593079197
+  },
+  {
+   "band": "conditional [0.30, 0.70)",
+   "plain km2": 7018,
+   "plain %disc": 12.277601861409003,
+   "guarded km2": 7018,
+   "guarded %disc": 12.277601861409003
+  },
+  {
+   "band": "frequent [0.70, 0.95)",
+   "plain km2": 1030,
+   "plain %disc": 1.801927887895593,
+   "guarded km2": 1030,
+   "guarded %disc": 1.801927887895593
+  },
+  {
+   "band": "always [0.95, 1.00]",
+   "plain km2": 87,
+   "plain %disc": 0.1522016759678802,
+   "guarded km2": 87,
+   "guarded %disc": 0.1522016759678802
+  }
+ ],
+ "E1": {
+  "mean_abs": 0.23089104890823364,
+  "max_abs": 0.8067227005958557
+ },
+ "E3": {
+  "within": 0.9970446825027466,
+  "between": 0.0029553542844951153,
+  "scenario": 0.0027937099803239107,
+  "climate": 5.928861355641857e-05
+ },
+ "crossed_contrast": {
+  "s1": 0.0041914633475244045,
+  "s3": 0.0011748720426112413
+ },
+ "D_5": {
+  "s0_ssp585_theta5": 0.9999008178710938,
+  "s1_ssp585_theta5": 0.9994049668312073,
+  "s2_ssp585_theta5": 0.9976197481155396,
+  "s3_ssp585_theta5": 1.0,
+  "s4_ssp585_theta2": 0.998214840888977,
+  "s5_ssp585_theta5": 1.0,
+  "s0_ssp245_theta5": 0.9999008178710938,
+  "s1_ssp245_theta5": 0.9958345890045166,
+  "s2_ssp245_theta5": 0.9979172945022583,
+  "s3_ssp245_theta5": 1.0,
+  "s4_ssp245_theta2": 0.9969255328178406,
+  "s5_ssp245_theta5": 1.0,
+  "s1x_ssp585_theta2": 0.9995040893554688,
+  "s3x_ssp585_theta2": 1.0
+ },
+ "D_2": {
+  "s0_ssp585_theta5": 0.8621442317962646,
+  "s1_ssp585_theta5": 0.8602598309516907,
+  "s2_ssp585_theta5": 0.8356639742851257,
+  "s3_ssp585_theta5": 0.8864425420761108,
+  "s4_ssp585_theta2": 0.855598509311676,
+  "s5_ssp585_theta5": 1.0,
+  "s0_ssp245_theta5": 0.8689873814582825,
+  "s1_ssp245_theta5": 0.8512347340583801,
+  "s2_ssp245_theta5": 0.8411186933517456,
+  "s3_ssp245_theta5": 0.8882277011871338,
+  "s4_ssp245_theta2": 0.8595656156539917,
+  "s5_ssp245_theta5": 1.0,
+  "s1x_ssp585_theta2": 0.8605573773384094,
+  "s3x_ssp585_theta2": 0.8859466314315796
+ },
+ "E11": {
+  "pairs_in_band": 182,
+  "pairs": 182,
+  "diag_max": 7.612522917456615e-09,
+  "J_min": 0.3727705922396188,
+  "J_mean": 0.6182551688549399,
+  "J_max": 0.9996033713435796
+ },
+ "C1": {
+  "spearman_5pct": 0.8503846843655495,
+  "tier_overlap_5pct": 1.0,
+  "tier_jaccard_5pct": 0.002403846153846154,
+  "anchors": [
+   {
+    "formulation": "s0_ssp585_theta5",
+    "parent": "s0_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 25377,
+    "overlap_coeff": 0.9777,
+    "jaccard": 0.385
+   },
+   {
+    "formulation": "s1_ssp585_theta5",
+    "parent": "s1_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 24394,
+    "overlap_coeff": 0.9857,
+    "jaccard": 0.405
+   },
+   {
+    "formulation": "s2_ssp585_theta5",
+    "parent": "s2_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 19058,
+    "overlap_coeff": 0.9509,
+    "jaccard": 0.4904
+   },
+   {
+    "formulation": "s3_ssp585_theta5",
+    "parent": "s3_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 22797,
+    "overlap_coeff": 0.9716,
+    "jaccard": 0.4244
+   },
+   {
+    "formulation": "s4_ssp585_theta2",
+    "parent": "s4_ssp585_theta3",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 19156,
+    "overlap_coeff": 0.9563,
+    "jaccard": 0.492
+   },
+   {
+    "formulation": "s5_ssp585_theta5",
+    "parent": "s5_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 20539,
+    "overlap_coeff": 0.9758,
+    "jaccard": 0.4734
+   },
+   {
+    "formulation": "s0_ssp245_theta5",
+    "parent": "s0_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 19723,
+    "overlap_coeff": 0.9633,
+    "jaccard": 0.4834
+   },
+   {
+    "formulation": "s1_ssp245_theta5",
+    "parent": "s1_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 16924,
+    "overlap_coeff": 0.9576,
+    "jaccard": 0.5564
+   },
+   {
+    "formulation": "s2_ssp245_theta5",
+    "parent": "s2_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 16557,
+    "overlap_coeff": 0.936,
+    "jaccard": 0.5487
+   },
+   {
+    "formulation": "s3_ssp245_theta5",
+    "parent": "s3_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 18645,
+    "overlap_coeff": 0.9418,
+    "jaccard": 0.4938
+   },
+   {
+    "formulation": "s4_ssp245_theta2",
+    "parent": "s4_ssp245_theta3",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 15426,
+    "overlap_coeff": 0.9081,
+    "jaccard": 0.5599
+   },
+   {
+    "formulation": "s5_ssp245_theta5",
+    "parent": "s5_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 16888,
+    "overlap_coeff": 0.9515,
+    "jaccard": 0.5521
+   },
+   {
+    "formulation": "s1x_ssp585_theta2",
+    "parent": "s1x_ssp585_theta3",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 21558,
+    "overlap_coeff": 0.9753,
+    "jaccard": 0.451
+   },
+   {
+    "formulation": "s3x_ssp585_theta2",
+    "parent": "s3x_ssp585_theta3",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 22393,
+    "overlap_coeff": 0.9733,
+    "jaccard": 0.4331
+   }
+  ]
+ },
+ "tiers_2pct": [
+  {
+   "tier": "core (F2 >= 0.70, all formulations)",
+   "km2": 1117,
+   "pct_disc": 1.9541295638634733
+  },
+  {
+   "tier": "s1@585: Core-habitat-forward (frequent minus core)",
+   "km2": 427,
+   "pct_disc": 0.7470128234285615
+  },
+  {
+   "tier": "s1@245: Core-habitat-forward (frequent minus core)",
+   "km2": 443,
+   "pct_disc": 0.7750039362502406
+  },
+  {
+   "tier": "s2: Connectivity-forward (frequent minus core)",
+   "km2": 606,
+   "pct_disc": 1.0601633981210965
+  },
+  {
+   "tier": "s3: Biodiversity-forward (frequent minus core)",
+   "km2": 35,
+   "pct_disc": 0.06123055929742307
+  },
+  {
+   "tier": "s4: Carbon-forward (frequent minus core)",
+   "km2": 310,
+   "pct_disc": 0.5423278109200329
+  },
+  {
+   "tier": "any value-forward scenario (union)",
+   "km2": 1121,
+   "pct_disc": 1.961127342068893
+  },
+  {
+   "tier": "opportunity (in >= 1 plan of >= 1 formulation, not above)",
+   "km2": 54185,
+   "pct_disc": 94.79365301516768
+  },
+  {
+   "tier": "never (no 2%-band plan selects it)",
+   "km2": 738,
+   "pct_disc": 1.2910900788999493
+  }
+ ],
+ "pooling": [
+  {
+   "scenario": "s0",
+   "levels": 2,
+   "jaccard": 0.9070855614973262,
+   "decision": "POOLED",
+   "freq_km2_585": 1488.0,
+   "freq_km2_245": 1365.0,
+   "freq_km2_0": NaN
+  },
+  {
+   "scenario": "s1",
+   "levels": 2,
+   "jaccard": 0.755656108597285,
+   "decision": "SEPARATE (diverged)",
+   "freq_km2_585": 1544.0,
+   "freq_km2_245": 1560.0,
+   "freq_km2_0": NaN
+  },
+  {
+   "scenario": "s2",
+   "levels": 2,
+   "jaccard": 0.9657303370786516,
+   "decision": "POOLED",
+   "freq_km2_585": 1774.0,
+   "freq_km2_245": 1725.0,
+   "freq_km2_0": NaN
+  },
+  {
+   "scenario": "s3",
+   "levels": 2,
+   "jaccard": 0.9535472972972973,
+   "decision": "POOLED",
+   "freq_km2_585": 1184.0,
+   "freq_km2_245": 1129.0,
+   "freq_km2_0": NaN
+  },
+  {
+   "scenario": "s4",
+   "levels": 2,
+   "jaccard": 0.9113009198423128,
+   "decision": "POOLED",
+   "freq_km2_585": 1491.0,
+   "freq_km2_245": 1418.0,
+   "freq_km2_0": NaN
+  },
+  {
+   "scenario": "s5",
+   "levels": 2,
+   "jaccard": 1.0,
+   "decision": "POOLED",
+   "freq_km2_585": 86.0,
+   "freq_km2_245": 86.0,
+   "freq_km2_0": NaN
+  },
+  {
+   "scenario": "s1x",
+   "levels": 1,
+   "jaccard": NaN,
+   "decision": "single level",
+   "freq_km2_585": NaN,
+   "freq_km2_245": NaN,
+   "freq_km2_0": 1538.0
+  },
+  {
+   "scenario": "s3x",
+   "levels": 1,
+   "jaccard": NaN,
+   "decision": "single level",
+   "freq_km2_585": NaN,
+   "freq_km2_245": NaN,
+   "freq_km2_0": 1186.0
+  }
+ ],
+ "guard_vs_plain_tier_jaccard_2pct": 1.0,
+ "C4": [
+  {
+   "aoi": "AOI-2 Nature First (novel)",
+   "km2": 436,
+   "share_of_disc_pct": 0.7627578243907559,
+   "mean_F2_inside": 0.2687630355358124,
+   "mean_F2_disc": 0.17639650404453278,
+   "core_inside_km2": 0,
+   "core_inside_pct": 0.0,
+   "ratio_vs_null": 0.0,
+   "mean_f2_s0": 0.27070966362953186,
+   "mean_f2_s1@585": 0.24352401494979858,
+   "mean_f2_s1@245": 0.5070606470108032,
+   "mean_f2_s2": 0.3288586139678955,
+   "mean_f2_s3": 0.1807204633951187,
+   "mean_f2_s4": 0.268146276473999,
+   "mean_f2_s5": 0.25305813550949097,
+   "mean_f2_s1x": 0.244378462433815,
+   "mean_f2_s3x": 0.16473287343978882
+  },
+  {
+   "aoi": "Upper Smoky SRP planning area (unlocked)",
+   "km2": 10028,
+   "share_of_disc_pct": 17.543429960987385,
+   "mean_F2_inside": 0.18593066930770874,
+   "mean_F2_disc": 0.17639650404453278,
+   "core_inside_km2": 0,
+   "core_inside_pct": 0.0,
+   "ratio_vs_null": 0.0,
+   "mean_f2_s0": 0.19290301203727722,
+   "mean_f2_s1@585": 0.12075014412403107,
+   "mean_f2_s1@245": 0.1825770139694214,
+   "mean_f2_s2": 0.194086953997612,
+   "mean_f2_s3": 0.19676867127418518,
+   "mean_f2_s4": 0.22026170790195465,
+   "mean_f2_s5": 0.1923193484544754,
+   "mean_f2_s1x": 0.12051551043987274,
+   "mean_f2_s3x": 0.1865071952342987
+  }
+ ],
+ "tenure_split": [
+  {
+   "tier": "core (F2 >= 0.70, all formulations)",
+   "km2": 1117,
+   "crown_green": 478,
+   "crown_white_ind": 106,
+   "private_presumed": 122,
+   "private_ranchland": 345,
+   "unclassified": 66
+  },
+  {
+   "tier": "s1@585: Core-habitat-forward (frequent minus core)",
+   "km2": 427,
+   "crown_green": 118,
+   "crown_white_ind": 139,
+   "private_presumed": 3,
+   "private_ranchland": 161,
+   "unclassified": 6
+  },
+  {
+   "tier": "s1@245: Core-habitat-forward (frequent minus core)",
+   "km2": 443,
+   "crown_green": 313,
+   "crown_white_ind": 40,
+   "private_presumed": 2,
+   "private_ranchland": 84,
+   "unclassified": 4
+  },
+  {
+   "tier": "s2: Connectivity-forward (frequent minus core)",
+   "km2": 606,
+   "crown_green": 103,
+   "crown_white_ind": 212,
+   "private_presumed": 10,
+   "private_ranchland": 281,
+   "unclassified": 0
+  },
+  {
+   "tier": "s3: Biodiversity-forward (frequent minus core)",
+   "km2": 35,
+   "crown_green": 0,
+   "crown_white_ind": 3,
+   "private_presumed": 3,
+   "private_ranchland": 29,
+   "unclassified": 0
+  },
+  {
+   "tier": "s4: Carbon-forward (frequent minus core)",
+   "km2": 310,
+   "crown_green": 228,
+   "crown_white_ind": 18,
+   "private_presumed": 20,
+   "private_ranchland": 44,
+   "unclassified": 0
+  },
+  {
+   "tier": "any value-forward scenario (union)",
+   "km2": 1121,
+   "crown_green": 590,
+   "crown_white_ind": 216,
+   "private_presumed": 27,
+   "private_ranchland": 282,
+   "unclassified": 6
+  },
+  {
+   "tier": "opportunity (in >= 1 plan of >= 1 formulation, not above)",
+   "km2": 54185,
+   "crown_green": 46185,
+   "crown_white_ind": 1617,
+   "private_presumed": 1713,
+   "private_ranchland": 4625,
+   "unclassified": 45
+  },
+  {
+   "tier": "never (no 2%-band plan selects it)",
+   "km2": 738,
+   "crown_green": 463,
+   "crown_white_ind": 53,
+   "private_presumed": 81,
+   "private_ranchland": 141,
+   "unclassified": 0
+  }
+ ],
+ "n_clusters_kept": 40
+}

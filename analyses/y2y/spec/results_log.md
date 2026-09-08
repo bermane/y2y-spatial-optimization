@@ -354,6 +354,20 @@ MGA 11.2 min (S0, median iterate 14.1 s) / 12.0 min (S4, 15.8 s) vs the plain ba
 per-value floors 15.1 / 15.3 min; MAA 13.2 / 18.0 min. Floors SHRINK the feasible set — S4's plain
 sweep was the slow one, its guarded sweep is not. Projection for the 12 open formulations ≈ 2.5–3 h
 serial (director spec's 8–10 h superseded).
+**R10.1 CORRECTION (18 RUN 2026-09-03/04): the projection was WRONG.** The 12 open guarded sweeps took
+52.5–75.6 min each (median iterate ~60–90 s), the S0 guarded MAA spot-check 59.7 min; total guarded solve
+time **12.27 h** — the director spec's 8–10 h was the better estimate. The 16-era S0/S4 sweeps (11–12 min)
+were not representative; the uniform ~5× slowdown across every formulation points to machine/WLS
+conditions rather than problem difficulty (S0 itself is 11 min in the 16 record). Integrity is perfect:
+14/14 sweeps × 50 members, every band certificate OK, zero duplicates, zero time-limited iterates,
+re-solved anchors within ≤9e-6 relative of the frozen record and **0 cells differing from anchor.tif**
+in all 12 (no near-tie divergence); band edges reached exactly (max +5.000% of z*; S5 +4.3%).
+Within the same run window the guarded iterate is only ~1.2× the plain one (medians 64–96 s vs the
+Gate-4 record's 50–62 s for the same formulations); the fast/slow split is BY DATE, not by semantics —
+Gate 2b S0 (16 s/iterate) and the 16-era S0/S4 sweeps (14–16 s) vs Gate 4 and 18 (50–96 s) — i.e. the
+machine-conditions lesson of 06 again. Wall time 2026-09-03 18:25 → 09-04 05:39 (~11.3 h).
+Cause confirmed by Ethan: concurrent analyses on the same machine (a MacBook Air) during 18 — solve
+times here are wall time under contention, not problem difficulty; report the compute platform as such.
 **R10.2 Guarded ensemble — PENDING 18:** guarded F bands (never/rare/conditional/frequent/always,
 discretionary km²) side by side with the unguarded record (R8: frequent 6,816 km², always 0);
 Act tiers (core / scenario-specific / opportunity / never); per-formulation guarded frequent tiers
@@ -390,6 +404,167 @@ refugia, S4's **7.13× on m_soc and 0.53× on biomass** (0.80× birds); the 2-fo
 at ~1–2×, but the cells that RECUR across near-optimal plans are the ones a binding claim cannot
 substitute — the promise tier is a scarcity map, not a value map. Refugia's dominance in the frequent
 tiers = its θ-tail-like concentration (leverage 0.422, reciprocal orientation) under the guarded band.
+**R10.6 THE CORE IS REFUGIA COUNTRY (production, 14 formulations; Ethan's observation 2026-09-04,
+verified):** climate macrorefugia is the most-enriched value of the frequent tier in 12 of 14 formulations
+(2.60–4.65×; the ensemble core 4.37×) and second in the two carbon-forward ones (m_soc 7.13× / 5.92×,
+refugia 2.07× / 1.85×). Mechanism, three facts: (i) it is ALREADY the pinned value in the unguarded band
+(S0 plain frequent tier 2.16× refugia; ensemble 1.35×) — the guard AMPLIFIES it (S0 4.11×, ensemble 4.37×)
+by forbidding the sacrifice E14 caught (members financed the aggregate band by dropping the core-habitat
+block 0.428 → 0.364); (ii) it is INDEPENDENT of floor granularity and estimator — S0 block floors 4.11×,
+per-value floors (E15b) 4.05×, MAA-guarded 3.99×; (iii) it is the value the balanced optimum leans on
+hardest (anchor capture 0.452, the highest-leverage feature without a target cap; new-half enrichment 1.74×)
+AND, among the uncapped values, the one whose 5% of the regional sum lives in the fewest unprotected cells
+(12,788 vs connectivity 16,436, birds 41,496; m_soc 3,489 but target-capped) — so a 5% floor on it is
+satisfied by the fewest, most fixed cells, which therefore recur in every member. E13 in one sentence: the
+promise tier is the set of cells the tightest un-substitutable claim cannot do without. Director framing:
+the durable core is climate-refugia country (plus dense soil carbon under carbon-forward values) — a
+representativeness-style endorsement question of the same kind as E17: is Y2Y comfortable that the land it
+can promise under every value position is defined by climate refugia?
+**R10.7 Representativeness axis — the spec's construction misreads (Ethan's observation 2026-09-04):** with
+"EFG classes present ÷ 40" the six Act-1 clusters score 0.20–0.35 and read as far below the 0.5 ring, but no
+1 km cell holds more than 15 of the 40 classes (unprotected mean 4.5, median 4), so no cluster-sized patch
+can approach 40. Tested against 300 equal-area random patches of unprotected land per cluster: the clusters
+hold an AVERAGE-TO-ABOVE-AVERAGE number of classes (44th–81st percentile: Purcells 14 classes vs median 10,
+p68; Mount Robson 12 vs 7, p81; Tahltan 8 vs 8, p44). On a per-cell EFG-count percentile — the same
+construction as the other five axes — they sit at 0.73–0.96. Ruling: the star axis uses the per-cell
+percentile; the raw class count ships in T-D1 (`efg_classes_present`). Refugia country is not ecosystem-poor.
+**R10.8 Climate-level pooling check (decision g, production 19, 2026-09-04): NO scenario pools.** Frequent-tier
+Jaccard between the SSP585 and SSP245 levels: S0 0.34, S1 0.41, S2 0.36, S3 0.34, S4 0.61, S5 0.34 — all
+below the pre-stated 0.80 — so Act 2 shows every scenario per level (eight pairs). The low-emissions tiers
+are consistently LARGER (S0 35,089 vs 23,108 km²; S1 60,940 vs 51,032; S3 15,349 vs 6,471; S4 42,479 vs
+34,787). E3's "climate = 0.2% of variance" is a within-formulation variance share over all cells; tier
+MEMBERSHIP at 0.70 is a sharper statistic and it moves — the two are not in conflict, but the paper must not
+cite the former as if it implied the latter. The carbon-forward pair agrees most (0.61) because its tier is
+pinned by the m_soc tail, which the climate layer does not touch.
+**R10.9 Crossed hybrids as votes (2026-09-04):** s1x/s3x reproduce their parents' frequent tiers (Jaccard vs
+S1-585 0.836, vs S3-585 0.947; corr(f) 0.971 / 0.992) and are unlike S4 (0.223 / 0.156) — they are second votes
+for two positions, not new positions. Core (F ≥ 0.70) over all 14: 16,610 km²; over the 12 elicited: 16,895
+km²; Jaccard 0.938 (681 km² gained, 396 lost). Ruling: package uses F12; paper keeps F14 + this sensitivity.
+Also measured for the climate-axis question: SSP585-only core 17,880 km² (1.4% of Y2Y), SSP245-only 28,612
+(2.2%), all-14 16,610 (1.3%); 21% of the SSP585-only core (3,829 km²) fails 0.70 once the other refugia
+future is included; anchor Jaccard across climate levels (same scenario) mean 0.67 vs 0.54 across scenarios
+(same level) — the refugia-realization axis moves plans about as much as the value axis. Ruling: axis KEPT
+(the promise must survive both refugia futures; R10.6 makes that the exposure that matters), to be RENAMED
+"refugia realization (two climate futures)" — it is not a climate-scenario axis, only one layer changes.
+**R10.10 Act 1 by refugia future, 6 formulations each (package F12 basis; 2026-09-04):** SSP585 core 17,308 km²
+(1.6% of unprotected land), SSP245 core 28,612 km² (2.6%), the 12-formulation core 16,895 km² (1.6%). The two
+futures' cores overlap at Jaccard 0.33 (intersection 11,333 km², union 34,587 km²); 80% of the 12-core lies inside
+the SSP585 core and 87% inside the SSP245 core. Reading: the 12-formulation core ≈ the intersection of the two
+futures' cores plus a rim of cells that are strong in one future and moderate in the other; reporting "6 and 6"
+separately would put ~35,000 km² on the table (union) of which only a third survives both futures. Low-emissions
+refugia are more diffuse (larger core at the same threshold). ERRATUM to this session's earlier deck text: the
+core was briefly double-counted (frequent + always, where "frequent" already meant ≥ 0.70) — figures and tables
+were never affected, only one bullet string; fixed before any production render.
+**R10.11 Climate-conditional core (T-D2 rows + the two-way map, 2026-09-04):** cell-level, F ≥ 0.70 under BOTH
+refugia futures 11,333 km² (1.05% of unprotected land); core only under the high-emissions future 5,975 km²
+(0.55%); only under the low-emissions future 17,279 km² (1.60%). The low-emissions-only land is three times the
+high-emissions-only land — low-emissions refugia are more diffuse, so more cells clear 0.70 — and it sits in the
+southern Rockies/Idaho, while the high-emissions-only land is north-western (Tahltan–Skeena). Director framing:
+commit to the 11,333 regardless; the other 23,000 km² is a climate bet, labelled by which way it pays.
+**R10.12 Act 2 by scenario (the summary map, 2026-09-04; package F12 basis, pooled f per scenario, ownership =
+highest f where a cell is frequent under exactly one named scenario):** core-habitat-forward 29,249 km²,
+carbon-forward 19,937, connectivity-forward 844, biodiversity-forward 407, frequent under 2+ named scenarios
+3,549; Act 1 core 16,895. The two concentrated claims (refugia, soil carbon) own almost all scenario-specific
+land; the two diffuse values add a few hundred km² each even when they lead at the ELICITED (doubled) emphasis — see
+R10.13: at ~4× that emphasis connectivity does define its own tier; the statement is dose-dependent.
+**R10.13 E18 RUN 2026-09-04 — VERDICT: WEIGHT-LIMITED. The "substitutability" reading of Act 2 (R10.12 prose,
+and the chat explanation that preceded it) is RETRACTED.** Arm: S2 with connectivity weights × 5 (influence share
+0.83), certified anchor (14 s, gap 0), 50 guarded members, all certificates OK, 55 min. Anchor: connectivity block
+capture 0.297 (S0) → 0.335 (S2) → **0.384**; core habitat 0.452 → 0.420 → 0.340; anchor Jaccard vs S2 0.330. Frequent
+tier: **34,705 km²** (S2-585: 11,086), Jaccard with S2's tier 0.054, only 3% inside the 12-position core (S2: 81%),
+**own land 31,780 km²** (S2: 861); enrichment connectivity **3.09×** (S2 tier 1.92×), corridors 1.15× (0.82×),
+refugia **0.88×** (4.65×), biomass 0.67×, birds 0.83×. So weight alone DOES create a connectivity tier — larger than
+carbon-forward's (19,937 own) — once connectivity dominates the objective. Mechanism (share of the residual
+shortfall objective at the anchor, w × relative shortfall): connectivity 0.31 (S0) → 0.55 (S2) → **0.84** (×5);
+core habitat 0.19 → 0.12 → 0.05. What recurs is the value whose shortfall dominates the band's objective slack —
+i.e. binding = WEIGHT × CONCENTRATION, not concentration alone. At the elicited doubling (S2) refugia still binds
+(fewer cells per unit of its sum: 12,788 vs 16,436 for 5% of the sum, and still 12% of the objective); at ~4× the
+elicited emphasis the price of dropping connectivity cells exceeds the band, and they pin. Implications: (i) the
+Act 2 statement for connectivity/biodiversity is a DOSE statement — "at the doubled emphasis these values add
+almost nothing to the promise; at dominance (≥0.8 of the objective) connectivity defines ~32,000 km² of its own" —
+and the deck must say which magnitude "forward" means; (ii) R10.6's mechanism sentence is refined: the core is
+refugia country at the elicited magnitudes because refugia is the most concentrated claim per unit weight, not
+because diffuse values cannot pin; (iii) the earlier claim that "a bigger weight is not the route to a
+connectivity tier" is withdrawn — it is A route, at a price (core habitat capture −0.08, biodiversity −0.03 at the
+anchor). Open: the crossover multiplier (×3?) and the same test for biodiversity (21/22 now take BLOCK and MULT).
+**R10.13 (cont.) E18 FULL DOSE TABLE (arms ran 2026-09-04/05, ~55 min each, all certificates OK; `spec/E18_dose_table.csv`):**
+
+| arm | influence share | anchor capture of led block | frequent tier km² | own land km² | enrich led / refugia | max f | D | rule |
+|---|---|---|---|---|---|---|---|---|
+| S2 (base) | 0.50 | 0.335 | 11,086 | 861 | 1.37 / 4.65 | 1.00 | 0.963 | — |
+| S2 ×2 | 0.67 | 0.366 | 12,687 | 7,925 | 2.30 / 2.44 | 1.00 | 0.942 | AMBIGUOUS (crossover) |
+| S2 ×5 | 0.83 | 0.384 | 34,705 | 31,780 | 2.12 / 0.88 | 1.00 | 0.845 | WEIGHT-LIMITED |
+| S3 (base) | 0.50 | 0.341 | 6,471 | 521 | 1.15 / 4.24 | 1.00 | 0.969 | — |
+| S3 ×2 | 0.67 | 0.349 | 1,024 | 0 | 1.27 / 7.02 | 1.00 | 0.999 | SUBSTITUTABLE |
+| S3 ×5 | 0.83 | 0.363 | **0** | 0 | n/a (empty tier) | **0.63** | **1.000** | rule: AMBIGUOUS (NaN); substantively the strongest SUBSTITUTABLE outcome |
+| S4 carbon (base, m_soc t 0.552) | 0.50 | 0.440 | 34,787 | 20,329 | 3.83 / 2.07 | 1.00 | 0.854 | — |
+| S4 weights-only (S0 targets, t 0.332; RAN 2026-09-08) | 0.50 | 0.370 | 16,425 | **763** | 1.40 / 4.03 | 1.00 | 0.927 | SUBSTITUTABLE |
+
+(Carbon rows added 2026-09-08 when the fifth arm ran; the CSV now also carries max f, Gate-2b D = max pairwise Hamming ÷ 2·discretionary-
+selected, and the R10.14 lead-magnitude currency, all computed in 22 — the earlier hand-computed values reproduce exactly.)
+
+Reading. (1) The two diffuse blocks are NOT alike. Connectivity crosses over between influence share 0.67 and 0.83:
+at ×2 its tier is already 62% own land with connectivity ≈ refugia enrichment (2.30 vs 2.44), at ×5 it owns
+31,780 km². Biodiversity never pins at ANY dose: raising its share dissolves refugia's pinning (refugia's
+objective share falls) without creating its own — the frequent tier shrinks 6,471 → 1,024 → 0 km², the maximum
+frequency of any unprotected cell drops to 0.63, and D reaches exactly 1.000 (complete discretionary turnover
+inside the 5 % band). (2) Mechanism, consistent with R10.13: pinning needs weight × concentration to make some
+cells too expensive to drop within the band; connectivity's spike/pinch-point structure (5 % of its sum in 16,436
+cells) reaches that price at ~4× the elicited emphasis, AOH richness (5 % in 41,496 cells, no tail) never does.
+(3) The anchor moves monotonically for both (weights move the optimum: +0.05 connectivity, +0.02 biodiversity
+capture at ×5) — the E7 places-not-outcomes result. (4) The verdict rule's NaN case (an EMPTY tier) was not
+anticipated: recorded as the rule printed it, with the interpretation stated separately. Director sentence:
+"leaning harder on connectivity eventually buys places of its own (≥ ~4× the elicited emphasis); leaning harder on
+species richness buys none at any emphasis — it only erases the refugia core."
+**R10.14 How hard does each scenario lead? (Ethan's fairness question, 2026-09-08; zero-solve):** the intended
+influence share is 0.50 for all four forward scenarios by design, so on that currency they lead equally. On the
+currency that decides recurrence — the min-shortfall cost of losing a cell, w_f·(v_i/T_f)/t_f, averaged over the led
+block's 10,000 densest unprotected cells and divided by refugia's under the same scenario — they do not: S1 1.00
+(led = refugia), S2 1.56, S3 1.74, **S4 4.59**; calibration from E18: S2 ×2 (crossover) 3.12, S2 ×5 (pins) 7.80,
+S3 ×2 3.47, S3 ×5 8.68. Carbon-forward therefore leads at roughly the emphasis that took ×3 on S2 to reach — the
+target does it twice over (a higher derived weight and the 1/t = 1.8× term on every dense-carbon cell). Caveat:
+per-cell cost alone is not sufficient for pinning (S3 ×5 scores 8.7 yet has NO tier — its top cells are all
+alike, so substitutes exist at the same cost); the currency ranks lead magnitude, the tail's steepness decides
+whether it pins. Also: residual-shortfall share at the anchor UNDER-reads carbon (0.086 at S4) because its target
+is nearly met there — not a usable lead currency for a satiating value. Fairness remedy (no formulation change):
+the **carbon weights-only counterfactual** (S4's doubled carbon share at S0's targets, the lever the others get)
+ran as the fifth E18 arm on 2026-09-08 — outcome next entry.
+
+**R10.14 (cont.) CARBON WEIGHTS-ONLY ARM RAN 2026-09-08 (`runs/e18_s4x1_wonly_ssp585`; 21 solves, 22 verdict; PRE-REGISTERED
+RULE → SUBSTITUTABLE).** Design as executed: S4's registered weight vector VERBATIM (m_soc 1.166, biomass 0.501, refugia 1.229 …)
+with m_soc's target reset to S0's 0.332 — no re-derivation was needed because the registered influence share is target-
+insensitive under the swing normalization (carbon share 0.499 vs S4's 0.500), so the arm is exactly "S4's share doubling at S0's
+targets", the lever S1–S3 get. Anchor 54 s (objective 4.898 vs S4's 5.014), guarded MGA 66 min, 50/50 certificates in band,
+D 0.927. Measured against S4: anchor carbon-block capture 0.440 → 0.370 (m_soc parks at 0.332 exactly, as in S0; biomass 0.329 →
+0.409 under its doubled weight), refugia 0.418 → 0.434, anchor Jaccard 0.595; frequent tier 34,787 → **16,425 km²** (Jaccard
+0.335), share inside the 12-position core 31% → **72%**; own land 20,329 → **763 km²** (S1–S3 own 0–861); tier enrichment
+carbon 3.83 → 1.40, refugia 2.07 → **4.03**; max f 1.000. **Answer to the fairness question: given only the lever the other
+three get, carbon-forward is refugia country like the rest — its 20,329 km² of Act-2 land is the TARGET's doing, not the
+weight's.** Mechanism (members' m_soc capture): under S4 the members dip BELOW target (0.530–0.552 — they pay shortfall to
+leave the tail, and the tail stays pinned); under the weights-only arm they never do (0.332–0.380): t = 0.332 is met by the
+θ-tail (4.1% of the region) with a reservoir of nearly-as-dense cells outside the selection to swap in at zero shortfall,
+whereas t = 0.552 has already consumed that reservoir, so every departure from the tail is charged. Binding scarcity (E13) is
+therefore created by the target exhausting the substitutes. **Currency caveat:** the per-cell shortfall cost scores this arm
+at 7.63× refugia — ABOVE S4's 4.59, because the same weight sits over a smaller t — yet it owns 763 km²: the cost is charged
+only while the feature is below target, so the currency ranks lead magnitude CONDITIONAL on the target binding inside the
+band. With S3 ×5 (8.68×, no tier) that makes two necessary conditions beyond the score: a steep tail AND a binding target
+(exhausted substitutes). Statement for the paper and the deck (E18 slide, 20): "carbon-forward is the only scenario that also
+states a security target (55% of dense soil carbon); with the same share doubling the other values get it would own ~760 km²,
+not ~20,300 — the target, not the weight, buys carbon its own places." Registered scenarios unchanged (M4.22).
+
+**R10.15 Cross-reference from the Alberta mirror (2026-09-08; AB results_log R7.9–R7.10): the EFG block is being
+completed on artifact and anthropogenic classes.** The largest Alberta core cluster (412 km², 53.4°N) is 99% the footprint of
+GET **F2.10 "Subglacial lakes"** — 409 "major-occurrence" cells in the Lower Foothills that are the class's ENTIRE footprint on
+the Y2Y extent (0% in PAs); **the Y2Y-wide F pins the same polygon (F 0.89 / guarded 0.86, 100% ≥ 0.70)**, so the parent core
+carries it too. Mechanism: each EFG holds 1/n of the block regardless of extent and capture is scored against the class's own
+total, so per-cell class value ∝ 1/footprint — the scarcest classes are the cheapest "representativeness" to complete (E13's
+binding scarcity), and 11 of the 40 Y2Y EFGs are anthropogenic biomes (T7.1–T7.5 croplands/pastures/plantations/urban/derived
+pastures, F3.1/F3.2/F3.4/F3.5 reservoirs/constructed wetlands/aquafarms/canals, SF2.1/SF2.2 pipes/flooded mines); others are
+coarse envelopes (F2.9 "Geothermal pools" covers 40% of the Y2Y PU). In Alberta 71% of the kept core km² sit on classes of this
+kind (F2.10, SF2.2 flooded mines, F3.5 canals, F2.9). **Decision flagged for the parent (spec amendment): restrict the
+representativeness block to natural biomes and physically plausible classes; would re-derive the EFG foundation (36/40
+rare-attainable), E17-T3's EFG-out counterfactual and the director package's core clusters** — check which Y2Y core picks sit
+on these classes before the director deck ships.
 
 ## Figure/table candidates (running)
 

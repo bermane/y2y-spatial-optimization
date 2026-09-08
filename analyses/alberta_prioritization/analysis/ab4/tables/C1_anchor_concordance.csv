@@ -1,0 +1,15 @@
+formulation,parent,ab_additions,y2y_clip_selected,overlap_coeff,jaccard
+s0_ssp585_theta5,s0_ssp585_theta5,10083,25377,0.9777,0.385
+s1_ssp585_theta5,s1_ssp585_theta5,10083,24394,0.9857,0.405
+s2_ssp585_theta5,s2_ssp585_theta5,10083,19058,0.9509,0.4904
+s3_ssp585_theta5,s3_ssp585_theta5,10083,22797,0.9716,0.4244
+s4_ssp585_theta2,s4_ssp585_theta3,10083,19156,0.9563,0.492
+s5_ssp585_theta5,s5_ssp585_theta5,10083,20539,0.9758,0.4734
+s0_ssp245_theta5,s0_ssp245_theta5,10083,19723,0.9633,0.4834
+s1_ssp245_theta5,s1_ssp245_theta5,10083,16924,0.9576,0.5564
+s2_ssp245_theta5,s2_ssp245_theta5,10083,16557,0.936,0.5487
+s3_ssp245_theta5,s3_ssp245_theta5,10083,18645,0.9418,0.4938
+s4_ssp245_theta2,s4_ssp245_theta3,10083,15426,0.9081,0.5599
+s5_ssp245_theta5,s5_ssp245_theta5,10083,16888,0.9515,0.5521
+s1x_ssp585_theta2,s1x_ssp585_theta3,10083,21558,0.9753,0.451
+s3x_ssp585_theta2,s3x_ssp585_theta3,10083,22393,0.9733,0.4331

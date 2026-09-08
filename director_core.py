@@ -24,7 +24,7 @@ from rasterio import features as rfeatures
 from scipy import ndimage
 from pyproj import Transformer
 import geopandas as gpd
-from shapely.geometry import Polygon, Point, shape
+from shapely.geometry import Polygon, Point, shape, box as shp_box
 from shapely.ops import unary_union
 
 import config
@@ -47,6 +47,10 @@ HEX_KM2 = 250              # decision (c) default
 HEX_KM2_ALT = 800          # board-level legibility variant, rendered for comparison
 POOL_JACCARD_MIN = 0.80    # decision (g): pool the two climate levels unless their frequent tiers diverge
 TOPK_ACT1 = 6              # deck shows top-k by area (tie-break mean guarded F); the register ships in full
+COMPLEX_LINK_KM = 25       # presentational grouping: kept components within this edge-to-edge distance (single
+                           # linkage) form one COMPLEX for the deck picks (Ethan 2026-09-04: the two Frank Church /
+                           # Gospel Hump components, 8 km apart, merge; Eagle Cap at 72 km and the cluster west of
+                           # Purcell/Robson stay separate). Components remain the analytic units.
 TOPK_ACT2 = 2
 FLOOR_G = 0.05
 RARE_EFG_PCT = 0.01       # "rarest" EFG companion mask: presence <= 1% of the PU (disclosed alongside the spec mask)
@@ -59,7 +63,7 @@ BLOCK_AXES = {
     "connectivity":  {"transboundary_connectivity": 0.5, "climate_corridors": 0.5},
     "biodiversity":  {"aoh_richness_birds": 0.5, "aoh_richness_mammals": 0.5},
     "carbon":        {"irrecoverable_carbon_m_soc": 0.742, "irrecoverable_carbon_biomass": 0.258},
-    "intactness":    {"human_modification": 1.0},     # disclosed, not a driver (dashed/grey)
+    "intactness":    {"human_modification": 1.0},     # plain sixth axis in the package (Ethan 2026-09-04)
 }
 STAR_AXES = ["core habitat", "connectivity", "biodiversity", "carbon", "representativeness", "intactness"]
 N_EFG = 40
@@ -67,6 +71,16 @@ SCENARIO_LABEL = {"s0": "Balanced", "s1": "Core-habitat-forward", "s2": "Connect
                   "s3": "Biodiversity-forward", "s4": "Carbon-forward", "s5": "Intactness push (S0 + gHM x10)",
                   "s1x": "Core-habitat x carbon regime", "s3x": "Biodiversity x carbon regime"}
 ACT2_SCENARIOS = ["s1", "s2", "s3", "s4"]   # the four named forward scenarios (spec Act 2)
+# Director package votes = the 12 ELICITED positions (6 scenarios x 2 climate futures). The two crossed
+# diagnostic hybrids (s1x, s3x: shares held, carbon target regime flipped alone) are near-duplicate votes for
+# S1/S3 at SSP585 (frequent-tier Jaccard 0.84 / 0.95) and are EXCLUDED here (Ethan, 2026-09-04; R10.9).
+# The paper's registered estimand stays F over all 14 (13_gate4_analysis); the package F12 is a deviation
+# from the package spec's "across all 14 formulations", logged in methods_log.
+PACKAGE_EXCLUDE = ("s1x", "s3x")
+def package_manifest(MAN):
+    m = MAN[~MAN.scenario_id.isin(PACKAGE_EXCLUDE)].reset_index(drop=True)
+    assert len(m) == 12, f"expected 12 elicited formulations, got {len(m)}"
+    return m
 SCENARIO_STATEMENT = {
     "s0": "all four value themes hold their intended influence shares",
     "s1": "climate macrorefugia (core habitat) carries a doubled influence share",
@@ -77,9 +91,8 @@ SCENARIO_STATEMENT = {
     "s1x": "S1's shares under the carbon-forward target regime (regime flipped alone)",
     "s3x": "S3's shares under the carbon-forward target regime (regime flipped alone)",
 }
-# decision (h): Nations' own DECLARED proposals only, never analyst-drawn. Indigenous-led rows of the
-# corridor-wide proposed-PA file: IPCA-typed + Indigenous-governed (GOV_TYPE 5) + the Ross River NPR
-# proposal (Kaska-led; the 04a "manual area"). Confirmed by Ethan before final render.
+# decision (h): Nations' own DECLARED IPCA proposals only, never analyst-drawn: the IPCA-typed rows of the
+# corridor-wide proposed-PA file + the Ross River NPR proposal (Kaska-led; the 04a "manual area").
 IPCA_SPEC = dict(vector=config.PROPOSED_PA_VECTOR, name_field="PA_NAME")
 # T-D4 (spec v1.3): tier area by ecozone/ecoregion. No such layer is in input_data yet -- drop a vector
 # (e.g. CEC North American Level II/III ecoregions, seamless US+Canada) into this folder and 19 picks it
@@ -87,8 +100,10 @@ IPCA_SPEC = dict(vector=config.PROPOSED_PA_VECTOR, name_field="PA_NAME")
 ECOREGIONS_DIR = config.INPUT_DIR / "ecoregions"
 ECOREGION_NAME_FIELDS = ("NA_L2NAME", "NA_L3NAME", "ECOZONE_NAME", "ZONE_NAME", "ECOREGION", "REGION_NAM", "NAME", "name")
 def ipca_rule(df):
-    return (df["PA_TYPE"].astype(str).str.strip() == "IPCA") | (df["GOV_TYPE"].astype(str).str.strip() == "5") \
-        | df["PA_NAME"].astype(str).str.contains("Ross River")
+    # declared IPCA proposals only (+ the Kaska-led Ross River NPR proposal). The Indigenous-governed "Great Caribou
+    # Rainforest" (PA_TYPE Conservation Area, 52% already inside Wells Gray / Bowron / Cariboo Mountains parks) is
+    # NOT an IPCA and is excluded (Ethan, 2026-09-04).
+    return (df["PA_TYPE"].astype(str).str.strip() == "IPCA") | df["PA_NAME"].astype(str).str.contains("Ross River")
 
 
 def ensure_dirs(pkg=PKG):
@@ -230,10 +245,12 @@ def jaccard(a, b):
     return float((a & b).sum() / u) if u else float("nan")
 
 
-def pool_scenarios(G, fdict, MAN, thr=FREQ_THR, jmin=POOL_JACCARD_MIN):
+def pool_scenarios(G, fdict, MAN, thr=FREQ_THR, jmin=POOL_JACCARD_MIN, force=False):
     """Decision (g): per scenario, pool the two climate levels unless their frequent tiers diverge.
 
-    Returns (POOL {key: f}, report df). key = scenario_id when pooled, '<sid>@<level>' otherwise."""
+    force=True pools regardless (Ethan, 2026-09-04: the deck shows one map per scenario; the divergence check
+    is still computed and reported). Returns (POOL {key: f}, report df); key = scenario_id when pooled,
+    '<sid>@<level>' otherwise."""
     POOL, rep = {}, []
     for sid, grp in MAN.groupby("scenario_id", sort=False):
         fids = [f for f in grp.formulation_id if f in fdict]
@@ -246,9 +263,9 @@ def pool_scenarios(G, fdict, MAN, thr=FREQ_THR, jmin=POOL_JACCARD_MIN):
             continue
         tiers = [(fdict[f] >= thr) & G.disc for f in fids]
         J = jaccard(tiers[0], tiers[1])
-        if J >= jmin:
+        if J >= jmin or force:
             POOL[sid] = np.mean([fdict[f] for f in fids], axis=0).astype(np.float32)
-            dec = "POOLED"
+            dec = "POOLED" if J >= jmin else f"POOLED (forced; rule would separate at Jaccard {J:.2f} < {jmin})"
         else:
             for f in fids:
                 POOL[f"{sid}@{'245' if 'ssp245' in f else '585'}"] = fdict[f]
@@ -295,6 +312,41 @@ def clusters(G, surf, thr=FREQ_THR, min_km2=MIN_KM2, close_r=CLOSE_R, subtract2d
 
 def top_k(reg, k):
     return reg[reg.kept].sort_values(["km2", "meanF"], ascending=False).head(k)
+
+
+def group_complexes(G, lab, reg, link_km=COMPLEX_LINK_KM):
+    """Single-linkage grouping of KEPT components by edge-to-edge distance -> `complex` id on the register.
+
+    Presentational (deck picks are complexes); the component rows are untouched. Returns (reg, complexes df) where
+    complexes has one row per complex: cids (list), anchor_cid (largest member), km2 (sum), meanF (area-weighted),
+    lat/lon (area-weighted), kept=True."""
+    from scipy.cluster.hierarchy import linkage, fcluster
+    from scipy.spatial.distance import squareform
+    reg = reg.copy()
+    reg["complex"] = -1
+    kept = reg[reg.kept]
+    ids = kept.cid.astype(int).tolist()
+    if len(ids) == 0:
+        return reg, pd.DataFrame(columns=["complex", "cids", "anchor_cid", "n", "km2", "meanF", "lat", "lon", "kept"])
+    if len(ids) == 1:
+        grp = np.array([1])
+    else:
+        n = len(ids); D = np.zeros((n, n))
+        for i, a in enumerate(ids):
+            dt = ndimage.distance_transform_edt(lab != a)
+            for j in range(i + 1, n):
+                D[i, j] = D[j, i] = dt[lab == ids[j]].min() * (abs(G.transform.a) / 1000.0)
+        grp = fcluster(linkage(squareform(D), method="single"), t=link_km, criterion="distance")
+    reg.loc[kept.index, "complex"] = grp
+    rows = []
+    area_col = "residual_km2" if "residual_km2" in reg.columns else "km2"
+    for g, sub in reg[reg.kept].groupby("complex"):
+        w = sub[area_col].values
+        rows.append(dict(complex=int(g), cids=sub.cid.astype(int).tolist(), anchor_cid=int(sub.sort_values(area_col).cid.iloc[-1]),
+                         n=len(sub), km2=float(w.sum()), meanF=float((sub.meanF.values * w).sum() / w.sum()),
+                         lat=float((sub.lat.values * w).sum() / w.sum()), lon=float((sub.lon.values * w).sum() / w.sum()), kept=True))
+    cx = pd.DataFrame(rows).sort_values(["km2", "meanF"], ascending=False).reset_index(drop=True)
+    return reg, cx
 
 
 def sensitivity(G, surf, thrs=(SENS_THRS[0], FREQ_THR, SENS_THRS[1]), **kw):
@@ -398,7 +450,7 @@ def graticule(ax, G, lats=(45, 50, 53, 55, 60, 65), lons=(-130, -125, -120, -115
     ax.set_xlim(0, W); ax.set_ylim(H, 0)
 
 
-def scalebar(ax, G, km=250, loc=(0.74, 0.10)):
+def scalebar(ax, G, km=250, loc=(0.70, 0.94)):     # north-east corner is empty on every Y2Y map
     H, W = G.shape
     px_per_km = 1000 / abs(G.transform.a)
     x0, y0 = loc[0] * W, (1 - loc[1]) * H
@@ -429,13 +481,22 @@ def block_percentiles(G):
     efg = np.zeros((len(paths), G.n_pu), bool)
     for i, p in enumerate(paths):
         efg[i] = np.nan_to_num(lc._read(p)[G.pu], nan=0.0) > 0
-    return SimpleNamespace(axes=axes, pct=pct, efg=efg, efg_names=[p.stem for p in paths])
+    # representativeness on the SAME construction as the other axes: per-cell count of EFG classes present,
+    # ranked over the discretionary landscape (the spec's "classes present / 40" cannot exceed ~0.35 for any
+    # cluster-sized patch -- no cell holds more than 15 classes -- so it read as "far below average" against
+    # the 0.5 ring; R10.7. The raw class count is still reported in T-D1.)
+    count = efg.sum(axis=0).astype(np.float32)
+    ref = np.sort(count[G.disc])
+    axes["representativeness"] = (np.searchsorted(ref, count, side="right") / len(ref)).astype(np.float32)
+    return SimpleNamespace(axes=axes, pct=pct, efg=efg, efg_names=[p.stem for p in paths], efg_count=count)
 
 
 def star_profile(P, mask1d):
-    out = {ax: float(P.axes[ax][mask1d].mean()) for ax in BLOCK_AXES}
-    out["representativeness"] = float(P.efg[:, mask1d].any(axis=1).sum() / P.efg.shape[0])
-    return {ax: out[ax] for ax in STAR_AXES}
+    return {ax: float(P.axes[ax][mask1d].mean()) for ax in STAR_AXES}
+
+
+def efg_classes_present(P, mask1d):
+    return int(P.efg[:, mask1d].any(axis=1).sum())
 
 
 # ---- driver attribution masks (E13 definitions, notebook 15) ----------------------------------
@@ -446,6 +507,11 @@ def driver_masks(G):
     masks = {"m_soc theta-tail": np.nan_to_num(v, nan=-1)[G.pu] >= theta * float(np.nanmean(v[G.pu]))}
     conn = lc._read(config.HANDOFF_DIR / "transboundary_connectivity.tif")[G.pu]
     masks["connectivity spike (top 0.2%)"] = conn >= np.nanquantile(conn, 0.998)
+    # refugia has no theta rule of its own (t = 1.0); its dense core is defined AREA-MATCHED to the m_soc
+    # theta-tail so the two attribution columns are comparable (R10.6: refugia pins the core)
+    refu = np.nan_to_num(lc._read(config.HANDOFF_DIR / "climate_type_macrorefugia.tif")[G.pu], nan=0.0)
+    k = int(masks["m_soc theta-tail"].sum())
+    masks["refugia densest (area-matched to the m_soc tail)"] = refu >= np.sort(refu)[-k]
     rare = np.zeros(G.n_pu, bool)
     n_rare = 0
     for p in lc.efg_paths():
@@ -466,7 +532,7 @@ def driver_masks(G):
             rarest |= e
             n_rarest += 1
     masks[f"rarest-EFG footprint (<= {100 * RARE_EFG_PCT:g}% of PU each)"] = rarest
-    print(f"driver masks: m_soc theta-tail {int(masks['m_soc theta-tail'].sum()):,} cells | spike "
+    print(f"driver masks: m_soc theta-tail {int(masks['m_soc theta-tail'].sum()):,} cells | refugia densest (same area) | spike "
           f"{int(masks['connectivity spike (top 0.2%)'].sum()):,} | rare-attainable EFG footprint "
           f"{int(rare.sum()):,} cells ({100 * rare.mean():.0f}% of PU) from {n_rare}/{len(lc.efg_paths())} EFGs | "
           f"rarest-EFG footprint {int(rarest.sum()):,} cells ({100 * rarest.mean():.1f}%) from {n_rarest} EFGs")
@@ -552,13 +618,10 @@ def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5):
         ax.plot(np.r_[ang, ang[0]], closed, color=pr.get("color", "#2b4f7d"), lw=1.6)
         ax.fill(np.r_[ang, ang[0]], closed, color=pr.get("color", "#2b4f7d"), alpha=0.25)
         ax.plot(np.r_[ang, ang[0]], [ref] * (k + 1), color="#888888", lw=0.8, ls="--")
-        i_int = STAR_AXES.index("intactness")
-        ax.plot([ang[i_int], ang[i_int]], [0, rmax], color="#999999", lw=1.0, ls=(0, (2, 2)))
+        # intactness drawn as a plain sixth axis (Ethan, 2026-09-04): it is in the formulation; that it
+        # cannot move the answer (leverage 0.042) is a paper finding, not a director-meeting caption
         ax.set_xticks(ang)
-        ax.set_xticklabels([a if a != "intactness" else "intactness†" for a in STAR_AXES], fontsize=7.5)
-        for lab_, a in zip(ax.get_xticklabels(), STAR_AXES):
-            if a == "intactness":
-                lab_.set_color("#888888")
+        ax.set_xticklabels(STAR_AXES, fontsize=7.5)
         ax.set_ylim(0, rmax)
         ax.set_yticks([0.25, 0.5, 0.75, 1.0]); ax.set_yticklabels(["", "0.5", "", "1"], fontsize=6.5)
         import textwrap
@@ -567,8 +630,8 @@ def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5):
         ax.axis("off")
     fig.suptitle(title, fontsize=12, y=1.0)
     fig.text(0.01, -0.01, "axes = cluster mean percentile vs the DISCRETIONARY landscape (dashed ring 0.5 = typical "
-             "unprotected land); representativeness = EFG classes present / 40 (different construction); "
-             "† intactness disclosed, not a driver", fontsize=7, color="#444444")
+             "unprotected land); representativeness = percentile of ecosystem groups present per cell",
+             fontsize=7, color="#444444")
     fig.savefig(path, dpi=200, bbox_inches="tight")
     return fig
 
@@ -635,3 +698,66 @@ def tier_achievement(G, cumulative_masks):
                 rows.append(dict(tier=tier, block=b, feature=f, capture=c))
             rows.append(dict(tier=tier, block=b, feature="BLOCK", capture=float(np.mean(caps))))
     return pd.DataFrame(rows)
+
+
+# ---- basemap: Natural Earth 10 m admin-1 (states/provinces) + international border --------------
+ADMIN_PATH = config.INPUT_DIR / "basemap" / "ne_10m_admin_1_states_provinces.shp"
+ADMIN_LINES_PATH = config.INPUT_DIR / "basemap" / "ne_10m_admin_1_states_provinces_lines.shp"
+
+def admin_layer(G, pad_m=150e3):
+    """Internal admin-1 boundary lines, the coastline (country polygon boundaries), the shared Canada-US border
+    (intersection of the two country boundaries) and label points -- all clipped to the map extent (+pad)."""
+    x0 = G.transform.c; y1 = G.transform.f
+    x1 = x0 + G.shape[1] * G.transform.a; y0 = y1 + G.shape[0] * G.transform.e
+    bbox = shp_box(x0 - pad_m, y0 - pad_m, x1 + pad_m, y1 + pad_m)
+    g = gpd.read_file(ADMIN_PATH).to_crs(G.crs)
+    g = g[g.intersects(bbox)].copy(); g["geometry"] = g.geometry.intersection(bbox)
+    lines = gpd.read_file(ADMIN_LINES_PATH).to_crs(G.crs)
+    lines = lines[lines.intersects(bbox)].copy(); lines["geometry"] = lines.geometry.intersection(bbox)
+    countries = g.dissolve(by="admin").reset_index()
+    coast = countries.geometry.boundary
+    border = None
+    if len(countries) >= 2:
+        b = [c.buffer(500) for c in countries.geometry.boundary]        # 500 m tolerance for the shared border
+        border = b[0]
+        for bb in b[1:]:
+            border = border.intersection(bb)
+    inner = shp_box(x0, y0, x1, y1)
+    lab = g.copy(); lab["geometry"] = lab.geometry.intersection(inner)
+    lab = lab[~lab.geometry.is_empty]; lab["pt"] = lab.geometry.representative_point()
+    return SimpleNamespace(admin1_lines=lines, coast=coast, border=border, labels=lab[["postal", "name", "pt"]])
+
+
+def _lines_px(G, geom):
+    parts = geom.geoms if hasattr(geom, "geoms") else [geom]
+    out = []
+    for part in parts:
+        if part.is_empty:
+            continue
+        if part.geom_type == "Polygon":
+            out += _lines_px(G, part.exterior); continue
+        if part.geom_type in ("GeometryCollection", "MultiPolygon", "MultiLineString"):
+            out += _lines_px(G, part); continue
+        x, y = np.asarray(part.coords)[:, :2].T
+        px, py = xy_to_px(G, x, y)
+        out.append(np.c_[px, py])
+    return out
+
+
+def draw_admin(ax, G, A, color="#8c8c8c", lw=0.5, coast_color="#b5b5b5", coast_lw=0.35,
+               border_color="#4a4a4a", border_lw=1.0, labels=True, fs=7):
+    import matplotlib.patheffects as _pe
+    for geom in A.coast:
+        for ln in _lines_px(G, geom):
+            ax.plot(ln[:, 0], ln[:, 1], color=coast_color, lw=coast_lw, zorder=0.3)
+    for geom in A.admin1_lines.geometry:
+        for ln in _lines_px(G, geom):
+            ax.plot(ln[:, 0], ln[:, 1], color=color, lw=lw, zorder=0.32)
+    if A.border is not None:
+        for ln in _lines_px(G, A.border):
+            ax.plot(ln[:, 0], ln[:, 1], color=border_color, lw=border_lw, zorder=0.35)
+    if labels:
+        for _, r in A.labels.iterrows():
+            px, py = xy_to_px(G, r.pt.x, r.pt.y)
+            ax.text(px, py, r.postal, fontsize=fs, color="#555555", ha="center", va="center", zorder=4.5,
+                    path_effects=[_pe.withStroke(linewidth=2, foreground="white", alpha=0.8)])
