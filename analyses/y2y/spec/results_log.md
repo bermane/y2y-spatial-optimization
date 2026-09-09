@@ -552,19 +552,101 @@ band. With S3 ×5 (8.68×, no tier) that makes two necessary conditions beyond t
 states a security target (55% of dense soil carbon); with the same share doubling the other values get it would own ~760 km²,
 not ~20,300 — the target, not the weight, buys carbon its own places." Registered scenarios unchanged (M4.22).
 
-**R10.15 Cross-reference from the Alberta mirror (2026-09-08; AB results_log R7.9–R7.10): the EFG block is being
-completed on artifact and anthropogenic classes.** The largest Alberta core cluster (412 km², 53.4°N) is 99% the footprint of
-GET **F2.10 "Subglacial lakes"** — 409 "major-occurrence" cells in the Lower Foothills that are the class's ENTIRE footprint on
-the Y2Y extent (0% in PAs); **the Y2Y-wide F pins the same polygon (F 0.89 / guarded 0.86, 100% ≥ 0.70)**, so the parent core
-carries it too. Mechanism: each EFG holds 1/n of the block regardless of extent and capture is scored against the class's own
-total, so per-cell class value ∝ 1/footprint — the scarcest classes are the cheapest "representativeness" to complete (E13's
-binding scarcity), and 11 of the 40 Y2Y EFGs are anthropogenic biomes (T7.1–T7.5 croplands/pastures/plantations/urban/derived
-pastures, F3.1/F3.2/F3.4/F3.5 reservoirs/constructed wetlands/aquafarms/canals, SF2.1/SF2.2 pipes/flooded mines); others are
-coarse envelopes (F2.9 "Geothermal pools" covers 40% of the Y2Y PU). In Alberta 71% of the kept core km² sit on classes of this
-kind (F2.10, SF2.2 flooded mines, F3.5 canals, F2.9). **Decision flagged for the parent (spec amendment): restrict the
-representativeness block to natural biomes and physically plausible classes; would re-derive the EFG foundation (36/40
-rare-attainable), E17-T3's EFG-out counterfactual and the director package's core clusters** — check which Y2Y core picks sit
-on these classes before the director deck ships.
+**R10.15 What raising S1–S3's emphasis would cost Act 1, and whether it answers "where do these themes have value"
+(Ethan's question after R10.14, 2026-09-08; zero-solve on the E18 arms):** (a) Swapping an E18 arm in for its scenario's
+SSP585 formulation and re-voting the 12-position core (245 twin unchanged — no 245 arms exist, so these are LOWER bounds on
+the erosion): S2 ×2 (share 0.67 = 4× S0 weight) core 16,895 → 15,412 km² (Jaccard 0.904; −1,555 / +72); S2 ×5 → 13,730
+(0.805); S3 ×2 → 15,970 (0.943; −943 for 0 km² of own land); S3 ×5 → 15,202 (0.891); S2 ×2 + S3 ×2 together → 14,512
+(0.856). (b) Where the diffuse values actually sit: the richest decile of unprotected land holds only 18% (connectivity)
+and 14% (biodiversity) of the block's unprotected value — 108,188 km² each — and 2–3% of that decile lies in the core. The
+connectivity tier moves INTO that decile as the weight rises (share of tier inside it: S2 29% → ×2 87% → ×5 100%) but never
+covers much of it (2.9% → 10.2% → 32.1%); the biodiversity tier does neither (20% → 43% of a 1,024 km² tier → empty).
+Reading: for a diffuse value the frequency tier can only ever pin a sliver of where the value is; "where the theme has
+value" is the value layer itself, and the applied statement is coverage (T-D3 / tier achievement), not a tier. Raising
+S3's emphasis buys nothing at any dose and erodes the core; raising S2's buys pinch-point land at ≥ 4× S0 at the price of
+~1.5–3 k km² of core (more once its 245 twin moves too). See `spec/e18_reportback.md` for the options put to chat.
+
+**R10.16 Denominator ruling measured (13b, 2026-09-08; unguarded band, the paper's Claim-A estimand; zero-solve):**
+F12 (12 design cells, PRIMARY) vs F14 (as frozen, supplement): per-cell |ΔF| over unprotected land mean 0.0056, max
+**0.054** — inside the single-vote bound 1/14 = 0.071 for every cell (the analytic bound for two removed votes is 2/14 =
+0.143; the measured maximum is well below both); 10 cells exceed 0.05. Bands (km² unprotected, F14 → F12): always 0 → 0;
+frequent 6,816 → **6,306** (Jaccard 0.925); conditional 93,408 → 89,786; rare 951,972 → 968,313; never 29,689 → 17,480
+(the crossed hybrids, both SSP585, had pushed 12 k km² of never-selected land below 0.05 — dropping them lifts it into
+rare). E1 bias (hierarchical − naive): 14-cell mean 0.169 / max 0.755 → 12-design **0.173 / 0.765** (Claim A unchanged).
+**E11 recount: 156/182 → 109/132 ordered pairs mutually in-band**; of the 26 out-of-band pairs in the 14-cell record,
+**3 involved a diagnostic cell — all as the PLAN (s3x under both S4 objectives, s1x under S4@245), none as the objective**;
+the 23 remaining failures are unchanged and all carbon-forward objectives (Δ 0.051–0.093) plus the two S4-plan-under-S1
+cases. Between-anchor Jaccard on the 12: min 0.373 / mean 0.519 / max 0.777. Products: `runs/ensemble_v1/
+F_surface_design12.tif`, `spec/T_denominator_v015.csv`, `spec/E11_recount_v015.json`, `figures/gate4_F_design12_vs_14.png`.
+The guarded package surfaces (19) were already F12 (R10.9); nothing there moves.
+
+**R10.17 Value vs irreplaceability (package spec v1.6 Acts 1/4 + hinge; 19 headless verification run 2026-09-08 on the
+production artifacts — PROVISIONAL until Ethan's run; zero-solve):** (1) **Value footprints** = the top 30% of unprotected
+land by block score, 324,566 km² each for core habitat / connectivity / biodiversity / carbon / intactness (exact quantile
+cut; M4.25); representativeness (presence of any ≤1%-footprint EFG class) 32,108 km² = 3.0% (the 36-class alternative would be
+834,226 km² = 77%, reported not used). (2) **Coverage by reliability tier** (% of each theme's footprint in core / scenario
+tiers / opportunity): core habitat 5.1 / 10.3 / 84.6; connectivity 0.7 / 4.6 / 94.6; biodiversity 2.9 / 5.1 / 92.1; carbon
+2.0 / 9.3 / 88.7; intactness 1.5 / 4.9 / 93.6; representativeness 4.3 / 12.5 / 83.2; never ≈ 0 for all. Share of each
+block's REGIONAL value by tier (PAs / core / scenario / opportunity): biodiversity 0.156 / 0.015 / 0.039 / 0.790; carbon
+0.149 / 0.014 / 0.111 / 0.726; connectivity 0.146 / 0.012 / 0.043 / 0.798; core habitat 0.192 / 0.057 / 0.076 / 0.675 —
+the core holds 1–6% of any theme's value; irreplaceability is a sliver of value by construction of a plateau-rich problem.
+(3) **Convergence** (themes voting a cell top-30%, km² unprotected): 0: 195,628; 1: 495,036; 2: 339,403; 3: 50,666; 4:
+1,152; 5: 0. High-value land (≥1 theme) 886,257 km² = 82% of unprotected land; **the gap (Act 4) = 815,442 km² = 92% of
+high-value land lies outside the core and every scenario tier**, and 99.9% of it is in ≥1 near-optimal plan (R10.3 union
+membership). (4) **Hinge cross-tab** (km²; rows = convergence, cols = core / scenario / opportunity): 0: 0 / 66 / 194,818;
+1: 1,691 / 15,653 / 477,661; 2: 11,493 / 31,684 / 296,226; 3: 3,440 / 6,316 / 40,910; 4: 271 / 267 / 614. Corners: high value
+(≥3 themes) in the core 3,711 km² (the easy sell); high value in opportunity 41,524 km² (Act 4's territory); LOW value (≤1
+theme) in the core **1,691 km²** = 10% of the core — the E13 surprise, binding claims in unglamorous places (the core is
+mostly 2-theme land: 11,493 of 16,895 km²). (5) **Biodiversity, the finding as the product:** AOH-richness block capture over
+ALL 612 guarded near-optimal plans (12 × 51) = **29.5–34.2% (median 31.4%)** — the slide states this measured range rather
+than the anchor-only "34–36%". Products: `geotiffs/value_top30_*.tif`, `value_convergence.tif`, `value_gap.tif`,
+`tables/T-D6_value_coverage.csv`, `T-D6b_value_share_by_tier.csv`, `hinge_crosstab.csv`; figures `act1_values_hex250`,
+`act1_value_convergence_hex250`, `act3_<sid>_hex250` (value | tier pairings), `hinge_convergence_x_F`, `act4_opportunity`,
+`td6_value_coverage`; deck 22 slides (v1.6 skeleton + by-future pairs + summary map + E18 appendix).
+
+**R10.19 The curated representativeness block (v3) — block card measured (`11b_efg_curation_freeze_v3`, 2026-09-09; zero-solve;
+M2.11, M4.26–M4.27).** Curation 40 → 22 classes → **20 features** on the parent extent (Alberta mirror 27 → 15 → 13).
+Re-derived facts on the 20: **rare-attainable 17/20** (was 36/40; the three that cannot be captured in full within the
+budget are T2.1 cap_max 0.41, T6.4 0.60, F2.4 0.84); **≤1%-footprint companion 6 features** (F1.1, T5.4, T6.1, F2.1, F1.6,
+T2.2; was 13); **classes > 90% south of 53°N: 9/20** (was 20/40; median feature mean-latitude 52.6°N) — the southern skew
+that drove E17's EFG-out attribution was half artifact. Rarity-scaled targets (M4.27): 0.10 for the four largest classes
+up to 0.94 for F1.1. **R0 (iii) boundary-proximity check:** of the six retained classes below 1% of the extent, FIVE have
+more than half their cells within 10 km of the study boundary — F1.1 79%, T5.4 100%, T6.1 93%, F2.1 72%, F1.6 87%
+(T2.2 47%) — i.e. the "honest rare-ecosystem presence" set is, on this extent, mostly range edges of classes centred
+outside it. Reported, not dropped (v0.17.1 leaves this to the spec chat); under the log-linear targets they will pin at
+F ≈ 1 by rarity and will be captioned as adequacy pins (M4.28). Manifest v3 frozen: sha e47991bc…, EFG block sha
+4dc60559…, weights identical to v1 (asserted). Products: `spec/v3/efg_curation_v3.csv`, `efg_block_card_v3.csv`,
+`efg_targets.json`; `input_data/aligned_stack{,_ab}/iucn_efg_v3/`.
+
+**R10.19 (cont.) The clip-edge resolution measured — manifest v3.1 (11b, last cell; 2026-09-09; zero-solve; M4.29).**
+Windows (study extent 1,551,653 km² = boundary + 20 km, buffered further): +100 km 2,435,283 km²; **+250 km 3,813,704
+km²**; +500 km 6,373,984 km². Class footprints counted on the GET archive maps (30-arc-second, presence = value > 0,
+nearest warp to the 1 km Albers grid); note the on-extent counts here are polygon counts, larger than the PU counts in
+the block card because the PU mask (biomass coverage) trims ~18% of the extent — most of T5.4, T6.1 and F1.6 lies in
+that trimmed fringe (deserts, ice, arid basins). **The flagged classes are range edges, as diagnosed:** share of the
++250 km footprint that lies inside the extent — T5.4 9.5%, F1.6 10.9%, T2.2 11.1%, T4.4 18.6%, F1.1 19.8%, T6.1 21.0%,
+F2.1 39.0%; the large classes 36–67%. **Targets v3 → v3.1 (+250 km):** F1.1 0.94 → **0.50**, F2.1 0.71 → **0.49**, T6.1
+0.84 → 0.36, F1.2 0.49 → 0.25, T2.2 0.60 → 0.15, T3.4 0.18 → 0.11, T5.4 0.87 → **0.105**, F1.6 0.66 → **0.101**; every other
+feature (T4.4, SF1.2, T6.2, T6.3, S1.1_SF1.1, T5.1, F1.3, TF1.2, TF1.6_TF1.7, T6.4, F2.4, T2.1) at the 0.10 floor — the
+block is now adequacy-semantic for two genuinely regionally rare classes and proportional for the rest. Sensitivity:
++100 km lifts the small classes (F1.1 0.63, F2.1 0.57, T6.1 0.47, T2.2 0.30, T5.4 0.26, F1.6 0.27); +500 km lowers them
+(F1.1 0.29, F2.1 0.46, T6.1 0.23; the rest 0.10). **Rare in the window (≤ 1% of it): F1.1 and F2.1 at +100 and +250 km;
+F2.1 alone at +500 km** — the Act 1 representativeness layer therefore votes on two classes (streams, large lakes),
+"expected thin — the honest representativeness story" (package spec v1.7). Manifest v3.1 frozen (sha 259f35ed…;
+weights unchanged; supersedes v3 e47991bc…, never solved). Products: `spec/v3.1/efg_window_footprints.csv`,
+`efg_targets.json`, `manifest_v3.1.csv` + sha.
+
+**R10.20 (placeholder) The v3 ensemble (12 + 18 under manifest v3) — PENDING Ethan's run.** To record: per-formulation
+anchor objectives and timings, twin ≤ anchor checks, MGA diameters, guarded sweep certificates; F12 bands and core vs the
+v1 record (Jaccard, km²), E1 bias, E7 captures (T1 on v3), E11 recount; the E14 trigger re-check.
+
+**R10.21 (placeholder) The necessity test (E19) — PENDING 18b/18c.** To record: the per-class forced ledger, forced land
+(≥ 1 / all formulations), the ensemble-forced share of the core vs the 50% gate, T2 necessary-vs-forced agreement and the
+leave-EFG-out latitude shift, T3 outcome if triggered, the adequacy-pin count in the register.
+
+**R10.22 (placeholder) Package v1.7 on the curated block — PENDING 19/20.** To record: core/tier/gap areas vs the
+artifact-block package (R10.17), the Act 1 representativeness layer on the retained ≤1% classes, cluster picks that
+changed, the E19 partition of core/tiers/picks.
 
 ## Figure/table candidates (running)
 
@@ -574,5 +656,37 @@ on these classes before the director deck ships.
 - Gate-0 capture-vs-target + reallocation table — from R2.1/R2.4.
 - LP-vs-MILP tightness table — R2.5.
 - Numerics vignette box/figure — R3.1–R3.3 (matrix-range before/after; 60× speedup).
+
+**R10.18 Cross-reference from the Alberta mirror (2026-09-08; AB results_log R7.9–R7.11): the EFG block rewards
+cartographic slivers of the GET indicative maps.** The largest Alberta core cluster (412 km², 53.4°N) is 99% the footprint of
+GET **F2.10 "Subglacial lakes"** — 409 "major-occurrence" cells (= a POINT RECORD; the GET's sources are Antarctic/Greenland/
+Iceland inventories) in ice-free Lower Foothills, the class's ENTIRE footprint on the Y2Y extent (0% in PAs); **the Y2Y-wide F
+pins the same polygon (F 0.89 / guarded 0.86, 100% ≥ 0.70)**, so the parent core carries it too. Mechanism: each EFG holds 1/n
+of the block regardless of extent and capture is scored against the class's own total, so per-cell class value ∝ 1/footprint
+(E13's binding scarcity) — and the GET's own README says its maps (10 arcmin–1° grain; 9 of AB's 27 and a comparable share of
+the 40 Y2Y classes are ecoregion ENVELOPES) are for "which EFG are likely to occur within areas, rather than which occur at
+particular point locations". On the Alberta extent three of the four pinning classes are natural-or-plausible classes whose
+mapped footprint is a border-overshoot or Y2Y-line sliver (F3.5 canals median 0.5 km from the BC border; F2.9 0.7 km; SF2.2
+4 km from the Y2Y line) — see R7.11 for the measurements. On the Y2Y extent F2.9 (40% of PU) and F3.5 (19%) are too large to
+pin; the parent's exposure is F2.10 (0.03%) plus any small-footprint envelope class (SF2.2 0.42%, T2.2 0.90%, T7.4 1.19% are
+the candidates). Earlier reading ("restrict the block to natural biomes") SUPERSEDED: the anthropogenic-biome question is a
+separate purpose decision and drove none of the picks. **Decision flagged for the parent (spec amendment, candidate rule =
+exclude point-record classes and envelope-method classes with footprint < 1% of the PU): would re-derive the EFG foundation
+(36/40 rare-attainable), E17-T3's EFG-out counterfactual and the director package's core clusters** — check which Y2Y core
+picks sit on these classes before the director deck ships.
+**R10.18 (cont.) Measured parent exposure (zero-solve on `director_package/`, 12 design formulations, guarded F,
+core = F ≥ 0.70 discretionary = 16,895 km²):** the five smallest classes — F2.6 (3 cells), F2.2 (9), F1.4 (93), F2.3
+(222), F2.10 (409) — are **100% of unlocked cells inside the core** (734 km²); core cells inside any ≤ 1%-footprint
+class = 1,377 (8.2%); register clusters ≥ 50% inside a ≤ 1% class = 12 of 99 (3,983 of 108,853 km²): the F2.10 polygon
+(412 km², register cluster "NE of Jasper 53.4°N", not a numbered pick) + a Wyoming group (Bridger / Gros Ventre /
+Jedediah Smith on the SF2.2 flooded-mines, F3.4 aquafarms and F1.6 episodic-rivers envelopes) + T5.4 cool deserts.
+**Deck pick #11 (Act 3 biodiversity-forward, "NW of Bridger Wilderness", 348 km²) is 100% inside ≤ 1% classes (SF2.2
+85% / F3.4 100% / F1.6 100%); pick #12 (234 km²) is 99% T5.4** (real but scarce); picks #1–#10, #13, #14 are 0–4.2%.
+The v1.6 Act 1 `value_top30_representativeness` layer (32,108 cells) is **27.9% F2.10 + SF2.2 + F3.4** (2.3% on the
+< 0.1% slivers); 4,324 of 51,818 `value_convergence ≥ 3` cells reach 3 only through representativeness. Tier composition: Act 2 core 7.5% / core-habitat 6.7% / connectivity 9.1% / carbon 8.8% inside ≤ 1% classes, but the
+**biodiversity-forward tier 40.6% (16.5% on F2.10 + SF2.2 + F3.4 alone)** — what S3 "owns" is largely the EFG block completing
+map slivers (cf. R10.13: AOH richness never pins). Anthropogenic
+count corrected to **12/40** (S2.1 anthropogenic subterranean voids included). Full class tables, option verdicts
+(A map-method rule / B sliver floor / C purpose rule / D presentation-only) and costs → `spec/efg_block_reportback.md`.
 
 *Last updated 2026-09-03 (R10 placeholders; R9.7 E15b).*

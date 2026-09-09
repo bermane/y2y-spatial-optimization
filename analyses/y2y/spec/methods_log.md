@@ -108,6 +108,27 @@ maintenance rule; quantitative outcomes live there, methods decisions here)**,
   and are unaffected — only the unit column of `consequences_raw.csv` (and any table
   importing RAW_SPEC) changes on its next regeneration.
 
+- **M2.11** **EFG representativeness block CURATION under the new input pre-screen (rule R0; study plan v0.17/.17.1,
+2026-09-09; trigger R10.18 / AB R7.9–R7.11).** The 40-class block as ingested (one IUCN GET EFG = one feature at 1/n,
+target 1.0) rewarded cartographic artifacts of the GET indicative maps: per-cell class value ∝ 1/footprint, so point
+records, envelope overshoots and clip slivers were the cheapest "representativeness" in every solve. **R0** (ahead of
+R1–R4, applied to every input): (i) purpose relevance, (ii) map validity at the analysis grain, (iii) a boundary-proximity
+check for retained classes below 1% of the extent. Rules and verdicts (`spec/v3/efg_curation_v3.csv`, from
+`11b_efg_curation_freeze_v3`): C purpose — 12 anthropogenic biomes out (T7.1–T7.5, F3.1/F3.2/F3.4/F3.5, SF2.1/SF2.2,
+S2.1); A map-method — the point-record class F2.10 out, envelope classes below 1% of the PU out (SF2.2, F3.4 — both also
+C); B grain floor — non-direct classes with fewer cells than one native GET grid cell (~330 km² at these latitudes) out
+(F2.6 3 cells, F2.2 9, F1.4 93, F2.3 222); utility — F2.9 out (an envelope over 40% of the extent, met by any 30% of
+half the landscape); MERGES — TF1.6+TF1.7 and S1.1+SF1.1 (identical footprints) into one feature each (cell-wise max;
+values 0/1/2 preserved). **40 → 22 classes → 20 features.** The curated block is a NEW stack folder
+`input_data/aligned_stack/iucn_efg_v3/` (18 singles copied + 2 merged rasters, source profiles identical; the v1 folder
+untouched); the same rules applied to the Alberta mirror stack give `aligned_stack_ab/iucn_efg_v3/` (27 → 15 classes /
+13 features) for stage 2. One switch selects the block everywhere (`config.EFG_SUBDIR`, derived from
+`config.Y2Y_VERSION`; `write_manifest` refuses to run on a missing/empty block folder). **R0 (iii) measured:** five of the
+six small retained classes have > 50% of their cells within 10 km of the study boundary — F1.1 79%, T5.4 100%, T6.1 93%,
+F2.1 72%, F1.6 87% (T2.2 47%, not flagged); REPORTED, not auto-dropped (the spec's residual-loophole check; a decision for
+the spec chat before the re-solve starts). Retained-block facts re-derived (R10.19). Naming convention adopted from
+here on: things are named by what they are, code in parentheses.
+
 ## 3. Feature characterization protocol (Gate 0a; spec §2.5)
 
 - **M3.1** LEVERAGE (the organizing statistic): share of a feature's total held by its richest
@@ -527,6 +548,110 @@ computes the dose table in full (max f, Gate-2b D as max pairwise Hamming ÷ 2·
 `spec/E18_dose_table.csv` is the single source; 20 renders it as the E18 slide (`td_e18_dose.png`) and adds the carbon-target
 caveat bullet to the carbon-forward Act-2 slide. Ruling stands: registered scenarios unchanged; the asymmetry is disclosed.
 
+**M4.23 — Denominator ruling (study plan v0.15, adopted 2026-09-08): F over the 12 DESIGN formulations is PRIMARY.**
+The two crossed hybrids s1x/s3x (S1/S3 shares under the θ=3× carbon regime, SSP585 only) are reclassified from voting to
+DIAGNOSTIC: not defensible value positions (lever-isolation probes for E3/E7 that no stakeholder holds), deep-carbon regime
+over-represented (4/14 votes vs the intended 1-in-6), climate asymmetry (8:6 instead of 1:1), and a failed-target state
+(m_soc 0.442/0.366 vs t=0.552) carried into F. Handling: the manifest gains `role` ∈ {design, diagnostic} as a NEW VERSION —
+`spec/manifest_v2.csv` + `manifest_v2.sha256` written by `13b_denominator_v015` — while the frozen v1 file and
+`manifest_freeze.sha256` stay byte-identical (12/18 hash-verify v1; §9: post-freeze change ⇒ new version + changelog).
+F, bands, E1 and E11 are recomputed on the 12 design cells as the primary record (R10.16); the 14-cell as-frozen results
+(13, R8) move to the supplement with per-cell deltas. E3/E7 keep using the diagnostics. `director_core.package_manifest`
+reads `role` from v2 (fallback: the previous exclude list, identical membership), so the package's F12 (R10.9) and the
+paper's primary F now coincide. Zero new solves; disclosed as a post-freeze reclassification with this rationale. The
+E18 arms (`runs/e18_*`) carry the same status: diagnostic, never voting (v0.16).
+
+**M4.24 — E18 closed; ladder and SSP245 twins RESCINDED (study plan v0.16 / v0.16.1, Ethan 2026-09-08):** Option A stands
+— registered S1–S4 unchanged for the ensemble, the core and the paper; Option B (re-register S2 at 4× S0) is deferred to
+Y2Y as a values call PROACT never elicited ('emphasized' vs 'dominant'), with the core cost (−1.5 to −3 k km²) on record
+(R10.15); Option C rejected. The connectivity emphasis ladder and the two SSP245 twins authorized in v0.16 were withdrawn
+in v0.16.1 (no further solves): the 4×/10× arms remain E18 EVIDENCE (dose table in the deck appendix), not products. Carried
+into the package verbatim: the carbon-forward caveat AND its mirror ("carbon has a target lever because its geometry admitted
+a stopping rule; the diffuse values cannot; the asymmetry is the landscape's"), and the biodiversity finding-as-product
+(no irreplaceable places at any emphasis; capture range over every guarded plan measured in 19, R10.17).
+
+**M4.25 — Package spec v1.6, VALUE-FIRST restructure (procedures, pre-stated; 2026-09-08):** the workshop spine is value vs
+irreplaceability. (1) **Act 1 value maps:** per PROACT theme, VALUE = the block score already used for the star axes
+(per-cell percentile over the discretionary landscape; carbon 0.742/0.258 mass split, pair means for connectivity and
+biodiversity, refugia alone), cut at the score's own 70th percentile over unprotected land = the top 30% (for two-layer
+blocks a 0.70 cut on the mean of two percentiles would keep only ~20%, so the quantile cut is used; ties may add a little);
+representativeness votes as presence of ANY scarce ecosystem class — the ≤1%-footprint set (13 EFGs; the spec's "rare-EFG"
+is ambiguous and the 36 rare-attainable classes cover 79% of the region, which would vote almost everywhere — reported in
+T-D6, not used); intactness is a sixth map ("disclosed, not a driver") and is NOT counted. (2) **Value-convergence map** =
+number of the five themes (0–5) voting a cell top-30%. (3) **Act 2** = the guarded core (F ≥ 0.70, 12 design formulations)
+unchanged; **Act 3** = per-scenario guarded tiers minus the core, climate pooled, with the BINDING pairing rule (value map
+left, tier right; IPCA overlay moves to the tier panel since the value panel is not analysis output). (4) **Act 4 = the
+measured gap:** high-value land (≥1 theme top-30%) outside core ∪ scenario tiers, backed by union membership and the
+12-cell E11 recount; **T-D6** = per-theme footprint coverage by tier + **T-D6b** = share of each block's regional value by
+tier (zero-solve, `tier_achievement` on non-cumulative masks). (5) **Hinge cross-tab** = convergence count × reliability
+class (km²), three corners annotated (easy sell / Act 4 / E13 surprise). (6) Deck = the v1.6 skeleton with Ethan's earlier
+rulings kept where the v1.6 text still carries v1.1 wording: no guarded/unguarded doubling slide (paper-only), star
+representativeness = per-cell EFG-count percentile, admin basemap with the 53°N line only, IPCAs orange, 250 km² hexes,
+the (a)/(b) core pair and the by-future pairs. Figure files carry the v1.6 act numbers; 19's registers keep their
+internal identifiers, mapped for display (`ACT_DISPLAY`). Build: `13b` (v0.15 record) → `19` → `20`; `director_core`
+gained `value_layers`, `coverage_table`, `crosstab`, `ACT_TITLE/ACT_DISPLAY`, `VALUE_THEMES`, `THEME_OF_SCENARIO`,
+`CARBON_CAVEAT/CARBON_MIRROR/BIODIV_FINDING`.
+
+**M4.26 — Manifest v3: the curated-block RE-SOLVE (study plan v0.17; 2026-09-09).** Second post-hoc formulation change,
+discovered from results and disclosed with its trigger (R10.18). Scope: the 12 DESIGN formulations are re-solved —
+anchors, MGA members (k = 50, g = 5%) and LP twins — into `runs_v3/`, then the guarded sweep (per-block floors) on the
+same runs; the k-best pools are NOT re-solved (the E5 by-product, discharged in v0.10) and the diagnostics s1x/s3x are not
+re-solved (E3's crossed contrast stands as v1 evidence). E12 (instrument bracket), E17-T3 (leave-block-out anchors) and
+E18 (dose–response) stand as v1 evidence with disclosure — their mechanisms do not depend on the slivers. Weights are
+re-derived and asserted EQUAL to v1's (EFGs sit outside the block accounting, M4.8), so the only formulation changes
+are the block and its targets. `spec/manifest_v3.csv` + `manifest_v3.sha256` carry `role`, `manifest_version = 3`,
+`efg_block_version`, `efg_block_sha256` (hash over the 20 layer hashes), `efg_target_rule`, `supersedes` (v1 d1723c82…,
+v2 6314b9cd…) and the trigger; v1/v2 manifests, `runs/` and the spec-root records stay byte-identical; v3 records go to
+`spec/v3/`. Versioning is one switch (`config.Y2Y_VERSION`, env-overridable so `Y2Y_VERSION=v1` reproduces the frozen
+run without editing config; 12/13/15/18/19/20 read every path through `config.y2y_paths()`; the R notebooks assert that
+the refreshed manifest enumerates the expected block; 22 is pinned to v1). Cost: ~10–12 h (12) + ~12 h (18) serial on
+Gurobi WLS.
+
+**M4.27 — Rarity-scaled EFG targets (study plan v0.17.1 open decision; ADOPTED as the v3 default, one-line switch to
+flat).** Under t = 1.0 the largest classes (T2.1 at 96% of the extent, T6.4 at 64%, F2.4 at 39%) can never saturate and
+act as weak diffuse-linear pulls, so "locked adequacy foundation" was literally true only for the small classes. v3 uses
+the Rodrigues et al. (2004) convention on class footprint within the PU: t = 1.0 at ≤ 1,000 km², 0.10 at ≥ 250,000 km²,
+log-linear between (`config.efg_target`; `spec/v3/efg_targets.json`). Resulting targets: F1.1 0.94, T5.4 0.87, T6.1 0.84,
+F2.1 0.71, F1.6 0.66, T2.2 0.60, F1.2 0.49, T4.4 0.43, T5.1 0.36, SF1.2 0.34, TF1.6_TF1.7 0.28, T6.2 0.25, T3.4 0.18,
+T6.3 0.14, TF1.2 0.13, F1.3 0.13, S1.1_SF1.1 / F2.4 / T6.4 / T2.1 0.10. Targets enter every formulation's
+`target_vector` by feature name (`pr_targets`); the block weight stays 1/n. Consequences to re-derive on v3: the EFG-out
+attribution (E17), the E11 objective reconstruction (13 now reads per-feature targets), the influence accounting (T1).
+The persisting mechanism is disclosed by design: small retained classes will still pin at F ≈ 1 — SCP's rarity
+priority acting on real ecosystems — and T-D1 must say so per cluster (the adequacy-pin caption, M4.28).
+
+**M4.28 — The necessity test (E19; study plan v0.17.2) — PRE-REGISTERED before the v3 run.** Purpose: answer "are high-F
+selections driven by the EFG block" causally, not by overlap (E13/T-D1 were overlap-based, E17-T3 anchor-only).
+**T1 (zero-solve, `18c_e19_analysis`):** a retained class whose capture is 1.0 in EVERY near-optimal member of a
+formulation forces every unlocked cell of the class to f = 1 by arithmetic; forced sets are identified exactly from the
+member rasters on the guarded band (the package basis; the unguarded band reported beside it); ensemble-forced = forced
+in every design formulation; the core, each scenario tier and each deck pick are partitioned into forced / multi-claim
+(not forced, ≥ 2 non-EFG themes top-30%) / other. **T2 (`18b_e19_solves`, ~12 × 1 min):** leave-EFG-out anchors (every
+EFG multiplier 0, the E17-T3 convention); core cells absent from every no-EFG anchor are EFG-necessary by counterfactual;
+agreement with T1 reported (necessary − forced = pulled in without forcing). **T3 (conditional, ~9 h + guarded):** the
+no-EFG ensemble and F − F_noEFG, run ONLY if the ensemble-forced share of the core exceeds 50% (`spec/v3/e19_gate.json`
+gates the cell). Pre-stated expectation: a real but MINORITY forced share on the curated block. **Deck rule:** any
+cluster ≥ 50% forced is captioned ADEQUACY PIN ("here because it is the only X on the extent", pinning class named),
+never a multi-value hotspot; T-D1 gains `pct_adequacy_forced`.
+
+**M4.29 — Clip-edge resolution: targets from the BUFFERED REGIONAL WINDOW (study plan v0.17.3; manifest v3.1;
+2026-09-09).** The boundary-proximity check (R0 iii; R10.19) flagged five of the six small retained classes (72–100% of
+their cells within 10 km of the study boundary): rarity measured inside the study polygon had made range edges of
+classes abundant just outside the line (Great Basin lip, Wyoming basins, Coast Mountains icefields) look rare, so v3's
+on-extent targets (0.66–0.94) would have pinned them as "the only X inside our polygon" — the artifact mechanism with a
+real ecosystem attached. Both offered options rejected (keep = five technicality pins; drop = an empty layer that
+pretends the ecosystems are absent). RULING: keep all 22 classes / 20 features; **rarity-scaled (log-linear, the same
+Rodrigues et al. 2004 anchors) targets derived from each class's footprint within the study extent buffered by 250 km**
+— a zonal count on the GET archive maps (global 30-arc-second rasters; presence = value > 0; nearest-neighbour warp to
+the 1 km Albers grid over the window; merged features = union of their classes), zero solves — with 100 / 500 km as
+the disclosed sensitivity (the continental footprint as the no-parameter alternative, not adopted: regional rarity is
+the rarity that should count for a regional plan). The same window defines "rare" for the Act 1 representativeness
+layer (footprint ≤ 1% of the window; `director_core.driver_masks` reads `spec/<version>/efg_window_footprints.csv`).
+**Manifest v3.1** = manifest v3 with the EFG part of every target vector replaced (weights unchanged; block folder
+unchanged — a minor version never changes the block, `config.efg_subdir_for`); v3 is superseded before any solve and
+kept byte-identical (write-once guards in 11b). Downstream expectations restated: the necessity test (E19) expects a
+SMALL forced share of the core; E17's southern statistic re-derived; R0 (iii) becomes a standing disclosure, not a
+drop decision. Versioning: `config.Y2Y_VERSION = "v3.1"` (runs_v3.1/, spec/v3.1/, manifest_v3.1.csv).
+
 ## 5. Solver configuration and numerical integrity
 
 - **M5.1** Gurobi 13.0.2, nonprofit WLS licence (16 cores; needs live internet during solves;
@@ -640,6 +765,9 @@ caveat bullet to the carbon-forward Act-2 slide. Ruling stands: registered scena
 | S4 places locks (tails t=1.0 in every stack) | pure (w,t) + pre-registered pilot band ≥0.75 both pools; tails = contingency @ t=0.8 | targets are pressure, not locks; "a lot of the tail," not completeness; sufficient pull demonstrably captures tails | 2026-08-28 (spec v0.11) |
 | v0.11 pre-authorized tail contingency (t=0.8) | RESCINDED — no tail features as separate values, ever, without a new decision; pilot failure → chat | Ethan's ruling: no separate tail values in the problem; knowledge kept as backup (M4.14) | 2026-08-28 |
 | Director-spec step-0 cost "~8–10 h serial" | projected ~3 h from S0/S4, then MEASURED 12.3 h on execution (52–76 min per sweep) — projection retracted, spec estimate was closer | certificates_guard.csv all 14 | 2026-09-03/04 (M4.19, R10.1) |
+| EFG block v1 (40 classes, t = 1.0; manifests v1/v2, `runs/`) | curated block v3 (22 classes / 20 features, rarity-scaled targets; manifest v3, `runs_v3/`) | scarcity-blind representation rewarded map artifacts (R10.18); rule R0 + curation (M2.11), re-solve (M4.26–M4.27) | 2026-09-09 |
+| director package v1.6 on the artifact block | package v1.7 rebuilt on v3 (+ the necessity test (E19) products) | every tier/cluster/star inherits the block; the v1.6 package is archived under `director_package/_superseded_v1_artifact_block/` | 2026-09-09 |
+| manifest v3 (targets from on-extent footprint; never solved) | manifest v3.1 (targets from the extent + 250 km window) | R0 (iii): on-extent rarity pinned clip-edges of classes abundant just outside the line (M4.29) | 2026-09-09 |
 
 *Maintainer note: entries M-numbered for stable citation from drafts. Update same-session, every
 methods-relevant change. Last updated 2026-09-03 (spec v0.14.1 + director package build).*

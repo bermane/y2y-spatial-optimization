@@ -304,6 +304,48 @@ weights at S0's targets; R10.14 cont.): SUBSTITUTABLE — own land 763 km² vs S
 Act-2 land is the TARGET's doing (members never fall below t 0.332; under t 0.552 they must). Lead-magnitude currency is conditional on the
 target binding (this arm scores 7.6× refugia yet owns nothing; M4.22 addendum). 22 now writes max f / D / lead currency into
 `spec/E18_dose_table.csv`; 20 renders it as the E18 slide (`td_e18_dose.png`) + a carbon-target caveat on the carbon-forward Act-2 slide.**
+**SPEC v0.15 / v0.16 / v0.16.1 + PACKAGE SPEC v1.6 (landed 2026-09-08; built the same day, all zero-solve):** (v0.15) s1x/s3x
+reclassified DIAGNOSTIC (non-voting) — F denominator = 12 DESIGN formulations PRIMARY for paper and package alike; **`13b_denominator_v015.ipynb`**
+writes `spec/manifest_v2.csv` (+ sha; `role` column; the frozen v1 manifest + hash untouched) and the 12-vs-14 record (R10.16: frequent
+6,816 → 6,306 km², max per-cell |ΔF| 0.054, E11 156/182 → 109/132; 3 of the 26 failures involved a diagnostic, all as plan);
+`director_core.package_manifest` reads `role`. (v0.16/.16.1) E18 closed on Option A; the connectivity ladder and the SSP245 twins were
+RESCINDED (no further solves; arms = evidence, dose table in the deck appendix); carbon caveat + mirror verbatim. (v1.6) deck is
+VALUE-FIRST, four acts: Act 1 where the values are (per-theme top-30% value maps by block score + value-convergence count 0–5;
+representativeness = presence of a ≤1%-footprint EFG; intactness sixth, not counted) → Act 2 core (old Act 1) → Act 3 scenario tiers with
+the BINDING value|tier pairing (old Act 2; biodiversity finding-as-product; carbon caveat + mirror) → hinge cross-tab (convergence ×
+reliability class) → Act 4 = the measured gap (high-value land outside core ∪ scenario tiers, backed by union membership + E11).
+19 gained the value cell (`value_top30_*.tif`, `value_convergence.tif`, `value_gap.tif`, T-D6/T-D6b, `hinge_crosstab.csv`, biodiversity
+capture over all 612 guarded plans); 20 renumbered its figures to v1.6 acts and gained `act1_values_hex250`, `act1_value_convergence_hex250`,
+`act3_<sid>_hex250` pairings, `hinge_convergence_x_F`, `act4_opportunity`, `td6_value_coverage`; internal act identifiers in 19's registers
+keep v1.1 values (`ACT_DISPLAY` maps them). Ethan's 09-04 rulings stand where v1.6 text is stale (no doubling slide, EFG-count percentile
+star axis, admin basemap). Logs M4.23–M4.25, R10.16–R10.17. Run order for the record: 13b → 19 → 20.**
+**SPEC v0.17 / v0.17.1 / v0.17.2 + PACKAGE v1.7 (landed 2026-09-09; BUILT the same day): EFG BLOCK CURATION + MANIFEST v3 RE-SOLVE +
+THE NECESSITY TEST (E19).** Trigger R10.18 / AB R7.9–R7.11: the 40-class block rewarded map artifacts (per-cell class value ∝ 1/footprint).
+New rule R0 (input pre-screen: purpose, map validity, boundary proximity). Curation 40 → 22 classes / **20 features** (12 anthropogenic
+out; point-record F2.10 out; sub-grain F2.6/F2.2/F1.4/F2.3 out; F2.9 out; TF1.6+TF1.7 and S1.1+SF1.1 merged) — M2.11, R10.19.
+**ONE SWITCH: `config.Y2Y_VERSION` ("v3" default; `Y2Y_VERSION=v1` in the env reproduces the frozen run) derives `config.EFG_SUBDIR`
+(`iucn_efg_v3` / `iucn_efg`) and `config.y2y_paths()` (runs_v3/ vs runs/, manifest_v3.csv vs manifest.csv, records spec/v3/ vs spec/).**
+Supersede, never delete: v1 stack/manifests/runs/records byte-identical; `write_manifest` refuses an empty block folder; the R notebooks
+assert the refreshed manifest enumerates the expected block; NEVER run two versions' R notebooks concurrently (they share
+aligned_stack/manifest.json). Rarity-scaled log-linear EFG targets ADOPTED for v3 (`config.EFG_TARGET_RULE`, Rodrigues 2004 anchors
+1,000 / 250,000 km²; M4.27). Build: **`11b_efg_curation_freeze_v3`** (py, RAN: curation table, both v3 stacks incl. the Alberta mirror
+27 → 13 features, block card — rare-attainable 17/20, ≤1% companion 6, southern 9/20 — targets, manifest v3 frozen sha e47991bc…;
+**R0 (iii) flags FIVE of the six small retained classes as clip-edges (72–100% within 10 km of the boundary) — reported for the spec
+chat, not dropped**) → **12 + 18 with `VERSION <- "v3"`** (anchors, MGA, twins — k-best skipped; guarded sweep; ~22 h total; dry-plans
+verified: 12 formulations, 20-feature block) → 13, 15 (version switch; v1 regression byte-identical) → **`18b_e19_solves`** (R: leave-EFG-out
+anchors ×12 ~15 min; gated no-EFG ensemble T3) → **`18c_e19_analysis`** (py: adequacy-forced set, core partition, T2 agreement, the 50%
+gate → `spec/v3/e19_gate.json`) → 19 → 20 (v1.7: archive the artifact-block package, `pct_adequacy_forced` + ADEQUACY PIN captions,
+E19 partition table/appendix slide, curation disclosure on slide 1). 22 pinned to v1 (E18 = evidence). E12/E17-T3/E18 stand as v1
+evidence. Logs M2.11, M4.26–M4.28, supersession rows, R10.19 (+ R10.20–R10.22 placeholders). **Naming convention (binding): name things by
+what they are, code in parentheses.** Alberta re-run = stage 2 (its v3 stack exists; spec mirror re-pin pending).
+**v0.17.3 (same day) → MANIFEST v3.1 = the one to solve:** the clip-edge flags were resolved by deriving the rarity-scaled targets from each
+class's footprint in the extent BUFFERED by 250 km (GET archive maps, 100/500 km sensitivity; M4.29, R10.19 cont.): F1.1 0.50, F2.1 0.49,
+T6.1 0.36, twelve features at the 0.10 floor; rare-in-window = F1.1 + F2.1 only (the Act 1 representativeness vote). `config.Y2Y_VERSION`
+default "v3.1" (runs_v3.1/, spec/v3.1/, manifest_v3.1.csv; block folder shared with v3 via `efg_subdir_for`); manifest v3 kept, never
+solved; 11b has write-once freeze guards. **RUN = ONE COMMAND: `caffeinate -i bash analyses/y2y/run_v31.sh`** (NUMERIC ORDER 12 → 13 → 15 → 18 → 18b → 18c
+→ [18b + 18c again iff the E19 gate opens] → 19 → 20, in place, resumable, logs in analyses/y2y/logs/; 13/15 need only 12, the rest need 18 too). **EFG-BLOCK EXPOSURE (2026-09-08, R10.18): the five smallest classes (3–409 cells) are 100% inside the
+Act 2 core; 8.2% of core, 2/14 deck picks (#11 = flooded-mines/aquafarms envelopes, #12 = T5.4), 27.9% of the Act 1 representativeness
+layer sit on ≤1%-footprint map slivers — decision (rule A/B/C/D + re-solve vs presentation) with chat; see `spec/efg_block_reportback.md`.**
 
 **LIVING PUBLICATION LOGS (added 2026-08-27, binding on every session touching this analysis):**
 `analyses/y2y/spec/methods_log.md` (M-numbered: every methods-relevant decision, data
@@ -370,7 +412,10 @@ H-AB4 refuted opposite way (D 0.9999, C 0); nesting at 2% = 1.000; AB-4 ensemble
 (py: 5% estimand block + 2% applied block, tiers, C1–C4, clusters; RUN 2026-09-08, R7) → **12 director
 surfaces + 13 director figures/deck = the mirror of the Y2Y-wide 19/20 (`director_package/`; NFZ + SRP
 planning area drawn on every (a) panel as the IPCA analogue; F12, 2% band, 10 km² clusters, T-D4 by Natural
-Region). Status 2026-09-08: 01–11 RUN; 12–13 BUILT, PENDING-RUN.** Data: `data/acquire.py`
+Region). Status 2026-09-08: 01–11 RUN; 12–13 BUILT, PENDING-RUN.** **EFG-BLOCK ISSUE OPEN (2026-09-08, R7.9–R7.11 / parent R10.18; report-back
+`analyses/y2y/spec/efg_block_reportback.md`): 71% of the AB 2%-band core sits on GET map slivers (F2.10 subglacial-lakes point record,
+F2.9/F3.5 envelopes 0.5–0.7 km from the BC border, SF2.2 ecoregion edge) — per-cell class value ∝ 1/footprint; candidate rule = drop
+point-record classes + envelope classes < 1% of PU (+ anthropogenic biomes). 12–13 PARKED until the chat rules; a re-run is 10 → 13.** Data: `data/acquire.py`
 (provenance.json); raw/derived dirs gitignored.
 
 ## Structure — two notebooks + shared config

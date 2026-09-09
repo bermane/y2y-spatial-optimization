@@ -386,4 +386,41 @@ units of "representativeness" to complete. → Decision needed (spec, and the pa
 representativeness block to natural biomes (and drop physically implausible classes) — a formulation
 change requiring a re-run of AB 10–13 (~2.5 h) and, for the parent, of its Gate-4/guarded sweeps.
 
+**R7.11 Method audit of the pinning classes (2026-09-08, after Ethan's challenge "are they really not physically
+plausible?"): the R7.10 diagnosis is CORRECTED — the classes belong in Alberta; the MAPS do not put them where they are.**
+Read from the GET archive's own `map-details.xml` (per-class construction) and measured on the AB stack (zero-solve):
+- The GET README states its maps are 10 arcmin–1° grain and "should be used to query which EFG are likely to occur within
+  areas, rather than which occur at particular point locations". Of Alberta's 27 classes, 9 are ENVELOPE maps (whole
+  freshwater/terrestrial ecoregions selected by description + expert review: F2.9, F3.2, F3.5, SF2.1, SF2.2, T4.4, T6.4,
+  TF1.6, TF1.7), 1 is a POINT-RECORD map (F2.10), the rest are land-cover/inventory/proxy maps.
+- **F2.10 Subglacial lakes** — 409 cells, ALL "major" (= a point record from the Antarctic/Greenland/Iceland inventories
+  the GET cites: Wright & Siegert 2012, Bowling 2019, Marteinsson 2013, Livingstone 2016), 121 km from the BC border, in
+  ice-free Lower Foothills (nearest glacier ≈100 km SW). Minor occurrences were to come from permanent snow/ice, yet the
+  Rockies' icefields carry none. **Physically impossible here: a misplaced record. Artifact stands.**
+- **F3.5 Canals, ditches and drains** — the class is real in Alberta (the prairie irrigation districts), but the mapped
+  Alberta footprint is 254 cells with **median distance 0.5 km (p90 1.3 km) to the BC border, 68% inside national parks**:
+  the overshoot of a Columbia/Missouri freshwater-ecoregion envelope across the divide. Not a canal in it.
+- **F2.9 Geothermal pools** — real in the AB Rockies (Banff, Miette, Mist Mountain), but built as "small lakes within
+  freshwater ecoregions deemed to contain the EFG" (40% of the Y2Y PU); Alberta footprint 450 minor cells, **median 0.7 km
+  (p90 1.7 km) from the border, 73% in PAs** — the same divide-overshoot sliver.
+- **SF2.2 Flooded mines** — real in southern Alberta (Lethbridge underground workings, Crowsnest, Coal Branch), but the map
+  paints WHOLE terrestrial ecoregions "with concentrations of flooded-mine records"; the Alberta footprint is the strip where
+  that prairie ecoregion crosses the Y2Y line (**median 4.0 km, max 11.2 km from the Y2Y boundary**, 66 km from the BC border,
+  0% PA). An ecoregion-edge sliver, not mine sites.
+- **T4.4 Temperate woodlands** is ALSO an envelope map, but there the envelope IS the ecosystem (the aspen-parkland strip =
+  Foothills Parkland; 1,302-cell body, 37 km from any border) — so envelope construction is not disqualifying per se.
+- **T7.x / F3.1 / F3.2 (croplands, pastures, urban, reservoirs, constructed wetlands)** are land-cover/inventory maps with
+  broadly correct footprints (3–49% of the AB PU) and drive none of the core picks; whether a conservation
+  representativeness block should hold shares of them is a separate purpose question, second-order for this result.
+**Corrected mechanism:** the block scores per-cell presence in coarse envelope/point maps as an ecosystem occurrence, and
+per-cell value ∝ 1/footprint, so the smallest cartographic slivers (border overshoots, a misplaced point) are the most
+valuable cells in the block. The R7.10 remedy ("restrict to natural biomes") targets the wrong thing: 3 of the 4 pinning
+classes are natural-or-plausible classes with sliver maps. **Candidate rule for the decision (not applied):** exclude
+point-record classes and envelope-method classes whose footprint on the extent is < 1% of the PU (AB: F2.10, F2.9, F3.5,
+SF2.2 → 23 classes); direct/land-cover classes are kept at any footprint (T6.1 glaciers, 0.29%, 98% in PAs, stays). The
+anthropogenic-biome purpose question is logged as open and separable.
+Parent exposure measured the same day (Y2Y results_log R10.18): 8.2% of the Y2Y core, 2 of 14 deck picks, 27.9% of the
+Act 1 representativeness layer. Both extents' class tables + options A–D + costs → `analyses/y2y/spec/efg_block_reportback.md`
+(the report-back for the spec chat). **12–13 PARKED pending the rule decision.**
+
 *Last updated 2026-09-08.*

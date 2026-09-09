@@ -250,12 +250,25 @@ rule; quantitative outcomes live there, methods decisions here);
   named area and a 40 km buffer around every labelled city, then the pole of inaccessibility of
   the largest free piece (`shapely.maximum_inscribed_circle`); provinces holding < 4% of the
   window (Alberta) get no name. City labels default to the right of the dot; Mackenzie and
-  Prince George go left (`TOWN_LABEL_SIDE`) because the right side is corridor. Two DISPLAY
+  Prince George goes left (`TOWN_LABEL_SIDE`) because the right side is corridor; Mackenzie was dropped from the city list 2026-09-09 because its label covered the Pine Le Moray links on either side. Two DISPLAY
   name overrides (`AREA_OVERRIDES`): the PA layer's string for Fishing Branch is mis-encoded
   ("Nj ‘Iinlii” Jjik") and is shown as "Ni’iinlii Njik (Fishing Branch)"; "Neah Conservancy"
   is shown with BC Parks' spelling "Ne’āh’". Node ids, tables and every computation keep the
-  source strings. Legends sit below the map (`fig.legend`, lower centre). Nothing here enters
-  any computation.
+  source strings. Legends sit below the map (`fig.legend`, lower centre). M0b = the same cost
+  map with the four-class network hard-coloured on top (`map_cost(P, corridors=True)`; the
+  region-scale sibling of the zoom overlay in M5.10's family). **Cost palette on the director
+  maps (2026-09-09, Ethan: the class colours were lost in the magma ramp):** the four cost
+  classes are drawn as DISCRETE muted warm-neutral tones — cream / khaki-grey / dark brown /
+  near-black (`COST_COLORS`, a luminance ramp, CVD-safe) — so the surface is a quiet ground and
+  the corridor classes, PA grey and IPCA teal sit on top as the figure; the cost classes are
+  legend patches (with their land shares) instead of a colorbar. **SUPERSEDED the same day
+  (Ethan: keep the cost colour as it was):** M0/M0b are back on the magma_r log ramp with the
+  colorbar; the figure/ground separation on M0b is instead a WHITE HALO under every corridor
+  swath (`halo_cells=6` × 300 m ≈ 1.8 km, `scipy.ndimage.binary_dilation` of the painted
+  union) so the class colours never merge with the red/purple part of the ramp. Mackenzie was
+  dropped from the city list (its label covered the Pine Le Moray links). The science figures
+  (`cc.cost_surface_map`, the zoom overlays) keep magma_r and no halo. Nothing here enters any
+  computation.
 - **M5.10 Background reference layers (2026-09-01, DISPLAY-ONLY):** the zoom figures
   (routing_problem_zoom / _cost_zoom / _cost_overlay, priority_links_map) carry
   provincial borders (Natural Earth 10m admin-1 lines, public domain, in

@@ -13,7 +13,14 @@
   labelled cities buffered out; pole of inaccessibility); Alberta (< 4% of the window) is
   unnamed. Two display-only name fixes: Fishing Branch (mis-encoded in the PA layer) shown as
   "Ni’iinlii Njik (Fishing Branch)", Neah Conservancy as "Ne’āh’" — Ethan to confirm both
-  spellings before the deck ships. M5.12.
+  spellings before the deck ships. M5.12. **M0b** (same day, Ethan's ask): the four-class
+  network hard-coloured over the cost surface (`map_cost(P, corridors=True)`), so the land
+  between the swaths reads as cost — deck order M0 → M0b → M1. 2026-09-09: the cost surface on
+  M0/M0b switched from the magma ramp to four discrete muted tones (cream / khaki-grey / dark
+  brown / near-black) with the classes as legend patches — the corridor palette was being lost
+  in the ramp — then REVERTED the same day at Ethan's call: the magma ramp + colorbar stay, and
+  M0b separates the swaths from the ramp with a ~1.8 km white halo under every corridor
+  instead. Mackenzie dropped from the city labels (covered the Pine Le Moray links). M5.12.
 - v1.2.1 (2026-09-08) — H8 CLOSED on measured data: D17 (width ratio vs the barrier-free
   counterfactual) yields **8 squeezed links**, not the draft map's 5 — the 5 survive in the same
   order; Gwillim↔Pine Le Moray is also squeezed but stays red (both-senses precedence); the two

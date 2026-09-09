@@ -34,7 +34,11 @@ import ensemble_core as ec
 ROOT = Path(config.PROJECT_DIR)
 Y2Y = ROOT / "analyses" / "y2y"
 SPEC = Y2Y / "spec"
-RUNS = Y2Y / "runs"
+VP = config.y2y_paths()                  # the active manifest/run VERSION (config.Y2Y_VERSION; v3 = curated EFG block)
+RUNS = VP.runs                           # runs_<version>/ (v1: runs/)
+SPEC_REC = VP.records                    # version-scoped records (T1 CSVs, E11 matrices, e17 geography, E19)
+MANIFEST = VP.manifest
+RUNS_V1 = config.y2y_paths("v1").runs    # v1 evidence that is never re-solved (E17-T3 anchors, E18 arms)
 PKG = Y2Y / "director_package"
 
 # ---- pre-stated constants (director_package_spec.md v1.1) ------------------------------------
@@ -66,7 +70,7 @@ BLOCK_AXES = {
     "intactness":    {"human_modification": 1.0},     # plain sixth axis in the package (Ethan 2026-09-04)
 }
 STAR_AXES = ["core habitat", "connectivity", "biodiversity", "carbon", "representativeness", "intactness"]
-N_EFG = 40
+N_EFG = len(lc.efg_paths())          # 20 under the curated block (v3); 40 under v1
 SCENARIO_LABEL = {"s0": "Balanced", "s1": "Core-habitat-forward", "s2": "Connectivity-forward",
                   "s3": "Biodiversity-forward", "s4": "Carbon-forward", "s5": "Intactness push (S0 + gHM x10)",
                   "s1x": "Core-habitat x carbon regime", "s3x": "Biodiversity x carbon regime"}
@@ -78,8 +82,20 @@ ACT2_SCENARIOS = ["s1", "s2", "s3", "s4"]   # the four named forward scenarios (
 # from the package spec's "across all 14 formulations", logged in methods_log.
 PACKAGE_EXCLUDE = ("s1x", "s3x")
 def package_manifest(MAN):
-    m = MAN[~MAN.scenario_id.isin(PACKAGE_EXCLUDE)].reset_index(drop=True)
-    assert len(m) == 12, f"expected 12 elicited formulations, got {len(m)}"
+    """The 12 DESIGN formulations. Study plan v0.15 made this the paper's PRIMARY denominator too: `role` = design
+    votes, diagnostic (s1x, s3x) never votes. Reads `role` from spec/manifest_v2.csv when 13b has written it;
+    falls back to PACKAGE_EXCLUDE (identical membership) before that."""
+    if "role" in MAN.columns:                          # manifest v3+ carries role itself
+        m = MAN[MAN.role.eq("design")].reset_index(drop=True)
+        assert len(m) == 12, f"expected 12 design formulations, got {len(m)}"
+        return m
+    v2 = SPEC / "manifest_v2.csv"
+    if v2.exists():
+        roles = pd.read_csv(v2).set_index("formulation_id")["role"]
+        m = MAN[MAN.formulation_id.map(roles).eq("design")].reset_index(drop=True)
+    else:
+        m = MAN[~MAN.scenario_id.isin(PACKAGE_EXCLUDE)].reset_index(drop=True)
+    assert len(m) == 12, f"expected 12 design formulations, got {len(m)}"
     return m
 SCENARIO_STATEMENT = {
     "s0": "all four value themes hold their intended influence shares",
@@ -91,6 +107,21 @@ SCENARIO_STATEMENT = {
     "s1x": "S1's shares under the carbon-forward target regime (regime flipped alone)",
     "s3x": "S3's shares under the carbon-forward target regime (regime flipped alone)",
 }
+# ---- package spec v1.6: value-first architecture --------------------------------------------------
+ACT_TITLE = {"act1": "Act 1 — Where the values are", "act2": "Act 2 — Core irreplaceability",
+             "act3": "Act 3 — Scenario irreplaceability", "act4": "Act 4 — The opportunity landscape (the measured gap)"}
+# internal act identifiers in 19's registers/picks keep their v1.1 values; this maps them to the v1.6 numbering for display
+ACT_DISPLAY = {"Act 1": "Act 2 core", "Act 2": "Act 3 scenario", "Act 1 (585)": "Act 2 core (SSP585)", "Act 1 (245)": "Act 2 core (SSP245)"}
+VALUE_THEMES = ["core habitat", "connectivity", "biodiversity", "carbon", "representativeness"]   # the five PROACT themes
+VALUE_TOP = 0.70                     # "top 30% of the discretionary landscape" = block percentile >= 0.70
+THEME_OF_SCENARIO = {"s1": "core habitat", "s2": "connectivity", "s3": "biodiversity", "s4": "carbon"}
+# E18 carry-overs (package spec v1.6, verbatim; study plan v0.16)
+CARBON_CAVEAT = ("carbon-forward is the only scenario that also states a security target (55% of dense soil carbon); "
+                 "given only the share doubling the other values get it would own ~760 km², not ~20,300")
+CARBON_MIRROR = ("carbon has a target lever because its geometry admitted a stopping rule; the diffuse values cannot; "
+                 "the asymmetry is the landscape's")
+BIODIV_FINDING = "no irreplaceable places at any emphasis (E18); every near-optimal plan holds {lo:.0f}–{hi:.0f}% of AOH richness"
+
 # decision (h): Nations' own DECLARED IPCA proposals only, never analyst-drawn: the IPCA-typed rows of the
 # corridor-wide proposed-PA file + the Ross River NPR proposal (Kaska-led; the 04a "manual area").
 IPCA_SPEC = dict(vector=config.PROPOSED_PA_VECTOR, name_field="PA_NAME")
@@ -491,6 +522,49 @@ def block_percentiles(G):
     return SimpleNamespace(axes=axes, pct=pct, efg=efg, efg_names=[p.stem for p in paths], efg_count=count)
 
 
+def value_layers(G, P, rare_mask, top=VALUE_TOP):
+    """Act 1 (package spec v1.6): where each PROACT theme's VALUE is, independent of any solve.
+    Continuous themes: the top (1-top) share of the DISCRETIONARY landscape by block score (P.axes -- the star construction).
+    Representativeness: presence of any rare-EFG class (rare_mask; the <=1%-footprint set by default, disclosed --
+    the 36 rare-attainable classes cover 79% of the region and would vote almost everywhere).
+    Intactness: same rule, a sixth map ("disclosed, not a driver") NOT counted in the convergence tally.
+    Returns 1-D masks over PU (discretionary only) + convergence = number of the five themes voting (0-5)."""
+    # exact top-(1-top) share of the DISCRETIONARY landscape by the block score: for single-layer blocks this equals
+    # "block percentile >= top"; for two-layer blocks (mean of two percentiles) a 0.70 cut on the mean would keep only
+    # ~20% of cells, so the cut is the score's own (top)-quantile over unprotected land (ties may add a little)
+    masks = {}
+    for ax in ("core habitat", "connectivity", "biodiversity", "carbon", "intactness"):
+        thr = float(np.quantile(P.axes[ax][G.disc], top))
+        masks[ax] = (P.axes[ax] >= thr) & G.disc
+    masks["representativeness"] = rare_mask & G.disc
+    conv = sum(masks[t].astype(np.uint8) for t in VALUE_THEMES).astype(np.uint8)
+    return SimpleNamespace(masks=masks, convergence=conv, top=top)
+
+
+TIER_NAMES = {3: "core", 2: "scenario tiers", 1: "opportunity", 0: "never"}     # act_tiers_guarded.tif codes
+
+def coverage_table(G, V, tier_code):
+    """T-D6: each theme's top-value footprint and how the reliability tiers cover it (Act 4 = the gap)."""
+    rows = []
+    for t, m in V.masks.items():
+        n = int(m.sum())
+        r = {"theme": t, "top-value footprint km2": n, "% of unprotected land": 100 * n / G.n_disc}
+        for code, nm in TIER_NAMES.items():
+            r[f"% of footprint in {nm}"] = 100 * float((m & (tier_code == code)).sum()) / max(n, 1)
+        rows.append(r)
+    return pd.DataFrame(rows)
+
+
+def crosstab(G, conv, tier_code):
+    """Hinge figure: value-convergence count (0-5 themes) x reliability class, km2 over the discretionary landscape."""
+    cols = {3: "core (F ≥ 0.70)", 2: "scenario tier", 1: "opportunity", 0: "never"}
+    T = pd.DataFrame(0, index=[f"{k} of 5 themes" for k in range(6)], columns=list(cols.values()), dtype=int)
+    for k in range(6):
+        for code, nm in cols.items():
+            T.loc[f"{k} of 5 themes", nm] = int(((conv == k) & (tier_code == code) & G.disc).sum())
+    return T
+
+
 def star_profile(P, mask1d):
     return {ax: float(P.axes[ax][mask1d].mean()) for ax in STAR_AXES}
 
@@ -526,12 +600,24 @@ def driver_masks(G):
     # EFGs whose presence covers <= RARE_EFG_PCT of the PU (the genuinely scarce classes). Both disclosed.
     rarest = np.zeros(G.n_pu, bool)
     n_rarest = 0
-    for p in lc.efg_paths():
-        e = np.nan_to_num(lc._read(p)[G.pu], nan=0.0) > 0
-        if e.sum() <= RARE_EFG_PCT * G.n_pu:
-            rarest |= e
-            n_rarest += 1
-    masks[f"rarest-EFG footprint (<= {100 * RARE_EFG_PCT:g}% of PU each)"] = rarest
+    win = SPEC_REC / "efg_window_footprints.csv"          # v3.1+: rarity judged in the buffered regional window (M4.29)
+    if win.exists():
+        W = pd.read_csv(win).set_index("feature")
+        rare_set = set(W.index[W["rare_window"]])
+        for p in lc.efg_paths():
+            if p.stem in rare_set:
+                rarest |= np.nan_to_num(lc._read(p)[G.pu], nan=0.0) > 0
+                n_rarest += 1
+        rare_key = (f"rarest-EFG footprint (rare in the extent+{config.EFG_TARGET_WINDOW_KM} km window: "
+                    f"<= {100 * config.EFG_RARE_WINDOW_PCT:g}% of the window)")
+    else:                                                  # v1 rule: <= 1% of the PU, on-extent
+        for p in lc.efg_paths():
+            e = np.nan_to_num(lc._read(p)[G.pu], nan=0.0) > 0
+            if e.sum() <= RARE_EFG_PCT * G.n_pu:
+                rarest |= e
+                n_rarest += 1
+        rare_key = f"rarest-EFG footprint (<= {100 * RARE_EFG_PCT:g}% of PU each)"
+    masks[rare_key] = rarest
     print(f"driver masks: m_soc theta-tail {int(masks['m_soc theta-tail'].sum()):,} cells | refugia densest (same area) | spike "
           f"{int(masks['connectivity spike (top 0.2%)'].sum()):,} | rare-attainable EFG footprint "
           f"{int(rare.sum()):,} cells ({100 * rare.mean():.0f}% of PU) from {n_rare}/{len(lc.efg_paths())} EFGs | "
@@ -587,11 +673,11 @@ def named_areas(G):
 def e17_shifts(G):
     """Leave-one-block-out latitude shifts vs the S0 anchor (from runs/e17_t3, notebook 16)."""
     lat, _ = latlon(G)
-    s0 = ec.read_selections(RUNS / "s0_ssp585_theta5" / "anchor.tif", G.pu)[0]
+    s0 = ec.read_selections(RUNS_V1 / "s0_ssp585_theta5" / "anchor.tif", G.pu)[0]   # E17-T3 is v1 evidence (v0.17)
     base = float(lat[s0 & G.disc].mean())
     rows = []
     for b in ["core_habitat", "connectivity", "biodiversity", "carbon", "efg"]:
-        p = RUNS / "e17_t3" / f"{b}_out" / "run" / "portfolio.tif"
+        p = RUNS_V1 / "e17_t3" / f"{b}_out" / "run" / "portfolio.tif"
         if not p.exists():
             continue
         sel = ec.read_selections(p, G.pu)[0]

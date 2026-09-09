@@ -47,6 +47,71 @@ HANDOFF_DIR = INPUT_DIR / "aligned_stack"
 # Built by analyses/alberta_prioritization/01_ab_extent_stack.ipynb; its own manifest.json.
 AB_HANDOFF_DIR = INPUT_DIR / "aligned_stack_ab"
 
+# ---- EFG representativeness block VERSION (study plan v0.17 / methods_log M2.x, 2026-09-09) ---------------
+# The block is ingested as one feature per GeoTIFF in <handoff_dir>/<EFG_SUBDIR>/. Two versions exist side by side:
+#   "iucn_efg"    -- the 40-class block as ingested (v1; SUPERSEDED: it rewarded cartographic artifacts of the GET
+#                    indicative maps -- point records, envelope overshoots, clip slivers; results_log R10.18)
+#   "iucn_efg_v3" -- the R0-curated block: 22 classes / 20 features (anthropogenic biomes out, the point-record class
+#                    out, sub-grain classes out, F2.9 out, two duplicate-footprint pairs merged); built by
+#                    analyses/y2y/11b_efg_curation_freeze_v3 for BOTH stacks (parent + Alberta).
+# Everything that enumerates the block (write_manifest, leverage_core.efg_paths, the notebooks) reads this one name.
+# ONE switch: the flagship VERSION (below) selects the block; Y2Y_VERSION=v1 in the environment reproduces the as-frozen
+# run without editing this file (nbconvert kernels inherit it; VS Code kernels do not, so they see the default).
+import os as _os
+Y2Y_VERSION = _os.environ.get("Y2Y_VERSION", "v3.1")
+def efg_subdir_for(version):
+    """The block folder for a manifest version: v1 -> iucn_efg; v3, v3.1, ... -> iucn_efg_v3 (a minor version changes
+    targets or weights, never the block itself)."""
+    return "iucn_efg" if version == "v1" else "iucn_efg_v" + version.lstrip("v").split(".")[0]
+EFG_SUBDIR = efg_subdir_for(Y2Y_VERSION)
+# v3.1 (study plan v0.17.3): the rarity-scaled targets are derived from each class's footprint in the study extent
+# BUFFERED by EFG_TARGET_WINDOW_KM (zonal count on the GET archive maps), not the on-extent footprint, so range edges of
+# classes abundant just outside the line stop pinning by construction; 100/500 km reported as sensitivity. The same
+# window defines "rare" for the Act 1 representativeness layer (footprint <= EFG_RARE_WINDOW_PCT of the window).
+EFG_TARGET_WINDOW_KM = 250
+EFG_TARGET_WINDOW_SENS_KM = (100, 500)
+EFG_RARE_WINDOW_PCT = 0.01
+# EFG targets (study plan v0.17.1 open decision, ADOPTED as the default here): rarity-scaled, log-linear in class
+# footprint after Rodrigues et al. 2004 -- 100% for classes <= FULL_KM2, 10% for classes >= FLOOR_KM2, log-linear
+# between -- so the whole block is adequacy-semantic (under t = 1.0 the largest classes could never saturate and acted
+# as weak diffuse-linear pulls). "flat" reproduces t = 1.0 for every class.
+EFG_TARGET_RULE = "loglinear"          # "loglinear" | "flat"
+EFG_TARGET_ANCHORS = dict(full_km2=1_000.0, floor_km2=250_000.0, floor_t=0.10)
+
+def efg_target(footprint_km2, rule=None, anchors=None):
+    """Per-class representation target from its footprint on the extent (km2 = 1 km cells present in the PU)."""
+    import math
+    rule = rule or EFG_TARGET_RULE
+    a = anchors or EFG_TARGET_ANCHORS
+    if rule == "flat":
+        return 1.0
+    if rule != "loglinear":
+        raise ValueError(f"unknown EFG_TARGET_RULE {rule!r}")
+    if footprint_km2 <= a["full_km2"]:
+        return 1.0
+    if footprint_km2 >= a["floor_km2"]:
+        return float(a["floor_t"])
+    frac = (math.log10(footprint_km2) - math.log10(a["full_km2"])) / (math.log10(a["floor_km2"]) - math.log10(a["full_km2"]))
+    return float(1.0 - (1.0 - a["floor_t"]) * frac)
+
+# ---- analyses/y2y manifest / run VERSION (supersede, never delete) -------------------------------------------------
+# v1 = the as-frozen 2026-08-30 record (spec/manifest.csv, runs/, records at spec/ root) -- kept byte-identical;
+# v3 = the curated-block re-solve (spec/manifest_v3.csv, runs_v3/, records at spec/v3/). Notebooks 12/13/15/18/19/20
+# read every path through y2y_paths(); 22 (the E18 dose analysis) is pinned to v1 because its arms are v1 evidence.
+# NOTE aligned_stack/manifest.json is rewritten by every R notebook from the ACTIVE version -- never run two versions'
+# R notebooks concurrently. Y2Y_VERSION is defined above, beside EFG_SUBDIR.
+
+def y2y_paths(version=None):
+    """Version-scoped locations for the flagship: runs, manifest (+ freeze hash), records dir, expected EFG subdir."""
+    from types import SimpleNamespace
+    v = version or Y2Y_VERSION
+    y = PROJECT_DIR / "analyses" / "y2y"
+    if v == "v1":
+        return SimpleNamespace(version="v1", runs=y / "runs", manifest=y / "spec" / "manifest.csv",
+                               freeze=y / "spec" / "manifest_freeze.sha256", records=y / "spec", efg_subdir="iucn_efg")
+    return SimpleNamespace(version=v, runs=y / f"runs_{v}", manifest=y / "spec" / f"manifest_{v}.csv",
+                           freeze=y / "spec" / f"manifest_{v}.sha256", records=y / "spec" / v, efg_subdir=efg_subdir_for(v))
+
 # Prioritizr results from 03 (R) land here; 04 (Python) reads them back.
 #   RESULTS_DIR    : root for all optimization outputs
 #   RESULTS_SUBDIR : per-run folder (objective + budget tag)
@@ -1165,7 +1230,11 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
 
     # Categorical EFG features (kept survivors from 02; minus exclusions).
     efg_citation = DATASETS["iucn_efg"]["citation"]
-    for p in sorted((handoff_dir / "iucn_efg").glob("*.tif")):
+    efg_files = sorted((handoff_dir / EFG_SUBDIR).glob("*.tif"))      # the block VERSION (see EFG_SUBDIR)
+    if not efg_files:                                                  # never solve silently without the block
+        raise FileNotFoundError(f"EFG block folder {handoff_dir / EFG_SUBDIR} is missing or empty -- build it "
+                                "(analyses/y2y/11b_efg_curation_freeze_v3) or set config.EFG_SUBDIR")
+    for p in efg_files:
         if p.stem in EXCLUDE_FEATURES:
             continue
         layers.append(layer_meta(p, p.stem, "feature_efg", citation=efg_citation))

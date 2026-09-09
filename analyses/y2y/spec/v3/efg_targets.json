@@ -1,0 +1,31 @@
+{
+ "rule": "loglinear",
+ "anchors": {
+  "full_km2": 1000.0,
+  "floor_km2": 250000.0,
+  "floor_t": 0.1
+ },
+ "formula": "t = 1 for footprint <= full_km2; floor_t for footprint >= floor_km2; log-linear in footprint between (Rodrigues et al. 2004)",
+ "targets": {
+  "F1.1.web.mix_v2.0": 0.9418,
+  "T5.4.web.mix_v1.0": 0.869,
+  "T6.1.web.map_v1.0": 0.8363,
+  "F2.1.web.alt_v4.0": 0.7059,
+  "F1.6.web.mix_v1.0": 0.6567,
+  "T2.2.web.mix_v1.0": 0.602,
+  "F1.2.web.map_v1.0": 0.4876,
+  "T4.4.web.orig_v1.0": 0.4288,
+  "T5.1.web.mix_v1.0": 0.3594,
+  "SF1.2.web.orig_v1.0": 0.3414,
+  "TF1.6_TF1.7.web.merged_v3": 0.279,
+  "T6.2.web.alt_v2.0": 0.2513,
+  "T3.4.web.mix_v1.0": 0.1835,
+  "T6.3.web.map_v1.0": 0.1393,
+  "TF1.2.web.orig_v2.0": 0.1319,
+  "F1.3.web.map_v1.0": 0.1293,
+  "S1.1_SF1.1.web.merged_v3": 0.1,
+  "F2.4.web.mix_v1.0": 0.1,
+  "T6.4.web.orig_v1.0": 0.1,
+  "T2.1.web.mix_v1.0": 0.1
+ }
+}

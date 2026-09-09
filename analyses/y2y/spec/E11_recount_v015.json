@@ -1,0 +1,31 @@
+{
+ "e11_pairs_14": [
+  156,
+  182
+ ],
+ "e11_pairs_12": [
+  109,
+  132
+ ],
+ "out_of_band_14": 26,
+ "out_of_band_involving_diagnostic": 3,
+ "out_of_band_12": 23,
+ "design": [
+  "s0_ssp585_theta5",
+  "s1_ssp585_theta5",
+  "s2_ssp585_theta5",
+  "s3_ssp585_theta5",
+  "s4_ssp585_theta3",
+  "s5_ssp585_theta5",
+  "s0_ssp245_theta5",
+  "s1_ssp245_theta5",
+  "s2_ssp245_theta5",
+  "s3_ssp245_theta5",
+  "s4_ssp245_theta3",
+  "s5_ssp245_theta5"
+ ],
+ "diagnostic": [
+  "s1x_ssp585_theta3",
+  "s3x_ssp585_theta3"
+ ]
+}

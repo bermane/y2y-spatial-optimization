@@ -77,7 +77,7 @@ def continuous_features():
 
 def efg_paths(handoff_dir=None):
     handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
-    return [p for p in sorted((handoff_dir / "iucn_efg").glob("*.tif"))
+    return [p for p in sorted((handoff_dir / config.EFG_SUBDIR).glob("*.tif"))    # block version: config.EFG_SUBDIR
             if p.stem not in config.EXCLUDE_FEATURES]
 
 

@@ -238,8 +238,9 @@ def _node_handles():
 # uses postal codes; directors asked for names), prominent cities, and the biggest named areas
 # labelled -- all from the Natural Earth admin-1 polygons already in input_data/basemap/.
 ADMIN_POLY = config.INPUT_DIR / "basemap" / "ne_10m_admin_1_states_provinces.shp"
+# Mackenzie dropped 2026-09-09: its label sat on the Pine Le Moray links whichever side it went
 MAJOR_TOWNS = ["Whitehorse", "Dawson City", "Watson Lake", "Fort Nelson", "Fort St. John",
-               "Dawson Creek", "Prince George", "Terrace", "Smithers", "Mackenzie"]
+               "Dawson Creek", "Prince George", "Terrace", "Smithers"]
 PROVINCE_LABEL = {"British Columbia": "BRITISH COLUMBIA", "Yukon": "YUKON",
                   "Northwest Territories": "NORTHWEST\nTERRITORIES", "Alberta": "ALBERTA",
                   "Alaska": "ALASKA"}
@@ -316,7 +317,7 @@ AREA_OVERRIDES = {"Tū Łī́dlini": "Tū Łī́dlini (Ross River)",
                   "Nj ‘Iinlii": "Ni’iinlii Njik (Fishing Branch)",
                   "Neah": "Ne’āh’"}
 # which side of the dot a city label goes (default right); left where the right side is corridor
-TOWN_LABEL_SIDE = {"Mackenzie": "left", "Prince George": "left"}
+TOWN_LABEL_SIDE = {"Prince George": "left"}
 
 
 def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, area_names=14,
@@ -396,10 +397,14 @@ def map_m1(P, pad=0.07, area_names=14):
     return P
 
 
-def map_cost(P, pad=0.07, area_names=14):
-    """The movement-cost surface with existing PAs + proposed IPCAs hard-coloured and NO
-    corridors -- the 'what the land is made of' companion to M1, same basemap and legend
-    placement. Four ordinal classes on a log colour ramp; class shares in the subtitle."""
+def map_cost(P, pad=0.07, area_names=14, corridors=False, halo_cells=6):
+    """The movement-cost surface (magma ramp, log colour, four ordinal classes) with existing
+    PAs + proposed IPCAs hard-coloured -- the 'what the land is made of' companion to M1, same
+    basemap and legend placement; class shares in the subtitle. `corridors=False` -> M0 (no
+    corridors); `corridors=True` -> M0b, the four-class network HARD-COLOURED on top of the
+    ramp with a thin WHITE HALO (`halo_cells` x 300 m) under every swath so the classes read
+    as the figure and never merge with the red/purple part of the ramp; the land between the
+    swaths is cost. Region-scale sibling of the zoom overlay `cc.routing_problem_cost_overlay`."""
     R = P.R
     XL, YL = cc._region_extent(R, pad)
     cost = R.resistance.values
@@ -410,18 +415,44 @@ def map_cost(P, pad=0.07, area_names=14):
     from matplotlib.colors import LogNorm
     im = cc._da(R, np.where(cost > 0, cost, np.nan).astype("float32")).plot.imshow(
         ax=ax, cmap="magma_r", norm=LogNorm(vmin=1, vmax=1000), add_colorbar=False)
+    handles = []
+    if corridors:
+        from scipy.ndimage import binary_dilation
+        layers, union = [], np.zeros(P.owner.shape, bool)
+        for c in ("securing", "squeezed", "edge", "both"):
+            ids = list(P.cls.index[P.cls == c])
+            if c == "squeezed" and P.h8_open:
+                ids = []
+            if c == "securing" and P.h8_open:
+                ids += list(P.cls.index[P.cls == "squeezed"])
+            col, lbl = CLASS[c]
+            m = np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor
+            layers.append((m, col)); union |= m
+            if not (c == "squeezed" and P.h8_open):
+                handles.append(Patch(color=col, label=f"{lbl}  [{len(ids)}]"))
+        halo = binary_dilation(union, iterations=halo_cells) & ~union
+        cc._da(R, np.where(halo, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap(["white"]), add_colorbar=False)
+        for m, col in layers:
+            if m.any():
+                cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                    ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
     _director_base(P, ax, XL, YL, area_names=area_names)
     cb = fig.colorbar(im, ax=ax, shrink=0.45, pad=0.01)
     cb.set_label("cost of moving through the land — 1 intact · 10 roads and cuts · "
                  "100 converted land · 1000 water, ice, settlement\n(four classes only; "
                  "log colour scale)", fontsize=9)
-    fig.legend(handles=_node_handles() + [
-        plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")],
-        loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2, fontsize=9.5, frameon=True)
-    ax.set_title("What the land is made of — the movement-cost surface\n"
+    handles += _node_handles() + [
+        plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")]
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
+               fontsize=9.5, frameon=True)
+    head = ("What the land is made of — the corridor network over the movement-cost surface"
+            if corridors else "What the land is made of — the movement-cost surface")
+    ax.set_title(f"{head}\n"
                  f"intact land {sh[1]:.0f}% · roads and cuts {sh[10]:.0f}% · converted "
                  f"{sh[100]:.1f}% · water, ice and settlement {sh[1000]:.0f}%", fontsize=14, pad=12)
-    fig.savefig(P.fig / "M0_cost_surface.png", dpi=170, bbox_inches="tight"); plt.show()
+    name = "M0b_cost_surface_corridors.png" if corridors else "M0_cost_surface.png"
+    fig.savefig(P.fig / name, dpi=170, bbox_inches="tight"); plt.show()
     return P
 
 
@@ -755,6 +786,17 @@ def build_deck(P, path=None):
                       "This analysis treats declared IPCA proposals as part of the protected "
                       "network: they are routed between exactly as existing protected areas are.",
                       "Structural connectivity — landscape condition — not measured animal movement."]),
+        dict(title="What the land is made of", image=F / "M0_cost_surface.png",
+             bullets=["The movement-cost surface: four classes only — intact land, roads and "
+                      "cuts, converted land, and water / ice / settlement.",
+                      "Existing protected areas and declared IPCA proposals hard-coloured; no "
+                      "corridors yet."]),
+        dict(title="The corridor network over the movement-cost surface",
+             image=F / "M0b_cost_surface_corridors.png",
+             bullets=["The same surface with the four-class network drawn on top: the land "
+                      "between the swaths is what a route has to cross.",
+                      "In the north the swaths sit on intact land; along the southern edge they "
+                      "thread between roads, cuts and settlement."]),
         dict(title="Where the land still offers choices — and where it does not",
              image=F / "M1_regime.png",
              bullets=["Act 1 (north): corridor land with options — route and partners can be chosen.",

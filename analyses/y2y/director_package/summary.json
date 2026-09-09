@@ -1,4 +1,9 @@
 {
+ "version": "v1",
+ "manifest": "manifest.csv",
+ "efg_block": "iucn_efg",
+ "n_efg": 40,
+ "efg_target_rule": "flat",
  "n_formulations": 12,
  "excluded": [
   "s1x",
@@ -122,6 +127,195 @@
   "banked_max": 19.16639009547981
  },
  "td4": "pending (no ecoregion layer)",
+ "biodiversity_plan_capture": {
+  "n_plans": 612,
+  "min": 0.2947417760702371,
+  "max": 0.34150658681219614,
+  "median": 0.3137606653711912
+ },
+ "e11_recount_v015": {
+  "e11_pairs_14": [
+   156,
+   182
+  ],
+  "e11_pairs_12": [
+   109,
+   132
+  ],
+  "out_of_band_14": 26,
+  "out_of_band_involving_diagnostic": 3,
+  "out_of_band_12": 23,
+  "design": [
+   "s0_ssp585_theta5",
+   "s1_ssp585_theta5",
+   "s2_ssp585_theta5",
+   "s3_ssp585_theta5",
+   "s4_ssp585_theta3",
+   "s5_ssp585_theta5",
+   "s0_ssp245_theta5",
+   "s1_ssp245_theta5",
+   "s2_ssp245_theta5",
+   "s3_ssp245_theta5",
+   "s4_ssp245_theta3",
+   "s5_ssp245_theta5"
+  ],
+  "diagnostic": [
+   "s1x_ssp585_theta3",
+   "s3x_ssp585_theta3"
+  ]
+ },
+ "value": {
+  "top": 0.7,
+  "rare_efg_rule": "rarest-EFG footprint (<= 1% of PU each)",
+  "footprint_km2": {
+   "core habitat": 324566,
+   "connectivity": 324567,
+   "biodiversity": 324641,
+   "carbon": 324566,
+   "intactness": 324568,
+   "representativeness": 32108
+  },
+  "convergence_km2": {
+   "0": 195628,
+   "1": 495036,
+   "2": 339403,
+   "3": 50666,
+   "4": 1152,
+   "5": 0
+  },
+  "high_value_km2": 886257,
+  "gap_km2": 815442,
+  "gap_pct_of_high_value": 92.00965408453756,
+  "value_share_by_tier": {
+   "biodiversity": {
+    "existing PAs": 0.1560189206015996,
+    "core": 0.014928610070238844,
+    "scenario tiers": 0.039108454580447344,
+    "opportunity": 0.7895202651489619,
+    "never": 0.0004237495987522706
+   },
+   "carbon": {
+    "existing PAs": 0.14946366523947557,
+    "core": 0.013538260122089,
+    "scenario tiers": 0.11109253218626035,
+    "opportunity": 0.7257625945683737,
+    "never": 0.0001429478838014695
+   },
+   "connectivity": {
+    "existing PAs": 0.14603772998617875,
+    "core": 0.012261113689213596,
+    "scenario tiers": 0.04349072059275015,
+    "opportunity": 0.7978503026047206,
+    "never": 0.0003601331271369633
+   },
+   "core_habitat": {
+    "existing PAs": 0.1916639009547981,
+    "core": 0.057307549972304375,
+    "scenario tiers": 0.07615056750674691,
+    "opportunity": 0.6746703386929933,
+    "never": 0.00020764287315733112
+   }
+  },
+  "coverage": [
+   {
+    "theme": "core habitat",
+    "top-value footprint km2": 324566,
+    "% of unprotected land": 30.0000462156329,
+    "% of footprint in core": 5.077549712539207,
+    "% of footprint in scenario tiers": 10.28912455401983,
+    "% of footprint in opportunity": 84.63332573344097,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "connectivity",
+    "top-value footprint km2": 324567,
+    "% of unprotected land": 30.0001386468987,
+    "% of footprint in core": 0.7499222040441573,
+    "% of footprint in scenario tiers": 4.630785015112442,
+    "% of footprint in opportunity": 94.6192927808434,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "biodiversity",
+    "top-value footprint km2": 324641,
+    "% of unprotected land": 30.006978560567898,
+    "% of footprint in core": 2.870863507690033,
+    "% of footprint in scenario tiers": 5.052042101891012,
+    "% of footprint in opportunity": 92.07709439041895,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "carbon",
+    "top-value footprint km2": 324566,
+    "% of unprotected land": 30.0000462156329,
+    "% of footprint in core": 1.993431228163147,
+    "% of footprint in scenario tiers": 9.305657400960051,
+    "% of footprint in opportunity": 88.69136015479133,
+    "% of footprint in never": 0.009551216085480303
+   },
+   {
+    "theme": "intactness",
+    "top-value footprint km2": 324568,
+    "% of unprotected land": 30.0002310781645,
+    "% of footprint in core": 1.5090828424243918,
+    "% of footprint in scenario tiers": 4.8754036134184515,
+    "% of footprint in opportunity": 93.57546030415814,
+    "% of footprint in never": 0.04005323999901408
+   },
+   {
+    "theme": "representativeness",
+    "top-value footprint km2": 32108,
+    "% of unprotected land": 2.9677830823054205,
+    "% of footprint in core": 4.288650803538059,
+    "% of footprint in scenario tiers": 12.482870312694656,
+    "% of footprint in opportunity": 83.22847888376728,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "representativeness \u2014 36 rare-attainable classes (NOT used)",
+    "top-value footprint km2": 834226,
+    "% of unprotected land": 77.10856514324536,
+    "% of footprint in core": 1.99574216099714,
+    "% of footprint in scenario tiers": 5.859802979048843,
+    "% of footprint in opportunity": 92.0690556276117,
+    "% of footprint in never": 0.07539923234231491
+   }
+  ],
+  "crosstab": {
+   "core (F \u2265 0.70)": {
+    "0 of 5 themes": 0,
+    "1 of 5 themes": 1691,
+    "2 of 5 themes": 11493,
+    "3 of 5 themes": 3440,
+    "4 of 5 themes": 271,
+    "5 of 5 themes": 0
+   },
+   "scenario tier": {
+    "0 of 5 themes": 66,
+    "1 of 5 themes": 15653,
+    "2 of 5 themes": 31684,
+    "3 of 5 themes": 6316,
+    "4 of 5 themes": 267,
+    "5 of 5 themes": 0
+   },
+   "opportunity": {
+    "0 of 5 themes": 194818,
+    "1 of 5 themes": 477661,
+    "2 of 5 themes": 296226,
+    "3 of 5 themes": 40910,
+    "4 of 5 themes": 614,
+    "5 of 5 themes": 0
+   },
+   "never": {
+    "0 of 5 themes": 744,
+    "1 of 5 themes": 31,
+    "2 of 5 themes": 0,
+    "3 of 5 themes": 0,
+    "4 of 5 themes": 0,
+    "5 of 5 themes": 0
+   }
+  }
+ },
  "e17": {
   "base_lat": 50.9617919921875,
   "n_efg_south": 20,

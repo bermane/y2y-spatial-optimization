@@ -1,0 +1,41 @@
+code,name,method,anthropogenic,cells,pct_pu,pct_in_PAs,rule_C_purpose,rule_A_point,rule_A_envelope_small,rule_B_subgrain,utility_drop,merged_into,retained,boundary_share_10km,clip_edge_flag,reason
+F2.6,Permanent salt and soda lakes,mixed,False,3,0.00023567970813424946,0.0,False,False,False,True,False,,False,,False,B grain floor: < 330 km2 (one native GET cell)
+F2.2,Small permanent freshwater lakes,proxy,False,9,0.0007070391244027483,0.0,False,False,False,True,False,,False,,False,B grain floor: < 330 km2 (one native GET cell)
+F1.4,Seasonal upland streams,proxy,False,93,0.007306070952161733,2.1505376344086025,False,False,False,True,False,,False,,False,B grain floor: < 330 km2 (one native GET cell)
+F2.3,Seasonal freshwater lakes,proxy,False,222,0.017440298401934458,0.0,False,False,False,True,False,,False,,False,B grain floor: < 330 km2 (one native GET cell)
+F2.10,Subglacial lakes,point,False,409,0.03213100020896934,0.0,False,True,False,False,False,,False,,False,A map-method: point-record class
+F1.1,Permanent upland streams,proxy,False,1429,0.11226210097461416,0.6997900629811057,False,False,False,False,False,,True,78.8663400979706,True,
+T5.4,Cool deserts and semi-deserts,proxy,False,2234,0.1755028226573044,0.0,False,False,False,False,False,,True,100.0,True,
+T6.1,"Ice sheets, glaciers and perennial snowfields",direct,False,2730,0.21446853440216698,48.64468864468864,False,False,False,False,False,,True,93.07692307692308,True,
+SF2.2,Flooded mines and other voids,envelope,True,5288,0.41542476553797036,0.624054462934947,True,False,True,False,False,,False,,False,C purpose: anthropogenic biome; A map-method: envelope < 1% of the extent
+F3.4,Freshwater aquafarms,envelope,True,5710,0.4485770444821881,27.04028021015762,True,False,True,False,False,,False,,False,C purpose: anthropogenic biome; A map-method: envelope < 1% of the extent
+F2.1,Large permanent freshwater lakes,direct,False,6075,0.47725140897185514,19.868312757201643,False,False,False,False,False,,True,71.98353909465021,True,
+F1.6,Episodic arid rivers,proxy,False,8215,0.6453696007742864,19.269628727936702,False,False,False,False,False,,True,86.70724284844796,True,
+T2.2,Deciduous temperate forests,proxy,False,11495,0.9030460816677325,0.37407568508046973,False,False,False,False,False,,True,47.01174423662462,False,
+T7.4,Urban and industrial ecosystems,proxy,True,15120,1.1878257289966172,2.427248677248677,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+F1.2,Permanent lowland rivers,proxy,False,23187,1.821568464169614,15.163669297451158,False,False,False,False,False,,True,,False,
+T7.1,Annual croplands,direct,True,26595,2.0893006126101215,1.3912389546907313,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+T4.4,Temperate woodlands,envelope,False,33263,2.6131380438898466,10.747677599735441,False,False,False,False,False,,True,,False,
+S2.1,Anthropogenic subterranean voids,envelope,True,40750,3.2013160354902217,8.365644171779142,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+T7.3,Plantations,direct,True,46516,3.654292434524249,7.7844182646831195,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+SF2.1,Water pipes and subterranean canals,envelope,True,49671,3.902148927578768,31.642205713595455,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+T5.1,Semi-desert steppe,proxy,False,50897,3.9984633683029647,0.4420692771676131,False,False,False,False,False,,True,,False,
+SF1.2,Groundwater ecosystems,direct,False,56842,4.465501989922336,6.0712149466943455,False,False,False,False,False,,True,,False,
+T7.2,Sown pastures and fields,proxy,True,78834,6.193191370351807,1.6401552629576073,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+TF1.7,Boreal and temperate fens,envelope,False,83382,6.550481807883329,6.748458900002399,False,False,False,False,False,TF1.6_TF1.7,True,,False,
+TF1.6,"Boreal, temperate and montane peat bogs",envelope,False,83382,6.550481807883329,6.748458900002399,False,False,False,False,False,TF1.6_TF1.7,True,,False,
+T6.2,"Polar/alpine cliffs, screes, outcrops and lava flows",direct,False,98830,7.764075184969291,30.024284124253768,False,False,False,False,False,,True,,False,
+F3.1,Large reservoirs,direct,True,103165,8.104632363223281,17.372170794358553,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+T7.5,Derived semi-natural pastures and old fields,proxy,True,107334,8.432148597627176,0.6885050403413643,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+T3.4,"Young rocky pavements, lava flows and screes",proxy,False,149811,11.769137585100015,29.487821321531797,False,False,False,False,False,,True,,False,
+T6.3,Polar tundra and deserts,proxy,False,196397,15.428929212814063,19.937677255762562,False,False,False,False,False,,True,,False,
+TF1.2,Subtropical/temperate forested wetlands,envelope,False,205540,16.147202403304544,20.95699133988518,False,False,False,False,False,,True,,False,
+F1.3,Freeze-thaw rivers and streams,direct,False,208825,16.405271683711547,15.403807015443553,False,False,False,False,False,,True,,False,
+F3.5,"Canals, ditches and drains",envelope,True,240086,18.861132802373138,17.16176703347967,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+S1.1,Aerobic caves,proxy,False,278764,21.899672719445306,22.536625963180324,False,False,False,False,False,S1.1_SF1.1,True,,False,
+SF1.1,Underground streams and pools,proxy,False,278764,21.899672719445306,22.536625963180324,False,False,False,False,False,S1.1_SF1.1,True,,False,
+F3.2,Constructed lacustrine wetlands,envelope,True,283559,22.276367452946545,19.515162629294082,True,False,False,False,False,,False,,False,C purpose: anthropogenic biome
+F2.4,Freeze-thaw freshwater lakes,direct,False,491075,38.57880422400885,15.176296899658912,False,False,False,False,False,,True,,False,
+F2.9,Geothermal pools and wetlands,envelope,False,514094,40.38717462452294,18.174108237015023,False,False,False,False,True,,False,,False,envelope over 40% of the extent: its target is met by any 30% of half the landscape (uninformative)
+T6.4,Temperate alpine grasslands and shrublands,envelope,False,812880,63.85977371605623,18.399271725223894,False,False,False,False,False,,True,,False,
+T2.1,Boreal and temperate high montane forests and woodlands,proxy,False,1225770,96.29637194657298,15.566052358925411,False,False,False,False,False,,True,,False,

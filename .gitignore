@@ -38,6 +38,7 @@ analyses/*/audit/feature_cards_ab/
 analyses/*/audit/audit_objects/feature_audit.npz
 analyses/*/audit/audit_objects_ab/feature_audit.npz
 analyses/*/runs/
+analyses/*/runs_*/
 # Alberta prioritization acquired layers (analyses/alberta_prioritization/data/): the raw downloads
 # (multi-GB: GVI FGDB, ACI GeoTIFF, SRP zips, REST pulls) are NOT tracked -- data/README.md,
 # data/acquire.py and data/provenance.json (URL + sha256 per file) are the record; re-acquire locally.
@@ -60,3 +61,6 @@ analyses/*/director_package/geotiffs/
 analyses/*/director_package/figures/
 analyses/*/director_package/*.pptx
 analyses/*/director_package/_smoke/
+
+# per-notebook execution logs written by analyses/y2y/run_v31.sh
+analyses/*/logs/
