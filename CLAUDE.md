@@ -672,7 +672,10 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 > betweenness since the v2 rebuild; implemented as a pinned `centrality` key + `centrality_sp`
 > comparison column + `cc.gate_g15` + `centrality_compare.csv` (M5.18); no product changes. NB02 gained
 > a G15 cell; NB04 step 0b runs it. D18/D20 deferred. COMMIT the specs after each session — the chat
-> regenerates from whatever it last saw.**
+> regenerates from whatever it last saw. Same day: D21 ADJACENCY GRAPH (chat's surgical patch, spliced) =
+> `cc.adjacency_graph` diagnostic universe (cost-allocation neighbours on the cached fields, Euclidean
+> comparison, G17 MST ⊆ adjacency, `adjacency_*.csv`, `allocation.tif`, `adjacency_map.png`; no product
+> changes; M5.19, R9.6 pending); NB02 step 2c, NB04 step 0b. Ethan runs NB04.**
 
 Standalone corridor analysis, NOT prioritizr: it **routes** between anchor areas, which the
 prioritizr connectivity penalty could not do (that aggregates permeable land; it cannot answer "how

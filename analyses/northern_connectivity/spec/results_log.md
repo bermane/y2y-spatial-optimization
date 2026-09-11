@@ -312,3 +312,9 @@ when the notebooks re-run.
 **R9.5 Centrality comparison (D19) [run002; PENDING NB04 step 0b / NB02 G15]:** `centrality_compare.csv`
 — current-flow vs shortest-path edge betweenness per inter-name edge, ranks and rank deltas; the
 Spearman agreement on the augmented graph and the β = 0 tree identity land here when the gate runs.
+
+**R9.6 Adjacency universe (D21) [run002; PENDING NB04 step 0b / NB02 step 2c]:** |E_adj| (cost-allocation,
+Euclidean), E_adj ∩ backbone, the backbone/backup edges that are NOT neighbour links (with intervening
+zones), the LM would-remove counts (through-core, > 200 km), `n_neighbours` per name (median / max), and
+the G17 verdict land here when the step runs. The count of non-adjacent BACKUPS decides the post-October
+D7 follow-up.

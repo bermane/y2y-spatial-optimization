@@ -2643,6 +2643,213 @@ def gate_g15(A, tol=1e-9):
     return cmp
 
 
+# ================= D21 adjacency (neighbour) graph -- diagnostic universe =================
+ADJACENCY_DEFAULT = {"metric": "cwd", "connectivity": 8, "distance_cap_km": None,
+                     "drop_through_core": False}
+
+
+def _allocation(A, fields, n):
+    """argmin over n fields (memmap-friendly; ties -> lowest id); -1 where no field is finite."""
+    best = np.full(A.shape, np.inf, "float32"); alloc = np.full(A.shape, -1, "int32")
+    for k in range(n):
+        f = np.asarray(fields[k], dtype="float32")
+        better = f < best                       # strict: the first (lowest id) wins ties
+        best[better] = f[better]; alloc[better] = k
+    return alloc
+
+
+def _zone_pairs(alloc, connectivity=8):
+    """Unordered (a, b) pairs of zone ids that share a boundary (a != b, both >= 0)."""
+    H, W = alloc.shape
+    shifts = [(0, 1), (1, 0)] + ([(1, 1), (1, -1)] if connectivity == 8 else [])
+
+    def sl(d, n):
+        return (slice(0, n - d), slice(d, n)) if d >= 0 else (slice(-d, n), slice(0, n + d))
+    pairs = set()
+    for dr, dc in shifts:
+        (ra, rb), (ca, cb) = sl(dr, H), sl(dc, W)
+        a, b = alloc[ra, ca], alloc[rb, cb]
+        m = (a != b) & (a >= 0) & (b >= 0)
+        if m.any():
+            ab = np.stack([a[m], b[m]], axis=1); ab.sort(axis=1)
+            pairs |= {tuple(x) for x in np.unique(ab, axis=0).tolist()}   # NB: `map` is shadowed by cc.map
+    return pairs
+
+
+def adjacency_graph(A, write=True, ridge_tol=0.5, cap_km=200.0, verbose=True):
+    """D21 -- Linkage Mapper-style ADJACENCY GRAPH as a diagnostic universe beside the backbone.
+
+    Cost-allocation neighbour graph on the cached part-level CWD fields: every routable cell is
+    allocated to the seed part with the minimum CWD (argmin; ties -> lowest part id); two parts
+    are adjacent when their zones share an 8-connected boundary; parts are contracted to
+    ROUTING UNITS (names; a name's parts are one unit unless `no_link`). LM's optional filters
+    (distance cap, drop-through-core) are OFF: the counts they *would* remove are reported.
+    A Euclidean allocation (LM's default metric) is computed as the comparison column.
+
+    Per adjacent pair the LCP length and the intervening zones/masks are read off the cached
+    UNIT fields without any new routing: the least-cost path is the ridge where
+    CWD_u + CWD_v <= min + ridge_tol (G10: exactly 0 slack on path cells). Length = the traced
+    centreline for backbone edges, else a straight-line proxy between the ridge's two ends.
+
+    Products (write=True): allocation.tif, adjacency_edges.csv, adjacency_nodes.csv,
+    figures/adjacency_map.png; A.edges gains is_adjacent, is_adjacent_euclid, via_names.
+    NOT a routing input; no bands for adjacency-only edges; no legend class. Gate G17.
+    """
+    from scipy import ndimage
+    cfg = dict(ADJACENCY_DEFAULT); cfg.update(A.cfg.get("adjacency", {}) or {})
+    conn = int(cfg.get("connectivity", 8))
+    U = len(A.nodes); labels = [lbl for lbl, _ in A.nodes]
+    P_ = len(A.parts)
+    part_unit = np.full(P_, -1, "int32")
+    for u, pidx in enumerate(A.unit_parts):
+        for pi in pidx:
+            part_unit[pi] = u
+    if verbose:
+        print(f"D21 adjacency graph: allocating {int(A.pu.sum()):,} routable cells to {P_} seed parts -> {U} units")
+    alloc_p = _allocation(A, A.cwd_parts, P_)
+    alloc = np.where(alloc_p >= 0, part_unit[np.clip(alloc_p, 0, None)], -1).astype("int32")
+    pairs = {tuple(sorted((int(part_unit[a]), int(part_unit[b])))) for a, b in _zone_pairs(alloc_p, conn)}
+    pairs = {pq for pq in pairs if pq[0] != pq[1]}
+    # Euclidean allocation (LM default) for the comparison column
+    seed = np.full(A.shape, -1, "int32")
+    for pi, (_, m) in enumerate(A.parts):
+        seed[m] = pi
+    _, (ri, ci) = ndimage.distance_transform_edt(seed < 0, return_indices=True)
+    alloc_e = np.where(A.pu, seed[ri, ci], -1).astype("int32")
+    pairs_e = {tuple(sorted((int(part_unit[a]), int(part_unit[b])))) for a, b in _zone_pairs(alloc_e, conn)}
+    pairs_e = {pq for pq in pairs_e if pq[0] != pq[1]}
+
+    # backbone lookup by unit pair
+    bb = {}
+    for eid, r in A.edges.iterrows():
+        if "i" in A.edges.columns and pd.notna(r.get("i")):
+            bb[tuple(sorted((int(r["i"]), int(r["j"]))))] = eid
+    masks = [m for _, m in A.nodes]
+    D = np.asarray(A.D, float)
+
+    def ridge_info(u, v):
+        fu = np.asarray(A.cwd[u], dtype="float32"); fv = np.asarray(A.cwd[v], dtype="float32")
+        tot = fu + fv
+        d = float(D[u, v])
+        ridge = np.isfinite(tot) & (tot <= d + ridge_tol) & ~masks[u] & ~masks[v]
+        rr, cc_ = np.nonzero(ridge)
+        if not len(rr):
+            return 0.0, [], []
+        # straight-line proxy between the ridge cell nearest u and the one nearest v (a lower
+        # bound on path length; the ridge's cell COUNT is an area on uniform land, where exactly
+        # tied staircase paths widen it into a lens -- measured 78 vs 21.6 km on the harness)
+        a, b = np.argmin(fu[rr, cc_]), np.argmin(fv[rr, cc_])
+        L = float(np.hypot(rr[a] - rr[b], cc_[a] - cc_[b])) * A.cell_km
+        zones = sorted({int(z) for z in np.unique(alloc[ridge]) if z >= 0 and z not in (u, v)})
+        crossed = [w for w in range(U) if w not in (u, v) and bool(np.any(ridge & masks[w]))]
+        return L, zones, crossed
+
+    rows = []
+    all_pairs = sorted(pairs | set(bb.keys()))          # every adjacent pair + every backbone pair
+    for (u, v) in all_pairs:
+        cost = float(D[u, v])
+        eid = bb.get((u, v))
+        L, zones, crossed = ridge_info(u, v) if np.isfinite(cost) and cost > 0 else (0.0, [], [])
+        rows.append(dict(edge_id=eid, label_i=labels[u], label_j=labels[v], i=u, j=v,
+                         is_adjacent=(u, v) in pairs, is_adjacent_euclid=(u, v) in pairs_e,
+                         in_backbone=eid is not None,
+                         edge_class=(A.edges.loc[eid, "edge_class"] if eid else None),
+                         in_mst=(bool(A.edges.loc[eid, "in_mst"]) if eid else False),
+                         cost=cost, lcp_len_km_proxy=round(L, 1),
+                         centreline_km=(float(A.edges.loc[eid, "centreline_km"]) if eid and "centreline_km" in A.edges.columns else np.nan),
+                         via_zones=" | ".join(labels[z] for z in zones),
+                         crosses_masks=" | ".join(labels[w] for w in crossed),
+                         lm_drop_through_core=bool(crossed),
+                         lm_beyond_cap=((float(A.edges.loc[eid, "centreline_km"]) if eid and "centreline_km" in A.edges.columns else L) > cap_km)))
+    adj = pd.DataFrame(rows)
+    # columns onto the network edge table
+    for col in ("is_adjacent", "is_adjacent_euclid", "via_names"):
+        A.edges[col] = None
+    for r in adj[adj.in_backbone].itertuples():
+        A.edges.loc[r.edge_id, "is_adjacent"] = bool(r.is_adjacent)
+        A.edges.loc[r.edge_id, "is_adjacent_euclid"] = bool(r.is_adjacent_euclid)
+        A.edges.loc[r.edge_id, "via_names"] = r.via_zones
+    # per-unit table
+    deg = {u: 0 for u in range(U)}; deg_e = {u: 0 for u in range(U)}; deg_b = {u: 0 for u in range(U)}
+    for u, v in pairs: deg[u] += 1; deg[v] += 1
+    for u, v in pairs_e: deg_e[u] += 1; deg_e[v] += 1
+    for u, v in bb: deg_b[u] += 1; deg_b[v] += 1
+    nodes = pd.DataFrame([dict(unit=u, label=labels[u], kind=A.kinds[u], n_parts=len(A.unit_parts[u]),
+                               n_neighbours=deg[u], n_neighbours_euclid=deg_e[u], n_backbone_links=deg_b[u])
+                          for u in range(U)]).sort_values("n_neighbours", ascending=False)
+    # report + G17
+    adj_only = adj[adj.is_adjacent & ~adj.in_backbone]
+    bb_not_adj = adj[adj.in_backbone & ~adj.is_adjacent & (adj.cost > 0)]
+    mst_not_adj = bb_not_adj[bb_not_adj.in_mst & (bb_not_adj.edge_class == "inter")]
+    if verbose:
+        print(f"  |E_adj| = {len(pairs)} unit pairs (euclid: {len(pairs_e)}) | backbone pairs {len(bb)} | "
+              f"E_adj ∩ backbone = {int((adj.is_adjacent & adj.in_backbone).sum())} | adjacency-only {len(adj_only)}")
+        print(f"  backbone/backup edges NOT adjacent: {len(bb_not_adj)}" +
+              ("".join(f"\n    {_short_node_name(r.label_i,16)} <-> {_short_node_name(r.label_j,16)} [{r.edge_class}{', mst' if r.in_mst else ''}] via {r.via_zones or '—'}"
+                       for r in bb_not_adj.itertuples()) if len(bb_not_adj) else ""))
+        print(f"  LM filters would remove (not applied): through-core {int(adj[adj.is_adjacent].lm_drop_through_core.sum())}, "
+              f"beyond {cap_km:.0f} km {int(adj[adj.is_adjacent].lm_beyond_cap.sum())} of {len(pairs)} adjacency edges")
+        print(f"  n_neighbours: median {nodes.n_neighbours.median():.0f}, max {nodes.n_neighbours.max()} "
+              f"({_short_node_name(nodes.iloc[0].label, 20)})")
+    A.adjacency = types.SimpleNamespace(edges=adj, nodes=nodes, alloc=alloc, pairs=pairs, pairs_euclid=pairs_e, cfg=cfg)
+    if write:
+        _da(A, alloc).astype("int32").rio.write_nodata(-1, inplace=False).rio.to_raster(A.run_dir / "allocation.tif", compress="DEFLATE")
+        adj.to_csv(A.run_dir / "adjacency_edges.csv", index=False, encoding="utf-8-sig")
+        nodes.to_csv(A.run_dir / "adjacency_nodes.csv", index=False, encoding="utf-8-sig")
+        _adjacency_map(A)
+    assert len(mst_not_adj) == 0, ("G17 FAILED: inter-name MST edge(s) not in the adjacency graph: " +
+                                   "; ".join(f"{r.label_i} <-> {r.label_j} via {r.via_zones}" for r in mst_not_adj.itertuples()))
+    if verbose:
+        print("G17 OK — every inter-name MST edge is an adjacency edge")
+    return adj
+
+
+def _adjacency_map(A):
+    """Appendix figure: neighbour links as thin LINES (never bands) over the M1-style basemap;
+    backbone edges darker, MST edges heavier."""
+    import matplotlib.patheffects as pe
+    adj = A.adjacency.edges
+    pa_mask, anch = _node_masks(A)
+    XL, YL = _region_extent(A, 0.05)
+    fig, ax = plt.subplots(figsize=(12, 15))
+    for layer, col in [(pa_mask, PA_COLOR), (anch, ANCHOR_COLOR)]:
+        _da(A, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
+            ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    cent = {}
+    for u, (lbl, m) in enumerate(A.nodes):
+        rr, cc_ = np.nonzero(m)
+        cent[u] = (A.template.x.values[int(np.median(cc_))], A.template.y.values[int(np.median(rr))])
+    for r in adj.itertuples():
+        if not r.is_adjacent and not r.in_backbone:
+            continue
+        (x0, y0), (x1, y1) = cent[r.i], cent[r.j]
+        if r.in_backbone and r.in_mst:
+            ax.plot([x0, x1], [y0, y1], color="0.15", lw=1.8, zorder=4)
+        elif r.in_backbone:
+            ax.plot([x0, x1], [y0, y1], color="0.35", lw=1.2, ls="--", zorder=4)
+        else:
+            ax.plot([x0, x1], [y0, y1], color="#2c7fb8", lw=0.6, alpha=0.7, zorder=3)
+    for u, (x, y) in cent.items():
+        ax.plot(x, y, "o", ms=3, color="0.1", zorder=5)
+    if hasattr(A, "outline"):
+        A.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--", zorder=3)
+    try:
+        _draw_basemap(A, ax, XL, YL, towns=False)
+    except Exception:
+        pass
+    ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
+    n_adj, n_bb = len(A.adjacency.pairs), int(adj.in_backbone.sum())
+    ax.legend(handles=[plt.Line2D([0], [0], color="#2c7fb8", lw=0.8, label=f"neighbour link (cost-allocation adjacency; {n_adj} pairs)"),
+                       plt.Line2D([0], [0], color="0.35", lw=1.2, ls="--", label="backbone backup link"),
+                       plt.Line2D([0], [0], color="0.15", lw=1.8, label="backbone MST link"),
+                       Patch(color=PA_COLOR, label="existing PAs"), Patch(color=ANCHOR_COLOR, label="proposed IPCAs")],
+              loc="lower left", fontsize=9, frameon=True)
+    ax.set_title(f"{A.region_label} — neighbour universe (D21) vs the minimum network + backups ({n_bb} links)\n"
+                 "lines join area centres; the difference between the two graphs is the choice space", fontsize=12)
+    (A.fig_dir).mkdir(parents=True, exist_ok=True)
+    fig.savefig(A.fig_dir / "adjacency_map.png", dpi=150, bbox_inches="tight"); plt.close(fig)
+
+
 def corridor_profile(A, n_groups=10):
     """Value star plots for the corridor network — a CO-BENEFIT AUDIT, not a scorecard.
 

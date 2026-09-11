@@ -815,6 +815,10 @@ CORRIDORS = {
         # has computed CURRENT-FLOW betweenness on the quotient graph since the v2 rebuild
         # (Centrality Mapper's formulation); "shortest_path" is the comparison column's method.
         "centrality": "current_flow",
+        # D21 (2026-09-11): Linkage Mapper-style adjacency graph as a DIAGNOSTIC universe (not a
+        # routing input). LM's optional filters are off; the counts they would remove are reported.
+        "adjacency": {"metric": "cwd", "connectivity": 8, "distance_cap_km": None,
+                      "drop_through_core": False},
 
         # ---- structured ensemble (D8) ---------------------------------------------------
         # Axes B/C/D all reuse the SAME resistance, and CWD depends only on resistance + node seeds

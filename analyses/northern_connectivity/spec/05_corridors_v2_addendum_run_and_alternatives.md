@@ -1,7 +1,7 @@
 # 05 corridors (north) — v2 addendum: production run, near-optimality surface, route-branch alternatives
 
 > Addendum to `docs/05_methods_v2.md`. Surgical: nothing in D1–D10 or A1–A4 is reopened.
-> Adds D11–D20 (D18/D20 deferred), Phases 4b/4c (4e deferred), gates G9–G16, and the run sequence. Written 2026-08-21.
+> Adds D11–D21 (D18/D20 deferred), Phases 4b/4c (4e deferred), gates G9–G17, and the run sequence. Written 2026-08-21.
 > Claude Code: patch `docs/05_methods_v2.md` with the new sections and append to its changelog;
 > do not rewrite the existing document.
 
@@ -15,6 +15,13 @@
 > delete. Same convention as the y2y flagship's spec/ logs.
 
 **Changelog**
+- 2026-09-11 — **D21: Linkage Mapper–style adjacency graph computed as a diagnostic
+  universe beside the backbone.** Cost-allocation neighbour graph on the part-level CWD
+  fields, contracted to names; per-name degree (`n_neighbours`), adjacency status of every
+  backbone/backup edge, gate G17 (MST ⊆ adjacency), one appendix map. **No change to bands,
+  classes, `linkage_priority.tif`, the 58-link network, or the pinned examples.** A D7
+  amendment (restrict backup candidates to adjacency edges) is logged as a follow-up decision
+  contingent on the measured count of non-adjacent backups (§7). M5.19. Applied from `05_patch_D21_adjacency.md` (kept in spec/ as the record).
 - 2026-09-11 (merge note) — the chat-regenerated copy of this spec (saved as
   `scratchpad/spec_merge/05_chat_20260911.md` for the session) again dropped §8/§9, the
   living-docs binding block, the D17-confirmed / G13-final text, `squeeze_cf_min_cost`, the
@@ -114,6 +121,7 @@ grizzly work remains a separate unapproved plan.
 | D18 (DEFERRED — future comparison) | **External validation against Linkage Mapper.** v2's per-edge slack (`CWD_i + CWD_j − min_e`) is, term for term, Linkage Pathways' normalized least-cost corridor (McRae & Kavanagh 2011), and its calibrated band is the CWD-truncated corridor. Validate: run Linkage Pathways in ArcGIS Pro on `validation_pairs` (5 MST edges spanning short/long and open/constrained cases) with the identical O'Brien surface and node rasters; compare NLCC to our slack (Pearson r over the union of both corridors at matched cutoff; Jaccard of the truncated bands). Recorded as G14; performed once per resistance-surface hash. | Buys external credibility for the whole engine at the cost of an afternoon; the comparison is exact in principle, so disagreement is a bug, not a difference of opinion. Not a routing input; nothing changes in the pipeline on pass. |
 | D19 | **Centrality = current-flow betweenness** on the backbone graph (locked intra-name + inter-name MST + β augmentation), edge weights = corridor cost (`min_e`), nodes = names (parts contracted). Implemented via `networkx.current_flow_betweenness_centrality` / `edge_current_flow_betweenness_centrality`. **As implemented (2026-09-11, M5.18): the engine has used exactly this measure since the v2 rebuild** (`corridor_graph.centrality`, conductance = 1/cost, zero-cost cliques contracted), so nothing in `linkage_priority.tif` changes; D19 PINS the method via the `centrality` config key, ADDS the shortest-path edge betweenness as the comparison column `centrality_sp` beside `centrality_cf`, writes `centrality_compare.csv` and asserts G15. | Linkage Mapper's Centrality Mapper standard: cores as nodes, linkages as resistors weighted by corridor cost, current flow summed over all pairs. Credits all paths, not only the shortest, so it behaves on a sparse augmented graph where shortest-path betweenness is brittle to a single cheap backup. Zero-cost adjacency edges are contracted as before (§7). |
 | D20 (DEFERRED — future comparison) | **Pinch points sit beside D17, not instead of it.** Phase 6 diagnostic: a pairwise circuit solve (`i` source / `j` ground) run **inside each edge's band** on the O'Brien surface, giving within-band current density `pinch_e`. **Implemented natively**: graph Laplacian on band cells (8-neighbour, conductance = 1/mean resistance of the two cells, diagonal scaled by 1/√2), source cells fixed at unit potential and ground cells at zero, `scipy.sparse.linalg` solve, cell current = sum of |branch currents| / 2 — i.e. the Circuitscape pairwise formulation (McRae et al. 2008) without the Circuitscape runtime. Cross-checked against Circuitscape 5 on one band (G16). Per edge: `pinch_max_pctl`, `pinch_len_km` (contiguous run of cells ≥ p95 of within-band current), `pinch_loc` (fractional position along the path). Never a routing input; never a legend class in the director deck until the comparison in step 4e has been read. | Two different questions. D17 asks *is the near-optimal set geometrically narrower than it would be without barriers* (director-visible, map-legible). Pinch points ask *where within a corridor would area loss hurt most* (ops-package question, Linkage Mapper's Pinchpoint Mapper). They can disagree — a wide band with a single internal choke, or a uniformly narrow band with no choke — and the disagreement is itself informative. D3's rejection of current density applies to *routing on external circuit outputs*, not to a diagnostic run on our own bands with our own surface. Native implementation because Linkage Mapper's Pinchpoint tool still depends on Circuitscape 4 (unmaintained Python 2.7-era) and Circuitscape 5 is a Julia runtime — neither belongs as a hard dependency of a gated Python pipeline; bands are small enough that a sparse solve is seconds per edge. Circuitscape 5 is used once, for the cross-check only (H10). |
+| D21 | **Adjacency graph as diagnostic universe.** `G_adj` = cost-weighted allocation adjacency: allocate every routable cell to the seed part with the minimum CWD (argmin over the cached part fields; ties → lowest part id); two parts are adjacent if their allocation zones share an 8-connected boundary; contract parts to names (and zero-cost cliques as in §7) to give the name-level graph. Optional LM-style filters are **off** (no distance cap; no intermediate-core drop) so the graph is the raw neighbour set — filters are reported as counts, not applied. Products: `adjacency_edges.csv` (i, j, `in_backbone`, `edge_class` if in the network, `min_e` cost, LCP length), `adjacency_nodes.csv` (`n_neighbours` per name; also per part), the `is_adjacent` column added to `corridor_edges.csv`, and one appendix figure (`adjacency_map`: thin neighbour links as lines — **not bands** — over the M1 basemap). **Not a routing input; no bands are computed for adjacency-only edges; no legend class.** | Linkage Pathways' network is the neighbour graph (McRae & Kavanagh 2011); ours is the minimum backbone plus affordable backups. Reporting both makes the relationship explicit: the difference is the choice space, which is the Act 1 quantity the current products cannot state — a name's number of possible partner links. Kept as a universe rather than adopted as the network because banding ~100 neighbour links destroys the must-have/optional distinction unless a weighted priority ranks them (the D5-rejected blend). Cost is trivial: the allocation is an argmin over fields already in memmaps. |
 
 ---
 
@@ -138,6 +146,7 @@ grizzly work remains a separate unapproved plan.
 | `pinch_pctl` (deferred, D20) | `95` | D20; within-band percentile defining a pinch cell |
 | `pinch_edges` (deferred, D20) | `"all_nonzero"` | D20; run on every non-zero-cost baseline edge (band count is small; cost is per-band Circuitscape solves) |
 | `pinch_conc_thresh` (deferred, D20) | `4.0` (proposed) | D20 comparison 2×2; set from the baseline distribution before class counts are read, and logged |
+| `adjacency` | `{"metric": "cwd", "connectivity": 8, "distance_cap_km": null, "drop_through_core": false}` | D21; filters off, counts reported. `metric: "euclid"` available for the comparison column only. |
 
 These go into `run_config.json` via `resolve()`. `resolve()` should raise if `branch_mult`,
 `branch_min_km2`, or `near_opt_tiers` are absent (same no-dead-flags doctrine as D2). `centrality`
@@ -215,6 +224,17 @@ betweenness kept as `centrality_sp`, criticality, bands at `cwd_cutoff_abs`,
 and augmentation area. G3, G4, G5 run here; G4 ("β = 0 reproduces the MST") is read as
 "reproduces locked + inter-name MST".
 
+**Step 2c — adjacency graph (D21).** From the cached part-level CWD fields: allocation
+raster (argmin; `allocation.tif`, int32 part id), zone-boundary pairs → part adjacency →
+name adjacency (contracted as §7). Join to `corridor_edges.csv` (`is_adjacent`); write
+`adjacency_edges.csv`, `adjacency_nodes.csv`. Report: |E_adj|, |E_adj ∩ backbone|,
+number of backbone/backup edges **not** adjacent (with the intervening name(s) whose zone the
+LCP crosses), and the counts LM's optional filters *would* remove (edges whose LCP crosses a
+third name's mask; edges beyond a nominal 200 km). Euclidean-allocation adjacency computed
+as a comparison column (`is_adjacent_euclid`) — the LM default — so the metric choice is
+visible. **G17** here. Lives in notebook 02 after the network is built (or notebook 04 step 0b
+when re-attaching); zero new CWD work.
+
 **Step 3 — ensemble.** Axes B {0.5, 1, 2}×, C (42 leave-one-out **by name**, all parts
 dropped together — including `no_link` parts, which are independent in the graph but share
 the name's realisation risk), D β {1.5, 2.5, 4.0}. G7 on the drop-nothing member. Serial, memmap-backed, one CWD set (unchanged). Write
@@ -272,6 +292,7 @@ step 0b when a run is re-attached.
 | G14 (deferred, D18) | Linkage Pathways validation (D18): for each of `validation_pairs`, Pearson r between LM's normalized least-cost corridor and our slack over the union of both corridors ≥ 0.99, and Jaccard of the truncated bands at matched cutoff ≥ 0.95. Recorded with the LM version, the resistance-surface hash, and the LM run parameters. Failure halts: it is a bug in one of the two implementations until shown otherwise. | once per resistance hash; before any external release (with H1) |
 | G15 | current-flow centrality is finite and non-negative on every edge; on a pure tree (β = 0 member) current-flow and shortest-path edge betweenness rank identically (on a tree there is one path per pair, so both reduce to the same count) — assert the two are PROPORTIONAL there (exact ties; a rank test is broken by solver noise), Spearman reported; `centrality_compare.csv` written | step 2 |
 | G16 (deferred, D20) | native circuit solve vs Circuitscape 5 on one validation band (the `n_branches ≥ 2` member of `validation_pairs`): Pearson r of cell current ≥ 0.99 and the top-5 % current cells overlap by Jaccard ≥ 0.9. Recorded once per resistance hash with the Circuitscape version. | before step 4e results are read |
+| G17 | every inter-name MST edge is an adjacency edge (`is_adjacent` true for all `edge_class == "mst"`); locked intra-name edges are exempt (parts of one name may be separated by another name's zone by design — reported, not asserted). Failure is investigated, not auto-fixed: an MST edge whose LCP crosses a third name's zone is either a multipart-field bug (Clarification 1) or a genuine case to document. | step 2c, hard assert on `mst` edges |
 
 G1 stays the gate that matters; none of the above replaces it.
 
@@ -287,7 +308,9 @@ step 0a and §8), `near_optimality.tif`, `near_optimality_class.tif`, `near_opt_
 `centrality_cf`, `centrality_sp` (D19), `band_new_km2`, `band_cf_km2`, `squeeze_ratio_obs`, `squeezed` (D17) and
 `bands_counterfactual.gpkg` is written (D17 natural-width polygons). All rasters COG, ESRI:102008 at 300 m (audit
 crossings stay internal), Dublin Core+ metadata written at creation. Every product that is not a
-frequency is named so it cannot be read as one.
+frequency is named so it cannot be read as one. D21 adds `allocation.tif`, `adjacency_edges.csv`,
+`adjacency_nodes.csv`, `figures/adjacency_map.png`; `corridor_edges.csv` gains `is_adjacent`,
+`is_adjacent_euclid`, `via_names` (D21).
 
 ---
 
@@ -313,6 +336,11 @@ frequency is named so it cannot be read as one.
   priority statement traces to a single, checkable reason (D5).
 - Pinch points (D20) are deferred; the squeezed class (D17) stands alone in this version and
   is described as a geometric measure of narrowing, not a flow bottleneck.
+- The adjacency graph is reported as the **neighbour universe** (Linkage Pathways' network
+  convention), the backbone as the **minimum network plus affordable backups**; the deck and
+  methods text state that the difference between them is the choice space, never that the
+  backbone is "the corridors" and adjacency "extra corridors". `n_neighbours` is the Act 1
+  option count per area; it is a count of possible partner links, not of corridors.
 
 ---
 
@@ -344,6 +372,13 @@ frequency is named so it cannot be read as one.
 - Future comparison (not scheduled): activate D18 and D20 together — LM validation of the
   corridor engine and the squeeze-vs-pinch comparison — and only then decide whether `pinch`
   products enter the ops package.
+
+- **Follow-up decision (D7 amendment, not taken):** if step 2c reports ≥ 1 backup edge that is
+  not adjacent (its LCP crosses a third name's allocation zone), decide whether backup
+  candidates should be restricted to `E_adj` — LM's intermediate-core rule. Restriction would
+  change the network and therefore the pinned examples (06 v1.2.4), so it is taken **after
+  October** unless the count is zero, in which case it becomes documentation only
+  ("backups are, empirically, all neighbour links"). Logged either way.
 
 ---
 
@@ -438,6 +473,7 @@ Run top-to-bottom, in numeric order, by Ethan. **One run (`v2_runNNN`) spans not
   `edge_class`. (Absorbs cells 9–32.)
 
 - **G15** (D19, added 2026-09-11) right after `cc.corridor_network`: `cc.gate_g15(A)` → `centrality_compare.csv`.
+- **Step 2c / G17** (D21, added 2026-09-11) next: `cc.adjacency_graph(A)` → `allocation.tif`, `adjacency_edges.csv`, `adjacency_nodes.csv`, `figures/adjacency_map.png`, `is_adjacent` columns; hard assert on inter-name MST edges.
 
 ### `03_ensemble.ipynb` — step 3
 
@@ -469,7 +505,7 @@ The "decision after step 3" (whether to open Phase 7, based on axis-C stability)
 notebooks 03 and 04 in wall-clock terms but does **not** block 04 — steps 4a–4d are
 climate-free by construction (D14).
 
-- **Step 0b** (added 2026-09-09/11): after the re-attach, `cc.corridor_profile` + `cc.gate_g15` + `cc.gate_g5` regenerate the audit, `centrality_compare.csv` and G5 on the loaded run without re-running notebook 02.
+- **Step 0b** (added 2026-09-09/11): after the re-attach, `cc.corridor_profile` + `cc.gate_g15` + `cc.gate_g5` regenerate the audit, `centrality_compare.csv`, the D21 adjacency products (G17) and G5 on the loaded run without re-running notebook 02.
 
 ### `06_director_package.ipynb` — the October-workshop package (added 2026-09-03)
 

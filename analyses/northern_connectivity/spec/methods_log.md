@@ -338,6 +338,26 @@ rule; quantitative outcomes live there, methods decisions here);
   / T2 chips / star plots / deck (06). "groups present (of 40)" becomes "(of 20)" everywhere.
   Every other axis is untouched. The stored 40-class values remain in git history / the run
   dir until overwritten; results_log R9.4 records the re-measured EFG axis.
+- **M5.19 D21 adjacency (neighbour) graph — diagnostic universe (2026-09-11; `05_patch_D21_adjacency.md`
+  spliced into spec 05, 06 v1.2.9):** `cc.adjacency_graph`. Cost-allocation adjacency on the CACHED
+  part-level CWD fields: argmin over the 48 part fields (ties → lowest part id; `allocation.tif`,
+  int32, −1 off the routable window), zone boundaries by 8-connectivity, parts contracted to routing
+  units (= names here; zero-cost cliques are NOT contracted — touching names count as neighbours,
+  which matches the network's adjacency edges; noted as a deviation from the patch's "as in §7").
+  Euclidean allocation (`scipy.ndimage.distance_transform_edt`, LM's default) as the comparison
+  column. Per pair, with no new routing: the least-cost path is read as the ridge `CWD_u + CWD_v ≤
+  min + 0.5` on the unit fields; intervening zones (`via_zones`) and crossed masks (the LM
+  drop-through-core count) come from that ridge; length = the traced `centreline_km` for backbone
+  edges, else a straight-line proxy between the ridge's two ends (the ridge's cell COUNT is an area
+  on uniform land — 78 vs 21.6 km on the harness — so it is not used). LM's optional filters are
+  OFF; their would-remove counts are printed. G17 = every inter-name MST edge is adjacent (hard
+  assert; locked intra-name edges exempt). Products: `adjacency_edges.csv` (every adjacent pair +
+  every backbone pair), `adjacency_nodes.csv` (`n_neighbours`, Euclidean and backbone degrees),
+  `is_adjacent` / `is_adjacent_euclid` / `via_names` on `corridor_edges.csv`, `figures/adjacency_map.png`
+  (lines between area centres, never bands). NOT a routing input; no bands; no legend class; no
+  change to any product. Config `adjacency` dict (filters off). NB02 step 2c after G15; NB04 step 0b
+  runs it on the loaded run. Toy-verified. Follow-up D7 amendment (restrict backups to adjacency)
+  is NOT taken: decided after October from the measured count of non-adjacent backups.
 - **M5.18 D19 centrality (2026-09-11; spec 05 changelog 2026-09-11 + merge note):** the chat's
   new D19 asked to switch centrality to current-flow betweenness; the engine has computed
   exactly that since the v2 rebuild (`corridor_graph.centrality`: edge current-flow betweenness

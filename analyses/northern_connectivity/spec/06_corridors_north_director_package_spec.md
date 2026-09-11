@@ -1,8 +1,14 @@
 # Northern corridors — Director Package Spec
 
-**Status:** v1.2.8 (2026-09-11) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_director_package.ipynb`; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
+**Status:** v1.2.9 (2026-09-11) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_director_package.ipynb`; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
 
 ## Changelog
+- v1.2.9 (2026-09-11) — from 05 D21: `n_neighbours` available per name (appendix; optionally
+  one phrase in the Act 1 narrative — "X could connect to N neighbouring areas"); `adjacency_map`
+  in the appendix beside the tier/attribution maps, links as thin lines, never bands. No change
+  to M0–M3, stars, or the two alternatives tables. Methods note gains one sentence: the
+  neighbour graph is Linkage Mapper's network convention; the maps show the minimum network
+  plus affordable backups; the difference is the choice space.
 - v1.2.8 (2026-09-11) — from 05 D19 (the only active change of the Linkage Mapper comparison;
   D18/D20 deferred). The chat-regenerated copy of this spec (v1.2 base, saved as
   `scratchpad/spec_merge/06_chat_20260911.md`) dropped v1.2.1–v1.2.7 and was NOT adopted; it
