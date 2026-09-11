@@ -165,36 +165,63 @@ def _edge_jurisdictions(P):
 
 
 # ================= example selection (06 §2, top-k by rule) =================
-def select_examples(P, n=7, south_of_frac=0.40):
+# Examples PINNED by Ethan (2026-09-09) -- label fragments resolved to edge ids at package time.
+# Act 1 shows OPTIONS: N2 = one link with two route branches (numbers 1-2), N3 = two links to
+# the same complex (3-4). Act 2 shows the three southern example links (5-7).
+EXAMPLE_PICKS = [
+    dict(slot="N2", act=1, pair=("Nahanni", "Liard River Corridor"), options="branches", side="ne"),
+    dict(slot="N3", act=1, pair=("T’akú", "Mount Edziza"), options="links",
+         option_pairs=[("T’akú", "Mount Edziza"), ("T’akú", "Stikine")]),
+    dict(slot="S1", act=2, pair=("Gwillim", "Pine Le Moray")),
+    dict(slot="S2", act=2, pair=("Wilps Gwininitxw", "Swan Lake")),
+    dict(slot="S3", act=2, pair=("Carp Lake", "Pine Le Moray"), mark=False),   # no M3 marker (Ethan)
+]
+
+
+def _find_edge(e, pair):
+    a, b = pair
+    m = e[(e.label_i.str.contains(a, regex=False) & e.label_j.str.contains(b, regex=False)) |
+          (e.label_i.str.contains(b, regex=False) & e.label_j.str.contains(a, regex=False))]
+    assert len(m) == 1, f"example pair {pair} resolves to {len(m)} edges"
+    return m.index[0]
+
+
+def select_examples(P, n=None, south_of_frac=0.40):
+    """Ethan's pinned examples (EXAMPLE_PICKS). Numbering: every OPTION on M2 gets its own
+    number (branches of N2 = 1, 2; the two links of N3 = 3, 4), then the Act-2 links continue
+    (5, 6, 7). A link example carries `num` (a string such as "1–2" for a multi-option
+    example) for its profile page, T1 row and deck slide. Remaining both-senses links go to
+    the appendix."""
     R, e = P.R, P.edges
-    ex = []
-    # N1: Dene K'éh Kusān leave-one-out pair (required)
-    ex.append(dict(slot="N1", act=1, edge_id=None, title="Dene Kʼéh Kusān — network with / without",
-                   kind="loo_pair"))
-    # N2-N3: securing exemplars -- largest n_branches x attribution, tie-break toward
-    # branches spanning >1 jurisdiction
-    sec = e[(P.cls == "securing")].copy()
-    sec["attr_c"] = P.attr["attr_c"].reindex(sec.index)
-    sec["score"] = sec.get("n_branches", 1).fillna(1) * sec["attr_c"].fillna(0)
-    sec["n_jur"] = P.jur.reindex(sec.index).str.count("/").fillna(0) + 1
-    sec = sec.sort_values(["score", "n_jur", "ecfb_raw"], ascending=False)
-    for k, eid in enumerate(sec.index[:2], 2):
-        ex.append(dict(slot=f"N{k}", act=1, edge_id=eid, kind="link",
-                       title=_pair_title(e.loc[eid])))
-    # S1-S3: both-senses irreplaceable, highest criticality (n_pairs_lost, then backup ratio)
+    ex = []                      # N1 (the Dene with/without pair, M4) AXED by Ethan 2026-09-09
+    counter = 0
+    for pk in EXAMPLE_PICKS:
+        eid = _find_edge(e, pk["pair"])
+        x = dict(slot=pk["slot"], act=pk["act"], edge_id=eid, kind="link", title=_pair_title(e.loc[eid]),
+                 side=pk.get("side", "nw"), mark=pk.get("mark", True))
+        if pk.get("options") == "branches":
+            k = int(e.loc[eid].get("n_branches", 1) or 1)
+            x["options"] = "branches"; x["option_nums"] = list(range(counter + 1, counter + k + 1))
+        elif pk.get("options") == "links":
+            ids = [_find_edge(e, q) for q in pk["option_pairs"]]
+            x["options"] = "links"; x["option_edges"] = ids
+            x["option_nums"] = list(range(counter + 1, counter + len(ids) + 1))
+        else:
+            x["option_nums"] = [counter + 1]
+        counter = x["option_nums"][-1]
+        x["num"] = (str(x["option_nums"][0]) if len(x["option_nums"]) == 1
+                    else f"{x['option_nums'][0]}–{x['option_nums'][-1]}")
+        if "squeeze_ratio_obs" in e.columns and P.cls.get(eid) == "squeezed":
+            x["headline"] = f"already at {e.loc[eid, 'squeeze_ratio_obs']:.1f}× its natural width"
+        ex.append(x)
+    used = {x["edge_id"] for x in ex}
     both = e[P.cls == "both"].sort_values(["n_pairs_lost", "backup_ratio"], ascending=False)
-    for k, eid in enumerate(both.index[:3], 1):
-        ex.append(dict(slot=f"S{k}", act=2, edge_id=eid, kind="link", title=_pair_title(e.loc[eid])))
-    P.appendix_both = list(both.index[3:])
-    # S4: the most squeezed link (only with H8 closed and if total <= n)
-    if not P.h8_open and len(ex) < n:
-        sq = e[P.cls == "squeezed"]
-        col = "squeeze_ratio_obs" if "squeeze_ratio_obs" in sq.columns else "squeeze_idx"
-        if len(sq):
-            eid = sq[col].idxmin()
-            ex.append(dict(slot="S4", act=2, edge_id=eid, kind="link", title=_pair_title(e.loc[eid]),
-                           headline=f"already at {sq.loc[eid, col]:.1f}× its natural width"))
-    return ex[:n]
+    P.appendix_both = [k for k in both.index if k not in used]
+    return ex
+
+
+def _example_label(ex):
+    return f"{ex['num']} — {ex['title']}" if ex.get("num") else f"{ex['slot']} — {ex['title']}"
 
 
 def _pair_title(r):
@@ -246,7 +273,7 @@ PROVINCE_LABEL = {"British Columbia": "BRITISH COLUMBIA", "Yukon": "YUKON",
                   "Alaska": "ALASKA"}
 
 
-def _admin(P, pad_m=150e3):
+def _admin(P, pad_m=500e3):
     """Cached admin layer clipped to the routing window (+pad): coast, admin-1 lines, the shared
     Canada-US border, and province label points inside the window."""
     if getattr(P, "_admin", None) is not None:
@@ -314,14 +341,14 @@ AREA_OVERRIDES = {"Tū Łī́dlini": "Tū Łī́dlini (Ross River)",
                   "Dune Za Keyih": "Dune Za Keyih",
                   # the PA layer's name string is mis-encoded ("Nj ‘Iinlii” Jjik"); display the
                   # park's spelling. DISPLAY ONLY -- the node id / tables keep the source string.
-                  "Nj ‘Iinlii": "Ni’iinlii Njik (Fishing Branch)",
-                  "Neah": "Ne’āh’"}
+                  "Nj ‘Iinlii": ("Ni’iinlii Njik (Fishing Branch)", 40_000, 30_000),
+                  "Neah": "Ne’āh’", "Liard River": "Liard River Corridor"}
 # which side of the dot a city label goes (default right); left where the right side is corridor
 TOWN_LABEL_SIDE = {"Prince George": "left"}
 
 
 def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, area_names=14,
-                   area_overrides=AREA_OVERRIDES):
+                   area_overrides=AREA_OVERRIDES, towns=None):
     """The shared director backdrop: (optional) province tint, coast/admin/border lines, PA + IPCA
     fills, Y2Y outline, province names, prominent cities, biggest named areas."""
     import matplotlib.patheffects as pe
@@ -342,6 +369,13 @@ def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, 
     for layer, col in [(R.pa_mask, PA_COLOR), (R.anch, ANCHOR_COLOR)]:
         cc._da(R, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
             ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+    # thin BLACK hairline around every NAMED area (parts dissolved by name), so adjoining PAs /
+    # IPCAs read as distinct polygons even where they share a border -- black, not white, so a
+    # shared border cannot be mistaken for a real gap between two areas (Ethan, 2026-09-10)
+    if getattr(P, "_names_gdf", None) is None:
+        P._names_gdf = (gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+                        .dissolve(by="name_label").reset_index())
+    P._names_gdf.boundary.plot(ax=ax, color="black", linewidth=0.45, zorder=2.5)
     R.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--", zorder=3)
     if province_names:
         for _, r in A.labels.iterrows():
@@ -354,7 +388,7 @@ def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, 
         if not hasattr(R, "_towns"):
             cc._draw_basemap(R, ax, XL, YL, towns=False)     # warms R._towns; borders already drawn
         for n, x, y in R._towns:
-            if n in MAJOR_TOWNS and XL[0] < x < XL[1] and YL[0] < y < YL[1]:
+            if n in (towns or MAJOR_TOWNS) and XL[0] < x < XL[1] and YL[0] < y < YL[1]:
                 ax.plot(x, y, marker="o", ms=5, color="0.1", mec="white", mew=1.0, zorder=6)
                 left = TOWN_LABEL_SIDE.get(n) == "left"
                 ax.annotate(n, (x, y), xytext=(-5 if left else 5, 4), textcoords="offset points",
@@ -367,15 +401,9 @@ def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, 
     ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
 
 
-# ================= maps M1-M4 =================
-def map_m1(P, pad=0.07, area_names=14):
-    """M1 -- the four-class regime map (the main plot): flat swaths on the director basemap
-    (province names, prominent cities, biggest PA/IPCA names), legend BELOW the map so it covers
-    nothing. Squeezed class withheld (drawn as securing) while H8 is open."""
-    R = P.R
-    XL, YL = cc._region_extent(R, pad)
-    fig = plt.figure(figsize=(12, 17))
-    ax = fig.add_axes([0.02, 0.09, 0.96, 0.87])
+def _paint_classes(P, ax):
+    """All four routing classes in the M1 palette (squeezed folded into securing while H8 is
+    open). Returns the legend handles in legend order."""
     handles = []
     for c in ("securing", "squeezed", "edge", "both"):
         ids = list(P.cls.index[P.cls == c])
@@ -387,6 +415,85 @@ def map_m1(P, pad=0.07, area_names=14):
         _paint(P, ax, ids, col)
         if not (c == "squeezed" and P.h8_open):
             handles.append(Patch(color=col, label=f"{lbl}  [{len(ids)}]"))
+    return handles
+
+
+def _m1_scale(P):
+    """Map scale of M1 in metres per inch of axes (M1 is height-limited on its 12x17 page)."""
+    XL, YL = cc._region_extent(P.R, 0.07)
+    return max((XL[1] - XL[0]) / (0.96 * 12), (YL[1] - YL[0]) / (0.87 * 17))
+
+
+def _crop_extent(P, y_from=None, y_to=None, pad_km=15):
+    """Bounding box of everything drawn (PAs, IPCAs, corridor land) whose cells lie between
+    y_from and y_to (map units), padded. The aspect is free: the crop is drawn at M1's SCALE."""
+    R = P.R
+    xs, ys = R.template.x.values, R.template.y.values
+    content = R.pa_mask | R.anch | R.corridor
+    rows = np.nonzero(content.any(axis=1))[0]
+    if y_from is not None:
+        rows = rows[ys[rows] >= y_from]
+    if y_to is not None:
+        rows = rows[ys[rows] <= y_to]
+    cols = np.nonzero(content[rows].any(axis=0))[0]
+    p = pad_km * 1e3
+    return ((xs[cols.min()] - p, xs[cols.max()] + p), (ys[rows].min() - p, ys[rows].max() + p))
+
+
+def _crop_figure(P, XL, YL, legend_in=1.9, title_in=0.8, min_w_in=12.0):
+    """Figure + axes sized so the crop renders at exactly M1's scale; legend room below."""
+    sc = _m1_scale(P)
+    w, h = (XL[1] - XL[0]) / sc, (YL[1] - YL[0]) / sc
+    fw, fh = max(w + 0.6, min_w_in), h + legend_in + title_in
+    fig = plt.figure(figsize=(fw, fh))
+    ax = fig.add_axes([(fw - w) / 2 / fw, legend_in / fh, w / fw, h / fh])
+    return fig, ax
+
+
+def _polys_y(P, fragments):
+    """Min/max y over the named-area polygons whose label contains any of the fragments."""
+    parts = gpd.read_file(P.R.run_dir / "node_parts.gpkg").to_crs(P.R.crs)
+    sel = parts[parts.name_label.apply(lambda l: any(f in str(l) for f in fragments))]
+    b = sel.total_bounds
+    return b[1], b[3]
+
+
+def _median_cell(R, m):
+    rr, cc_ = np.nonzero(m)
+    if not len(rr):
+        return None
+    return R.template.x.values[int(np.median(cc_))], R.template.y.values[int(np.median(rr))]
+
+
+def _number_marker(ax, xy, num, color, XL, YL, side="nw"):
+    x, y = xy
+    if XL[0] < x < XL[1] and YL[0] < y < YL[1]:
+        ax.annotate(str(num), (x, y), xytext=(22 if side == "ne" else -22, 22),
+                    textcoords="offset points",
+                    fontsize=11, fontweight="bold", ha="center", va="center", zorder=8,
+                    bbox=dict(boxstyle="circle,pad=0.3", fc="white", ec=color, lw=1.8),
+                    arrowprops=dict(arrowstyle="-", color=color, lw=1.2, shrinkB=0))
+        return True
+    return False
+
+
+def _marker_handle(nums):
+    return plt.Line2D([0], [0], marker="o", color="none", markerfacecolor="white",
+                      markeredgecolor="0.2", markersize=10,
+                      label=f"Example links {', '.join(str(n) for n in nums)} "
+                            "(profiles and table T1)")
+
+
+# ================= maps M1-M4 =================
+def map_m1(P, pad=0.07, area_names=14):
+    """M1 -- the four-class regime map (the main plot): flat swaths on the director basemap
+    (province names, prominent cities, biggest PA/IPCA names), legend BELOW the map so it covers
+    nothing. Squeezed class withheld (drawn as securing) while H8 is open."""
+    R = P.R
+    XL, YL = cc._region_extent(R, pad)
+    fig = plt.figure(figsize=(12, 17))
+    ax = fig.add_axes([0.02, 0.09, 0.96, 0.87])
+    handles = _paint_classes(P, ax)
     _director_base(P, ax, XL, YL, area_names=area_names)
     handles += _node_handles()
     fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
@@ -456,75 +563,88 @@ def map_cost(P, pad=0.07, area_names=14, corridors=False, halo_cells=6):
     return P
 
 
-def map_m2(P):
-    """M2 -- Act 1: securing-regime bands only, N2/N3 route alternatives as EQUAL single-colour
-    swaths, jurisdiction tint beneath."""
+NORTH_TOWNS = MAJOR_TOWNS + ["Mayo", "Ross River", "Faro", "Dease Lake"]
+SOUTH_TOWNS = MAJOR_TOWNS + ["Chetwynd", "Tumbler Ridge", "Dease Lake", "Fort St. James"]
+
+
+M2_SOUTH_LIMIT = ["Mount Edziza", "Spatsizi", "Dene K", "Dune Za Keyih", "Northern Rocky"]
+
+
+def map_m2(P, area_names=14, tint=False):
+    """M2 -- Act 1, the north at M1's MAP SCALE (crop: everything north of the Edziza /
+    Spatsizi / Dene Kʼéh Kusān group). Every link in its M1 colour; the Act-1 examples' OPTIONS
+    drawn on top in one colour and numbered 1-4: the two route branches of Nahanni ↔ Liard
+    River Corridor (1, 2) and the two links from T'akú Tlatsini to the Mount Edziza / Stikine
+    complex (3, 4)."""
     R = P.R
-    XL, YL = cc._region_extent(R, 0.05)
-    fig, ax = plt.subplots(figsize=(12, 13))
-    _base(P, ax, XL, YL, tint=True, towns=True)
-    sec_ids = list(P.cls.index[P.cls == "securing"])
-    _paint(P, ax, sec_ids, CLASS["securing"][0])
+    y_lo, _ = _polys_y(P, M2_SOUTH_LIMIT)
+    XL, YL = _crop_extent(P, y_from=y_lo)
+    fig, ax = _crop_figure(P, XL, YL)
+    handles = _paint_classes(P, ax)
     lab = np.nan_to_num(R.branch_label.values, nan=0).astype(int)
     br = R.branches.reset_index(drop=True); br["value"] = np.arange(1, len(br) + 1)
+    marks = []
     for ex in P.examples:
-        if ex["slot"] in ("N2", "N3") and ex["edge_id"] is not None:
-            vals = br.loc[br.edge_id == ex["edge_id"], "value"]
-            m = np.isin(lab, vals)
-            if m.any():
-                cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
-                    ax=ax, cmap=ListedColormap([OPTIONS_COLOR]), add_colorbar=False)
-            rr, ccol = np.nonzero(m)
-            if len(rr):
-                ax.annotate(ex["slot"], (R.template.x.values[int(np.median(ccol))],
-                                         R.template.y.values[int(np.median(rr))]),
-                            fontsize=10, fontweight="bold", ha="center", va="center",
-                            bbox=dict(boxstyle="circle,pad=0.28", fc="white", ec=OPTIONS_COLOR, lw=1.6))
-    handles = [Patch(color=CLASS["securing"][0], label=CLASS["securing"][1]),
-               Patch(color=OPTIONS_COLOR, label="Route options for the Act 1 examples (equal weight)")]
-    handles += _node_handles()
-    if P.prov_raster is not None:
-        handles.append(Patch(color="#f5efe6", label="Jurisdiction tint (provinces/territories; "
-                                                    "settlement lands pending)"))
-    ax.legend(handles=handles, loc="lower left", fontsize=9, frameon=True)
-    ax.set_title("Act 1 — the north: room to choose", fontsize=13)
+        if ex["act"] != 1 or ex["edge_id"] is None:
+            continue
+        if ex.get("options") == "branches":
+            vals = list(br.loc[br.edge_id == ex["edge_id"], "value"])
+            masks = [lab == v for v in vals]
+        else:
+            masks = [(P.owner == P.order[k]) & R.corridor for k in ex["option_edges"]]
+        cells = [(_median_cell(R, m), m) for m in masks]
+        cells = sorted([c for c in cells if c[0] is not None], key=lambda t: t[0][0])   # west -> east
+        for num, (xy, m) in zip(ex["option_nums"], cells):
+            cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap([OPTIONS_COLOR]), add_colorbar=False)
+            marks.append((xy, num, ex.get("side", "nw")))
+    for xy, num, side in marks:
+        _number_marker(ax, xy, num, OPTIONS_COLOR, XL, YL, side=side)
+    _director_base(P, ax, XL, YL, tint=tint, area_names=area_names, towns=NORTH_TOWNS)
+    nums = [n for _, n, _ in marks]
+    handles.append(Patch(color=OPTIONS_COLOR,
+                         label=f"Route options {min(nums)}–{max(nums)} — different ways to the "
+                               "same place, equal weight" if nums else "Route options"))
+    handles += _node_handles() + [
+        plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")]
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
+               fontsize=9.5, frameon=True)
+    ax.set_title("Act 1 — the north: room to choose", fontsize=15, pad=12)
     fig.savefig(P.fig / "M2_act1_securing.png", dpi=170, bbox_inches="tight"); plt.show()
     return P
 
 
-def map_m3(P):
-    """M3 -- Act 2: southern zoom, flagged links only, one colour per class, and the D17
-    counterfactual 'natural width' as a thin outline around squeezed bands (H8 closed) --
-    otherwise the ratio chip fallback (decision (d))."""
+def map_m3(P, area_names=14):
+    """M3 -- Act 2, the south at M1's MAP SCALE (crop: everything south of the M1 midline).
+    Every link in its M1 colour; the Act-2 example links numbered 5-7."""
     R = P.R
-    e, classes, owner, order, links, XL, YL = cc._zoom_links(R, 0.5, P.south_of_frac, 35)
-    fig, ax = plt.subplots(figsize=(12.5 * (XL[1] - XL[0]) / (YL[1] - YL[0]) + 3, 13))
-    _base(P, ax, XL, YL, towns=True)
-    handles = []
-    for c in ("squeezed", "edge", "both"):
-        ids = list(P.cls.index[P.cls == c])
-        if c == "squeezed" and P.h8_open:
+    XL1, YL1 = cc._region_extent(R, 0.07)
+    XL, YL = _crop_extent(P, y_to=0.5 * (YL1[0] + YL1[1]))
+    fig, ax = _crop_figure(P, XL, YL)
+    handles = _paint_classes(P, ax)
+    nums = []
+    for ex in P.examples:
+        if ex["act"] != 2 or ex["edge_id"] is None or not ex.get("mark", True):
             continue
-        _paint(P, ax, ids, CLASS[c][0])
-        handles.append(Patch(color=CLASS[c][0], label=CLASS[c][1]))
-    if not P.h8_open and getattr(R, "cf_bands", None) is not None:
-        sq_ids = list(P.cls.index[P.cls == "squeezed"])
-        cf = R.cf_bands[R.cf_bands.edge_id.isin(sq_ids)]
-        if len(cf):
-            cf.boundary.plot(ax=ax, color=CLASS["squeezed"][0], linewidth=0.9, linestyle=":")
-            handles.append(plt.Line2D([0], [0], color=CLASS["squeezed"][0], ls=":", lw=1,
-                                      label="Natural width of a squeezed corridor (no barriers)"))
-    handles += _node_handles()
-    ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5), fontsize=9,
-              frameon=True)
-    ax.set_title(f"Act 2 — {SOUTH_NAME}: options are closing", fontsize=13)
+        xy = _median_cell(R, (P.owner == P.order[ex["edge_id"]]) & R.corridor)
+        col = CLASS[P.cls.get(ex["edge_id"], "securing")][0]
+        if xy is not None and _number_marker(ax, xy, ex["num"], col, XL, YL, side=ex.get("side", "nw")):
+            nums.append(ex["num"])
+    _director_base(P, ax, XL, YL, area_names=area_names, towns=SOUTH_TOWNS)
+    if nums:
+        handles.append(_marker_handle(nums))
+    handles += _node_handles() + [
+        plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")]
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
+               fontsize=9.5, frameon=True)
+    ax.set_title(f"Act 2 — {SOUTH_NAME}: options are closing", fontsize=15, pad=12)
     fig.savefig(P.fig / "M3_act2_flagged.png", dpi=170, bbox_inches="tight"); plt.show()
     return P
 
 
 def map_m4(P):
-    """M4 (N1) -- the with / without Dene Kʼéh Kusān pair, small multiples, identical extent
-    and symbology; bands only."""
+    """M4 (N1) -- the with / without Dene Kʼéh Kusān pair. RETIRED from the deck and the
+    notebook (Ethan, 2026-09-09); kept callable for the appendix."""
     R = P.R
     ens = R.run_dir / "ensemble"
     design = pd.read_csv(ens / "design.csv")
@@ -559,6 +679,239 @@ def map_m4(P):
     fig.savefig(P.fig / "M4_N1_dene_pair.png", dpi=150, bbox_inches="tight"); plt.show()
     P.n1 = dict(run_id=rid, with_km2=int(R.corridor.sum()) * R.cell_km2, without_km2=int(wo.sum()) * R.cell_km2)
     return P
+
+
+# ================= star plots (06 §2b, added 2026-09-09) =================
+def _option_masks(P):
+    """Every numbered option on the maps, in number order: (num, title, mask300m, colour)."""
+    R = P.R
+    lab = np.nan_to_num(R.branch_label.values, nan=0).astype(int)
+    br = R.branches.reset_index(drop=True); br["value"] = np.arange(1, len(br) + 1)
+    out = []
+    for ex in P.examples:
+        if ex["edge_id"] is None:
+            continue
+        if ex.get("options") == "branches":
+            vals = list(br.loc[br.edge_id == ex["edge_id"], "value"])
+            ms = [lab == v for v in vals]
+            ms = sorted([m for m in ms if m.any()], key=lambda m: _median_cell(R, m)[0])
+            side = ["western route", "eastern route"] if len(ms) == 2 else [f"route {i+1}" for i in range(len(ms))]
+            for num, m, sd in zip(ex["option_nums"], ms, side):
+                out.append((num, f"{ex['title']}\n{sd}", m, OPTIONS_COLOR))
+        elif ex.get("options") == "links":
+            items = [(k, (P.owner == P.order[k]) & R.corridor) for k in ex["option_edges"]]
+            items = sorted(items, key=lambda t: _median_cell(R, t[1])[0])
+            for num, (k, m) in zip(ex["option_nums"], items):
+                out.append((num, _pair_title(P.edges.loc[k]), m, OPTIONS_COLOR))
+        elif ex.get("mark", True):
+            m = (P.owner == P.order[ex["edge_id"]]) & R.corridor
+            out.append((ex["option_nums"][0], ex["title"], m, CLASS[P.cls.get(ex["edge_id"], "securing")][0]))
+    return out
+
+
+def star_options(P, reference="y2y", ncols=4):
+    """Star plots for the numbered options (1-6) + the proposed IPCAs and the existing PAs as
+    wholes, on the Y2Y-WIDE DIRECTOR CONSTRUCTION (`director_core.block_percentiles` ->
+    `plot_star_grid`): each axis = the option's mean PERCENTILE of a theme, per-cell percentiles
+    ranked over the discretionary (unprotected) landscape, themes = the y2y package's six block
+    axes; dashed ring 0.5 = typical unprotected land. Fractional 300 m -> 1 km cover weights
+    (M6.5). `reference`: "y2y" = percentiles over ALL unprotected Y2Y land (comparable with the
+    y2y-wide deck); "window" = over the routing window's unprotected land (north-relative).
+    Decision 2026-09-09 (Ethan): mean percentile, not value-per-area, for both packages."""
+    import director_core as dc
+    R = P.R
+    G = dc.grid()
+    if reference == "window":
+        win = cc._to_audit(R, np.ones(R.shape, bool))
+        assert win.shape == G.shape, "audit grid != hand-off grid"
+        G = SimpleNamespace(**{**vars(G), "disc": G.disc & win[G.pu]})
+    B = dc.block_percentiles(G)
+    items = _option_masks(P) + [("IPCA", "Proposed IPCAs (as a whole)", R.anch, ANCHOR_COLOR),
+                                ("PA", "Existing protected areas (as a whole)", R.pa_mask, PA_COLOR)]
+    profiles, rows = [], []
+    for num, title, m, col in items:
+        w = cc._to_audit_frac(R, m)
+        assert w.shape == G.shape, "audit grid != hand-off grid"
+        w1 = w[G.pu]
+        if w1.sum() <= 0:
+            print(f"  option {num}: no 1 km cover -- skipped"); continue
+        vals = {ax: float((w1 * B.axes[ax]).sum() / w1.sum()) for ax in dc.STAR_AXES}
+        head = f"{num} — {title}" if isinstance(num, int) else title
+        profiles.append(dict(title=head, values=vals, color=col))
+        rows.append(dict(option=num, title=title.replace("\n", " — "), km2=round(int(m.sum()) * R.cell_km2),
+                         **{ax: round(v, 3) for ax, v in vals.items()}))
+    ref_txt = ("all unprotected land in Y2Y" if reference == "y2y"
+               else "unprotected land in the northern routing window")
+    dc.plot_star_grid(profiles, P.fig / "S1_star_options.png",
+                      f"What each option delivers — mean percentile by theme, ranked against {ref_txt}",
+                      ncols=ncols)
+    df = pd.DataFrame(rows)
+    df.to_csv(P.tab / "star_options.csv", index=False, encoding="utf-8-sig")
+    P.stars = df
+    print(f"  star plots: {len(profiles)} profiles -> S1_star_options.png + star_options.csv "
+          f"(reference: {ref_txt})")
+    plt.show()
+    return df
+
+
+# ================= alternatives table (06 §2c, added 2026-09-10) =================
+# Themes in the y2y-wide order; each value in its RAW native unit (results_core.RAW_SPEC).
+# ABSOLUTE table, THRESHOLD-FREE (Ethan, 2026-09-10). Per index: ("sum", label) = the raster
+# summed over the option's cover x km2, where that sum has a physical reading; ("share", label) =
+# the option's share of the Y2Y-wide total (%), for the flow-like / quality-like indices whose sum
+# means nothing (current density, centrality, refugial residence). Carbon = t C, EFG = groups.
+ABS_SPEC = {
+    "climate_type_macrorefugia":  ("share", "share of Y2Y-wide refugial residence (%)"),
+    "transboundary_connectivity": ("share", "share of Y2Y-wide movement flow (%)"),
+    "climate_corridors":          ("share", "share of Y2Y-wide corridor centrality (%)"),
+    "aoh_richness_birds":         ("sum",   "habitat km², summed across species (AOH)"),
+    "aoh_richness_mammals":       ("sum",   "habitat km², summed across species (AOH)"),
+    "human_modification":         ("sum",   "intact land, km² (Σ (1−gHM) × km²)"),
+}
+TABLE_THEMES = [
+    ("Core habitat",       ["climate_type_macrorefugia"]),
+    ("Connectivity",       ["transboundary_connectivity", "climate_corridors"]),
+    ("Biodiversity",       ["aoh_richness_birds", "aoh_richness_mammals"]),
+    ("Carbon",             ["irrecoverable_carbon_m_soc", "irrecoverable_carbon_biomass"]),
+    ("Representativeness", ["EFG_mean"]),
+    ("Intactness",         ["human_modification"]),
+]
+
+
+def _option_profiles(P):
+    """Per option: raw values, % of Y2Y totals, cover weights (fractional 300 m -> 1 km, M6.5)."""
+    R = P.R
+    Pst = cc._profile_stacks(R)
+    items = _option_masks(P) + [("IPCA", "Proposed IPCAs (as a whole)", R.anch, ANCHOR_COLOR),
+                                ("PA", "Existing protected areas (as a whole)", R.pa_mask, PA_COLOR)]
+    out = []
+    efg_count = (np.nan_to_num(Pst.efg_raw, nan=0.0) > 0).sum(axis=0).astype("float64")   # groups per cell
+    for num, title, m, _ in items:
+        w = cc._to_audit_frac(R, m)
+        if w.sum() <= 0:
+            print(f"  option {num}: no 1 km cover -- skipped"); continue
+        prof, contrib, eff, raw = cc._profile_frac(Pst, w)
+        sums = [float(np.nansum(np.nan_to_num(Pst.cont_raw[k], nan=0.0) * w)) * Pst.cell_km2
+                for k in range(len(Pst.cont))]          # Σ value × km² over the option's cover
+        group = ("Route options" if isinstance(num, int) and num <= 4 else
+                 "Example links" if isinstance(num, int) else "As a whole")
+        head = (f"{num} — {title.replace(chr(10), ' — ')}" if isinstance(num, int) else title)
+        out.append(dict(col=(group, head), km2=int(m.sum()) * R.cell_km2, w_km2=float(w.sum()) * Pst.cell_km2,
+                        w_ha=float(w.sum()) * Pst.cell_ha, share=100.0 * float(w.sum()) / Pst.n_region_full,
+                        raw=raw, contrib=contrib, sums=sums,
+                        efg_per_cell=float((efg_count * w).sum() / w.sum())))
+    return Pst, out
+
+
+def table_options(P, kind="density"):
+    """The ALTERNATIVES TABLES for the numbered options (1-6) + the proposed IPCAs and the
+    existing PAs as wholes, in the y2y-wide consequences-table format (results_core.RAW_SPEC
+    units; fractional cover weights, M6.5), rows grouped by theme, one column per option.
+      kind="density"  -> what the land is LIKE: per-cell means, carbon as t C / ha, ecosystem
+                         groups per cell. Comparable across columns regardless of area.
+      kind="absolute" -> how much it HOLDS, threshold-free: land, share of Y2Y, carbon totals
+                         (t C), groups present (of N), habitat km² summed across species (AOH),
+                         intact km², and -- for the flow / quality indices whose sum means
+                         nothing -- the option's share of the Y2Y-wide total (%) (ABS_SPEC).
+    Writes T_options_<kind>.csv + .png (Ethan, 2026-09-10: two tables, never mixed)."""
+    assert kind in ("density", "absolute")
+    Pst, profs = _option_profiles(P)
+    ci = {n: k for k, n in enumerate(Pst.cont)}
+    n_efg = len(Pst.efg)
+    cols, data, dps = [], {}, {}
+    for pr in profs:
+        raw, contrib = pr["raw"], pr["contrib"]
+        d = {("Area", "land (km²)"): pr["km2"]}; dps[("Area", "land (km²)")] = 0
+        if kind == "absolute":
+            d[("Area", "share of Y2Y (%)")] = pr["share"]; dps[("Area", "share of Y2Y (%)")] = 2
+        for theme, feats in TABLE_THEMES:
+            for f in feats:
+                label, unit, agg, dp = rc.RAW_SPEC[f]
+                if f == "EFG_mean":
+                    if kind == "density":
+                        k = (theme, f"{label} — groups per cell (mean, of {n_efg})"); d[k] = pr["efg_per_cell"]; dps[k] = 1
+                    else:
+                        k = (theme, f"{label} — groups present (of {n_efg})"); d[k] = raw[-1]; dps[k] = 0
+                elif agg == "tonnes":
+                    if kind == "density":
+                        k = (theme, f"{label} — t C / ha (mean)"); d[k] = raw[ci[f]] / pr["w_ha"]; dps[k] = 1
+                    else:
+                        k = (theme, f"{label} — t C (total)"); d[k] = raw[ci[f]]; dps[k] = 0
+                elif kind == "density":
+                    k = (theme, f"{label} — {unit}"); d[k] = raw[ci[f]]; dps[k] = dp
+                else:
+                    how, lab = ABS_SPEC[f]
+                    k = (theme, f"{label} — {lab}")
+                    if how == "sum":
+                        d[k] = pr["sums"][ci[f]]; dps[k] = 0
+                    else:
+                        d[k] = contrib[ci[f]]; dps[k] = 2
+        cols.append(pr["col"]); data[pr["col"]] = d
+    df = pd.DataFrame(data); df.columns = pd.MultiIndex.from_tuples(cols)
+    df.index = pd.MultiIndex.from_tuples(df.index, names=["theme", "value"])
+    name = f"T_options_{kind}"
+    P.tab.mkdir(parents=True, exist_ok=True)
+    # Display rule (Ethan's hand-edited table, 2026-09-10): ONE number of decimals per ROW --
+    # the decimals the row's smallest non-zero value needs to show 2 significant figures
+    # (results_core._dec with dp 0), applied to every cell of the row; so a row whose values are
+    # all >= 10 has none, and a share row reads 0.016 ... 12.448 with three throughout. The
+    # ecosystem-group rows are whole numbers. The CSV carries the same rounded numbers (plain);
+    # the PNG adds thousands separators.
+    def row_dp(r):
+        if r[0] == "Representativeness":
+            return 0
+        fin = df.loc[r].astype(float); fin = fin[np.isfinite(fin) & (fin != 0)]
+        return int(max((rc._dec(v, 0) for v in fin), default=0))
+    row_dps = {r: row_dp(r) for r in df.index}
+    def cell(v, dp, sep):
+        return "—" if pd.isna(v) else (f"{v:,.{dp}f}" if sep else f"{v:.{dp}f}")
+    plain = pd.DataFrame([[cell(float(v), row_dps[r], False) for v in df.loc[r]] for r in df.index],
+                         index=df.index, columns=df.columns)          # fixed decimals, e.g. 0.080
+    plain.to_csv(P.tab / f"{name}.csv", encoding="utf-8-sig")
+    shown = pd.DataFrame([[cell(float(v), row_dps[r], True) for v in df.loc[r]] for r in df.index],
+                         index=df.index, columns=df.columns)
+    shown.columns = df.columns
+    title = ("What each option's land is LIKE — per-unit values by theme (comparable across columns)"
+             if kind == "density" else
+             "How much each option HOLDS — threshold-free absolutes by theme (sums in native units; "
+             "shares of the Y2Y-wide total where a sum has no meaning)")
+    _table_png_grouped(shown, P.fig / f"{name}.png", title)
+    setattr(P, f"table_{kind}", df)
+    print(f"  alternatives table ({kind}): {df.shape[1]} columns x {df.shape[0]} values -> {name}.csv / .png")
+    return shown
+
+
+def _table_png_grouped(shown, path, title):
+    """Render a (theme, value) x (group, option) table to PNG with theme bands and group headers."""
+    import textwrap
+    nrow, ncol = shown.shape
+    fig_w = 3.2 + 1.55 * ncol
+    fig_h = 1.6 + 0.34 * (nrow + len(set(shown.index.get_level_values(0))) + 2)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h)); ax.axis("off")
+    cell_text, row_labels, row_colors = [], [], []
+    last_theme = None
+    for (theme, value), row in shown.iterrows():
+        if theme != last_theme:
+            cell_text.append([""] * ncol); row_labels.append(theme.upper()); row_colors.append("#e8edf0")
+            last_theme = theme
+        cell_text.append(list(row.values)); row_labels.append("   " + value); row_colors.append("white")
+    col_labels = ["\n".join(textwrap.wrap(c[1], 18)) for c in shown.columns]
+    tbl = ax.table(cellText=cell_text, rowLabels=row_labels, colLabels=col_labels, loc="center",
+                   cellLoc="right", rowLoc="left")
+    tbl.auto_set_font_size(False); tbl.set_fontsize(8.5); tbl.scale(1.0, 1.35)
+    for (r, c), cell in tbl.get_celld().items():
+        if r == 0:
+            cell.set_text_props(fontweight="bold", va="center"); cell.set_height(cell.get_height() * 2.2)
+            cell.set_facecolor("#dfe6ea")
+        elif r > 0:
+            cell.set_facecolor(row_colors[r - 1])
+            if row_colors[r - 1] != "white":
+                cell.set_text_props(fontweight="bold", color="#2b4f7d")
+    # group header line above the columns
+    groups = [c[0] for c in shown.columns]
+    ax.set_title(title + "\n" + "   |   ".join(f"{g}: {groups.count(g)} column{'s' if groups.count(g)>1 else ''}"
+                                             for g in dict.fromkeys(groups)), fontsize=10, pad=14)
+    fig.savefig(path, dpi=200, bbox_inches="tight"); plt.close(fig)
 
 
 # ================= profiles (06 §2 one-pagers) =================
@@ -659,7 +1012,7 @@ def profile_pages(P):
                 rows.append(("Who's at the table", jur or "pending authoritative layer"))
         axm.set_title("")
         y = 0.97
-        axt.text(0, y, f"{ex['slot']} · {ex['title']}", fontsize=15, fontweight="bold", va="top")
+        axt.text(0, y, f"{_example_label(ex)}", fontsize=15, fontweight="bold", va="top")
         y -= 0.08
         axt.text(0, y, textwrap.fill(words, 78), fontsize=10.5, va="top", linespacing=1.4)
         y -= 0.42
@@ -726,7 +1079,8 @@ def table_t1(P):
         eid = ex["edge_id"]; r = e.loc[eid]; c = P.cls[eid]
         nb = int(r.get("n_branches", 1)) if pd.notna(r.get("n_branches", np.nan)) else 1
         rows.append(dict(
-            Example=ex["slot"], Connects=_pair_title(r),
+            Example=(f"{ex['num']} ({ex['slot']})" if ex.get("num") else ex["slot"]),
+            Connects=_pair_title(r),
             Status=CLASS[c if c != "adjacency" else "securing"][1].split(" — ")[0],
             **{"Room to move": f"{nb} route options" if nb > 1 else "single route"},
             **{"If a proposal doesn't proceed": attr_words(P.attr.loc[eid]) if eid in P.attr.index else "n/a"},
@@ -805,14 +1159,18 @@ def build_deck(P, path=None):
              bullets=["Wide bands, multiple routes, alternative links.",
                       "Connectivity is contingent on decisions, not on geography.",
                       "Sequencing can follow relationships, jurisdiction and the pace of IPCA realisation."]),
-        dict(title="N1 — what depends on the largest proposal", image=F / "M4_N1_dene_pair.png",
-             bullets=["We took every proposal as given; here is what depends on this one.",
-                      f"With: {getattr(P,'n1',{}).get('with_km2',0):,.0f} km² · without: "
-                      f"{getattr(P,'n1',{}).get('without_km2',0):,.0f} km² of corridor land."]),
     ]
+    slides.append(dict(title="What each option delivers", image=F / "S1_star_options.png",
+                       bullets=["One star per numbered option, plus the proposed IPCAs and the "
+                                "existing protected areas as wholes.",
+                                "Each axis = the average percentile of that value across the option's "
+                                "land, ranked against unprotected land Y2Y-wide; the dashed ring is "
+                                "typical unprotected land.",
+                                "Same construction as the Y2Y-wide package, so the two decks read "
+                                "against each other."]))
     for ex in P.examples:
         if ex["slot"] in ("N2", "N3"):
-            slides.append(dict(title=f"{ex['slot']} — {ex['title']}", image=F / f"profile_{ex['slot']}.png",
+            slides.append(dict(title=_example_label(ex), image=F / f"profile_{ex['slot']}.png",
                                bullets=[]))
     slides.append(dict(title=f"Act 2 — {SOUTH_NAME}: options are closing",
                        image=F / "M3_act2_flagged.png",
@@ -822,7 +1180,7 @@ def build_deck(P, path=None):
                                 else "Squeezed class withheld pending H8."]))
     for ex in P.examples:
         if ex["slot"].startswith("S"):
-            slides.append(dict(title=f"{ex['slot']} — {ex['title']}", image=F / f"profile_{ex['slot']}.png",
+            slides.append(dict(title=_example_label(ex), image=F / f"profile_{ex['slot']}.png",
                                bullets=[ex.get("headline", "")] if ex.get("headline") else []))
     slides += [
         dict(title="T1 — the examples in plain language", image=F / "T1_examples.png", bullets=[]),

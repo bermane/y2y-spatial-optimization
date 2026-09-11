@@ -269,6 +269,109 @@ rule; quantitative outcomes live there, methods decisions here);
   dropped from the city list (its label covered the Pine Le Moray links). The science figures
   (`cc.cost_surface_map`, the zoom overlays) keep magma_r and no halo. Nothing here enters any
   computation.
+- **M5.13 M2/M3 rebuilt as half-window maps + example numbering (2026-09-09, PRESENTATION
+  ONLY — spec 06 v1.2.3):** M2 (Act 1) and M3 (Act 2) now share M1's page layout and EXACT
+  aspect ratio (`_half_extent`: bounding box of PAs + IPCAs + corridor land in the northern /
+  southern half of the M1 frame, 4% pad, then widened or heightened to M1's aspect with the
+  extra height taken toward the other half). Because the region is a diagonal band, each half
+  frame covers ~¾ of M1's height (≈1.35× zoom) — a tighter zoom at this aspect would cut named
+  areas. Both draw EVERY link in the M1 palette (`_paint_classes`, shared with M1); M2 adds the
+  Act-1 examples' route branches in the options colour, M3 the D17 natural-width outlines. The
+  six LINK examples are numbered 1–6 in act order (N2→1, N3→2, S1→3, S2→4, S3→5, S4→6; N1 the
+  with/without pair stays unnumbered) and the number is carried on the map markers (circle
+  up-left of the link's median corridor cell, leader line), profile-page titles, T1's Example
+  column and deck slide titles. Markers: M2 = Act-1 examples + any Act-2 example outside the
+  southern frame (S2 Tthetäwndëk ↔ Ni'iinlii Njik is a northern link, so 4 appears on M2);
+  M3 = Act-2 examples in frame (3, 5, 6). Jurisdiction tint OFF by default on M2 (M1 look);
+  a few local towns added per half (`NORTH_TOWNS` / `SOUTH_TOWNS`). Admin clip pad 150 → 500 km
+  (the half frames exposed the clip edge). No computation touched.
+- **M5.14 Examples pinned + M2/M3 as scale-preserving crops (2026-09-09, PRESENTATION ONLY —
+  spec 06 v1.2.4, supersedes M5.13's framing and the rule-based example selection):**
+  `EXAMPLE_PICKS` resolves Ethan's chosen pairs to edge ids (assert exactly one match).
+  Numbering is per OPTION on M2 — N2's two route branches (D12 components) are 1 and 2, the
+  two links from T'akú Tlatsini to the Mount Edziza / Stikine complex (Edziza and Stikine touch,
+  so both links reach the same place) are 3 and 4 — then the Act-2 links 5–7; a multi-option
+  example carries "1–2" / "3–4" on its profile page, T1 row and deck slide. Frames: `_crop_extent`
+  (bbox of drawn content within a y-range + 15 km) drawn at M1's metres-per-inch
+  (`_m1_scale`; figure sized to the crop, legend below), M2 north of the min-y of the Edziza /
+  Spatsizi / Dene Kʼéh Kusān / Dune Za Keyih / Northern Rocky polygons, M3 south of the M1
+  midline. Natural-width outlines removed from M3 (the ratio lives in T2 / S3's headline).
+  Hudson's Hope dropped from the southern city list (collided with Fort St. John at this
+  scale). No computation touched.
+- **M5.15 Star-plot construction = mean percentile by theme (DECISION 2026-09-09, Ethan; spec 06
+  v1.2.5; presentation only):** the director star plots for the numbered options (1–6) and for
+  the proposed IPCAs / existing PAs as wholes use the Y2Y-wide director construction
+  (`director_core.block_percentiles` + `plot_star_grid`): per-cell percentile of each hand-off
+  layer over the DISCRETIONARY (unprotected) landscape, combined into the six block axes (core
+  habitat = refugia; connectivity = 0.5 transboundary + 0.5 Carroll; biodiversity = 0.5 birds +
+  0.5 mammals; carbon = 0.742 m_soc + 0.258 biomass; representativeness = percentile of EFG
+  classes present per cell; intactness = gHM), then the COVER-WEIGHTED mean over the option's
+  land (300 m mask → fractional 1 km cover, M6.5). Reference population = ALL unprotected Y2Y
+  land by default (cross-package comparability); `reference="window"` re-ranks over the routing
+  window's unprotected land. Rationale for percentile over value-per-area: one 0–1 scale with a
+  plain meaning ("this land ranks at the 70th percentile for refugia"), robust to the carbon
+  tails that compress a 5–95 stretch, and identical to the y2y-wide deck. The science stars
+  (`results_core` richness / contribution / efficiency, `priority_link_stars`,
+  `corridor_profile.csv`) are UNCHANGED — they carry magnitude, which the percentile does not.
+  N1 / M4 (the Dene with/without pair) retired from the deck the same day.
+- **M5.16 EFG block version — INHERITED CHANGE, ruling needed (found 2026-09-09):** the star
+  plots' representativeness axis (M5.15) reads the block through `leverage_core.efg_paths`, i.e.
+  the y2y R0-CURATED block (`iucn_efg_v3`: 20 features / 22 classes; y2y M2.11) with the R10.7
+  construction (per-cell class-count percentile) — correct and identical to the y2y deck. But
+  the northern package's OWN profiles read the EFG layers from the shared
+  `aligned_stack/manifest.json`, which was rewritten under Y2Y_VERSION v3.1 on 2026-09-09 and
+  now lists the 20 curated layers, whereas every stored northern profile (`corridor_profile.csv`
+  2026-08-27, `priority_links_profile.csv` 2026-09-08, the T2 chips, G5) was computed on the
+  40-class block ("groups present (of 40)"). Re-running any profile cell now silently switches
+  the EFG axis to the curated block; G5 (audit invariance vs v1) would move on that axis.
+  OPTIONS for Ethan: (a) adopt the curated block for the northern profiles (re-run the profile
+  cells; "of 40" → "of 20"; exclude the EFG axis from G5 as macrorefugia already is, M6.3) —
+  RECOMMENDED for cross-package consistency and because the curation removed artefact classes;
+  (b) pin the northern notebooks to `Y2Y_VERSION=v1` for reproduction of the stored profiles.
+  **RULED same day (Ethan): (a) — the curated block is adopted for the WHOLE northern analysis.**
+  Mechanics: gate G5 moved into the engine (`cc.gate_g5`, `G5_REDEFINED` = macrorefugia + EFG
+  (mean): reported, not asserted; NB02's G5 cell calls it); NB04 gained step 0b (re-attach →
+  `cc.corridor_profile` + `cc.gate_g5`) so the audit regenerates without re-running NB02's
+  `cc.start`. Products that carry an EFG axis and must be regenerated on the curated block:
+  `corridor_profile.csv` + audit figures (NB04 step 0b), `alternatives_branches.csv` (NB04
+  step 4c), `priority_links_profile.csv` + PROACT stars (05_results), `link_profiles_all.csv`
+  / T2 chips / star plots / deck (06). "groups present (of 40)" becomes "(of 20)" everywhere.
+  Every other axis is untouched. The stored 40-class values remain in git history / the run
+  dir until overwritten; results_log R9.4 records the re-measured EFG axis.
+- **M5.18 D19 centrality (2026-09-11; spec 05 changelog 2026-09-11 + merge note):** the chat's
+  new D19 asked to switch centrality to current-flow betweenness; the engine has computed
+  exactly that since the v2 rebuild (`corridor_graph.centrality`: edge current-flow betweenness
+  on the quotient graph, conductance = 1/cost, zero-cost cliques contracted — column
+  `ecfb_raw`). Implemented as a pin + comparison: config key `centrality: "current_flow"`
+  (default when absent, so v2_run002 loads unchanged; `"shortest_path"` would route the
+  priority surface off least-cost-path edge betweenness), both measures written on every
+  edge as `centrality_cf` / `centrality_sp`, `cc.gate_g15` asserts finiteness / non-negativity
+  and the tree-case identity (β = 0: the two are proportional — asserted as proportionality,
+  since a rank test is broken by solver noise on exact ties) and writes
+  `centrality_compare.csv`. NO product changes (linkage_priority.tif, classes, tables). Toy-
+  verified (`corridor_graph.selftest` + harnesses). D18 (Linkage Pathways validation, G14, H9)
+  and D20 (within-band circuit pinch points, step 4e, G16, H10) are DEFERRED per the spec's
+  own later note; their constants are not written to run_config (dead-flag rule). The 06 spec's
+  uncommitted v1.2.3–v1.2.7 entries were overwritten by the regeneration and reconstructed.
+- **M5.17 Alternatives table for the options (2026-09-10, PRESENTATION ONLY — spec 06 v1.2.7):**
+  `corridors_director.table_options` — the y2y-wide consequences-table format on the option
+  masks (route branches 1–2, links 3–6, IPCAs and PAs as wholes): raw values per input in
+  `results_core.RAW_SPEC` units (means for indices / densities, t C totals for carbon, EFG
+  groups present of the curated 20), computed by `cc._profile_frac` with fractional 300 m → 1 km
+  cover weights (M6.5; identical to `mask_profile` for binary weights, so the estimands match
+  the Y2Y-wide tables), plus land km² and share of Y2Y. Rows grouped by the six y2y themes.
+  The example profile pages, T1, T2 and the draft deck are retired from the notebook (functions
+  kept). Same day (Ethan): TWO tables, never mixed — DENSITY (per-cell means; carbon = total ÷
+  covered hectares, t C/ha; representativeness = mean number of curated EFG groups present per
+  cell, the y2y per-cell-count construction) and ABSOLUTE (land, share of Y2Y, carbon totals,
+  groups present, and THRESHOLD-FREE absolutes for the per-cell indices (Ethan's final call,
+  2026-09-10, `ABS_SPEC`): where the raster sum has a physical reading it is shown in native
+  units — bird / mammal richness × area = habitat km² summed across species (Σ_s AOH area of s
+  inside the option), intactness × area = intact km²; where it does not (current density,
+  Carroll centrality, refugial residence) the absolute is the option's share of the Y2Y-wide
+  total (%) = `mask_profile`'s contribution metric. A top-30% 'high-value land km²' alternative
+  (the y2y Act-1 VALUE_TOP cut) was considered and rejected as threshold-dependent. No
+  computation touched.
 - **M5.10 Background reference layers (2026-09-01, DISPLAY-ONLY):** the zoom figures
   (routing_problem_zoom / _cost_zoom / _cost_overlay, priority_links_map) carry
   provincial borders (Natural Earth 10m admin-1 lines, public domain, in

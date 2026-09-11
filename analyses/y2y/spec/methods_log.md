@@ -652,6 +652,22 @@ kept byte-identical (write-once guards in 11b). Downstream expectations restated
 SMALL forced share of the core; E17's southern statistic re-derived; R0 (iii) becomes a standing disclosure, not a
 drop decision. Versioning: `config.Y2Y_VERSION = "v3.1"` (runs_v3.1/, spec/v3.1/, manifest_v3.1.csv).
 
+**M4.30 — External caution on the GET extents (Dave Theobald to Ethan, 2026-09-10) and how v3.1 answers it.** The GET
+indicative maps are drawn coarsely (10 arcmin–1° grain); the analysis must include the ecosystem block without honing
+in on its polygon edges. Standing design response, measured: (i) rule R0 removed the classes whose footprints were
+map artifacts (M2.11); (ii) the window-derived rarity targets (M4.29) put 12 of 20 features at the 0.10 floor, and the
+locked protected areas already hold ≥ 10% of every one of those, so **12/20 features are inert in every solve** (their
+targets are met before the optimizer chooses a cell); (iii) the eight features that still bind ask, summed, for about
+**16,300 cells = 8.6% of the 190,845 unprotected cells the optimizer chooses** (cell-count approximation; the largest asks
+are T5.1 semi-desert steppe ~4,900, the peat-bog/fen merge ~2,700, groundwater ~2,200), versus v1 where every unlocked
+cell of all 40 classes was demanded and the five smallest classes were pinned at F = 1 by arithmetic; (iv) nothing in the
+block pins any more — the unguarded frequent tier on the curated block is 4 km² (R10.20 cont.), the applied core rests on
+the four PROACT-theme floors; (v) the necessity test (E19) measures and captions any cluster the block does force
+(adequacy pins), so no EFG-driven place can pass as a multi-value hotspot; (vi) presentation: cluster boundaries are drawn
+from F, never from class edges; the Act 1 representativeness layer votes on the two window-rare classes only; the
+representativeness star axis is a per-cell class-count percentile read at cluster scale (≥ 100 km²), with the grain
+disclosed on the how-to-read slide. No change to the formulation.
+
 ## 5. Solver configuration and numerical integrity
 
 - **M5.1** Gurobi 13.0.2, nonprofit WLS licence (16 cores; needs live internet during solves;

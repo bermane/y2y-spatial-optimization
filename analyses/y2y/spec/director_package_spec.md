@@ -38,6 +38,7 @@
 - Six axes: five PROACT blocks + intactness (intactness visually distinct — dashed/grey — captioned "disclosed, not a driver").
 - Block member aggregation: carbon = mass-weighted mean of SOC + biomass percentiles (74.2/25.8); biodiversity = mean of birds + mammals percentiles; connectivity = mean of transboundary + corridors percentiles; core habitat = macrorefugia percentile; representativeness = count of EFG classes present in cluster ÷ 40 (different construction — footnote it).
 - Normalization: cluster mean percentile relative to the DISCRETIONARY landscape (0.5 = typical unprotected land). One shared radial scale across all stars.
+- **Cross-package convention (Ethan, 2026-09-09):** this construction — mean PERCENTILE by theme over the discretionary landscape, not value ÷ area on a stretch — is the star-plot standard for BOTH director packages; the northern connectivity package (analyses/northern_connectivity, spec 06 v1.2.5, M5.15) now uses it with the same Y2Y-wide reference, so the two decks read against each other. No change here.
 - Layout: grid of stars grouped Act-1 core first, then scenario-specific by scenario; each star titled with cluster name + area + mean guarded F.
 - Expectation to preserve, not hide: core clusters spike on binding claims rather than excelling everywhere (E13). The star grid is the visual proof of "why these places."
 

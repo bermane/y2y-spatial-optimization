@@ -811,6 +811,10 @@ CORRIDORS = {
         # Costs one extra CWD set (cached under cwd_cache/<sha>_cf).
         "squeeze_ratio": 0.5,
         "squeeze_cf_min_cost": 10,
+        # D19 (2026-09-11): which edge centrality feeds ecfb_raw / linkage_priority.tif. The engine
+        # has computed CURRENT-FLOW betweenness on the quotient graph since the v2 rebuild
+        # (Centrality Mapper's formulation); "shortest_path" is the comparison column's method.
+        "centrality": "current_flow",
 
         # ---- structured ensemble (D8) ---------------------------------------------------
         # Axes B/C/D all reuse the SAME resistance, and CWD depends only on resistance + node seeds

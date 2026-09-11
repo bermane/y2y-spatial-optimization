@@ -1,12 +1,12 @@
 # 05 corridors (north) — v2 addendum: production run, near-optimality surface, route-branch alternatives
 
 > Addendum to `docs/05_methods_v2.md`. Surgical: nothing in D1–D10 or A1–A4 is reopened.
-> Adds D11–D17, Phases 4b/4c, gates G9–G13, and the run sequence. Written 2026-08-21.
+> Adds D11–D20 (D18/D20 deferred), Phases 4b/4c (4e deferred), gates G9–G16, and the run sequence. Written 2026-08-21.
 > Claude Code: patch `docs/05_methods_v2.md` with the new sections and append to its changelog;
 > do not rewrite the existing document.
 
 **Status:** approved in design discussion 2026-08-21. Implemented 2026-08-21; NB01+H7 done
-2026-08-26; NB02 baseline done 2026-08-27 (`v2_run002`); NB03/NB04 done 2026-08-27; 05_results figures incl. the draft regime map as of 2026-08-31. **Subordinate build spec for the director package: `06_corridors_north_director_package_spec.md` (v1.1) — consumes this addendum's artifacts; presentation decisions live there, methods decisions here, ambiguous items logged in both.**
+2026-08-26; NB02 baseline done 2026-08-27 (`v2_run002`); NB03/NB04 done 2026-08-27; 05_results figures incl. the draft regime map as of 2026-08-31. **Subordinate build spec for the director package: `06_corridors_north_director_package_spec.md` (v1.1) — consumes this addendum's artifacts; presentation decisions live there, methods decisions here, ambiguous items logged in both.** 2026-09-11: Linkage Mapper comparison added — D19 (centrality) active, D18/D20 deferred; see changelog.
 
 > **Living paper documents (BINDING maintenance rule):** `spec/methods_log.md` and
 > `spec/results_log.md` are the cumulative methods and results registers for the publication.
@@ -15,6 +15,31 @@
 > delete. Same convention as the y2y flagship's spec/ logs.
 
 **Changelog**
+- 2026-09-11 (merge note) — the chat-regenerated copy of this spec (saved as
+  `scratchpad/spec_merge/05_chat_20260911.md` for the session) again dropped §8/§9, the
+  living-docs binding block, the D17-confirmed / G13-final text, `squeeze_cf_min_cost`, the
+  as-implemented §5 output names and the 2026-08-27 → 2026-09-08 changelog; restored from git
+  HEAD and the chat's additions (D18–D20, G14–G16, constants, §6/§7 lines, the deferred step
+  4e spec as §10) spliced in. **D19's premise was wrong:** the engine has computed edge
+  CURRENT-FLOW betweenness on the quotient graph since the v2 rebuild (`corridor_graph.
+  centrality`, 2026-08-07; column `ecfb_raw`), never shortest-path betweenness. D19 is
+  therefore implemented as: the method is PINNED by a config key (`centrality`), the
+  shortest-path measure is added as the comparison column `centrality_sp` beside
+  `centrality_cf`, `centrality_compare.csv` is written and gate G15 asserts the tree-case
+  identity. `linkage_priority.tif` and every product are UNCHANGED by D19. M5.18.
+- 2026-09-11 (later) — scope narrowed: **only D19 (current-flow centrality) is active now.**
+  D18 (LM validation, G14, H9) and D20 (pinch beside squeeze, step 4e, G16, H10) are
+  **deferred** to a future comparison and marked as such below; their specs are kept intact
+  so they can be switched on without redesign. Nothing in the run sequence calls them.
+- 2026-09-11 — Linkage Mapper comparison (McRae & Kavanagh 2011 is the method precedent; v2 is a
+  Linkage Pathways–equivalent corridor model on a published surface). Three additions: D18
+  external validation against Linkage Pathways (G14, H9); D19 centrality switched to
+  current-flow betweenness (G15; quotient-graph betweenness retained as a comparison column);
+  D20 Pinchpoint-style within-band circuit solve added as a Phase 6 diagnostic that sits
+  **beside** D17, with an explicit comparison product (step 4e); implemented natively in
+  scipy (Linkage Mapper's Pinchpoint tool is bound to unmaintained Circuitscape 4; Circuitscape
+  5 is Julia) and cross-checked once against Circuitscape 5 (G16, H10). Linkage Priority (weighted
+  blend) explicitly not adopted — D5 stands.
 - 2026-09-08 — D17 ratio restated as WIDTH (area ÷ own route length) after the first real
   execution falsified the area inequality (G13 fired on 6 links: the counterfactual shortens
   detouring routes); a second execution then showed narrower counterfactuals WITHOUT shorter
@@ -86,6 +111,9 @@ grizzly work remains a separate unapproved plan.
 | D15 | Ensemble member fraction (cell in member's corridor union / members) is written as `ensemble_attribution.tif` and used for the robust-core threshold (0.9) and per-axis attribution rasters only. | ~42 of ~49 members are leave-one-out; the fraction is "share of dropped nodes that didn't matter," not a near-optimal sampling frequency. |
 | D16 | **Multipart named areas are routed internally.** A named PA/IPCA whose rasterized mask has >1 8-connected component is split into **parts**; each part ≥ `part_min_km2` is its own seed/routing unit. For each multipart name, the MST over its parts (on CWD) is **locked into the backbone** before the inter-name MST is built. Parts < `part_min_km2` remain in `node_union` (area accounting) but are not seeds. Leave-one-out (axis C) drops a **name** (all parts), not a part. Calibration (`calibrate_cutoff`) uses the **inter-name MST only**; intra-name corridor area is reported separately, as augmentation area is. | Seeding all parts at CWD = 0 as one node means the model never asks how to move between them. A named area is a management unit, so connecting its parts is a defensible default — but it is an assertion about intent for multi-site designations, so the part list is reviewed by a human before the run (H7). Locked rather than competing so a part is never connected to its sibling only via a third park. |
 | D17 (CONFIRMED 2026-09-03, H8 closed) | **Squeezed link class.** A non-adjacency edge is `squeezed` when `squeeze_ratio_obs = width_new_km / width_cf_km < squeeze_ratio` (0.5), where width = the band's NEW-land area (`& ~node_union`) divided by its OWN least-cost route length (the implementable analogue of the spec's cross-sectional width); the real band is at `cwd_cutoff_abs`, and the counterfactual band is the SAME edge banded at the SAME cutoff on a COUNTERFACTUAL surface with every cost class ≥ `squeeze_cf_min_cost` (10) set to 1 — 'how wide would the near-optimal set be if nothing constrained it'. One extra CWD set per seed part (cached `cwd_cache/<sha>_cf`), unit fields derived as in step 1. Reported per edge in `corridor_edges.csv` as `band_new_km2`, `band_cf_km2`, `centreline_cf_km`, `width_new_km`, `width_cf_km`, `squeeze_ratio_obs`, `squeezed`; counterfactual band polygons in `bands_counterfactual.gpkg` (the M3 natural-width outline). Class is **disjoint from** the two irreplaceability senses for presentation (irreplaceable takes precedence; the ratio stays in the table). The analytic ellipse index (`squeeze_idx`, methods_log M4.6) that produced the draft map is RETAINED as a screening diagnostic column only. | H8 outcome: the draft map used an analytic index (mean band width ÷ the straight-link open-ground ellipse width); the counterfactual replaces it because it needs no straight-link assumption, both bands share the study-window clipping (the boundary artefact cancels), and it yields a drawable natural width. WIDTH (area ÷ own route length) rather than raw area — measured 2026-09-08: raw area failed G13 on 6 links because relaxing barriers SHORTENS detouring routes, and area ∝ length × width; rather than median perpendicular width: equivalent for ribbons, no path-normal geometry. Implemented as `corridors_core.counterfactual_squeeze` (notebook 04 step 2b); synthetic-verified (a cost-1000 wall drives the ratio down monotonically; G13 holds). Measured count on `v2_run002` lands when notebook 04 re-runs. |
+| D18 (DEFERRED — future comparison) | **External validation against Linkage Mapper.** v2's per-edge slack (`CWD_i + CWD_j − min_e`) is, term for term, Linkage Pathways' normalized least-cost corridor (McRae & Kavanagh 2011), and its calibrated band is the CWD-truncated corridor. Validate: run Linkage Pathways in ArcGIS Pro on `validation_pairs` (5 MST edges spanning short/long and open/constrained cases) with the identical O'Brien surface and node rasters; compare NLCC to our slack (Pearson r over the union of both corridors at matched cutoff; Jaccard of the truncated bands). Recorded as G14; performed once per resistance-surface hash. | Buys external credibility for the whole engine at the cost of an afternoon; the comparison is exact in principle, so disagreement is a bug, not a difference of opinion. Not a routing input; nothing changes in the pipeline on pass. |
+| D19 | **Centrality = current-flow betweenness** on the backbone graph (locked intra-name + inter-name MST + β augmentation), edge weights = corridor cost (`min_e`), nodes = names (parts contracted). Implemented via `networkx.current_flow_betweenness_centrality` / `edge_current_flow_betweenness_centrality`. **As implemented (2026-09-11, M5.18): the engine has used exactly this measure since the v2 rebuild** (`corridor_graph.centrality`, conductance = 1/cost, zero-cost cliques contracted), so nothing in `linkage_priority.tif` changes; D19 PINS the method via the `centrality` config key, ADDS the shortest-path edge betweenness as the comparison column `centrality_sp` beside `centrality_cf`, writes `centrality_compare.csv` and asserts G15. | Linkage Mapper's Centrality Mapper standard: cores as nodes, linkages as resistors weighted by corridor cost, current flow summed over all pairs. Credits all paths, not only the shortest, so it behaves on a sparse augmented graph where shortest-path betweenness is brittle to a single cheap backup. Zero-cost adjacency edges are contracted as before (§7). |
+| D20 (DEFERRED — future comparison) | **Pinch points sit beside D17, not instead of it.** Phase 6 diagnostic: a pairwise circuit solve (`i` source / `j` ground) run **inside each edge's band** on the O'Brien surface, giving within-band current density `pinch_e`. **Implemented natively**: graph Laplacian on band cells (8-neighbour, conductance = 1/mean resistance of the two cells, diagonal scaled by 1/√2), source cells fixed at unit potential and ground cells at zero, `scipy.sparse.linalg` solve, cell current = sum of |branch currents| / 2 — i.e. the Circuitscape pairwise formulation (McRae et al. 2008) without the Circuitscape runtime. Cross-checked against Circuitscape 5 on one band (G16). Per edge: `pinch_max_pctl`, `pinch_len_km` (contiguous run of cells ≥ p95 of within-band current), `pinch_loc` (fractional position along the path). Never a routing input; never a legend class in the director deck until the comparison in step 4e has been read. | Two different questions. D17 asks *is the near-optimal set geometrically narrower than it would be without barriers* (director-visible, map-legible). Pinch points ask *where within a corridor would area loss hurt most* (ops-package question, Linkage Mapper's Pinchpoint Mapper). They can disagree — a wide band with a single internal choke, or a uniformly narrow band with no choke — and the disagreement is itself informative. D3's rejection of current density applies to *routing on external circuit outputs*, not to a diagnostic run on our own bands with our own surface. Native implementation because Linkage Mapper's Pinchpoint tool still depends on Circuitscape 4 (unmaintained Python 2.7-era) and Circuitscape 5 is a Julia runtime — neither belongs as a hard dependency of a gated Python pipeline; bands are small enough that a sparse solve is seconds per edge. Circuitscape 5 is used once, for the cross-check only (H10). |
 
 ---
 
@@ -105,9 +133,17 @@ grizzly work remains a separate unapproved plan.
 | intra-name treatment | per name, from reviewed `multipart_review.csv` (`merge_parts` / `link_locked` / `link_competing` / `no_link`) | `link_competing` uses the D7 β ceiling against the cheapest inter-name path between the parts; `no_link` parts are independent nodes in the inter-name graph |
 | `squeeze_ratio` | `0.5` | D17; matches the draft map. Confirmed 2026-09-03 (H8 closed). |
 | `squeeze_cf_min_cost` | `10` | D17: cost classes at or above this are relaxed to 1 on the counterfactual surface (roads, converted land, water/ice). |
+| `centrality` | `"current_flow"` | D19; `"shortest_path"` retained only as the `centrality_sp` comparison column |
+| `validation_pairs` (deferred, D18) | 5 MST edge ids, chosen by rule: shortest, longest, one crossing a cost-1000 mask, one with `n_branches ≥ 2`, one both-senses irreplaceable | D18 / G14; ids recorded in `run_config.json` once the baseline exists |
+| `pinch_pctl` (deferred, D20) | `95` | D20; within-band percentile defining a pinch cell |
+| `pinch_edges` (deferred, D20) | `"all_nonzero"` | D20; run on every non-zero-cost baseline edge (band count is small; cost is per-band Circuitscape solves) |
+| `pinch_conc_thresh` (deferred, D20) | `4.0` (proposed) | D20 comparison 2×2; set from the baseline distribution before class counts are read, and logged |
 
 These go into `run_config.json` via `resolve()`. `resolve()` should raise if `branch_mult`,
-`branch_min_km2`, or `near_opt_tiers` are absent (same no-dead-flags doctrine as D2).
+`branch_min_km2`, or `near_opt_tiers` are absent (same no-dead-flags doctrine as D2). `centrality`
+defaults to `"current_flow"` when absent (runs that predate D19 load unchanged). Deferred keys are
+**not** written to `run_config.json` until their decision is activated — a deferred constant in
+the config would be a dead flag.
 
 ---
 
@@ -171,7 +207,8 @@ within one cell-area of target; report the residual). Inter-name distance betwee
 multipart names = min over part pairs (standard multi-seed semantics; state it).
 
 **Step 2 — baseline.** Locked intra-name edges + inter-name MST + bridge-backup augmentation
-(β = 2.5), quotient-graph centrality, criticality, bands at `cwd_cutoff_abs`,
+(β = 2.5), **current-flow betweenness centrality on the quotient graph (D19)** with shortest-path
+betweenness kept as `centrality_sp`, criticality, bands at `cwd_cutoff_abs`,
 `linkage_priority.tif`, `edge_owner.tif`, audit, maps. Locked edges carry `edge_class =
 "intra_name"` in `corridor_edges.csv`, are included in criticality and failure enumeration
 (they are real corridor land), and their band area is reported as a separate line from MST
@@ -217,6 +254,10 @@ branches by the audit columns and write `tiebreak.csv` with both the connectivit
 evidence (slack difference) and the values evidence. Ranking only — no automated
 "recommended" flag; the recommendation is a human read of the table.
 
+**Step 4e — DEFERRED (D20).** Not run in v2_run002 or its ensemble. Spec retained in §10 for
+the future comparison. G15 (`centrality_compare.csv`) runs in step 2 and again in notebook 04's
+step 0b when a run is re-attached.
+
 ---
 
 ## 4. Gates (add to §10)
@@ -228,6 +269,9 @@ evidence (slack difference) and the values evidence. Ranking only — no automat
 | G11 | per-branch `audit_area_check` discrepancy ≤ 5% for branches ≥ 50 km²; all discrepancies logged | step 4c |
 | G12 | ensemble member count = 1 baseline + 2 (B, excluding the 1× duplicate) + 42 (C) + 2 (D, excluding the 2.5 duplicate) = 47 distinct members; duplicates resolved by config-hash equality, not by name | step 3 |
 | G13 (restated 2026-09-08, final) | The counterfactual band bounds the real band in NEITHER direction — measured on v2_run002 it is narrower per km on some links for two legitimate reasons: relaxation SHORTENS a detouring route, or barriers on the real surface EQUALISE two routes into a near-tie (a braided, wide band: Liard↔Nahanni's two branches) that relaxation breaks, collapsing the band to one ribbon. The gate is therefore the one true relaxation invariant: `lcp_cf ≤ lcp_real` for every banded edge (lowering costs can never make the least-cost route costlier) — hard assert. Narrower-counterfactual links are reported with widths and lengths, never classed squeezed. The `squeezed` count is reported and, if it differs from the draft map's 5, the director package regenerates from the confirmed definition | notebook 04 step 2b, hard assert |
+| G14 (deferred, D18) | Linkage Pathways validation (D18): for each of `validation_pairs`, Pearson r between LM's normalized least-cost corridor and our slack over the union of both corridors ≥ 0.99, and Jaccard of the truncated bands at matched cutoff ≥ 0.95. Recorded with the LM version, the resistance-surface hash, and the LM run parameters. Failure halts: it is a bug in one of the two implementations until shown otherwise. | once per resistance hash; before any external release (with H1) |
+| G15 | current-flow centrality is finite and non-negative on every edge; on a pure tree (β = 0 member) current-flow and shortest-path edge betweenness rank identically (on a tree there is one path per pair, so both reduce to the same count) — assert the two are PROPORTIONAL there (exact ties; a rank test is broken by solver noise), Spearman reported; `centrality_compare.csv` written | step 2 |
+| G16 (deferred, D20) | native circuit solve vs Circuitscape 5 on one validation band (the `n_branches ≥ 2` member of `validation_pairs`): Pearson r of cell current ≥ 0.99 and the top-5 % current cells overlap by Jaccard ≥ 0.9. Recorded once per resistance hash with the Circuitscape version. | before step 4e results are read |
 
 G1 stays the gate that matters; none of the above replaces it.
 
@@ -239,8 +283,8 @@ G1 stays the gate that matters; none of the above replaces it.
 originals live git-tracked in `audit/audit_objects/`, hash-pinned by `run_config.json`; see
 step 0a and §8), `near_optimality.tif`, `near_optimality_class.tif`, `near_opt_owner.tif`,
 `ensemble_attribution.tif` (+ per-axis), `branches.tif/.gpkg/.csv`,
-`alternatives_branches.csv`, `tiebreak.csv`; `corridor_edges.csv` gains
-`band_new_km2`, `band_cf_km2`, `squeeze_ratio_obs`, `squeezed` (D17) and
+`alternatives_branches.csv`, `tiebreak.csv`, `centrality_compare.csv` (D19); `corridor_edges.csv` gains
+`centrality_cf`, `centrality_sp` (D19), `band_new_km2`, `band_cf_km2`, `squeeze_ratio_obs`, `squeezed` (D17) and
 `bands_counterfactual.gpkg` is written (D17 natural-width polygons). All rasters COG, ESRI:102008 at 300 m (audit
 crossings stay internal), Dublin Core+ metadata written at creation. Every product that is not a
 frequency is named so it cannot be read as one.
@@ -261,6 +305,14 @@ frequency is named so it cannot be read as one.
   areas" is conditional on IPCA proposals being realised.
 - The climate dimension in this product is audit-only (macrorefugia and `carroll2018_pctl`
   columns). No routing is climate-informed. Phase 7 status is "deferred, scope extension".
+- Method precedent is stated: the corridor model is equivalent to Linkage Mapper's Linkage
+  Pathways (McRae & Kavanagh 2011) — formal validation against it is deferred (D18/G14) and
+  the text says so; centrality follows Centrality Mapper's current-flow formulation (D19).
+  Linkage Mapper's Linkage Priority (weighted multi-factor blend) is deliberately not adopted:
+  values are reported as an audit rather than folded into a weighted priority, so that every
+  priority statement traces to a single, checkable reason (D5).
+- Pinch points (D20) are deferred; the squeezed class (D17) stands alone in this version and
+  is described as a geometric measure of narrowing, not a flow bottleneck.
 
 ---
 
@@ -277,7 +329,21 @@ frequency is named so it cannot be read as one.
   mark D17 confirmed; if not, replace D17's definition with the implemented one, update the
   rationale, and re-check G13. The director package's "already narrowing" class does not ship
   until this is closed.
+- **H9 (deferred with D18)** — run Linkage Pathways on `validation_pairs` with the exported O'Brien
+  surface and node rasters (identical grid, CRS, nodata). Preferred form: a batch script
+  `validation_lm/run_lm.py` in the ArcGIS Pro Python (arcpy) environment using Linkage
+  Mapper ≥ 3.0.1's scripted-run entry points, so G14 is reproducible; manual tool runs are
+  acceptable as a fallback. arcpy is confined to `validation_lm/` and is **not** a pipeline
+  dependency. Hand back the NLCC and truncated-corridor rasters plus the LM run log; Claude
+  Code computes G14. Open: whether ArcGIS Pro is on the pipeline machine or a separate box.
+- **H10 (deferred with D20)** — run Circuitscape 5 (Julia, any machine) pairwise on the one G16
+  validation band exported by the pipeline (resistance ASCII + source/ground rasters) and
+  hand back the current raster. Not a pipeline dependency: step 4e runs natively regardless;
+  its results are marked unvalidated until G16 is recorded.
 - Decision after step 3: whether to open Phase 7 at all, based on axis C stability.
+- Future comparison (not scheduled): activate D18 and D20 together — LM validation of the
+  corridor engine and the squeeze-vs-pinch comparison — and only then decide whether `pinch`
+  products enter the ops package.
 
 ---
 
@@ -371,6 +437,8 @@ Run top-to-bottom, in numeric order, by Ethan. **One run (`v2_runNNN`) spans not
   `edge_owner.tif`, v1 compare, co-benefit audit (**G5**), maps. Edge table carries
   `edge_class`. (Absorbs cells 9–32.)
 
+- **G15** (D19, added 2026-09-11) right after `cc.corridor_network`: `cc.gate_g15(A)` → `centrality_compare.csv`.
+
 ### `03_ensemble.ipynb` — step 3
 
 - Bootstrap; `RUN = "v2_runNNN"`; `A = cc.load(...)`.
@@ -400,6 +468,8 @@ Run top-to-bottom, in numeric order, by Ethan. **One run (`v2_runNNN`) spans not
 The "decision after step 3" (whether to open Phase 7, based on axis-C stability) sits between
 notebooks 03 and 04 in wall-clock terms but does **not** block 04 — steps 4a–4d are
 climate-free by construction (D14).
+
+- **Step 0b** (added 2026-09-09/11): after the re-attach, `cc.corridor_profile` + `cc.gate_g15` + `cc.gate_g5` regenerate the audit, `centrality_compare.csv` and G5 on the loaded run without re-running notebook 02.
 
 ### `06_director_package.ipynb` — the October-workshop package (added 2026-09-03)
 
@@ -439,3 +509,38 @@ confirm when `docs/05_methods_v2.md` is patched, not a settled decision:
    `branches.csv` / `alternatives_branches.csv`.
 3. **Tier domain.** `near_opt_tiers` percentiles are computed over the 2× union band, so cells
    outside it fall to "occasional" implicitly. Proposed: state that explicitly.
+
+---
+
+## 10. Deferred specs (added 2026-09-11) (kept intact for the future comparison; not part of the run)
+
+**Step 4e (deferred) — pinch points beside squeeze (D20; Phase 6 diagnostic).** Per non-zero-cost
+baseline edge: clip the O'Brien surface to the edge's band (at `cwd_cutoff_abs`, node cells
+included), solve the pairwise circuit natively with node `i` cells as source and `j` cells as
+ground (D20), write
+`pinch_{edge_id}.tif` and mosaic to `pinch.tif` (max where bands overlap; owner in
+`pinch_owner.tif`). Per edge: `pinch_max_pctl` (max current as a within-band percentile is
+trivially 100 — report instead the ratio of max to median within-band current,
+`pinch_concentration`), `pinch_len_km` (longest contiguous run of cells ≥ `pinch_pctl` along
+the least-cost path), `pinch_loc` (fractional position of the run's midpoint along the path,
+0 = node i, 1 = node j).
+
+Then the comparison product — this is the point of "sits beside":
+- `squeeze_vs_pinch.csv`: one row per edge with `squeeze_ratio_obs`, `squeezed`,
+  `pinch_concentration`, `pinch_len_km`, `pinch_loc`, and a 2×2 class:
+  *narrow-and-choked* / *narrow-not-choked* / *wide-but-choked* / *neither*, using
+  `squeezed` and `pinch_concentration ≥ pinch_conc_thresh` (pre-registered, proposed 4.0 —
+  set from the baseline distribution before reading the class counts; log the value).
+- `squeeze_vs_pinch.png`: scatter of `squeeze_ratio_obs` (x) vs `pinch_concentration` (y,
+  log), one point per edge, labelled, quadrant lines at the two thresholds. Flagged classes
+  (D7, D12) as marker shape.
+- Per-edge panel for every edge in the *wide-but-choked* and *narrow-not-choked* cells (the
+  disagreements): band outline, within-band current, least-cost path, the pinch run
+  highlighted. These are the cases to read, because they are where the two definitions tell
+  different stories.
+- One paragraph in the run report stating what the disagreements look like on the ground
+  (e.g. river crossings and mountain passes produce chokes inside wide bands; long valley
+  corridors squeezed by parallel linear features produce narrow bands with no choke).
+
+Nothing in 4e feeds routing, priority, or the director legend. Whether `pinch` earns a
+place in the ops package (Phase 8) is decided after this comparison is read, and logged.

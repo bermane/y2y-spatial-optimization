@@ -1,0 +1,13 @@
+,human_modification,transboundary_connectivity,climate_corridors,climate_type_macrorefugia,irrecoverable_carbon_biomass,irrecoverable_carbon_m_soc,aoh_richness_mammals,aoh_richness_birds
+s0_ssp585_theta5,,0.995,,1.0,0.502,0.41,,
+s1_ssp585_theta5,,0.813,,1.0,0.3,0.362,,
+s2_ssp585_theta5,,1.0,,0.999,0.381,0.303,,
+s3_ssp585_theta5,,0.876,,0.999,0.422,0.489,,
+s4_ssp585_theta3,,0.941,,1.0,0.891,0.954,,
+s5_ssp585_theta5,,0.969,,0.998,0.509,0.39,,
+s0_ssp245_theta5,,0.996,,0.999,0.497,0.429,,
+s1_ssp245_theta5,,0.804,,1.0,0.346,0.392,,
+s2_ssp245_theta5,,1.0,,0.966,0.375,0.304,,
+s3_ssp245_theta5,,0.868,,0.979,0.399,0.498,,
+s4_ssp245_theta3,,0.935,,0.997,0.888,0.965,,
+s5_ssp245_theta5,,0.967,,0.987,0.509,0.415,,

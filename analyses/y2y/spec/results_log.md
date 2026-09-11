@@ -636,9 +636,36 @@ F2.1 alone at +500 km** — the Act 1 representativeness layer therefore votes o
 weights unchanged; supersedes v3 e47991bc…, never solved). Products: `spec/v3.1/efg_window_footprints.csv`,
 `efg_targets.json`, `manifest_v3.1.csv` + sha.
 
-**R10.20 (placeholder) The v3 ensemble (12 + 18 under manifest v3) — PENDING Ethan's run.** To record: per-formulation
-anchor objectives and timings, twin ≤ anchor checks, MGA diameters, guarded sweep certificates; F12 bands and core vs the
-v1 record (Jaccard, km²), E1 bias, E7 captures (T1 on v3), E11 recount; the E14 trigger re-check.
+**R10.20 The v3.1 ensemble solved (12 under manifest v3.1; run by Ethan 2026-09-09/10; integrity from 12's closing cell +
+the certificates):** 12/12 design formulations complete — anchor, 50 MGA members (g = 5%), LP twin, meta — in **4.0 h wall**
+(MGA 7.2 h of solver time across formulations is the certificates' sum; anchors 55 min, twins 7 min); far under the ~10–12 h
+projection because the machine was uncontended (members 12–15 s each). Every twin ≤ its anchor (LP ≤ MILP OK, 12/12);
+anchor gaps 6e-6 – 2e-5; **certificates: 600/600 members in band, 0 time-limited, 4 duplicates (2 in each S5)**; every
+member sits at exactly +5.0% of z* at most. Anchor objectives (SSP585 / SSP245): S0 4.9025 / 4.8655, S1 4.7034 / 4.6195,
+S2 5.0657 / 5.0560, S3 5.0934 / 5.0672, S4 4.5241 / 4.4866, S5 11.1315 / 11.1055 — lower than the v1 record throughout
+(e.g. S0 v1 5.3628 at Gate 2b) because twelve of twenty EFG targets sit at 0.10 under the window-derived rule and the
+block no longer pays shortfall on the artifact classes. Anchor solve times 49–693 s (S2, the connectivity scenarios,
+slowest as before). k-best pools not re-solved (M4.26). Next: 13 → 15 → 18 (or the one-command runner, which skips 12).
+
+**R10.20 (cont.) The unguarded frequency surface on the curated block (13 + 15 under v3.1, Ethan's run 2026-09-10;
+zero-solve comparison against the v1 record on the same 12 design formulations):** **the unguarded frequent tier all but
+vanishes — F ≥ 0.70: 6,306 km² (v1, F12) → 4 km²; F ≥ 0.50: 15,097 → 2,051; F ≥ 0.30: 96,092 → 61,871; never (< 0.05)
+17,480 → 829** (bands: conditional 61,867, rare 1,019,185). Max F 0.784; corr(F_v1, F_v3.1) 0.723 over unprotected land;
+mean F identical by construction (0.1764). Where the v1 tier went: its 6,306 km² now average F 0.25 (median 0.21; 613 km²
+still ≥ 0.50) — and **99% of the v1 unguarded frequent tier sat on a ≤ 1%-footprint class (artifact or retained-small)**:
+the shared frequent land across all twelve positions was rarity-pinned EFG land, exactly as R10.18 diagnosed ("the
+classes cheapest to hold"). The retained small classes no longer pin: F1.1's unlocked cells fall from mean F 0.84 to 0.41
+(0% ≥ 0.70) under its 0.50 target; F2.1 0.36 → 0.33. Per formulation (f ≥ 0.70, v1 → v3.1): S0 11,247 → 650 / 13,513 →
+1,844 (585/245); S2 4,748 → 29 / 6,107 → 63; S3 8,186 → 0 / 9,830 → 21; **S1 27,843 → 23,106 / 39,161 → 34,491 and S4
+28,748 → 20,351 / 30,818 → 22,135 keep most of theirs** — the two concentrated claims (dense refugia, the carbon target)
+pin on their own; the diffuse scenarios and the balanced position had been pinned by the block. S5 stays empty. E-round
+statistics on v3.1: within-formulation degeneracy share 0.961 (v1 0.952; scenario 0.034, climate 0.002); E1 bias mean
+0.179 / max 0.81 (v1 0.173 / 0.77); D_s 0.836–1.000; E11 107/132 pairs mutually in-band (v1 twelve: 109/132; largest
+conflict S4@245 at Δ 0.106); the E14 trigger FIRES again (members sacrifice whole blocks inside the 5% band); E17-T2
+southern statistic 9/20 (was 20/40); E13 overlap on the 4-cell core is moot. **Reading for the paper:** the aggregate
+5% band's "always/frequent" core was a representativeness artifact on the 40-class block; on the curated block the
+Claim-A estimand says almost no cell is required by every value position within 5% of optimal — the pluralism result
+sharpens, and the applied core now rests entirely on the guarded (per-block-floor) semantics, measured by 18 (running).
 
 **R10.21 (placeholder) The necessity test (E19) — PENDING 18b/18c.** To record: the per-class forced ledger, forced land
 (≥ 1 / all formulations), the ensemble-forced share of the core vs the 50% gate, T2 necessary-vs-forced agreement and the

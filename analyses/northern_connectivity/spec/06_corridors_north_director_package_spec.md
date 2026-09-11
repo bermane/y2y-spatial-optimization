@@ -1,8 +1,49 @@
 # Northern corridors — Director Package Spec
 
-**Status:** v1.2 — BUILT 2026-09-03 (`corridors_director.py` + `06_director_package.ipynb`; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
+**Status:** v1.2.8 (2026-09-11) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_director_package.ipynb`; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
 
 ## Changelog
+- v1.2.8 (2026-09-11) — from 05 D19 (the only active change of the Linkage Mapper comparison;
+  D18/D20 deferred). The chat-regenerated copy of this spec (v1.2 base, saved as
+  `scratchpad/spec_merge/06_chat_20260911.md`) dropped v1.2.1–v1.2.7 and was NOT adopted; it
+  also overwrote the uncommitted v1.2.3–v1.2.7 entries, which are reconstructed below from the
+  session record and methods_log M5.13–M5.17. Effect of D19 on the package: **none on any map,
+  star or table** — the classes are D7 / D12 / D17, the examples are PINNED (v1.2.4), and the
+  engine's centrality was already current-flow betweenness (05 merge note, M5.18);
+  `centrality_compare.csv` is available for an appendix. The "already narrowing" class remains
+  D17 and is described as geometric narrowing, not a flow bottleneck. Any methods note gains the
+  Linkage Mapper precedent line (formal validation deferred, D18) and the values-as-audit
+  sentence from 05 §6.
+- v1.2.7 (2026-09-10) — **Notebook trimmed to what the workshop needs (Ethan):** link-profile
+  chips, example profile pages, T1, T2 and the draft deck RETIRED from `06_director_package`
+  (functions kept). After the star plots: TWO alternatives tables in the y2y-wide consequences
+  format for options 1–6 + the IPCAs and the PAs as wholes, rows by theme, never mixed —
+  `T_options_density` (per-cell means, carbon t C/ha, EFG groups per cell) and
+  `T_options_absolute` (land, share of Y2Y, carbon totals, groups present, and THRESHOLD-FREE
+  absolutes for the rest: habitat km² summed across species for richness, intact km² for
+  intactness, share of the Y2Y-wide total for refugial residence / movement flow / corridor
+  centrality; a top-30% high-value-land alternative was rejected as threshold-dependent).
+  Decimals: one per row, set by the row's smallest value to two significant figures, none
+  when every value ≥ 10, EFG rows whole numbers; CSV = fixed decimals, PNG adds separators.
+  M5.17.
+- v1.2.6 (2026-09-10) — thin black hairline (0.45 pt) around every named PA / IPCA polygon on
+  M0–M3 so adjoining areas (Mount Edziza / Stikine River) read as distinct. Display only.
+- v1.2.5 (2026-09-09) — **M4 / N1 AXED.** New section after M3: star plots of options 1–6 +
+  IPCAs and PAs as wholes (`star_options`) on the Y2Y-wide director construction. **DECISION
+  (Ethan, both packages): star axes = mean PERCENTILE by theme** over the discretionary
+  landscape (y2y block axes; ring 0.5 = typical unprotected land), not value ÷ area; reference
+  = all unprotected Y2Y land (IPCA land included; `reference="window"` = north-relative). M5.15.
+  EFG curation (40 → 20) adopted for the whole northern analysis (M5.16, `cc.gate_g5`).
+- v1.2.4 (2026-09-09) — **Examples PINNED by Ethan** (`EXAMPLE_PICKS`; rule-based selection
+  retired): options 1–2 = the two route branches of Nahanni ↔ Liard River Corridor, 3–4 = the
+  two links from T'akú Tlatsini to the touching Mount Edziza / Stikine complex, 5 Gwillim Lake ↔
+  Pine Le Moray, 6 Wilps Gwininitxw ↔ Swan Lake, 7 Carp Lake ↔ Pine Le Moray (unmarked on M3).
+  M2 / M3 = CROPS AT M1's MAP SCALE (M2 north of the Edziza / Spatsizi / Dene group, M3 south
+  of the M1 midline), every link in its M1 colour, natural-width outlines dropped; numbers
+  carried on markers and every downstream product. Tthetäwndëk ↔ Ni'iinlii Njik and Wədzih
+  Yiné' ↔ Chase → appendix. M5.14.
+- v1.2.3 (2026-09-09) — first M2 / M3 rebuild at M1's exact aspect ratio (superseded by v1.2.4's
+  scale-preserving crops). M5.13.
 - v1.2.2 (2026-09-08) — M1 promoted to the main plot and restyled to the y2y-wide basemap
   conventions (coast / admin-1 lines / Canada–US border from Natural Earth; province NAMES rather
   than postal codes, per Ethan; prominent cities; the biggest PA/IPCA names with the decluttered

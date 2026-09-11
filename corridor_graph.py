@@ -165,23 +165,11 @@ def augment(D, beta, labels=None, verbose=True):
 
 
 # ================= centrality =================
-def centrality(G):
-    """Edge current-flow betweenness on the QUOTIENT graph (zero-cost cliques contracted).
-
-    Infinite conductance between two nodes IS a merged node -- that is the correct physics, not a
-    numerical nuisance to be capped away. A finite cap would approximate the same limit while
-    introducing an arbitrary constant and a Laplacian ill-conditioned across orders of magnitude.
-
-    The contraction is COMPUTATION-SCOPED ONLY: the caller's node list, banding, audit and
-    leave-one-out all keep the nodes distinct, so the deliberate 2026-08-05 dedupe decision (merge
-    only on >=50% mask overlap, so a wrapping neighbour stays a separate node) is untouched.
-
-    Returns {(i,j): (raw, normalised)}. Adjacency edges get (nan, nan) -- they live inside a
-    supernode, so betweenness through them is undefined. Store BOTH values: networkx normalises by
-    2/[(n-1)(n-2)], which changes with n, so normalised centrality is NOT comparable across a
-    leave-one-out ensemble where n varies.
-    """
-    # contract zero-cost cliques
+def _quotient(G):
+    """Contract zero-cost cliques (infinite conductance IS a merged node -- the correct physics,
+    not a numerical nuisance). COMPUTATION-SCOPED ONLY: the caller's node list, banding, audit
+    and leave-one-out all keep the nodes distinct, so the 2026-08-05 dedupe decision (merge only
+    on >=50% mask overlap) is untouched. Returns (Q, find)."""
     uf = {n: n for n in G.nodes}
 
     def find(x):
@@ -193,7 +181,6 @@ def centrality(G):
     for u, v, d in G.edges(data=True):
         if d["cost"] <= ADJACENCY_COST:
             uf[find(u)] = find(v)
-
     Q = nx.Graph()
     for u, v, d in G.edges(data=True):
         qu, qv = find(u), find(v)
@@ -201,16 +188,38 @@ def centrality(G):
             continue                                   # inside a supernode
         if not Q.has_edge(qu, qv) or d["cost"] < Q[qu][qv]["cost"]:
             Q.add_edge(qu, qv, cost=d["cost"], conductance=1.0 / d["cost"])
+    return Q, find
 
+
+def centrality(G, method="current_flow"):
+    """Edge centrality on the QUOTIENT graph (zero-cost cliques contracted).
+
+    method="current_flow" (D19, the priority input since the v2 rebuild): edge current-flow
+    betweenness, conductance = 1/cost -- Linkage Mapper's Centrality Mapper formulation (cores
+    as nodes, linkages as resistors weighted by corridor cost, current summed over all pairs).
+    method="shortest_path": edge betweenness over least-cost paths (weight = cost) -- the
+    comparison column `centrality_sp` (D19), brittle to a single cheap backup on a sparse graph.
+
+    Returns {(i,j): (raw, normalised)}. Adjacency edges get (nan, nan) -- they live inside a
+    supernode, so betweenness through them is undefined. Store BOTH values: networkx normalises by
+    2/[(n-1)(n-2)], which changes with n, so normalised centrality is NOT comparable across a
+    leave-one-out ensemble where n varies.
+    """
+    assert method in ("current_flow", "shortest_path"), method
+    Q, find = _quotient(G)
     raw = {}
     for comp in nx.connected_components(Q):
         sub = Q.subgraph(comp)
-        if sub.number_of_nodes() < 3:                  # normalisation needs n >= 3
-            for e in sub.edges:
-                raw[tuple(sorted(e))] = 0.0
-            continue
-        for e, val in nx.edge_current_flow_betweenness_centrality(
-                sub, normalized=False, weight="conductance").items():
+        if method == "current_flow":
+            if sub.number_of_nodes() < 3:              # normalisation needs n >= 3
+                for e in sub.edges:
+                    raw[tuple(sorted(e))] = 0.0
+                continue
+            vals = nx.edge_current_flow_betweenness_centrality(sub, normalized=False,
+                                                                weight="conductance")
+        else:
+            vals = nx.edge_betweenness_centrality(sub, normalized=False, weight="cost")
+        for e, val in vals.items():
             raw[tuple(sorted(e))] = float(val)
 
     n = Q.number_of_nodes()
@@ -279,8 +288,10 @@ def stretch(G, D):
 
 
 # ================= assembly =================
-def build(D, labels, kinds=None, beta=2.5, verbose=True):
-    """D + labels -> (G, edges_df). The one entry point corridors_core calls."""
+def build(D, labels, kinds=None, beta=2.5, verbose=True, centrality_method="current_flow"):
+    """D + labels -> (G, edges_df). The one entry point corridors_core calls. `centrality_method`
+    (D19 config key `centrality`) selects which centrality feeds `ecfb_raw` / the priority
+    surface; BOTH are always written as comparison columns `centrality_cf` / `centrality_sp`."""
     D = np.asarray(D, float)
     assert D.shape[0] == D.shape[1] == len(labels), "D must be square and match labels"
     assert np.allclose(D, D.T, equal_nan=True), "D must be symmetric before graph construction"
@@ -290,7 +301,8 @@ def build(D, labels, kinds=None, beta=2.5, verbose=True):
     if verbose and n_comp > 1:
         print(f"  WARNING network is a FOREST: {n_comp} components (some node pairs unreachable)")
 
-    cen = centrality(G)
+    cen_cf, cen_sp = centrality(G, "current_flow"), centrality(G, "shortest_path")
+    cen = cen_cf if centrality_method == "current_flow" else cen_sp
     crit = criticality(G, D)
     insured = {}                       # added edge -> the bridge it insures
     for br, info in backup.items():
@@ -309,6 +321,7 @@ def build(D, labels, kinds=None, beta=2.5, verbose=True):
             "cost": d["cost"], "in_mst": bool(d.get("in_mst", False)),
             "is_adjacency": c["is_adjacency"],
             "ecfb_raw": cen[e][0], "ecfb_norm": cen[e][1],
+            "centrality_cf": cen_cf[e][0], "centrality_sp": cen_sp[e][0],
             "disconnects": c["disconnects"], "n_pairs_lost": c["n_pairs_lost"],
             "cost_inflation": c["cost_inflation"],
             "mean_pair_inflation": c["mean_pair_inflation"],

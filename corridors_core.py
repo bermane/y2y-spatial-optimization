@@ -922,7 +922,7 @@ def _locked_edges(A, cutoff, cutoff_mode="abs"):
                              # edges contribute NO linkage-priority weight -- their land shows in
                              # corridors.tif and the near-optimality surface but not
                              # linkage_priority.tif. OPEN METHODS QUESTION flagged for review.
-                             ecfb_raw=np.nan, ecfb_norm=np.nan,
+                             ecfb_raw=np.nan, ecfb_norm=np.nan, centrality_cf=np.nan, centrality_sp=np.nan,
                              edge_class="intra_name", name_label=n["label"]))
     if not rows:
         return None, {}, {}, {}, {}
@@ -1063,7 +1063,8 @@ def corridor_network(A, cutoff=None, cutoff_mode="abs", beta=None, verbose=True)
 
     A.D = _unit_D(A)
     labels = [lbl for lbl, _ in A.nodes]
-    A.graph, A.edges = cg.build(A.D, labels, A.kinds, beta=beta, verbose=verbose)
+    A.graph, A.edges = cg.build(A.D, labels, A.kinds, beta=beta, verbose=verbose,
+                                centrality_method=A.cfg.get("centrality", "current_flow"))   # D19
     A.edges["edge_class"] = np.where(A.edges["is_adjacency"], "adjacency", "inter")
 
     A.bands, A.slack, A.paths, A.band_meta = edge_bands(
@@ -2574,6 +2575,72 @@ def _corridor_groups(A, corr, nodes, n_groups):
         s["short"] = f"{j}. {' ↔ '.join(short)}{extra}"
         s["color"] = rc.CLUSTER_CMAP((j - 1) % 10)
     return segs, n
+
+
+# Axes whose FEATURE DEFINITION changed after v1's profile froze (2026-08-07); G5 reports them
+# instead of asserting on them:
+#   climate type macrorefugia -- re-oriented vmax-v -> 1/v (2026-08-17 leverage redesign, M6.3)
+#   EFG (mean) -- the EFG block was R0-CURATED 40 -> 20 features (y2y M2.11, 2026-09-09) and Ethan
+#                 adopted the curated block for this analysis the same day (M5.16): the axis now
+#                 counts a different class set, so v1's 40-class value is not a regression target
+G5_REDEFINED = ("climate type macrorefugia", "EFG (mean)")
+
+
+def gate_g5(A, redefined=G5_REDEFINED, tol=0.02):
+    """Gate G5 -- audit invariance: v1's frozen IPCA / PA profile rows must reproduce on every
+    richness axis whose feature definition is unchanged (`redefined` axes are reported, not
+    asserted). Reads A.profile["table"] (corridor_profile) and the frozen v1 profile."""
+    old = pd.read_csv(config.RESULTS_DIR / "corridors_north" / "_v1_frozen" / "corridor_profile.csv")
+    new = A.profile["table"]
+    for area in ("proposed IPCAs", "existing PAs"):
+        o = old[old.area == area].iloc[0]; n = new[new.area == area].iloc[0]
+        cols = [c for c in new.columns if c.endswith("| richness") and c in old.columns]
+        inv = [c for c in cols if not any(k in c for k in redefined)]
+        d = max(abs(float(o[c]) - float(n[c])) for c in inv)
+        print(f"  {area:16s} max |Δrichness| over {len(inv)} unchanged axes = {d:.4f}")
+        for c in cols:
+            if any(k in c for k in redefined):
+                print(f"    reported, not asserted ({c.split(' |')[0]}: feature redefined after v1 froze): "
+                      f"v1 {float(o[c]):.3f} -> v2 {float(n[c]):.3f}")
+        assert d < tol, f"G5 FAILED on {area}: the audit path changed (max Δ {d:.4f})"
+    print("G5 OK — audit path unchanged on every axis with an unchanged feature definition")
+
+
+def gate_g15(A, tol=1e-9):
+    """Gate G15 (D19): the priority centrality is finite and non-negative on every inter-name
+    edge; on a pure tree (beta = 0) current-flow and shortest-path edge betweenness rank
+    identically (one path per pair, so both reduce to the same pair count) -- Spearman rho = 1.
+    Writes centrality_compare.csv (edge, both centralities, ranks, rank delta) so the effect of
+    the D19 choice is inspectable."""
+    from scipy.stats import spearmanr
+    e = A.edges
+    inter = e[(e["edge_class"] == "inter") & ~e["is_adjacency"].astype(bool)]
+    cf, sp = inter["centrality_cf"].astype(float), inter["centrality_sp"].astype(float)
+    assert np.isfinite(cf).all() and (cf >= -tol).all(), "G15: non-finite / negative current-flow centrality"
+    assert np.isfinite(sp).all() and (sp >= -tol).all(), "G15: non-finite / negative shortest-path centrality"
+    cmp = inter[["label_i", "label_j", "edge_class", "in_mst", "cost", "centrality_cf", "centrality_sp"]].copy()
+    cmp["rank_cf"] = cmp["centrality_cf"].rank(ascending=False, method="min").astype(int)
+    cmp["rank_sp"] = cmp["centrality_sp"].rank(ascending=False, method="min").astype(int)
+    cmp["rank_delta"] = cmp["rank_cf"] - cmp["rank_sp"]
+    cmp = cmp.sort_values("rank_cf")
+    cmp.to_csv(A.run_dir / "centrality_compare.csv", encoding="utf-8-sig")
+    rho_full = float(spearmanr(cf, sp).correlation) if len(inter) > 2 else np.nan
+    # tree case: rebuild at beta = 0 on the same distance matrix
+    labels = [lbl for lbl, _ in A.nodes]
+    _, tree = cg.build(A.D, labels, A.kinds, beta=0, verbose=False)
+    t = tree[~tree["is_adjacency"].astype(bool)]
+    cf_t, sp_t = t["centrality_cf"].astype(float).values, t["centrality_sp"].astype(float).values
+    # on a tree both are the same pair count up to networkx's constant factor: assert
+    # PROPORTIONALITY (ties are exact there; a rank test would be broken by solver noise)
+    prop = bool(np.allclose(cf_t / cf_t.sum(), sp_t / sp_t.sum(), rtol=1e-6, atol=1e-9))
+    rho_tree = float(spearmanr(np.round(cf_t / cf_t.sum(), 9), np.round(sp_t / sp_t.sum(), 9)).correlation)
+    print(f"  G15: {len(inter)} inter-name edges | rank agreement current-flow vs shortest-path: "
+          f"Spearman {rho_full:.3f} on the augmented graph, {rho_tree:.3f} on the beta=0 tree "
+          f"| top-5 by current flow: " + ", ".join(
+              f"{_short_node_name(r.label_i, 12)}<->{_short_node_name(r.label_j, 12)}" for r in cmp.head(5).itertuples()))
+    assert prop, f"G15 FAILED: on the beta=0 tree current-flow and shortest-path betweenness are not proportional (Spearman {rho_tree:.4f})"
+    print("G15 OK — centrality_compare.csv written")
+    return cmp
 
 
 def corridor_profile(A, n_groups=10):

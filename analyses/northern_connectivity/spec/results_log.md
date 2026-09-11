@@ -280,3 +280,35 @@ Wilps Gwininitxw ↔ Swan Lake Kispiox (both-senses, by criticality); Wədzih Yi
 the appendix. **Every flagged link reads 'Unaffected' on the proposal-drop test** — no
 flagged link's existence depends on a non-endpoint proposal. T2: 12 flagged links × 19
 columns. Final numbers/figures land when 04 → 06 run.
+
+**R9.3 Partners of squeezed links are themselves squeezed [run002, D17 measured, 2026-09-09]:**
+the partner test (D7) is link-by-link on the augmented graph — a link passes if the network stays
+connected without it and, where a single backup was recorded, that backup costs ≤ β. Read against
+D17: of the 7 purple (squeezed, not edge-irreplaceable) links, the 3 with a recorded backup all
+back onto ANOTHER squeezed link — Gwillim Lake ↔ Monkman → Gwillim Lake ↔ Kakwa (1.48×, squeeze
+0.37), Mount Blanchet ↔ Sustut → Wilps Gwininitxw ↔ Mount Blanchet (1.07×, squeeze 0.41), and
+Carp Lake ↔ Omineca's backup is Graham-Laurier ↔ Pine Le Moray (squeeze 0.40); the 3 squeezed
+BACKUP links (Gwillim ↔ Kakwa, Graham-Laurier ↔ Pine Le Moray, Wilps Gwininitxw ↔ Mount Blanchet)
+have no recorded backup of their own. So the "options" behind the purple class are options WITHIN
+two southern complexes (Pine Le Moray / Gwillim / Kakwa / Monkman / Carp Lake; Wilps Gwininitxw /
+Mount Blanchet / Sustut) that are narrowing as systems. Presentation consequence: the Act-2
+sentence "a connection that still has a substitute is losing width" holds link-by-link but not
+complex-by-complex. METHODS QUESTION queued for Ethan (not implemented): a complex-level squeeze
+statement, or a partner test that discounts squeezed backups, would be a D7/D17 change.
+R9.3 addendum (same day) — PAIRED loss, read off the run002 edge list (58 edges, name-level
+graph; not a new solve): every squeezed link can be lost ALONE without a disconnect except
+Gwillim Lake ↔ Pine Le Moray (already red); but losing a squeezed link TOGETHER with its recorded
+backup splits the network in both recorded pairs — Gwillim Lake ↔ Monkman + Gwillim Lake ↔
+Kakwa, and Mount Blanchet ↔ Sustut + Wilps Gwininitxw ↔ Mount Blanchet. The map draws every
+backup link (they are the other purple swaths in the same complex) but no product shows the
+paired-loss case; backups have no backups by construction (D7 = one loss at a time).
+
+**R9.4 EFG axis re-measured under the curated block [run002; PENDING the NB04 → 05 → 06 re-run,
+ruled 2026-09-09, M5.16]:** every EFG-bearing profile (corridor co-benefit audit, branch values
+table, priority-link PROACT profiles, T2 chips, star plots) moves from the 40-class block to the
+R0-curated 20-feature block; the G5 EFG delta vs v1 is reported, not asserted. Numbers land here
+when the notebooks re-run.
+
+**R9.5 Centrality comparison (D19) [run002; PENDING NB04 step 0b / NB02 G15]:** `centrality_compare.csv`
+— current-flow vs shortest-path edge betweenness per inter-name edge, ranks and rank deltas; the
+Spearman agreement on the augmented graph and the β = 0 tree identity land here when the gate runs.
