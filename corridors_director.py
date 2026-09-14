@@ -169,9 +169,15 @@ def _edge_jurisdictions(P):
 # Act 1 shows OPTIONS: N2 = one link with two route branches (numbers 1-2), N3 = two links to
 # the same complex (3-4). Act 2 shows the three southern example links (5-7).
 EXAMPLE_PICKS = [
-    dict(slot="N2", act=1, pair=("Nahanni", "Liard River Corridor"), options="branches", side="ne"),
+    # Every option = one LINK's full corridor band (its owned land, exactly as M1 draws it) --
+    # Ethan 2026-09-11, after seeing that the Dene<->Nahanni and Liard<->Nahanni bands overlap:
+    # 1 = Nahanni to Dene Kʼéh Kusān, 2 = Nahanni to the Liard River Corridor (two ways south);
+    # 3-4 = the two links from T'akú Tlatsini to the Mount Edziza / Stikine complex.
+    dict(slot="N2", act=1, pair=("Dene K", "Nahanni National"), options="links",
+         option_pairs=[("Dene K", "Nahanni National"), ("Liard River Corridor", "Nahanni National")],
+         side=["sw", "ne"]),
     dict(slot="N3", act=1, pair=("T’akú", "Mount Edziza"), options="links",
-         option_pairs=[("T’akú", "Mount Edziza"), ("T’akú", "Stikine")]),
+         option_pairs=[("T’akú", "Mount Edziza"), ("T’akú", "Stikine")], side=["sw", "ne"]),
     dict(slot="S1", act=2, pair=("Gwillim", "Pine Le Moray")),
     dict(slot="S2", act=2, pair=("Wilps Gwininitxw", "Swan Lake")),
     dict(slot="S3", act=2, pair=("Carp Lake", "Pine Le Moray"), mark=False),   # no M3 marker (Ethan)
@@ -459,16 +465,25 @@ def _polys_y(P, fragments):
 
 
 def _median_cell(R, m):
+    """Median cell of the LARGEST 8-connected piece of m (a link's owned land can be several
+    pieces, and the median of all of them can fall in the gap between)."""
+    from scipy import ndimage
     rr, cc_ = np.nonzero(m)
     if not len(rr):
         return None
+    lab, n = ndimage.label(m, structure=np.ones((3, 3)))
+    if n > 1:
+        big = 1 + int(np.argmax(ndimage.sum(m, lab, range(1, n + 1))))
+        rr, cc_ = np.nonzero(lab == big)
     return R.template.x.values[int(np.median(cc_))], R.template.y.values[int(np.median(rr))]
 
 
 def _number_marker(ax, xy, num, color, XL, YL, side="nw"):
     x, y = xy
     if XL[0] < x < XL[1] and YL[0] < y < YL[1]:
-        ax.annotate(str(num), (x, y), xytext=(22 if side == "ne" else -22, 22),
+        dx = 22 if side in ("ne", "se") else -22
+        dy = 22 if side in ("ne", "nw") else -22
+        ax.annotate(str(num), (x, y), xytext=(dx, dy),
                     textcoords="offset points",
                     fontsize=11, fontweight="bold", ha="center", va="center", zorder=8,
                     bbox=dict(boxstyle="circle,pad=0.3", fc="white", ec=color, lw=1.8),
@@ -504,28 +519,332 @@ def map_m1(P, pad=0.07, area_names=14):
     return P
 
 
-def map_cost(P, pad=0.07, area_names=14, corridors=False, halo_cells=6):
+def map_adjacency(P, adjacency_dir=None, pad=0.07, area_names=14, show_degree=True):
+    """M1b -- M1 beside the NEIGHBOUR UNIVERSE (D21): left = the four-class regime map, right =
+    the same basemap with every cost-allocation neighbour link drawn as a LINE between area
+    centres (adjacency-only thin blue; backbone backups dashed; MST links heavy) and each area's
+    neighbour count. Lines, never bands: the difference between the two panels is the choice
+    space. Reads adjacency_edges/nodes.csv from the run dir (notebook 04 step 0b) unless
+    `adjacency_dir` points elsewhere."""
+    R = P.R
+    adir = pathlib.Path(adjacency_dir) if adjacency_dir else R.run_dir
+    fe, fn = adir / "adjacency_edges.csv", adir / "adjacency_nodes.csv"
+    if not fe.exists():
+        print(f"  adjacency products not found in {adir} -- run notebook 04 (step 0b) first"); return None
+    adj, nodes = pd.read_csv(fe), pd.read_csv(fn)
+    XL, YL = cc._region_extent(R, pad)
+    fig = plt.figure(figsize=(24, 17))
+    axL = fig.add_axes([0.01, 0.09, 0.485, 0.87]); axR = fig.add_axes([0.505, 0.09, 0.485, 0.87])
+    handles = _paint_classes(P, axL)
+    _director_base(P, axL, XL, YL, area_names=area_names)
+    axL.set_title("Where the land still offers choices — and where it does not", fontsize=15, pad=12)
+    # right panel: NO area names -- the neighbour-count circles sit at the same points and the
+    # left panel already names every area at the same position
+    _director_base(P, axR, XL, YL, area_names=0)
+    # area centres: the largest polygon of each name (a multipart name's midpoint can fall between parts)
+    names = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs).dissolve(by="name_label").reset_index()
+    cent = {}
+    for _, r in names.iterrows():
+        g = r.geometry
+        big = max(g.geoms, key=lambda q: q.area) if hasattr(g, "geoms") else g
+        pt = big.representative_point(); cent[str(r["name_label"])] = (pt.x, pt.y)
+    def xy(lbl):
+        if lbl in cent:
+            return cent[lbl]
+        k = next((n for n in cent if n.startswith(str(lbl)[:24])), None)
+        return cent.get(k)
+    n_lines = {"adj": 0, "backup": 0, "mst": 0}
+    for r in adj.itertuples():
+        if r.edge_class == "intra_name" or not (r.is_adjacent or r.in_backbone):
+            continue
+        a, b = xy(r.label_i), xy(r.label_j)
+        if a is None or b is None:
+            continue
+        if r.in_backbone and r.in_mst:
+            axR.plot([a[0], b[0]], [a[1], b[1]], color="0.15", lw=2.0, zorder=4); n_lines["mst"] += 1
+        elif r.in_backbone:
+            axR.plot([a[0], b[0]], [a[1], b[1]], color="0.3", lw=1.4, ls="--", zorder=4); n_lines["backup"] += 1
+        else:
+            axR.plot([a[0], b[0]], [a[1], b[1]], color=OPTIONS_COLOR, lw=0.9, alpha=0.85, zorder=3.5); n_lines["adj"] += 1
+    if show_degree:
+        import matplotlib.patheffects as pe
+        for r in nodes.itertuples():
+            c = xy(r.label)
+            if c is not None and XL[0] < c[0] < XL[1] and YL[0] < c[1] < YL[1]:
+                axR.annotate(str(int(r.n_neighbours)), c, fontsize=7.5, fontweight="bold", ha="center",
+                             va="center", zorder=7, color="0.1",
+                             bbox=dict(boxstyle="circle,pad=0.22", fc="white", ec="0.4", lw=0.7, alpha=0.95))
+    axR.set_title("The neighbour universe — every possible partner link", fontsize=15, pad=12)
+    handles += [plt.Line2D([0], [0], color=OPTIONS_COLOR, lw=1.2, label=f"Possible partner link not in the network — neighbouring areas [{n_lines['adj']}]"),
+                plt.Line2D([0], [0], color="0.3", lw=1.4, ls="--", label=f"Backup link in the network [{n_lines['backup']}]"),
+                plt.Line2D([0], [0], color="0.15", lw=2.0, label=f"Minimum-network link [{n_lines['mst']}]"),
+                plt.Line2D([0], [0], marker="o", color="none", markerfacecolor="white", markeredgecolor="0.4",
+                           markersize=9, label="Number of neighbouring areas")]
+    handles += _node_handles() + [plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")]
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=3, fontsize=9.5, frameon=True)
+    fig.text(0.5, 0.075, "Left: the minimum network plus affordable backups, classed by the tests. Right: every pair of areas "
+                         "whose cost-allocation zones touch (lines join area centres; no corridor is drawn for them). "
+                         "The difference between the two is the choice space.", ha="center", fontsize=10, color="#333333")
+    fig.savefig(P.fig / "M1b_adjacency_pair.png", dpi=150, bbox_inches="tight"); plt.show()
+    return adj
+
+
+# ================= GIS export (for ArcGIS Pro / QGIS rendering; Ethan 2026-09-14) =================
+def export_gis(P, out=None):
+    """Write the director package's layers as GIS-ready files with the presentation attributes
+    attached, so the figures can be rebuilt in ArcGIS Pro: corridor_pressure.gpkg (owner-partition
+    polygons per link with the four-class attribute + hex), areas.gpkg (PAs / IPCAs by name with
+    kind + hex), options.gpkg (the numbered options 1-6), and style.json (every colour used).
+    Rasters are NOT copied -- resistance.tif (cost 1/10/100/1000), edge_owner.tif, corridors.tif
+    and the hillshade are referenced by path in style.json."""
+    import corridors_mapstyle as ms
+    from rasterio import features as rfeatures
+    from shapely.geometry import shape as _shape
+    R = P.R
+    out = pathlib.Path(out) if out else P.out / "gis"; out.mkdir(parents=True, exist_ok=True)
+    tr = R.template.rio.transform()
+    # 1. corridor pressure: owner partition -> one multipolygon per link, class attached
+    rows = []
+    for eid, k in P.order.items():
+        m = (P.owner == k) & R.corridor
+        if not m.any():
+            continue
+        polys = [_shape(g) for g, v in rfeatures.shapes(m.astype("uint8"), mask=m, transform=tr) if v == 1]
+        e = R.edges.loc[eid]; c = P.cls.get(eid, "securing")
+        if c == "adjacency":
+            continue
+        rows.append(dict(edge_id=eid, label_i=e["label_i"], label_j=e["label_j"], pressure=c,
+                         pressure_label=ms.CLASS[c][3], hex=ms.CLASS[c][0], cost=float(e["cost"]),
+                         in_mst=bool(e["in_mst"]), irreplaceable=bool(e.get("irreplaceable", False)),
+                         route_irreplaceable=bool(e.get("route_irreplaceable", False)),
+                         squeezed=bool(e.get("squeezed", False)) if pd.notna(e.get("squeezed", np.nan)) else False,
+                         squeeze_ratio=float(e.get("squeeze_ratio_obs", np.nan)),
+                         n_branches=int(e.get("n_branches", 0) or 0), band_km2=round(float(m.sum()) * R.cell_km2, 1),
+                         geometry=gpd.GeoSeries(polys, crs=R.crs).union_all()))
+    gpd.GeoDataFrame(rows, crs=R.crs).to_file(out / "corridor_pressure.gpkg", driver="GPKG")
+    # 2. areas
+    names = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs).dissolve(by="name_label").reset_index()
+    names["kind"] = np.where(names.name_label.str.startswith("IPCA"), "Proposed IPCA", "Existing Protected Area")
+    names["hex"] = np.where(names.kind == "Proposed IPCA", ms.AREA["ipca"]["fill"], ms.AREA["pa"]["fill"])
+    names["display_name"] = [cc._short_node_name(n, 40) for n in names.name_label]
+    names[["name_label", "display_name", "kind", "hex", "area_km2", "geometry"]].to_file(out / "areas.gpkg", driver="GPKG")
+    # 3. options 1-6
+    orows = []
+    for num, title, m, col in _option_masks(P):
+        if not isinstance(num, int) or not m.any():
+            continue
+        polys = [_shape(g) for g, v in rfeatures.shapes(m.astype("uint8"), mask=m, transform=tr) if v == 1]
+        orows.append(dict(option=num, title=title.replace(chr(10), " — "), km2=round(float(m.sum()) * R.cell_km2, 1),
+                          geometry=gpd.GeoSeries(polys, crs=R.crs).union_all()))
+    if orows:
+        gpd.GeoDataFrame(orows, crs=R.crs).to_file(out / "options.gpkg", driver="GPKG")
+    # 4. style sheet
+    style = dict(
+        crs="ESRI:102008 (North America Albers Equal Area Conic); rasters 300 m",
+        cost_surface=dict(raster=str(R.run_dir / "resistance.tif"), values="unique: 1, 10, 100, 1000 (nodata -1)",
+                          swatches={str(c): dict(hex=ms.COST[c][0], label=ms.COST[c][1]) for c in (1, 10, 100, 1000)}),
+        corridor_pressure=dict(vector=str(out / "corridor_pressure.gpkg"), field="pressure",
+                               classes={c: dict(hex=ms.CLASS[c][0], label=ms.CLASS[c][3]) for c in ms.CLASS_ORDER},
+                               raster_alternative=dict(owner=str(R.run_dir / "edge_owner.tif"), mask=str(R.run_dir / "corridors.tif"),
+                                                       join="edge index in corridor_edges.csv (row order) -> pressure via corridor_pressure.gpkg")),
+        areas=dict(vector=str(out / "areas.gpkg"), field="kind", fill_opacity=0.55,
+                   ipca=dict(hex=ms.AREA["ipca"]["fill"], outline=ms.AREA["ipca"]["edge"]),
+                   pa=dict(hex=ms.AREA["pa"]["fill"], outline=ms.AREA["pa"]["edge"])),
+        options=dict(vector=str(out / "options.gpkg"), hex=OPTIONS_COLOR),
+        basemap=dict(land=ms.BASE["land"], ocean=ms.BASE["ocean"], water=ms.BASE["water"],
+                     hillshade=str(ms.BASEMAP_DIR / "hillshade_300m.tif") + " (multiply, 18% opacity)",
+                     admin_lines=str(ms.BASEMAP_DIR / "ne_10m_admin_1_states_provinces_lines.shp"),
+                     lakes=[str(ms.BASEMAP_DIR / f) for f in ("ne_10m_lakes.shp", "ne_10m_lakes_north_america.shp")],
+                     rivers=[str(ms.BASEMAP_DIR / f) for f in ("ne_10m_rivers_lake_centerlines.shp", "ne_10m_rivers_north_america.shp")],
+                     y2y_boundary=str(config.CORRIDOR_REF)),
+        fonts="Noto Sans (input_data/basemap/fonts)", type=ms.TYPE,
+    )
+    (out / "style.json").write_text(json.dumps(style, indent=2, ensure_ascii=False))
+    print(f"GIS export -> {out}: corridor_pressure.gpkg ({len(rows)} links), areas.gpkg ({len(names)}), "
+          f"options.gpkg ({len(orows)}), style.json")
+    return out
+
+
+# ================= cartographic contract figures (spec 06 §3a; corridors_mapstyle) =================
+import corridors_mapstyle as ms
+
+# Figure spec row for M0b (hand-placed label list; Ethan signs). <= 10 labels: 5 jurisdictions /
+# towns + 5 anchor areas. Jurisdiction points = the pole-of-inaccessibility positions already
+# verified on M1 (data coords, ESRI:102008).
+M0B_SPEC = dict(
+    fig_id="M0b",
+    title="Northern Corridors: Movement Cost",
+    message="the south is where the cost is",
+    # jurisdiction names in lon/lat (hand-placed on open ground for THIS frame)
+    jurisdictions=[("YUKON", (-138.6, 62.6)), ("NORTHWEST\nTERRITORIES", (-126.5, 67.2)),
+                   ("BRITISH COLUMBIA", (-128.6, 53.9))],
+    towns=[("Whitehorse", "right", -5, 0), ("Fort St. John", "left", 5, 2)],
+    areas=[("Peel Watershed", "Peel Watershed", 0, 0), ("Nahanni National", "Nahanni", 0, 0),
+           ("Tū Łī́dlini", "Tū Łī́dlini (Ross River)", 0, 0), ("Dene K", "Dene Kʼéh Kusān", 0, 0),
+           ("Pine Le Moray", "Pine Le Moray", -34, 6)],
+)
+
+
+def _area_point(names, fragment):
+    row = names[names.name_label.str.contains(fragment, regex=False)]
+    if not len(row):
+        return None
+    g = row.iloc[0].geometry
+    big = max(g.geoms, key=lambda q: q.area) if hasattr(g, "geoms") else g
+    pt = big.representative_point(); return (pt.x, pt.y)
+
+
+def _town_xy(R, name):
+    import pyproj
+    lat, lon = cc._TOWNS[name]
+    return pyproj.Transformer.from_crs("EPSG:4326", R.crs, always_xy=True).transform(lon, lat)
+
+
+def figure_m0b(P, template="slide", run_tag=None, spec=M0B_SPEC, corridors=False):
+    """M0b -- context figure on the §3a slide template: greyscale cost swatches, water in blue,
+    PAs + IPCAs, the four corridor classes, boundaries; one legend in the furniture column;
+    locator, 100 km scale bar, north. Exports PDF + PNG and runs the §3a.3 QA."""
+    ms.apply()
+    R = P.R
+    fig, ns = ms.new_figure(spec["title"], template, locator=False)
+    ax = ns.map
+    XL, YL = ms.sector_frame(R, 40)
+    ms.draw_land(ax, R, XL, YL)
+    ms.draw_water(ax, R, XL, YL, z=ms.Z["cost"] - 0.1)   # under the cost swatches: water = cost-1000 colour inside the sector
+    ms.draw_cost(ax, R)
+    hs = ms.draw_hillshade(ax, R)
+    names = ms.draw_areas(ax, R)
+    counts = ms.draw_classes(ax, R, P.owner, P.order, P.cls, P.h8_open) if corridors else {}
+    ms.draw_boundaries(ax, R, XL, YL, sector=False)     # Y2Y region boundary only (Ethan)
+    ms.set_frame(ax, XL, YL)
+    # labels: jurisdictions, then areas, then towns (§1.6)
+    import pyproj
+    to_map = pyproj.Transformer.from_crs("EPSG:4326", R.crs, always_xy=True)
+    for text, (lon, lat) in spec["jurisdictions"]:
+        ms.label(ax, ns, text, to_map.transform(lon, lat), "jurisdiction")
+    for frag, text, dx, dy in spec["areas"]:
+        xy = _area_point(names, frag)
+        if xy:
+            ms.label(ax, ns, text, xy, "area", dx_pt=dx, dy_pt=dy)
+    for t, ha, dx, dy in spec["towns"]:
+        ms.town(ax, ns, t, _town_xy(R, t), dx_pt=dx, dy_pt=dy, ha=ha)
+    # furniture: one legend, three headings (Ethan): Cost Surface / Corridors / Jurisdictions
+    y2y_line = ms.line_handles()[1]
+    groups = [("Cost Surface", ms.cost_handles())]
+    if corridors:
+        groups.append((ms.CLASS_HEADING, [ms.class_handle(c, counts.get(c)) for c in ms.CLASS_ORDER]))
+    groups.append(("Jurisdictions", [ms.area_handle("pa"), ms.area_handle("ipca"), y2y_line]))
+    ms.legend(ns.legend, groups)
+    fig.canvas.draw()
+    ms.scale_north(ns.scale, ax, fig)
+    cost = R.resistance.values; fin = cost[np.isfinite(cost) & (cost > 0)]
+    sh = {int(c): 100 * float((fin == c).sum()) / fin.size for c in (1, 10, 100, 1000)}
+    ms.caption(fig, ns,
+               f"Movement-cost surface: O'Brien et al. (transboundary extension of Pither et al. 2023), 300 m. Sector shares — intact land {sh[1]:.0f}%, "
+               f"roads and cuts {sh[10]:.0f}%, converted land {sh[100]:.1f}%, water, ice and settlement {sh[1000]:.0f}%."
+               + (" Corridor classes from the partner, route and squeeze tests (spec 05: D7, D12, D17)." if corridors else "")
+               + " Basemap: Natural Earth (public domain)"
+               + (", Copernicus GLO-90 hillshade." if hs else "."))
+    paths = ms.export(fig, spec["fig_id"], run_tag or R.run_dir.name, P.fig)
+    print(f"{spec['fig_id']}: exported " + ", ".join(p.name for p in paths) + f" | font {ms.font_in_use()}")
+    ms.qa(fig, ns, paths, message=spec["message"], expected_message=spec["message"])
+    plt.show()
+    return fig
+
+
+# ================= insets (shared frames for every map; Ethan 2026-09-11) =================
+# Two zoom boxes, defined ONCE from the option land so every map shows the same windows:
+#   A = the land around options 1-2 (Nahanni's ways south), B = the land around option 5
+#   (Gwillim Lake <-> Pine Le Moray). Panels sit in the page corners the diagonal region leaves
+#   empty; each frame is padded and then widened/heightened to its panel's aspect.
+INSET_RECTS = {"A": [0.745, 0.50, 0.25, 0.25],       # figure-fraction [left, bottom, width, height]
+               "B": [0.025, 0.115, 0.30, 0.25]}       # A east of the region's edge, B in the SW corner
+INSET_SPEC = {"A": dict(nums=(1, 2), title="A · options 1–2: Nahanni's ways south", pad_km=25),
+              "B": dict(nums=(5,), title="B · option 5: Gwillim Lake ↔ Pine Le Moray", pad_km=25)}
+
+
+def inset_frames(P, fig_w=12, fig_h=17):
+    """{key: (XL, YL, title)} -- bbox of the named options' corridor land + pad, fitted to the
+    panel's aspect. Cached on P so every map uses identical windows."""
+    if getattr(P, "_inset_frames", None) is not None:
+        return P._inset_frames
+    R = P.R
+    opts = {num: m for num, _, m, _ in _option_masks(P) if isinstance(num, int)}
+    xs, ys = R.template.x.values, R.template.y.values
+    out = {}
+    for key, spec in INSET_SPEC.items():
+        m = np.zeros(R.shape, bool)
+        for n in spec["nums"]:
+            if n in opts:
+                m |= opts[n]
+        rr, cc_ = np.nonzero(m)
+        if not len(rr):
+            continue
+        p = spec["pad_km"] * 1e3
+        x0, x1 = xs[cc_.min()] - p, xs[cc_.max()] + p
+        y0, y1 = ys[rr].min() - p, ys[rr].max() + p
+        rect = INSET_RECTS[key]
+        aspect = (rect[2] * fig_w) / (rect[3] * fig_h)
+        w, h = x1 - x0, y1 - y0
+        if w / h < aspect:
+            cx = 0.5 * (x0 + x1); w = aspect * h; x0, x1 = cx - w / 2, cx + w / 2
+        else:
+            cy = 0.5 * (y0 + y1); h = w / aspect; y0, y1 = cy - h / 2, cy + h / 2
+        out[key] = ((x0, x1), (y0, y1), spec["title"])
+    P._inset_frames = out
+    return out
+
+
+def add_insets(P, fig, ax_main, draw, area_names=6, scale_km=50):
+    """Place the shared inset panels on a map. `draw(ax, XL, YL, area_names)` must paint the
+    map's layers into any axes for the given frame (the same function the main map used)."""
+    from mpl_toolkits.axes_grid1.inset_locator import mark_inset
+    import matplotlib.patheffects as pe
+    for key, (XL, YL, title) in inset_frames(P).items():
+        iax = fig.add_axes(INSET_RECTS[key])
+        draw(iax, XL, YL, area_names)
+        iax.set_axis_on(); iax.set_xticks([]); iax.set_yticks([])
+        iax.set_title(""); iax.set_xlabel(""); iax.set_ylabel("")     # xarray's imshow labels
+        for sp in iax.spines.values():
+            sp.set_visible(True); sp.set_linewidth(1.4); sp.set_color("0.15")
+        iax.set_facecolor("white")
+        # scale bar + title inside the panel
+        w = XL[1] - XL[0]; h = YL[1] - YL[0]
+        x0, y0 = XL[1] - 0.05 * w - scale_km * 1e3, YL[0] + 0.06 * h      # bottom-right corner
+        iax.plot([x0, x0 + scale_km * 1e3], [y0, y0], color="0.1", lw=2.5, zorder=9,
+                 path_effects=[pe.withStroke(linewidth=4.5, foreground="white")])
+        iax.text(x0 + scale_km * 500, y0 + 0.025 * h, f"{scale_km} km", ha="center", va="bottom",
+                 fontsize=8, zorder=9, path_effects=[pe.withStroke(linewidth=2.5, foreground="white")])
+        iax.text(0.015, 0.975, title, transform=iax.transAxes, ha="left", va="top", fontsize=9,
+                 fontweight="bold", zorder=9,
+                 bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="0.15", lw=0.8, alpha=0.95))
+        # box on the main map + connectors (matplotlib draws the box from the inset's data limits)
+        # connectors from the two corners tangent to the panel's direction (UL + LR for a panel
+        # to the NE or the SW of its box)
+        mark_inset(ax_main, iax, loc1=2, loc2=4, fc="none", ec="0.15", lw=1.3, zorder=8)
+        ax_main.text(XL[0], YL[1], f" {key}", ha="left", va="bottom", fontsize=10, fontweight="bold",
+                     zorder=9, path_effects=[pe.withStroke(linewidth=2.5, foreground="white")])
+
+
+def map_cost(P, pad=0.07, area_names=14, corridors=False, halo_cells=6, insets=True):
     """The movement-cost surface (magma ramp, log colour, four ordinal classes) with existing
     PAs + proposed IPCAs hard-coloured -- the 'what the land is made of' companion to M1, same
     basemap and legend placement; class shares in the subtitle. `corridors=False` -> M0 (no
     corridors); `corridors=True` -> M0b, the four-class network HARD-COLOURED on top of the
     ramp with a thin WHITE HALO (`halo_cells` x 300 m) under every swath so the classes read
     as the figure and never merge with the red/purple part of the ramp; the land between the
-    swaths is cost. Region-scale sibling of the zoom overlay `cc.routing_problem_cost_overlay`."""
+    swaths is cost. Region-scale sibling of the zoom overlay `cc.routing_problem_cost_overlay`.
+    `insets=True` adds the shared zoom panels (INSET_SPEC) drawn with the same layers."""
+    from matplotlib.colors import LogNorm
+    from scipy.ndimage import binary_dilation
     R = P.R
     XL, YL = cc._region_extent(R, pad)
     cost = R.resistance.values
     fin = cost[np.isfinite(cost) & (cost > 0)]
     sh = {int(c): 100 * float((fin == c).sum()) / fin.size for c in (1, 10, 100, 1000)}
-    fig = plt.figure(figsize=(12, 17))
-    ax = fig.add_axes([0.02, 0.09, 0.96, 0.87])
-    from matplotlib.colors import LogNorm
-    im = cc._da(R, np.where(cost > 0, cost, np.nan).astype("float32")).plot.imshow(
-        ax=ax, cmap="magma_r", norm=LogNorm(vmin=1, vmax=1000), add_colorbar=False)
-    handles = []
+    cost_da = cc._da(R, np.where(cost > 0, cost, np.nan).astype("float32"))
+    layers, union, handles = [], np.zeros(P.owner.shape, bool), []
     if corridors:
-        from scipy.ndimage import binary_dilation
-        layers, union = [], np.zeros(P.owner.shape, bool)
         for c in ("securing", "squeezed", "edge", "both"):
             ids = list(P.cls.index[P.cls == c])
             if c == "squeezed" and P.h8_open:
@@ -538,19 +857,37 @@ def map_cost(P, pad=0.07, area_names=14, corridors=False, halo_cells=6):
             if not (c == "squeezed" and P.h8_open):
                 handles.append(Patch(color=col, label=f"{lbl}  [{len(ids)}]"))
         halo = binary_dilation(union, iterations=halo_cells) & ~union
-        cc._da(R, np.where(halo, 1.0, np.nan).astype("float32")).plot.imshow(
-            ax=ax, cmap=ListedColormap(["white"]), add_colorbar=False)
-        for m, col in layers:
-            if m.any():
-                cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
-                    ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
-    _director_base(P, ax, XL, YL, area_names=area_names)
-    cb = fig.colorbar(im, ax=ax, shrink=0.45, pad=0.01)
-    cb.set_label("cost of moving through the land — 1 intact · 10 roads and cuts · "
-                 "100 converted land · 1000 water, ice, settlement\n(four classes only; "
-                 "log colour scale)", fontsize=9)
+    else:
+        halo = None
+
+    def draw(ax, XL_, YL_, names):
+        """Every layer of this map for any frame -- the main map and the insets share it."""
+        im_ = cost_da.plot.imshow(ax=ax, cmap="magma_r", norm=LogNorm(vmin=1, vmax=1000), add_colorbar=False)
+        if corridors:
+            cc._da(R, np.where(halo, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap(["white"]), add_colorbar=False)
+            for m, col in layers:
+                if m.any():
+                    cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+                        ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
+        _director_base(P, ax, XL_, YL_, area_names=names)
+        return im_
+
+    fig = plt.figure(figsize=(12, 17))
+    ax = fig.add_axes([0.02, 0.09, 0.96, 0.87])
+    im = draw(ax, XL, YL, area_names)
+    if insets:
+        add_insets(P, fig, ax, draw)
+    # colour bar: horizontal, in the empty south-east corner of the page (the insets take the
+    # right margin the vertical bar used to occupy)
+    cax = fig.add_axes([0.60, 0.135, 0.36, 0.014])
+    cb = fig.colorbar(im, cax=cax, orientation="horizontal")
+    cb.set_label("cost of moving through the land (log colour scale)\n"
+                 "1 intact · 10 roads and cuts · 100 converted land · 1000 water, ice, settlement", fontsize=8.5)
     handles += _node_handles() + [
         plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")]
+    if insets:
+        handles.append(plt.Line2D([0], [0], color="0.15", lw=1.3, label="Inset frames A, B (same on every map)"))
     fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
                fontsize=9.5, frameon=True)
     head = ("What the land is made of — the corridor network over the movement-cost surface"
@@ -561,13 +898,6 @@ def map_cost(P, pad=0.07, area_names=14, corridors=False, halo_cells=6):
     name = "M0b_cost_surface_corridors.png" if corridors else "M0_cost_surface.png"
     fig.savefig(P.fig / name, dpi=170, bbox_inches="tight"); plt.show()
     return P
-
-
-NORTH_TOWNS = MAJOR_TOWNS + ["Mayo", "Ross River", "Faro", "Dease Lake"]
-SOUTH_TOWNS = MAJOR_TOWNS + ["Chetwynd", "Tumbler Ridge", "Dease Lake", "Fort St. James"]
-
-
-M2_SOUTH_LIMIT = ["Mount Edziza", "Spatsizi", "Dene K", "Dune Za Keyih", "Northern Rocky"]
 
 
 def map_m2(P, area_names=14, tint=False):
@@ -590,21 +920,31 @@ def map_m2(P, area_names=14, tint=False):
         if ex.get("options") == "branches":
             vals = list(br.loc[br.edge_id == ex["edge_id"], "value"])
             masks = [lab == v for v in vals]
+            cells = [(_median_cell(R, m), m) for m in masks]
+            cells = sorted([c for c in cells if c[0] is not None], key=lambda t: t[0][0])   # west -> east
         else:
+            # each option = the link's FULL corridor band (its owned land, exactly as M1 draws
+            # it), in the order the picks list them (Ethan 2026-09-11)
             masks = [(P.owner == P.order[k]) & R.corridor for k in ex["option_edges"]]
-        cells = [(_median_cell(R, m), m) for m in masks]
-        cells = sorted([c for c in cells if c[0] is not None], key=lambda t: t[0][0])   # west -> east
-        for num, (xy, m) in zip(ex["option_nums"], cells):
+            cells = [(_median_cell(R, m), m) for m in masks]
+            cells = [c for c in cells if c[0] is not None]
+        sides = ex.get("side", "nw"); sides = sides if isinstance(sides, list) else [sides] * len(cells)
+        from scipy import ndimage
+        for num, (xy, m), side in zip(ex["option_nums"], cells, sides):
             cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
                 ax=ax, cmap=ListedColormap([OPTIONS_COLOR]), add_colorbar=False)
-            marks.append((xy, num, ex.get("side", "nw")))
+            # dark rim (~1.2 km) so two adjacent options in the same blue read as two shapes
+            rim = m & ~ndimage.binary_erosion(m, iterations=4)
+            cc._da(R, np.where(rim, 1.0, np.nan).astype("float32")).plot.imshow(
+                ax=ax, cmap=ListedColormap(["#08306b"]), add_colorbar=False)
+            marks.append((xy, num, side))
     for xy, num, side in marks:
         _number_marker(ax, xy, num, OPTIONS_COLOR, XL, YL, side=side)
     _director_base(P, ax, XL, YL, tint=tint, area_names=area_names, towns=NORTH_TOWNS)
     nums = [n for _, n, _ in marks]
     handles.append(Patch(color=OPTIONS_COLOR,
-                         label=f"Route options {min(nums)}–{max(nums)} — different ways to the "
-                               "same place, equal weight" if nums else "Route options"))
+                         label=(f"Options {min(nums)}–{max(nums)} — alternative links, corridor land as on M1 "
+                                "(equal weight)") if nums else "Route options"))
     handles += _node_handles() + [
         plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")]
     fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
@@ -699,9 +1039,10 @@ def _option_masks(P):
             for num, m, sd in zip(ex["option_nums"], ms, side):
                 out.append((num, f"{ex['title']}\n{sd}", m, OPTIONS_COLOR))
         elif ex.get("options") == "links":
-            items = [(k, (P.owner == P.order[k]) & R.corridor) for k in ex["option_edges"]]
-            items = sorted(items, key=lambda t: _median_cell(R, t[1])[0])
-            for num, (k, m) in zip(ex["option_nums"], items):
+            # each option = the link's FULL corridor band (owned land, as on M1), in the order
+            # the picks list them (Ethan 2026-09-11)
+            for num, k in zip(ex["option_nums"], ex["option_edges"]):
+                m = (P.owner == P.order[k]) & R.corridor
                 out.append((num, _pair_title(P.edges.loc[k]), m, OPTIONS_COLOR))
         elif ex.get("mark", True):
             m = (P.owner == P.order[ex["edge_id"]]) & R.corridor

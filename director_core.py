@@ -1,8 +1,8 @@
 """director_core.py -- helpers for the Y2Y DIRECTOR PACKAGE (Gate 5 deliverable).
 
 Spec: `analyses/y2y/spec/director_package_spec.md` v1.1 (subordinate to the study plan v0.14.1).
-Consumed by `19_director_surfaces.ipynb` (surfaces, clustering, tables, GeoTIFFs) and
-`20_director_figures.ipynb` (hex choropleths, cluster overlays, star grid, Act-3 map, E17 one-pager,
+Consumed by `19_tiers_and_clusters.ipynb` (surfaces, clustering, tables, GeoTIFFs) and
+`20_figures.ipynb` (hex choropleths, cluster overlays, star grid, Act-3 map, E17 one-pager,
 deck). Presentation decisions live in the package spec, methods decisions in the study plan; the
 pre-stated constants below are copied from the spec verbatim and logged in methods_log.
 
@@ -51,6 +51,8 @@ HEX_KM2 = 250              # decision (c) default
 HEX_KM2_ALT = 800          # board-level legibility variant, rendered for comparison
 POOL_JACCARD_MIN = 0.80    # decision (g): pool the two climate levels unless their frequent tiers diverge
 TOPK_ACT1 = 6              # deck shows top-k by area (tie-break mean guarded F); the register ships in full
+PICK_LINK_KM = 75          # deck picks: the top-k complexes are grouped into REGIONAL clusters by single linkage at this
+                           # edge-to-edge distance and numbered north -> south (Ethan 2026-09-14: "3, 4 and 6 become one")
 COMPLEX_LINK_KM = 25       # presentational grouping: kept components within this edge-to-edge distance (single
                            # linkage) form one COMPLEX for the deck picks (Ethan 2026-09-04: the two Frank Church /
                            # Gospel Hump components, 8 km apart, merge; Eagle Cap at 72 km and the cluster west of
@@ -67,9 +69,9 @@ BLOCK_AXES = {
     "connectivity":  {"transboundary_connectivity": 0.5, "climate_corridors": 0.5},
     "biodiversity":  {"aoh_richness_birds": 0.5, "aoh_richness_mammals": 0.5},
     "carbon":        {"irrecoverable_carbon_m_soc": 0.742, "irrecoverable_carbon_biomass": 0.258},
-    "intactness":    {"human_modification": 1.0},     # plain sixth axis in the package (Ethan 2026-09-04)
+    "naturalness":   {"human_modification": 1.0},     # plain sixth axis in the package (Ethan 2026-09-04); "naturalness" = 1 - gHM (terminology, 2026-09-14)
 }
-STAR_AXES = ["core habitat", "connectivity", "biodiversity", "carbon", "representativeness", "intactness"]
+STAR_AXES = ["core habitat", "connectivity", "biodiversity", "carbon", "representativeness", "naturalness"]
 N_EFG = len(lc.efg_paths())          # 20 under the curated block (v3); 40 under v1
 SCENARIO_LABEL = {"s0": "Balanced", "s1": "Core-habitat-forward", "s2": "Connectivity-forward",
                   "s3": "Biodiversity-forward", "s4": "Carbon-forward", "s5": "Intactness push (S0 + gHM x10)",
@@ -108,19 +110,22 @@ SCENARIO_STATEMENT = {
     "s3x": "S3's shares under the carbon-forward target regime (regime flipped alone)",
 }
 # ---- package spec v1.6: value-first architecture --------------------------------------------------
-ACT_TITLE = {"act1": "Act 1 — Where the values are", "act2": "Act 2 — Core irreplaceability",
-             "act3": "Act 3 — Scenario irreplaceability", "act4": "Act 4 — The opportunity landscape (the measured gap)"}
-# internal act identifiers in 19's registers/picks keep their v1.1 values; this maps them to the v1.6 numbering for display
-ACT_DISPLAY = {"Act 1": "Act 2 core", "Act 2": "Act 3 scenario", "Act 1 (585)": "Act 2 core (SSP585)", "Act 1 (245)": "Act 2 core (SSP245)"}
+ACT_TITLE = {"act0": "Act 0 — Where the values are", "act1": "Act 1 — Core commitments",
+             "act2": "Act 2 — Value-specific priorities", "act3": "Act 3 — The opportunity landscape (the measured gap)"}
+# the acts follow THIS analysis (Ethan 2026-09-14): Act 0 = the values before any optimization (the v1.6 "value-first" prologue),
+# Act 1 = the core, Act 2 = the scenario tiers, Act 3 = the opportunity landscape; 19's registers use the same numbers
+ACT_DISPLAY = {"Act 1": "Act 1 core", "Act 2": "Act 2 scenario", "Act 1 (585)": "Act 1 core (SSP585)", "Act 1 (245)": "Act 1 core (SSP245)"}
 VALUE_THEMES = ["core habitat", "connectivity", "biodiversity", "carbon", "representativeness"]   # the five PROACT themes
 VALUE_TOP = 0.70                     # "top 30% of the discretionary landscape" = block percentile >= 0.70
 THEME_OF_SCENARIO = {"s1": "core habitat", "s2": "connectivity", "s3": "biodiversity", "s4": "carbon"}
-# E18 carry-overs (package spec v1.6, verbatim; study plan v0.16)
+# E18 carry-overs (package spec v1.6 / study plan v0.16). The deck is built on v3.1 only (Ethan, 2026-09-14): the E18
+# dose numbers were measured on the 40-class block and stay in the paper's record (R10.13-R10.15), so the caveat and its
+# mirror are stated STRUCTURALLY here -- what the design does, not a v1 measurement.
 CARBON_CAVEAT = ("carbon-forward is the only scenario that also states a security target (55% of dense soil carbon); "
-                 "given only the share doubling the other values get it would own ~760 km², not ~20,300")
+                 "its own land comes from that target, not from the share doubling the other values get")
 CARBON_MIRROR = ("carbon has a target lever because its geometry admitted a stopping rule; the diffuse values cannot; "
                  "the asymmetry is the landscape's")
-BIODIV_FINDING = "no irreplaceable places at any emphasis (E18); every near-optimal plan holds {lo:.0f}–{hi:.0f}% of AOH richness"
+BIODIV_FINDING = "almost no land of its own; every near-optimal plan holds {lo:.0f}–{hi:.0f}% of AOH richness whichever value leads"
 
 # decision (h): Nations' own DECLARED IPCA proposals only, never analyst-drawn: the IPCA-typed rows of the
 # corridor-wide proposed-PA file + the Ross River NPR proposal (Kaska-led; the 04a "manual area").
@@ -527,13 +532,13 @@ def value_layers(G, P, rare_mask, top=VALUE_TOP):
     Continuous themes: the top (1-top) share of the DISCRETIONARY landscape by block score (P.axes -- the star construction).
     Representativeness: presence of any rare-EFG class (rare_mask; the <=1%-footprint set by default, disclosed --
     the 36 rare-attainable classes cover 79% of the region and would vote almost everywhere).
-    Intactness: same rule, a sixth map ("disclosed, not a driver") NOT counted in the convergence tally.
+    Naturalness (1 - gHM): same rule, a sixth map ("disclosed, not a driver") NOT counted in the convergence tally.
     Returns 1-D masks over PU (discretionary only) + convergence = number of the five themes voting (0-5)."""
     # exact top-(1-top) share of the DISCRETIONARY landscape by the block score: for single-layer blocks this equals
     # "block percentile >= top"; for two-layer blocks (mean of two percentiles) a 0.70 cut on the mean would keep only
     # ~20% of cells, so the cut is the score's own (top)-quantile over unprotected land (ties may add a little)
     masks = {}
-    for ax in ("core habitat", "connectivity", "biodiversity", "carbon", "intactness"):
+    for ax in ("core habitat", "connectivity", "biodiversity", "carbon", "naturalness"):
         thr = float(np.quantile(P.axes[ax][G.disc], top))
         masks[ax] = (P.axes[ax] >= thr) & G.disc
     masks["representativeness"] = rare_mask & G.disc
@@ -563,6 +568,54 @@ def crosstab(G, conv, tier_code):
         for code, nm in cols.items():
             T.loc[f"{k} of 5 themes", nm] = int(((conv == k) & (tier_code == code) & G.disc).sum())
     return T
+
+
+def group_picks(G, lab, picks, link_km=PICK_LINK_KM):
+    """Second presentational tier: merge deck-pick complexes whose masks lie within link_km (single linkage) into
+    regional clusters; renumber NORTH -> SOUTH. picks: DataFrame rows for ONE act/key (number, cids, name, km2, meanF,
+    lat, lon). Returns a DataFrame with the same columns + `members` (the merged pick numbers)."""
+    rows = list(picks.itertuples()); n = len(rows)
+    masks = [np.isin(lab, [int(c) for c in str(r.cids).split(";")]) for r in rows]
+    parent = list(range(n))
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]; i = parent[i]
+        return i
+    for i in range(n):
+        dt = ndimage.distance_transform_edt(~masks[i])
+        for j in range(i + 1, n):
+            if float(dt[masks[j]].min()) <= link_km:
+                parent[find(i)] = find(j)
+    groups = {}
+    for i in range(n):
+        groups.setdefault(find(i), []).append(i)
+    out = []
+    for idx in groups.values():
+        mem = [rows[i] for i in idx]; big = max(mem, key=lambda r: r.km2); km2 = sum(r.km2 for r in mem)
+        out.append(dict(act=big.act, key=big.key, cid=int(big.cid), cids=";".join(str(r.cids) for r in mem), n_components=sum(int(r.n_components) for r in mem),
+                        name=big.name, km2=float(km2), meanF=float(sum(r.meanF * r.km2 for r in mem) / km2),
+                        lat=float(sum(r.lat * r.km2 for r in mem) / km2), lon=float(sum(r.lon * r.km2 for r in mem) / km2),
+                        members=";".join(str(r.number) for r in mem)))
+    out = sorted(out, key=lambda r: -r["lat"])                      # north -> south
+    return pd.DataFrame(out)
+
+
+class ValueRatios:
+    """Consequences tables (Ethan 2026-09-14): mean raw value inside a cluster / mean raw value over ALLOCATABLE
+    (discretionary) land, per star axis -- "2.3x" = 2.3 times the average unprotected cell. Blocks combine their
+    members' ratios with the BLOCK_AXES weights; representativeness = ecosystem classes present per cell;
+    naturalness = 1 - gHM."""
+    def __init__(self, G, P):
+        self.G = G
+        self.raw = {f: np.nan_to_num(lc._read(config.HANDOFF_DIR / f"{f}.tif")[G.pu], nan=0.0) for d in BLOCK_AXES.values() for f in d}
+        self.raw["__efg_count"] = P.efg_count.astype(np.float32)
+        self.base = {k: float(v[G.disc].mean()) for k, v in self.raw.items()}
+    def of(self, mask1d):
+        out = {}
+        for ax, members in BLOCK_AXES.items():
+            out[ax] = float(sum(w * (self.raw[f][mask1d].mean() / self.base[f]) for f, w in members.items()))
+        out["representativeness"] = float(self.raw["__efg_count"][mask1d].mean() / self.base["__efg_count"])
+        return {a: out[a] for a in STAR_AXES}
 
 
 def star_profile(P, mask1d):
@@ -670,19 +723,25 @@ def named_areas(G):
 
 
 # ---- E17 one-pager inputs ----------------------------------------------------------------------
-def e17_shifts(G):
-    """Leave-one-block-out latitude shifts vs the S0 anchor (from runs/e17_t3, notebook 16)."""
+def e17_shifts(G, version=None):
+    """Leave-one-theme-out latitude shifts vs the S0 anchor. Reads the ACTIVE version's runs (`runs_<version>/e17_t3`,
+    solved by 18b on the curated block) and falls back to the v1 record (`runs/e17_t3`, notebook 16) when the arms are
+    absent; `basis` says which. Pass version="v1" for the 40-class comparison explicitly."""
     lat, _ = latlon(G)
-    s0 = ec.read_selections(RUNS_V1 / "s0_ssp585_theta5" / "anchor.tif", G.pu)[0]   # E17-T3 is v1 evidence (v0.17)
+    root = config.y2y_paths(version).runs if version else RUNS
+    basis = version or VP.version
+    if not (root / "e17_t3" / "efg_out" / "run" / "portfolio.tif").exists():
+        root, basis = RUNS_V1, "v1 (40-class block; run 18b's E17-T3 cell for the curated block)"
+    s0 = ec.read_selections(root / "s0_ssp585_theta5" / "anchor.tif", G.pu)[0]
     base = float(lat[s0 & G.disc].mean())
     rows = []
     for b in ["core_habitat", "connectivity", "biodiversity", "carbon", "efg"]:
-        p = RUNS_V1 / "e17_t3" / f"{b}_out" / "run" / "portfolio.tif"
+        p = root / "e17_t3" / f"{b}_out" / "run" / "portfolio.tif"
         if not p.exists():
             continue
         sel = ec.read_selections(p, G.pu)[0]
         rows.append(dict(block_out=b, mean_lat=float(lat[sel & G.disc].mean()),
-                         delta_lat=float(lat[sel & G.disc].mean() - base), jaccard_vs_s0=jaccard(sel, s0)))
+                         delta_lat=float(lat[sel & G.disc].mean() - base), jaccard_vs_s0=jaccard(sel, s0), basis=basis))
     return base, pd.DataFrame(rows)
 
 
@@ -690,34 +749,35 @@ def e17_shifts(G):
 def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5):
     """profiles: list of dict(title=, values={axis: v}, color=). One shared radial scale."""
     import matplotlib.pyplot as plt
+    import textwrap
     n = len(profiles)
     ncols = min(ncols, max(n, 1))
     nrows = int(math.ceil(n / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 4.0 * nrows), subplot_kw=dict(polar=True))
-    fig.subplots_adjust(wspace=0.55, hspace=0.6)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.6 * ncols, 5.0 * nrows), subplot_kw=dict(polar=True))
+    fig.subplots_adjust(wspace=0.6, hspace=0.55)
     axes = np.atleast_1d(axes).ravel()
     k = len(STAR_AXES)
     ang = np.linspace(0, 2 * np.pi, k, endpoint=False)
     for ax, pr in zip(axes, profiles):
         vals = [pr["values"][a] for a in STAR_AXES]
         closed = np.r_[vals, vals[0]]
-        ax.plot(np.r_[ang, ang[0]], closed, color=pr.get("color", "#2b4f7d"), lw=1.6)
+        ax.plot(np.r_[ang, ang[0]], closed, color=pr.get("color", "#2b4f7d"), lw=2.0)
         ax.fill(np.r_[ang, ang[0]], closed, color=pr.get("color", "#2b4f7d"), alpha=0.25)
-        ax.plot(np.r_[ang, ang[0]], [ref] * (k + 1), color="#888888", lw=0.8, ls="--")
-        # intactness drawn as a plain sixth axis (Ethan, 2026-09-04): it is in the formulation; that it
+        ax.plot(np.r_[ang, ang[0]], [ref] * (k + 1), color="#888888", lw=0.9, ls="--")
+        # naturalness (1 - gHM) drawn as a plain sixth axis (Ethan 2026-09-04): it is in the formulation; that it
         # cannot move the answer (leverage 0.042) is a paper finding, not a director-meeting caption
         ax.set_xticks(ang)
-        ax.set_xticklabels(STAR_AXES, fontsize=7.5)
+        ax.set_xticklabels([a.replace(" ", "\n") for a in STAR_AXES], fontsize=11)
         ax.set_ylim(0, rmax)
-        ax.set_yticks([0.25, 0.5, 0.75, 1.0]); ax.set_yticklabels(["", "0.5", "", "1"], fontsize=6.5)
-        import textwrap
-        ax.set_title("\n".join(textwrap.fill(t, 30) for t in pr["title"].split("\n")), fontsize=8, pad=10)
+        ax.set_yticks([0.25, 0.5, 0.75, 1.0]); ax.set_yticklabels(["", "0.5", "", "1"], fontsize=9)
+        ax.tick_params(axis="x", pad=8)
+        ax.set_title("\n".join(textwrap.fill(t, 34) for t in pr["title"].split("\n")), fontsize=13, fontweight="bold", pad=18)
     for ax in axes[n:]:
         ax.axis("off")
-    fig.suptitle(title, fontsize=12, y=1.0)
-    fig.text(0.01, -0.01, "axes = cluster mean percentile vs the DISCRETIONARY landscape (dashed ring 0.5 = typical "
-             "unprotected land); representativeness = percentile of ecosystem groups present per cell",
-             fontsize=7, color="#444444")
+    fig.suptitle(title, fontsize=15, y=1.01)
+    fig.text(0.01, -0.01, "axes = cluster mean percentile vs the ALLOCATABLE landscape (dashed ring 0.5 = the typical unprotected cell); "
+             "representativeness = percentile of ecosystem classes present per cell; naturalness = 1 - human modification",
+             fontsize=9, color="#444444")
     fig.savefig(path, dpi=200, bbox_inches="tight")
     return fig
 

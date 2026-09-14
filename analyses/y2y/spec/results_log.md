@@ -501,7 +501,7 @@ anchor). Open: the crossover multiplier (×3?) and the same test for biodiversit
 | S4 weights-only (S0 targets, t 0.332; RAN 2026-09-08) | 0.50 | 0.370 | 16,425 | **763** | 1.40 / 4.03 | 1.00 | 0.927 | SUBSTITUTABLE |
 
 (Carbon rows added 2026-09-08 when the fifth arm ran; the CSV now also carries max f, Gate-2b D = max pairwise Hamming ÷ 2·discretionary-
-selected, and the R10.14 lead-magnitude currency, all computed in 22 — the earlier hand-computed values reproduce exactly.)
+selected, and the R10.14 lead-magnitude currency, all computed in 23 — the earlier hand-computed values reproduce exactly.)
 
 Reading. (1) The two diffuse blocks are NOT alike. Connectivity crosses over between influence share 0.67 and 0.83:
 at ×2 its tier is already 62% own land with connectivity ≈ refugia enrichment (2.30 vs 2.44), at ×5 it owns
@@ -667,13 +667,59 @@ southern statistic 9/20 (was 20/40); E13 overlap on the 4-cell core is moot. **R
 Claim-A estimand says almost no cell is required by every value position within 5% of optimal — the pluralism result
 sharpens, and the applied core now rests entirely on the guarded (per-block-floor) semantics, measured by 18 (running).
 
-**R10.21 (placeholder) The necessity test (E19) — PENDING 18b/18c.** To record: the per-class forced ledger, forced land
-(≥ 1 / all formulations), the ensemble-forced share of the core vs the 50% gate, T2 necessary-vs-forced agreement and the
-leave-EFG-out latitude shift, T3 outcome if triggered, the adequacy-pin count in the register.
+**R10.20 (cont. 2) The guarded sweep on the curated block (18 under v3.1; Ethan's run, finished 2026-09-14) — THE APPLIED
+RESULT.** Integrity: 12/12 formulations, **600/600 guarded members in band, 0 duplicates, 0 time-limited**, solver time
+11.0 h / wall 12.2 h (47–65 min per formulation); the re-solved anchors reproduce 12's objectives to ≤ 1e-11 with 0
+differing cells on eleven formulations (S5@585: rel. drift 4.5e-7, 2,254 near-tie cells — the flat intactness-push
+formulation, D = 1.000; inside the 1e-3 assert); the S0 guarded MAA spot-check: 50/50 in band, corr(f_MGA, f_MAA) 0.978,
+tier Jaccard 0.840 (v1: instrument-robust as before). **The guarded ensemble core GROWS: F ≥ 0.70 on the 12 design
+formulations 16,895 km² (v1) → 29,194 km² (v3.1)**, Jaccard 0.523 — 15,818 km² kept, **1,077 lost (99.4% of the lost
+cells sit on an old ≤1%-footprint class: the artifact/clip-edge land, gone as designed)**, 13,376 gained (67.7% inside
+the densest-refugia mask, 1.9% in the soil-carbon tail, 0.1% on any old small class). Composition: the v3.1 core is
+82.3% inside densest refugia (v1 89.0%), 2.7% soil-carbon tail, 1.1% on an old ≤1% class (v1 8.2%), 0.1% on a
+window-rare class — refugia country, with the representativeness pins removed. Bands: F ≥ 0.95 2,237 → 4,528 km²;
+F ≥ 0.50 54,126 → 72,239; F ≥ 0.30 162,773 → 186,196; corr(F_v1, F_v3.1) 0.954. Per-formulation guarded tiers all
+grew (f ≥ 0.70 km², v1 → v3.1): S0 23,108 → 42,733 / 35,089 → 53,834; S1 51,032 → 74,160 / 60,940 → 80,802; S2 11,086 →
+30,509 / 15,974 → 33,108; S3 6,471 → 9,636 / 15,349 → 24,617; S4 34,787 → 50,544 / 42,479 → 60,395; S5 25,227 → 39,585 /
+35,588 → 46,329 (tier Jaccards 0.26–0.77, f correlations 0.84–0.98). **Mechanism (M4.31): the band is 5% OF THE OPTIMUM,
+and the optimum fell 4–10% (mean 8.1%) once the block stopped paying shortfall on artifact and never-attainable classes
+(z*: S0 5.363 → 4.903, S4 5.014 → 4.524; absolute 5% width 0.318 → 0.294 objective units)** — a tighter absolute
+tolerance pins more refugia cells inside the floors; a second, unmeasured contribution is the removal of the twelve
+anthropogenic envelopes (3–22% of the region each at t = 1.0) that had pulled members away from refugia inside the
+band. Contrast with the unguarded band (R10.20 cont.), where the core went to 4 km²: the guarded semantics carry the
+applied headline entirely. Next: 18b → 18c (the necessity test), then 19 → 20.
+
+**R10.21 The necessity test (E19) on the curated block (18b + 18c, 2026-09-14; T2 at the 1e-3 witness gap, M4.28 addendum):**
+**T1 — the adequacy-forced set is EMPTY.** No retained class is captured in full by every member of any formulation, on either
+band (the least-selecting member holds 0–19% of each class's unlocked cells; the window-derived targets of 0.10–0.50 never
+require a class in full), so 0 km² is forced in ≥ 1 formulation and 0 km² in all twelve; the core (29,194 km²) is 0.0%
+forced; the T3 gate (> 50%) is NOT triggered, the no-EFG ensemble does not run. Share of each class's unlocked cells
+inside the core: T6.1 glaciers 19%, T6.2 cliffs/screes 14%, T4.4 7%, everything else ≤ 5% — the core meets the block
+incidentally. **T2 — the leave-EFG-out anchors:** all 12 certified OPTIMAL at ≤ 1e-3 in 1–43 s (the plateau that took 25
+min at 1e-4 in v1 and > 100 min on v3.1 closes at 1e-3 in seconds); anchor Jaccard with vs without the block 0.91–0.95;
+each no-EFG anchor drops 0–74 core cells, but the UNION of no-EFG anchors keeps every core cell: **EFG-necessary core =
+0 km²**; agreement with T1 exact (0 / 0 / 0). **E17 re-measured on the curated block:** removing the ecosystem block
+moves the anchor **+0.02 to +0.22°N (S0 +0.14°N)** versus **+2.11°N on the 40-class block** (E17-T3, v1) — the southern
+pull of representativeness was almost entirely the artifact and clip-edge classes; the residual is real but small.
+Deck: no adequacy pins in the register; the caption rule stays armed. Products: `spec/v3.1/E19_forced.csv`,
+`E19_t2_anchors.csv`, `e19_gate.json` (t3_triggered false), `runs_v3.1/e19_forced.tif` (all zero), `e19_necessary.tif`
+(all zero), `figures/v3.1/e19_forced.png`.
 
 **R10.22 (placeholder) Package v1.7 on the curated block — PENDING 19/20.** To record: core/tier/gap areas vs the
 artifact-block package (R10.17), the Act 1 representativeness layer on the retained ≤1% classes, cluster picks that
 changed, the E19 partition of core/tiers/picks.
+
+**R10.23 Sizing a developed-land PU mask (Ethan's parked idea, 2026-09-14; zero-solve on the v3.1 record).** Question:
+would removing urban/developed cells from the planning-unit set enlarge the applied core the way the v3.1 block change
+did (M4.31: a smaller optimum tightens the absolute 5% band)? Magnitude of what such a mask removes, by raw gHM
+threshold — ≥ 0.5 ("developed"): 13,187 km² = **1.0% of the PU**, holding 0.3–1.2% of every value's regional total
+(richness the most, 1.0–1.2%), 0.09% of the S0 anchor's new selection and **0.16% of the v3.1 guarded core**; ≥ 0.3
+(semi-modified: farmland, road corridors): 49,987 km² = 3.9% of the PU, 1–5% of each value (birds 4.9%, mammals 4.3%,
+refugia 3.5%), 2.9% of the core; ≥ 0.7: 0.3% of the PU. The core already avoids modified land (mean raw gHM 0.050 vs
+0.059 on unprotected land). Reading: a developed-land mask would move the optimum by ~1% or less, so the band-tightening
+effect would be an order of magnitude smaller than the block change (8%) — it is a SCOPING choice to make on
+planning-relevance grounds, not a lever on the core. If adopted (applied paper): gHM ≥ 0.5, locked PAs untouched, a
+pre-processing change with the full re-solve and Gate-0a re-audit disclosed under the same trigger discipline.
 
 ## Figure/table candidates (running)
 

@@ -96,8 +96,8 @@ def efg_target(footprint_km2, rule=None, anchors=None):
 
 # ---- analyses/y2y manifest / run VERSION (supersede, never delete) -------------------------------------------------
 # v1 = the as-frozen 2026-08-30 record (spec/manifest.csv, runs/, records at spec/ root) -- kept byte-identical;
-# v3 = the curated-block re-solve (spec/manifest_v3.csv, runs_v3/, records at spec/v3/). Notebooks 12/13/15/18/19/20
-# read every path through y2y_paths(); 22 (the E18 dose analysis) is pinned to v1 because its arms are v1 evidence.
+# v3 = the curated-block re-solve (spec/manifest_v3.csv, runs_v3/, records at spec/v3/). Notebooks 12/13/15/18/19/20/21
+# read every path through y2y_paths(); 23 (the E18 dose analysis) is pinned to v1 because its arms are v1 evidence.
 # NOTE aligned_stack/manifest.json is rewritten by every R notebook from the ACTIVE version -- never run two versions'
 # R notebooks concurrently. Y2Y_VERSION is defined above, beside EFG_SUBDIR.
 
@@ -111,6 +111,25 @@ def y2y_paths(version=None):
                                freeze=y / "spec" / "manifest_freeze.sha256", records=y / "spec", efg_subdir="iucn_efg")
     return SimpleNamespace(version=v, runs=y / f"runs_{v}", manifest=y / "spec" / f"manifest_{v}.csv",
                            freeze=y / "spec" / f"manifest_{v}.sha256", records=y / "spec" / v, efg_subdir=efg_subdir_for(v))
+
+
+def ab_paths(version=None):
+    """Version-scoped locations for the Alberta mirror (analyses/alberta_prioritization) -- the same one switch as the
+    flagship (Y2Y_VERSION; AB spec v0.5 D-AB11): runs (level directory appended by the notebooks), manifest (+ freeze
+    hash), records dir, the analysis (AB-4) products dir, and the expected EFG subdir under AB_HANDOFF_DIR.
+    v1 = the as-frozen 2026-09-03 record (spec/manifest.csv, runs/ab_l/, analysis/ab4/, records at spec/ root);
+    v3.1 = the curated block with window-derived targets (spec/manifest_v3.1.csv, runs_v3.1/ab_l/, analysis/ab4_v3.1/,
+    records at spec/v3.1/). Supersede, never delete."""
+    from types import SimpleNamespace
+    v = version or Y2Y_VERSION
+    a = PROJECT_DIR / "analyses" / "alberta_prioritization"
+    if v == "v1":
+        return SimpleNamespace(version="v1", runs=a / "runs" / "ab_l", manifest=a / "spec" / "manifest.csv",
+                               freeze=a / "spec" / "manifest_freeze.sha256", records=a / "spec", analysis=a / "analysis" / "ab4",
+                               figures=a / "figures", efg_subdir="iucn_efg")
+    return SimpleNamespace(version=v, runs=a / f"runs_{v}" / "ab_l", manifest=a / "spec" / f"manifest_{v}.csv",
+                           freeze=a / "spec" / f"manifest_{v}.sha256", records=a / "spec" / v, analysis=a / "analysis" / f"ab4_{v}",
+                           figures=a / "figures" / v, efg_subdir=efg_subdir_for(v))
 
 # Prioritizr results from 03 (R) land here; 04 (Python) reads them back.
 #   RESULTS_DIR    : root for all optimization outputs

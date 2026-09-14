@@ -338,6 +338,17 @@ rule; quantitative outcomes live there, methods decisions here);
   / T2 chips / star plots / deck (06). "groups present (of 40)" becomes "(of 20)" everywhere.
   Every other axis is untouched. The stored 40-class values remain in git history / the run
   dir until overwritten; results_log R9.4 records the re-measured EFG axis.
+- **M5.20 Cartographic contract + basemap data (2026-09-11, PRESENTATION ONLY — spec 06 §3a,
+  v1.2.14):** `corridors_mapstyle.py` is the single style source (palette, type, templates,
+  layers in the §3a.1.6 order, legend builder, locator, 100 km bar + north, PDF/PNG export,
+  render QA with Machado-2009 deuteranopia / protanopia simulation and CIE76 ΔE ≥ 20 between
+  class hues, glyph-coverage and label-overlap checks). Data acquired for CARTOGRAPHY ONLY (never
+  analysis inputs): Copernicus GLO-90 DEM (AWS open data, 408 1° tiles, lat 52–69 / lon 144–119 W)
+  → `dem_300m.tif` → `hillshade_300m.tif` (gdaldem, az 315 / alt 45) on the routing grid + 60 km;
+  Natural Earth 10 m lakes + rivers (+ North America supplements; stand-in for the contract's
+  HydroSHEDS layers); Noto Sans TTFs. The four cost classes are drawn as flat greys on the context
+  figure (no colour ramp, no colourbar); water is drawn over the cost-1000 class in blue. M0b built
+  first at Ethan's request; slide layout 50 / 48 instead of 68 / 30 (sector aspect), disclosed.
 - **M5.19 D21 adjacency (neighbour) graph — diagnostic universe (2026-09-11; `05_patch_D21_adjacency.md`
   spliced into spec 05, 06 v1.2.9):** `cc.adjacency_graph`. Cost-allocation adjacency on the CACHED
   part-level CWD fields: argmin over the 48 part fields (ties → lowest part id; `allocation.tif`,
@@ -358,6 +369,18 @@ rule; quantitative outcomes live there, methods decisions here);
   change to any product. Config `adjacency` dict (filters off). NB02 step 2c after G15; NB04 step 0b
   runs it on the loaded run. Toy-verified. Follow-up D7 amendment (restrict backups to adjacency)
   is NOT taken: decided after October from the measured count of non-adjacent backups.
+  Same day (M5.17 addendum, presentation): the option masks for the star plots and the two
+  alternatives tables are the route BRANCHES at the tightened allowance for EVERY option
+  (options 3–4 had used whole bands) — one definition, 06 v1.2.11. SUPERSEDED the same day
+  (06 v1.2.12, Ethan): every option is a LINK's full owned corridor band, as on M1; the Act-1
+  example is re-pinned as Nahanni ↔ Dene Kʼéh Kusān (1) and Nahanni ↔ Liard River Corridor (2)
+  — the two links' bands overlap on the plateau south of Nahanni (the Dene link owns 3,703 km²
+  of it), and the Liard link's western route crosses the Dene IPCA.
+  Same day, fix on first real-data run: locked intra-name edges carry PART ids in i/j (D16), so
+  they are matched at part level (part-zone adjacency on the part fields) and reported
+  separately, G17-exempt; the first pass had mislabelled three of them as non-adjacent
+  inter-name edges. Presentation: `corridors_director.map_adjacency` (M1b, 06 v1.2.10) draws the
+  universe beside M1.
 - **M5.18 D19 centrality (2026-09-11; spec 05 changelog 2026-09-11 + merge note):** the chat's
   new D19 asked to switch centrality to current-flow betweenness; the engine has computed
   exactly that since the v2 rebuild (`corridor_graph.centrality`: edge current-flow betweenness

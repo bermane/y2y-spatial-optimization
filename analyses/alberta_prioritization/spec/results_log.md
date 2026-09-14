@@ -423,4 +423,29 @@ Parent exposure measured the same day (Y2Y results_log R10.18): 8.2% of the Y2Y 
 Act 1 representativeness layer. Both extents' class tables + options A–D + costs → `analyses/y2y/spec/efg_block_reportback.md`
 (the report-back for the spec chat). **12–13 PARKED pending the rule decision.**
 
-*Last updated 2026-09-08.*
+## R8. The curated block on Alberta (v3.1) — PENDING-RUN (09b → 10 → 11 → 11b/11c → 12 → 13; AB spec v0.5)
+
+**R8.1 (placeholder) Block card v3 on Alberta (09b):** 27 → 15 classes → 13 features (inherited R0); rare-attainable count, the
+≤1%-footprint companion, banked shares, the extent-relative rule re-application (disclosure) and the boundary-proximity flags
+(R0 iii) on the Alberta study boundary. To record beside R2.3 (v1: 27 present / 20 rare-attainable / 7 unsaturated).
+
+**R8.2 (placeholder) Window targets (D-AB12; 09b):** window areas (+100/+250/+500 km around the Alberta extent), each feature's
+footprint and target at +250 km vs on-extent vs the parent's +250 km target for the same feature; the window-rare set (≤ 1% of the
+window); the number of features at the 0.10 floor. Manifest v3.1 sha.
+
+**R8.3 (placeholder) The v3.1 ensemble (10):** 12/12 formulations — anchors, twins (LP ≤ MILP), MGA at 5% and 2% (plain + guarded)
+certificates; z* per formulation vs the v1 block and the absolute band widths (M4.31); solve time.
+
+**R8.4 (placeholder) Analysis on the curated block (11):** the D-AB13 decision (5% guarded frequent tier vs the 100 km² flatness
+threshold → applied band); F bands at 5% and at the applied band; E1/E3/E11 on the 12 design formulations (crossed contrast = v1
+record); C1 at the same parent version (+ C1b guarded); C4, tenure, clusters; where the v1 core went (the four artifact classes are
+gone by construction — compare R7.7–R7.11).
+
+**R8.5 (placeholder) The necessity test (E19; 11b/11c):** per-class forced ledger, forced land (≥ 1 / all formulations), the
+ensemble-forced share of the core vs the 50% gate, T2 necessary-vs-forced agreement, T3 outcome if triggered, adequacy pins.
+
+**R8.6 (placeholder) Package v1.7 on the curated block (12/13):** core/tier/gap areas vs the v1 artifact-block package (archived);
+the Act 1 representativeness layer on the window-rare classes; picks that changed; the E19 partition of core/tiers/picks; AOI
+alignment and tenure by tier re-read.
+
+*Last updated 2026-09-14 (R8 placeholders).*

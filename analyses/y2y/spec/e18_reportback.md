@@ -1,6 +1,6 @@
 # E18 report-back — weight vs substitutability, all five arms (2026-09-08)
 
-_For the spec chat. Provenance: `runs/e18_*` (21), `22_e18_analysis` → `spec/E18_dose_table.csv`;
+_For the spec chat. Provenance: `runs/e18_*` (21), `23_e18_analysis` → `spec/E18_dose_table.csv`;
 results_log R10.13–R10.15; methods_log M4.21–M4.22 (+ addendum). Everything below is guarded (5 % band,
 per-block floors), SSP585 only, k = 50, Gurobi certificates 50/50 in band for every arm._
 

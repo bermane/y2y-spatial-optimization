@@ -273,11 +273,11 @@ decision; E16 = F-guided clustering is primary. Build (all headless smoke-run on
 MAA spot-check on S0; anchors/kbest/twins STAND, anchor re-solved only for the compiled model with a
 1e-3 assert vs formulation_meta; **RAN 2026-09-03/04: 12.3 h solve time (52–76 min per sweep — my ~3 h
 projection from the 16-era S0/S4 timings was wrong; integrity perfect, 0 anchor cells differing)**;
-`maa_generate` gained `floors=`, toy-verified) → **`19_director_surfaces.ipynb`** (py; guarded
+`maa_generate` gained `floors=`, toy-verified) → **`19_tiers_and_clusters.ipynb`** (py; guarded
 F + f per formulation + union membership → `director_package/geotiffs/`; T-D2 bands/acts, pooling
 check (Jaccard ≥0.80), pre-stated clustering (0.70 → closing r=1 → 8-conn → ≥100 km² → core
 subtraction; sensitivity 0.60/0.80; top-k presentational), T-D1 register with block percentiles +
-driver attribution + IPCA overlap, T-D3, E17 shifts, `summary.json`) → **`20_director_figures.ipynb`**
+driver attribution + IPCA overlap, T-D3, E17 shifts, `summary.json`) → **`20_figures.ipynb`**
 (py; hex choropleths 250/800 km², Act 1/2/3 maps, star grid, why-these-places, E17 one-pager, table
 PNGs, `deck_outline.md` + draft `director_deck.pptx` via python-pptx) over **`director_core.py`** (root
 helper: grid/load_guarded/clusters/hex_grid/graticule/block_percentiles/driver_masks/ipca_layer/
@@ -302,7 +302,7 @@ E18 dose table COMPLETE 2026-09-05: connectivity crosses over between share 0.67
 (×5: tier 0 km², max f 0.63, D = 1.000) — weight × concentration, AOH richness unrescuable by weight. **Carbon weights-only arm RAN 2026-09-08 (fifth E18 arm, `runs/e18_s4x1_wonly_ssp585` = S4's registered
 weights at S0's targets; R10.14 cont.): SUBSTITUTABLE — own land 763 km² vs S4's 20,329, tier 72% inside the 12-position core → carbon's
 Act-2 land is the TARGET's doing (members never fall below t 0.332; under t 0.552 they must). Lead-magnitude currency is conditional on the
-target binding (this arm scores 7.6× refugia yet owns nothing; M4.22 addendum). 22 now writes max f / D / lead currency into
+target binding (this arm scores 7.6× refugia yet owns nothing; M4.22 addendum). 23 now writes max f / D / lead currency into
 `spec/E18_dose_table.csv`; 20 renders it as the E18 slide (`td_e18_dose.png`) + a carbon-target caveat on the carbon-forward Act-2 slide.**
 **SPEC v0.15 / v0.16 / v0.16.1 + PACKAGE SPEC v1.6 (landed 2026-09-08; built the same day, all zero-solve):** (v0.15) s1x/s3x
 reclassified DIAGNOSTIC (non-voting) — F denominator = 12 DESIGN formulations PRIMARY for paper and package alike; **`13b_denominator_v015.ipynb`**
@@ -343,8 +343,14 @@ class's footprint in the extent BUFFERED by 250 km (GET archive maps, 100/500 km
 T6.1 0.36, twelve features at the 0.10 floor; rare-in-window = F1.1 + F2.1 only (the Act 1 representativeness vote). `config.Y2Y_VERSION`
 default "v3.1" (runs_v3.1/, spec/v3.1/, manifest_v3.1.csv; block folder shared with v3 via `efg_subdir_for`); manifest v3 kept, never
 solved; 11b has write-once freeze guards. **LAYOUT (2026-09-10): `analyses/y2y/` = the complete trail from step one in numeric order (01–11 gates, 11b v3.1 freeze, 12/13/15/18
-Gate 4, 16/17 E-round, 18b/18c E19, 19/20 package, 21/22 E18); `evidence/` = ONLY superseded notebooks (13b → manifest role column; 14 →
-the package); `archive/` = rescinded. Rule: a notebook whose artifacts a later step consumes stays in the trail. See `analyses/y2y/README.md`.** **RUN = ONE COMMAND: `caffeinate -i bash analyses/y2y/run_v31.sh`** (NUMERIC ORDER 12 → 13 → 15 → 18 → 18b → 18c
+Gate 4, 16/17 E-round, 18b/18c E19, 19/20 package, 22/23 E18); `evidence/` = ONLY superseded notebooks (13b → manifest role column; 14 →
+the package); `archive/` = rescinded. Rule: a notebook whose artifacts a later step consumes stays in the trail. See `analyses/y2y/README.md`.** **NOTEBOOK NAMES (2026-09-14): 19_tiers_and_clusters (was director_surfaces), 20_figures (EVERY output, the record), 21_director_outputs (the
+curated few for the presentation; `director_package/director_outputs/`), E18 → 22_e18_connectivity_weight / 23_e18_analysis. Shared plotting state/helpers =
+`director_plot.py` (`C = dp.load()`; notebooks `globals().update(vars(C))`).** **ACT NUMBERING (Ethan 2026-09-14, overrides package spec v1.6):
+Act 0 = the values (maps + convergence, a prologue); Act 1 = the core; Act 2 = the scenario tiers; Act 3 = the opportunity landscape; hinge
+between 2 and 3. Files/titles/deck follow (`ACT_TITLE`); 19's internal ids unchanged.** **2026-09-14 team-output rules (M4.33): deck picks = top-k complexes grouped REGIONALLY (single linkage 75 km, `group_picks`) and numbered
+NORTH → SOUTH (v3.1 core: four clusters); star titles "Cluster N"; "intactness" is now "naturalness" in every output (feature name unchanged);
+T-D7 consequences tables per act = cluster mean value ÷ allocatable-land mean, shown as "2.3×" (`ValueRatios`); deck is v3.1-only (M4.32).** **RUN = ONE COMMAND: `caffeinate -i bash analyses/y2y/run_v31.sh`** (NUMERIC ORDER 12 → 13 → 15 → 18 → 18b → 18c
 → [18b + 18c again iff the E19 gate opens] → 19 → 20, in place, resumable, logs in analyses/y2y/logs/; 13/15 need only 12, the rest need 18 too). **EFG-BLOCK EXPOSURE (2026-09-08, R10.18): the five smallest classes (3–409 cells) are 100% inside the
 Act 2 core; 8.2% of core, 2/14 deck picks (#11 = flooded-mines/aquafarms envelopes, #12 = T5.4), 27.9% of the Act 1 representativeness
 layer sit on ≤1%-footprint map slivers — decision (rule A/B/C/D + re-solve vs presentation) with chat; see `spec/efg_block_reportback.md`.**
@@ -379,46 +385,44 @@ including portfolio summaries + write round-trip.
 ## ANALYSIS 3 — `analyses/alberta_prioritization/`: the Alberta scale-transfer mirror (added 2026-09-03)
 
 Applied decision-support run for Y2Y's Alberta program (Tim Burkhart) + a scale-transfer test of
-the flagship protocol. **Spec = `spec/alberta_prioritization_spec.md` (v0.4.6, mirror of the parent
-study plan v0.14.1 — re-pin and log the delta whenever the parent spec changes; Ethan's standing
-instruction).** Read it before touching anything here. **Binding living logs, same rule as y2y:
-`spec/methods_log.md` (M1–M12) + `spec/results_log.md` (R1–R7), update in the SAME session.**
-Mirrored = the frozen decision procedure (R1–R4, θ=5×/λ=0.10/a_min=0.5%/t_min=0.15, block
-accounting, scenario rules, numerics, estimator `mga_maxham_v1` k=50); NOT mirrored = the
-Y2Y-extent measurements. **Engine design (M2.2): `input_data/aligned_stack_ab/` = the parent stack
+the flagship protocol. **Spec = `spec/alberta_prioritization_spec.md` (v0.5, mirror of the parent
+study plan v0.17.3 + package spec v1.7 — re-pin and log the delta whenever the parent spec changes; Ethan's
+standing instruction). The spec file was found TRUNCATED to 3 lines in HEAD (2026-09-08) and restored from
+`77d8713` on 2026-09-14 — if it ever reads as a header only again, restore from git before editing.** Read it
+before touching anything here. **Binding living logs, same rule as y2y: `spec/methods_log.md` (M1–M17) +
+`spec/results_log.md` (R1–R8), update in the SAME session.**
+Mirrored = the frozen decision procedure (R0 pre-screen + R1–R4, θ=5×/λ=0.10/a_min=0.5%/t_min=0.15, block
+accounting, scenario rules, numerics, estimator `mga_maxham_v1` k=50, the necessity test E19); NOT mirrored = the
+Y2Y-extent measurements, E17/E18/E12. **Engine design (M2.2): `input_data/aligned_stack_ab/` = the parent stack
 masked to Alberta on the SAME grid** (cell IDs identical; every parent module runs unchanged via
 `config.AB_HANDOFF_DIR` / `config.ANALYSES["ab_y2y"]`; R side = `config.write_manifest(analysis=
 "ab_y2y", handoff_dir=AB, manifest_path=…)` then `pr_setup`; budget via `pr_override(budget_pct=…)`).
-Runs live in `runs/ab_l/A/<formulation_id>/` (level directory; parent layout otherwise).
+**ONE VERSION SWITCH (M15.4): `config.ab_paths(version)` mirrors `y2y_paths()` on `config.Y2Y_VERSION`** — v1 =
+`spec/manifest.csv`, `runs/ab_l/A/`, `analysis/ab4/`; **v3.1 = `spec/manifest_v3.1.csv`, `runs_v3.1/ab_l/A/`,
+`analysis/ab4_v3.1/`, `spec/v3.1/`, `figures/v3.1/`, block `aligned_stack_ab/iucn_efg_v3/` (13 features).**
 
 **Rulings (all logged):** D-AB5 budget = locked + X·unlocked, X = the parent's realized fill rate
-0.1764 → **level A: 38,055 cells (44.7%), additions 10,083 km²; level B (X/2) was piloted for the
-nesting test and then SCRATCHED (M9.6) — A only.** D-AB9 biodiversity block kept whole (mammals
-R3-inexpressible, weight inert, disclosed). S4 = θ 2× (t 0.772) via the pre-registered ladder against
-the MEASURED co-capture floor (a1's 0.744 — a0 includes carbon pull and was the wrong reference,
-M5.7); a5 certified binding. **D-AB10: the applied band is g = 2%** (the 5% band is flat here:
-D ≈ 1, empty frequent tier, guardrails inert — R5); the 5% band stays the estimand. **Ethan's
-deliverable definition: each value-forward scenario's OWN frequency surface is a first-class
-product beside the ensemble F.** D-AB7: presentation constants re-set at AB scale (1 km display,
-10 km² clusters, 500 m simplification). D-AB6 tabled (distance-to-PA read post hoc). D-AB8 on
-hold: disposition/title polygons are not open (Altalis; academic consortium = Alberta institutions
-only) — tenure uses the White-Area-minus-crown-indicators ESTIMATE (M6.1) with the over-count disclosed.
+0.1764 → **level A: 38,055 cells (44.7%), additions 10,083 km²; level B scratched (M9.6).** D-AB9 biodiversity
+block kept whole. S4 = θ 2× (t 0.772) via the pre-registered ladder against the measured co-capture floor (a1's
+0.744, M5.7). D-AB7: 1 km display, 10 km² clusters, 10 km complexes, 500 m simplification. D-AB6 tabled. D-AB8 on
+hold (tenure = the M6.1 estimate). **v0.5 (2026-09-14, parent scope closed): D-AB11 the R0 curation is INHERITED
+(27 → 15 classes → 13 features; the four v1 core-pinning classes F2.10/F3.5/SF2.2/F2.9 all leave); D-AB12
+rarity-scaled targets from the ALBERTA extent + 250 km window (parent's rule on this extent; the parent's targets
+for the same features written beside — CONFIRM the window with Ethan); D-AB13 the applied band is DECIDED BY RULE
+in 11: guarded 5% (mirror) unless the 5% guarded frequent tier < 100 km² (flat, as on the v1 block), then 2%
+(D-AB10) — outputs are named `*_applied*`; E19 mirrored (11b/11c) with adequacy-pin captions; package v1.6
+value-first four acts + v1.7 in 12/13.**
 
-**Measured so far:** AB PU 85,133 km², **32.9% already locked** (30% referent infeasible); tenure —
-discretionary land 87% crown, private-ranchland pool 5,393 km²; audit — H-AB1 refuted (gHM 0.086 <
-λ; mammals flips inexpressible), m_soc scale-stable (t 0.322) but 71% banked; 27/40 EFGs; AB-2 —
-H-AB4 refuted opposite way (D 0.9999, C 0); nesting at 2% = 1.000; AB-4 ensemble RAN 2026-09-03
-(14/14, 2,800 certified members, 2.3 h, every twin = anchor at 4 decimals).
+**Measured so far (v1 block):** AB PU 85,133 km², **32.9% locked**; tenure — discretionary 87% crown, ranchland pool
+5,393 km²; audit — H-AB1 refuted, m_soc scale-stable but 71% banked; 27/40 EFGs; AB-2 — D 0.9999, C 0 at 5%;
+AB-4 ran 2026-09-03; 11 ran 2026-09-08 (R7): **71% of the 2%-band core sat on GET map slivers (R7.9–R7.11) — the
+trigger for the parent's v0.17 curation.**
 **Build record (spec §12): 01 extent/stack → 02 audit → 03 tenure/AOI → 04 arms (R) → 05 scenarios →
-06 anchors (R) → 07 MGA pilots (R) → 08 AB-2 analysis → 09 freeze → 10 ensemble (R) → 11 analysis
-(py: 5% estimand block + 2% applied block, tiers, C1–C4, clusters; RUN 2026-09-08, R7) → **12 director
-surfaces + 13 director figures/deck = the mirror of the Y2Y-wide 19/20 (`director_package/`; NFZ + SRP
-planning area drawn on every (a) panel as the IPCA analogue; F12, 2% band, 10 km² clusters, T-D4 by Natural
-Region). Status 2026-09-08: 01–11 RUN; 12–13 BUILT, PENDING-RUN.** **EFG-BLOCK ISSUE OPEN (2026-09-08, R7.9–R7.11 / parent R10.18; report-back
-`analyses/y2y/spec/efg_block_reportback.md`): 71% of the AB 2%-band core sits on GET map slivers (F2.10 subglacial-lakes point record,
-F2.9/F3.5 envelopes 0.5–0.7 km from the BC border, SF2.2 ecoregion edge) — per-cell class value ∝ 1/footprint; candidate rule = drop
-point-record classes + envelope classes < 1% of PU (+ anthropogenic biomes). 12–13 PARKED until the chat rules; a re-run is 10 → 13.** Data: `data/acquire.py`
-(provenance.json); raw/derived dirs gitignored.
+06 anchors (R) → 07 MGA pilots (R) → 08 AB-2 analysis → 09 freeze (v1) → **09b curation freeze v3.1** → 10 ensemble
+(R; VERSION switch, no k-best on v3.1) → 11 analysis (D-AB13, M4.31, C1 at the same parent version) → **11b E19
+solves (R) → 11c E19 analysis** → 12 director surfaces → 13 director figures/deck; or `run_v31.sh` (mirror of the
+parent's runner). Status 2026-09-14: 01–11 RUN on v1; **09b/10/11/11b/11c/12/13 BUILT for v3.1, PENDING-RUN
+(commit `config.py` first — 09b asserts the pipeline modules clean vs HEAD).** Data: `data/acquire.py`.
 
 ## Structure — two notebooks + shared config
 
@@ -676,6 +680,10 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 > `cc.adjacency_graph` diagnostic universe (cost-allocation neighbours on the cached fields, Euclidean
 > comparison, G17 MST ⊆ adjacency, `adjacency_*.csv`, `allocation.tif`, `adjacency_map.png`; no product
 > changes; M5.19, R9.6 pending); NB02 step 2c, NB04 step 0b. Ethan runs NB04.**
+> **CARTOGRAPHIC CONTRACT (06 §3a, 2026-09-11): `corridors_mapstyle.py` at root is the ONLY place a colour /
+> font / line weight / extent / export setting may live; figures = `corridors_director.figure_*` with hand-placed
+> label specs; run the §3a.3 QA before showing any figure; PDF + PNG. M0b built first; M1/M3/M2 pending
+> Ethan's sign-off. Basemap data (hillshade, NE water, Noto Sans) = cartography only.**
 
 Standalone corridor analysis, NOT prioritizr: it **routes** between anchor areas, which the
 prioritizr connectivity penalty could not do (that aggregates permeable land; it cannot answer "how

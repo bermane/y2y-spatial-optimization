@@ -339,4 +339,109 @@ pending an ecoregion layer). T-D5's "new half" denominator = the level-A additio
 **M13.5 Names** are the parent's placeholders (bearing from the nearest PA ≥ 25 km² in the extent or the
 nearest AOI + lat/lon tag); Ethan/Tim rename before final render.
 
-*Last updated 2026-09-08.*
+## M14. Spec restore + re-pin to the parent's closed scope (2026-09-14)
+
+**M14.1 Spec file restored.** `alberta_prioritization_spec.md` was found truncated to its title and status line (3 lines) in the
+working tree AND in HEAD (committed 2026-09-08, `d4c789b`); the last full version is `77d8713` (v0.4.6, 164 lines). Restored from
+that commit, the v0.4.7 delta (director-package mirror build record; M13) re-applied from this log, then re-pinned as v0.5. The
+truncation is recorded in the spec changelog; nothing in the logs was lost.
+
+**M14.2 Mirror re-pinned v0.14.1 → v0.17.3 (parent scope CLOSED, Ethan 2026-09-14) + package spec v1.6/v1.7.** Absorbed, in
+order: v0.15 (12 design formulations are the primary denominator; crossed diagnostics non-voting and not re-solved), v0.16/.16.1
+(E18 closed; no further solves; package value-first), **v0.17–v0.17.3 (rule R0 + the EFG curation; rarity-scaled targets from the
+buffered regional window; the necessity test E19; manifest v3.1; M4.31 band-width disclosure)**, package v1.7 (Act 1
+representativeness = window-rare presence; adequacy-pin captions). What stays NOT mirrored: E17 (no leave-one-block-out solves at
+AB), E18 (dose arms are parent evidence; caveat text carried), E12 (instrument bracket).
+
+## M15. The curated block on Alberta, window targets, manifest v3.1 (2026-09-14; `09b_ab_curation_freeze_v3` built, PENDING-RUN)
+
+**M15.1 D-AB11 — the curation is INHERITED, not re-decided.** Rule R0 (purpose relevance, map validity, the 330 km² grain floor,
+the F2.9 utility drop, the TF1.6+TF1.7 and S1.1+SF1.1 merges) is a property of each class's GET map, decided on the parent
+(M2.11 there) and applied to the Alberta block by the parent's 11b: 27 present → 15 retained → **13 features** in
+`input_data/aligned_stack_ab/iucn_efg_v3/`. On Alberta the four classes that pinned the v1 core (R7.9–R7.11) all leave: F2.10 (rule
+A, point record), F3.5 and SF2.2 (rule C, anthropogenic), F2.9 (utility). 09b re-applies the extent-relative parts (rule A's 1%
+envelope threshold, rule B's grain floor, the boundary-proximity check R0 iii on the Alberta study boundary) as a DISCLOSURE only
+and asserts the block folder equals the inherited set. The block card v3 (rare-attainable count, ≤1%-footprint companion, leverage,
+banked share) is re-measured on the 13 (`spec/v3.1/efg_block_card_v3.csv`); 02's v1 audit record stands.
+
+**M15.2 D-AB12 — targets from the ALBERTA extent buffered by 250 km.** The parent's v0.17.3 rule ("each class's footprint within the
+study extent buffered by 250 km, zonal count on the GET archive maps; 100/500 km sensitivity; log-linear Rodrigues anchors
+1,000 → 250,000 km², floor 0.10") applied to this extent: window = `data/ab_extent_v1.gpkg` buffered in Albers metres. Rationale:
+a regional plan's rarity is judged in its own region (the parent's own wording); the parent's +250 km targets for the same 13
+features are written beside Alberta's in `spec/v3.1/efg_window_footprints.csv` / `efg_targets.json` (`parent_targets_same_features`)
+so the deviation is one column wide. "Rare" for the Act 1 representativeness layer and the T-D1 driver = ≤ 1% of the Alberta
+window (`rare_window`). ALTERNATIVE not adopted: inherit the parent's Y2Y-window targets verbatim (would judge Alberta's rarity
+against a window centred on BC and the US Rockies). **Flagged for Ethan's confirmation before 09b runs (one constant: the window
+polygon).**
+
+**M15.3 Manifest v3.1 (`spec/manifest_v3.1.csv` + `.sha256`; `spec/v3.1/` records).** 12 design rows (s1x/s3x diagnostic, not
+re-solved — parent v0.15/v0.17; the E3 crossed contrast keeps the v1 record as evidence); weights re-derived on the AB stack via
+`lc.scenario_weights` and asserted equal to the v1 freeze (EFGs sit outside the block accounting); EFG targets appended to every
+`target_vector` by feature name; new columns `role`, `manifest_version`, `efg_block_version`, `efg_block_sha256`, `efg_features`,
+`efg_target_rule`, `supersedes`, `trigger`, `applied_band_rule`; `anchor_ref/twin_ref/mga_ref` empty (the reference formulation is
+re-solved too — its AB-1/AB-2 artifacts were on the v1 block); code provenance as M8.2 (commit `config.py` first — it gained
+`ab_paths()`). Write-once guard (kept byte-identical once frozen). v1 (`spec/manifest.csv`, `runs/ab_l/`, `analysis/ab4/`, the
+2026-09-08 package archived to `director_package/_superseded_v1_artifact_block/`) stays byte-identical: supersede, never delete.
+
+**M15.4 One version switch.** `config.ab_paths(version)` mirrors `config.y2y_paths()` on the same `Y2Y_VERSION` (v3.1 → `runs_v3.1/ab_l/`,
+`spec/manifest_v3.1.csv`, `spec/v3.1/`, `analysis/ab4_v3.1/`, `figures/v3.1/`, block `iucn_efg_v3`). Every AB notebook from 10 on
+reads its paths through it; the R notebooks refresh `aligned_stack_ab/manifest.json` from the ACTIVE `config.EFG_SUBDIR` and assert
+the ingested block matches VERSION. `Y2Y_VERSION=v1` reproduces the frozen run.
+
+**M15.5 Ensemble (10) on v3.1:** anchors + LP twins + MGA at BOTH bands (g = 5% and 2%, plain and per-block-floor guarded) for the 12
+formulations; **no k-best** (the E5 by-product, discharged in the parent v0.10; the v1 pools stand as the uniqueness record).
+`formulation_meta.json` records z* and the absolute band widths at 5% and 2% (the parent's M4.31).
+
+## M16. The applied band under the curated block — rule D-AB13; the necessity test (E19) mirror (2026-09-14; 11 patched, 11b/11c built)
+
+**M16.1 D-AB13 — the applied band is DECIDED BY RULE in 11, not carried over.** D-AB10 chose g = 2% because the 5% band was flat on
+the v1 block (D ≈ 1, empty frequent tier, guardrails inert — a representativeness-artifact plateau, R7.9–R7.11). On the curated
+block the mirror is the parent's guarded g = 5%; the D-AB10 exception applies only if the flatness recurs: **applied band = 5%
+guarded unless the 5% guarded ensemble frequent tier (F ≥ 0.70) is below 100 km² (1% of the additions budget), then 2%.** Both bands
+are solved by 10, so the decision is a read; 11 records it (`gate_ab4_summary.json: applied_band_g, applied_band_rule,
+freq5_guarded_km2`) and 12/13 consume it. Outputs are named `*_applied*` so the band can change without renaming. **Flagged for
+Ethan's confirmation (the 100 km² flatness threshold is the one free constant).**
+
+**M16.2 M4.31 mirrored:** 11 tabulates z* per formulation and the absolute 5%/2% widths against the v1 block
+(`analysis/ab4_v3.1/tables/band_width_abs.csv`); any claim phrased "within g of optimal" ships with the absolute width beside it.
+
+**M16.3 E11 reconstruction with per-feature targets.** The cross-objective suboptimality Δ(s,s′) now scores each EFG's shortfall
+against its own target ((1/n)·max(0, t_e − c)/t_e), as the parent's 13 does under v3.1; under v1 (t = 1) this reduces to the old
+form. The Δ-diagonal self-check remains the guard.
+
+**M16.4 C1 like-for-like stays block-matched:** the parent surfaces are read at the SAME version (`config.y2y_paths(VERSION)`:
+`runs_v3.1/ensemble/F_surface.tif`, its anchors); the 2% S0 probe (a v1-only artifact on the parent) is skipped under v3.1; **C1b
+added** — the parent's guarded F (its director package at the same version) vs Alberta's applied guarded F.
+
+**M16.5 The necessity test (E19) mirrored as `11b_ab_e19_solves` (R) + `11c_ab_e19_analysis` (py), pre-stated:** T1 = the
+adequacy-forced set from the member rasters at the APPLIED band (guarded = the package basis; unguarded beside it): a class whose
+capture is 1.0 in every member of a formulation forces every unlocked cell of the class to f = 1 by arithmetic; ensemble-forced =
+forced in all 12; the core, each scenario tier and each deck pick partitioned into forced / multi-claim (≥ 2 non-EFG themes
+top-30%) / other. T2 = leave-EFG-out anchors ×12 (every EFG multiplier 0; ~1 s each at AB scale); core cells absent from every
+no-EFG anchor are EFG-necessary; agreement with T1 reported. T3 = the no-EFG ensemble at the applied band, run ONLY if the
+ensemble-forced share of the core exceeds 50% (`spec/v3.1/e19_gate.json`; ~1 h at AB scale). Pre-stated expectation: a SMALL forced
+share. Deck rule: clusters ≥ 50% forced are captioned ADEQUACY PIN (pinning class named); T-D1 gains `pct_adequacy_forced`.
+
+## M17. Director package mirror re-pinned to package spec v1.6/v1.7 (2026-09-14; 12/13 rebuilt, PENDING-RUN)
+
+**M17.1 Value-first structure (v1.6):** Act 1 = where the values are (per-theme top-30% masks at 1 km, `value_top30_*.tif`, plus the
+0–5 convergence count; representativeness = presence of a window-rare class, D-AB12; intactness sixth, not counted) → Act 2 = core
+irreplaceability (the old Act 1) → Act 3 = scenario irreplaceability with the BINDING value | tier pairing per theme (the old Act 2;
+AOIs on the value panel) → hinge cross-tab (convergence × reliability class) → Act 4 = the measured gap (`value_gap.tif`, T-D6,
+T-D6b, union membership). Internal act identifiers in 12's registers keep the v1.1 values; `act_v16` carries the display numbering
+(`dc.ACT_DISPLAY`), as in the parent. Figure files carry the v1.6 act numbers (`act2_core_1km.png`, `act3_<key>_1km.png`,
+`act4_opportunity.png`, `hinge_convergence_x_F.png`, `act1_values_1km.png`, `act1_value_convergence_1km.png`).
+
+**M17.2 v1.7 additions:** the E19 columns in T-D1 (`pct_adequacy_forced`, `adequacy_pin`, `adequacy_pin_class`) with the ADEQUACY-PIN
+caption on stars and the picks table; the E19 partition table + appendix slide; the biodiversity finding-as-product line uses
+Alberta's own capture range over all guarded plans; the carbon caveat is stated in Alberta terms (m_soc t = 0.772 at the ladder)
+and attributed to the parent's E18 (not re-measured).
+
+**M17.3 Unchanged Alberta rulings:** 1 km display (25 km² hex for the how-to-read slide only), 10 km² clusters / 10 km complexes /
+500 m simplification (D-AB7), the Upper Smoky overlay in the IPCA role (M13.3), T-D4 by Natural Region/Subregion (M13.4), tenure
+by tier (D-AB8 disclosure), placeholder names (M13.5).
+
+**M17.4 Runner.** `run_v31.sh` mirrors the parent's: 09b → 10 → 11 → 11b → 11c → (T3 if gated) → 12 → 13, in place, resumable, logs
+in `logs/` (gitignored).
+
+*Last updated 2026-09-14 (M14–M17).*

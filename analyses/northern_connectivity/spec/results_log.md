@@ -309,12 +309,23 @@ table, priority-link PROACT profiles, T2 chips, star plots) moves from the 40-cl
 R0-curated 20-feature block; the G5 EFG delta vs v1 is reported, not asserted. Numbers land here
 when the notebooks re-run.
 
-**R9.5 Centrality comparison (D19) [run002; PENDING NB04 step 0b / NB02 G15]:** `centrality_compare.csv`
-— current-flow vs shortest-path edge betweenness per inter-name edge, ranks and rank deltas; the
-Spearman agreement on the augmented graph and the β = 0 tree identity land here when the gate runs.
+**R9.5 Centrality comparison (D19) [run002, NB04 step 0b 2026-09-11 12:08; `centrality_compare.csv`]:**
+G15 OK (β = 0 tree identity holds). On the augmented backbone the two measures DISAGREE materially:
+Spearman(current-flow, shortest-path) = **0.757** over 39 inter-name edges, max |rank delta| 18.
+Top by current flow: Dene Kʼéh Kusān ↔ Stikine River and Finlay Russel ↔ Stikine River (tied, 77.9),
+Spatsizi ↔ Stikine (65.2), Wədzih Yiné' ↔ Finlay Russel (56.6), Spatsizi ↔ Tatlatui (51.9). Because the
+engine has used current flow since the v2 rebuild, `linkage_priority.tif` is unchanged; the comparison
+records what a shortest-path ranking would have done (D19 rationale: brittle to a single cheap backup).
 
 **R9.6 Adjacency universe (D21) [run002; PENDING NB04 step 0b / NB02 step 2c]:** |E_adj| (cost-allocation,
 Euclidean), E_adj ∩ backbone, the backbone/backup edges that are NOT neighbour links (with intervening
 zones), the LM would-remove counts (through-core, > 200 km), `n_neighbours` per name (median / max), and
 the G17 verdict land here when the step runs. The count of non-adjacent BACKUPS decides the post-October
 D7 follow-up.
+CONFIRMED by NB04 step 0b (run-dir products 2026-09-11 12:09, identical to the read-only preview, 95 rows): |E_adj| = **89**
+neighbour pairs (Euclidean allocation: 92); backbone 52 inter-name/adjacency edges + 6 locked
+intra-name; **every backbone edge is a neighbour link** (E_adj ∩ backbone = 58, non-adjacent
+backups = 0 → the D7 follow-up resolves to documentation: "backups are, empirically, all neighbour
+links"); adjacency-only links 37; LM would-remove counts: through-core 8, beyond 200 km 0; G17 OK.
+`n_neighbours`: median 4, max 15 (Dene Kʼéh Kusān; Peel Watershed 8, Wədzih Yiné' 8, Tū Łī́dlini 7,
+Omineca 7).

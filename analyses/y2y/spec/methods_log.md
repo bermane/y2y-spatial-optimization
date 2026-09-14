@@ -423,7 +423,7 @@ spec's 8–10 h was closer; the 16-era timings were not representative (uniform 
 not difficulty). Protocol unchanged; integrity clean (0 anchor cells differing, all certificates OK).**
 
 **M4.20 — Director-package procedures, pre-stated (spec v1.1; `director_core.py`,
-`19_director_surfaces`, `20_director_figures`; presentation decisions live in the package spec,
+`19_tiers_and_clusters`, `20_figures`; presentation decisions live in the package spec,
 this entry records what was FIXED before the run):** clustering = guarded surface ≥ 0.70 →
 morphological closing r = 1 cell → 8-connected components → min 100 km² (the 04-era
 `CLUSTER_MIN_CELLS = 25` is NOT used) → scenario clusters minus the Act-1 core footprint with %
@@ -517,7 +517,7 @@ SUBSTITUTABLE if, in the ×5 arm's frequent tier, refugia's enrichment still exc
 own land (outside the core and the other scenarios' tiers) is < 3,000 km²; WEIGHT-LIMITED if connectivity's
 enrichment exceeds refugia's OR own land > 10,000 km²; else AMBIGUOUS. The anchor's connectivity capture is
 expected to rise either way (weights move the optimum; E7). Not part of the pre-registered 14-formulation
-design; a diagnostic like E8–E10, outside F. `21_e18_connectivity_weight.ipynb` (R) → `22_e18_analysis.ipynb`.
+design; a diagnostic like E8–E10, outside F. `22_e18_connectivity_weight.ipynb` (R) → `23_e18_analysis.ipynb`.
 **Outcome (same day, R10.13): WEIGHT-LIMITED.** The pre-registered rule fired against my standing explanation:
 at ×5 the connectivity tier is 34,705 km² (own land 31,780), enriched 3.09× in connectivity and 0.88× in refugia.
 Methods consequence: "binding scarcity" (E13) is weight × concentration — what recurs across a band is the value
@@ -604,7 +604,7 @@ are the block and its targets. `spec/manifest_v3.csv` + `manifest_v3.sha256` car
 v2 6314b9cd…) and the trigger; v1/v2 manifests, `runs/` and the spec-root records stay byte-identical; v3 records go to
 `spec/v3/`. Versioning is one switch (`config.Y2Y_VERSION`, env-overridable so `Y2Y_VERSION=v1` reproduces the frozen
 run without editing config; 12/13/15/18/19/20 read every path through `config.y2y_paths()`; the R notebooks assert that
-the refreshed manifest enumerates the expected block; 22 is pinned to v1). Cost: ~10–12 h (12) + ~12 h (18) serial on
+the refreshed manifest enumerates the expected block; 23 is pinned to v1). Cost: ~10–12 h (12) + ~12 h (18) serial on
 Gurobi WLS.
 
 **M4.27 — Rarity-scaled EFG targets (study plan v0.17.1 open decision; ADOPTED as the v3 default, one-line switch to
@@ -632,6 +632,14 @@ no-EFG ensemble and F − F_noEFG, run ONLY if the ensemble-forced share of the 
 gates the cell). Pre-stated expectation: a real but MINORITY forced share on the curated block. **Deck rule:** any
 cluster ≥ 50% forced is captioned ADEQUACY PIN ("here because it is the only X on the extent", pinning class named),
 never a multi-value hotspot; T-D1 gains `pct_adequacy_forced`.
+**M4.28 addendum (2026-09-14, before any T2 anchor completed):** the leave-EFG-out anchors are certified to a **1e-3 gap with
+a 20-minute cap** per formulation, not the 1e-4 of the E17-T3 convention — the EFG-free objective is a near-flat plateau
+(D ≈ 1): certifying 1e-4 took 25 min in v1 (`e17_t3/efg_out`, vs 15–67 s for the four block-outs) and exceeded 100 min on
+v3.1's first formulation (the optimum is ~8% smaller, so the absolute gap is tighter). T2 is a WITNESS test — any no-EFG
+plan inside the 5% band that keeps a cell proves the cell is not EFG-necessary — so a 1e-3-gap plan (fifty times inside
+the band) is a valid witness; "necessary" is therefore an upper bound and is stated as such. Achieved gap, bound and
+status are recorded per anchor (`run_summary.json` solver_provenance) and read back by 18c. T1 (exact, from the 12/18
+members) and the T3 gate are unaffected. Interrupted first solve discarded.
 
 **M4.29 — Clip-edge resolution: targets from the BUFFERED REGIONAL WINDOW (study plan v0.17.3; manifest v3.1;
 2026-09-09).** The boundary-proximity check (R0 iii; R10.19) flagged five of the six small retained classes (72–100% of
@@ -667,6 +675,61 @@ the four PROACT-theme floors; (v) the necessity test (E19) measures and captions
 from F, never from class edges; the Act 1 representativeness layer votes on the two window-rare classes only; the
 representativeness star axis is a per-cell class-count percentile read at cluster scale (≥ 100 km²), with the grain
 disclosed on the how-to-read slide. No change to the formulation.
+
+**M4.31 — The g-band is RELATIVE to the optimum, so a formulation change that removes inert shortfall tightens the
+absolute tolerance (observed on the v3.1 re-solve, 2026-09-14).** g = 5% is applied to z*, and z* on the 40-class block
+carried ~0.46 objective units of shortfall from classes that could never be captured in full (t = 1.0 on T2.1, T6.4,
+F2.4 …) plus the artifact classes; on the curated block with window-derived targets that term is mostly gone, z* fell
+4–10% (mean 8.1%) and with it the absolute width of the band (0.318 → 0.294 units). Because the frequency core is
+steep in the absolute slack (the core-erosion curve (E4/F6): 22,866 → 3,829 → 0 cells at 2/5/10% on the reference
+formulation), the guarded core grew from 16,895 to 29,194 km² (R10.20 cont. 2) partly for this reason. Ruling: g stays
+5% of z* (the pre-registered, scale-free definition; every claim is phrased "within 5% of optimal"); the effect is
+DISCLOSED beside the v1 → v3.1 comparison, and any future formulation change must report the absolute band width
+alongside g. Not a numerics issue: certificates are exact on both versions.
+
+**M4.32 — The director package is built on v3.1 ONLY (Ethan's ruling, 2026-09-14; package spec v1.7 deviation logged):**
+nothing measured on the 40-class block appears in 19/20 as a current number. Consequences: (i) the E17 leave-one-theme-out
+bars are re-solved on the curated block at S0 (18b, E17-T3 cell: four block-outs at 1e-4, the EFG-out at the T2 witness gap;
+`runs_v3.1/e17_t3/`) and `director_core.e17_shifts` reads the active version, with the 40-class result entering the
+one-pager's text as a one-sentence disclosure only; (ii) the E18 dose-table appendix slide is removed from the deck
+(`INCLUDE_V1_EVIDENCE = False`) — the dose–response stays in the paper record (R10.13–R10.15); (iii) the carbon-forward
+caveat + mirror and the biodiversity finding are stated structurally (the target lever; almost no own land; the measured
+capture range over the v3.1 plans) without the v1 arm numbers. Re-measuring E18 on v3.1 (five arms, ~5 h) would be needed
+to put dose numbers back in the deck — not planned.
+
+**M4.33 — Director-package presentation rules added for the team outputs (Ethan, 2026-09-14; package-spec deviations, to be
+carried into the spec by the chat):** (1) **Regional deck picks.** The pre-stated clustering and the 25-km complexes are
+unchanged (the register ships in full); for the deck, the top-k complexes are grouped a second time into REGIONAL
+clusters by single linkage at **75 km** edge-to-edge (`director_core.group_picks`, `PICK_LINK_KM`) and **numbered north
+→ south**, the core first, then each scenario's picks continuing the numbering. On v3.1 this turns the six core
+complexes into four regional clusters (the three central-Idaho/Oregon complexes at 43–69 km apart merge; the nearest
+other pair, Purcells–Granby, is 106 km apart). Star plots and tables use the same four; titles are "Cluster N" with the
+area and mean F on the second line; star-plot text enlarged. (2) **Terminology: "intactness" → "naturalness"** for the
+1 − gHM value everywhere in the outputs (axis, value map, tables, deck); the feature name `human_modification` and the
+formulation are unchanged; the study-plan and package-spec text should adopt the word (spec change requested by Ethan).
+(3) **Consequences tables (T-D7), one per act, placed at the END of each act in the deck:** for every deck cluster and
+star axis, the cluster's mean raw value divided by the mean over ALLOCATABLE (discretionary) land, displayed as "2.3×"
+(`director_core.ValueRatios`): blocks combine their members' ratios with the block weights (carbon 0.742/0.258), pairs
+by equal weight; representativeness = ecosystem classes present per cell; naturalness = 1 − gHM. This replaces the
+percentile columns as the directors' reading of "how much better than average"; the percentiles remain in T-D1 and the
+stars. (4) 19 and 20 stay separate notebooks for the design phase (20 alone re-renders in ~10 min).
+**M4.33 addendum (Ethan, 2026-09-14): the acts follow THIS analysis.** The package spec's v1.6 renumbering (value maps as
+Act 1, core as Act 2, scenarios as Act 3, opportunity as Act 4) is reverted for every output: **Act 0** = where the values
+are (the value maps and the convergence count — a prologue, "something totally different" from the optimization acts),
+**Act 1** = the core, **Act 2** = the value-specific (scenario) tiers, **Act 3** = the opportunity landscape as the measured
+gap; the hinge cross-tab sits between Acts 2 and 3. 19's internal identifiers already used these numbers; figure files,
+titles, tier labels and the deck now match them (`director_core.ACT_TITLE`). A package-spec deviation for the chat to
+carry. Also added: `21_director_outputs` (the curated presentation set) beside `20_figures` (the complete record), both
+drawing from `director_plot.py`.
+
+**M4.33 addendum (Ethan, 2026-09-14): the acts follow THIS analysis.** The package spec's v1.6 renumbering (value maps as
+Act 1, core as Act 2, scenarios as Act 3, opportunity as Act 4) is reverted for every output: **Act 0** = where the values
+are (the value maps and the convergence count — a prologue, "something totally different" from the optimization acts),
+**Act 1** = the core, **Act 2** = the value-specific (scenario) tiers, **Act 3** = the opportunity landscape as the measured
+gap; the hinge cross-tab sits between Acts 2 and 3. 19's internal identifiers already used these numbers; figure files,
+titles, tier labels and the deck now match them (`director_core.ACT_TITLE`). A package-spec deviation for the chat to
+carry. Also added: `21_director_outputs` (the curated presentation set) beside `20_figures` (the complete record), both
+drawing from `director_plot.py`.
 
 ## 5. Solver configuration and numerical integrity
 

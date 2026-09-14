@@ -2708,7 +2708,8 @@ def adjacency_graph(A, write=True, ridge_tol=0.5, cap_km=200.0, verbose=True):
         print(f"D21 adjacency graph: allocating {int(A.pu.sum()):,} routable cells to {P_} seed parts -> {U} units")
     alloc_p = _allocation(A, A.cwd_parts, P_)
     alloc = np.where(alloc_p >= 0, part_unit[np.clip(alloc_p, 0, None)], -1).astype("int32")
-    pairs = {tuple(sorted((int(part_unit[a]), int(part_unit[b])))) for a, b in _zone_pairs(alloc_p, conn)}
+    part_pairs = _zone_pairs(alloc_p, conn)                       # part level (locked edges live here)
+    pairs = {tuple(sorted((int(part_unit[a]), int(part_unit[b])))) for a, b in part_pairs}
     pairs = {pq for pq in pairs if pq[0] != pq[1]}
     # Euclidean allocation (LM default) for the comparison column
     seed = np.full(A.shape, -1, "int32")
@@ -2719,11 +2720,14 @@ def adjacency_graph(A, write=True, ridge_tol=0.5, cap_km=200.0, verbose=True):
     pairs_e = {tuple(sorted((int(part_unit[a]), int(part_unit[b])))) for a, b in _zone_pairs(alloc_e, conn)}
     pairs_e = {pq for pq in pairs_e if pq[0] != pq[1]}
 
-    # backbone lookup by unit pair
-    bb = {}
+    # backbone lookup by UNIT pair (inter-name + adjacency edges); locked intra-name edges carry
+    # PART ids in i/j (D16) and are handled at part level below, exempt from G17
+    bb, locked = {}, {}
     for eid, r in A.edges.iterrows():
-        if "i" in A.edges.columns and pd.notna(r.get("i")):
-            bb[tuple(sorted((int(r["i"]), int(r["j"]))))] = eid
+        if pd.isna(r.get("i")):
+            continue
+        key = tuple(sorted((int(r["i"]), int(r["j"]))))
+        (locked if r.get("edge_class") == "intra_name" else bb)[key] = eid
     masks = [m for _, m in A.nodes]
     D = np.asarray(A.D, float)
 
@@ -2761,6 +2765,21 @@ def adjacency_graph(A, write=True, ridge_tol=0.5, cap_km=200.0, verbose=True):
                          crosses_masks=" | ".join(labels[w] for w in crossed),
                          lm_drop_through_core=bool(crossed),
                          lm_beyond_cap=((float(A.edges.loc[eid, "centreline_km"]) if eid and "centreline_km" in A.edges.columns else L) > cap_km)))
+    # locked intra-name edges: part-level adjacency on the PART fields (reported, G17-exempt)
+    part_pairs_e = _zone_pairs(alloc_e, conn)
+    for (pa, pb), eid in locked.items():
+        fa = np.asarray(A.cwd_parts[pa], dtype="float32"); fb = np.asarray(A.cwd_parts[pb], dtype="float32")
+        tot = fa + fb; d = float(np.nanmin(tot))
+        ridge = np.isfinite(tot) & (tot <= d + ridge_tol) & ~A.parts[pa][1] & ~A.parts[pb][1]
+        u = int(part_unit[pa])
+        zones = sorted({int(z) for z in np.unique(alloc[ridge]) if z >= 0 and z != u})
+        rows.append(dict(edge_id=eid, label_i=A.edges.loc[eid, "label_i"], label_j=A.edges.loc[eid, "label_j"],
+                         i=u, j=u, is_adjacent=(pa, pb) in part_pairs, is_adjacent_euclid=(pa, pb) in part_pairs_e,
+                         in_backbone=True, edge_class="intra_name", in_mst=bool(A.edges.loc[eid, "in_mst"]),
+                         cost=d, lcp_len_km_proxy=np.nan,
+                         centreline_km=float(A.edges.loc[eid, "centreline_km"]) if "centreline_km" in A.edges.columns else np.nan,
+                         via_zones=" | ".join(labels[z] for z in zones), crosses_masks="",
+                         lm_drop_through_core=False, lm_beyond_cap=False))
     adj = pd.DataFrame(rows)
     # columns onto the network edge table
     for col in ("is_adjacent", "is_adjacent_euclid", "via_names"):
@@ -2779,7 +2798,8 @@ def adjacency_graph(A, write=True, ridge_tol=0.5, cap_km=200.0, verbose=True):
                           for u in range(U)]).sort_values("n_neighbours", ascending=False)
     # report + G17
     adj_only = adj[adj.is_adjacent & ~adj.in_backbone]
-    bb_not_adj = adj[adj.in_backbone & ~adj.is_adjacent & (adj.cost > 0)]
+    bb_not_adj = adj[adj.in_backbone & ~adj.is_adjacent & (adj.cost > 0) & (adj.edge_class != "intra_name")]
+    lk_not_adj = adj[(adj.edge_class == "intra_name") & ~adj.is_adjacent]
     mst_not_adj = bb_not_adj[bb_not_adj.in_mst & (bb_not_adj.edge_class == "inter")]
     if verbose:
         print(f"  |E_adj| = {len(pairs)} unit pairs (euclid: {len(pairs_e)}) | backbone pairs {len(bb)} | "
@@ -2787,6 +2807,9 @@ def adjacency_graph(A, write=True, ridge_tol=0.5, cap_km=200.0, verbose=True):
         print(f"  backbone/backup edges NOT adjacent: {len(bb_not_adj)}" +
               ("".join(f"\n    {_short_node_name(r.label_i,16)} <-> {_short_node_name(r.label_j,16)} [{r.edge_class}{', mst' if r.in_mst else ''}] via {r.via_zones or '—'}"
                        for r in bb_not_adj.itertuples()) if len(bb_not_adj) else ""))
+        if len(lk_not_adj):
+            print(f"  locked intra-name edges whose PARTS are not zone-adjacent (reported, G17-exempt): {len(lk_not_adj)}" +
+                  "".join(f"\n    {_short_node_name(r.label_i,16)} <-> {_short_node_name(r.label_j,16)} via {r.via_zones or '—'}" for r in lk_not_adj.itertuples()))
         print(f"  LM filters would remove (not applied): through-core {int(adj[adj.is_adjacent].lm_drop_through_core.sum())}, "
               f"beyond {cap_km:.0f} km {int(adj[adj.is_adjacent].lm_beyond_cap.sum())} of {len(pairs)} adjacency edges")
         print(f"  n_neighbours: median {nodes.n_neighbours.median():.0f}, max {nodes.n_neighbours.max()} "

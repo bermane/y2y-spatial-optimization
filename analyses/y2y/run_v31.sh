@@ -31,6 +31,7 @@ if $PY -c "import json,sys; sys.exit(0 if json.load(open('$NB/spec/v3.1/e19_gate
 else
   echo "T3 gate not triggered (pre-stated expectation)"
 fi
-run 19_director_surfaces     y2y-geo   # tiers, clusters, tables (archives the artifact-block package first)
-run 20_director_figures      y2y-geo   # figures + deck
+run 19_tiers_and_clusters    y2y-geo   # surfaces, tiers, clusters, tables (archives the artifact-block package first)
+run 20_figures               y2y-geo   # every figure + the draft deck (the record)
+run 21_director_outputs      y2y-geo   # the curated few for the presentation
 echo "DONE $(date '+%F %T') -- analyses/y2y/director_package/ rebuilt on manifest v3.1"

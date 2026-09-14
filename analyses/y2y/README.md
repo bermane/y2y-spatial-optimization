@@ -22,11 +22,11 @@ v1 evidence and are not re-run. Set `Y2Y_VERSION=v1` in the environment (or in `
 | Gate 4 (v1) | 12 → 13 → 15 | y2y-r / y2y-geo | anchors, members, twins; F, E1–E3, E7, E11; E13/E14/E17 → `runs/`, `spec/` |
 | E-round (v1) | 16_supplementary_solves → 17_e_round_analysis | y2y-r / y2y-geo | E8–E10, E12, E15 demonstration, E17-T3 (feeds the E17 one-pager) |
 | E15 completion (v1) | 18_guarded_sweep | y2y-r | guarded members on the v1 record |
-| E18 (v1) | 21_e18_connectivity_weight → 22_e18_analysis | y2y-r / y2y-geo | the weight-vs-substitutability arms and dose table (`spec/E18_dose_table.csv`, deck appendix) |
+| E18 (v1) | 22_e18_connectivity_weight → 23_e18_analysis | y2y-r / y2y-geo | the weight-vs-substitutability arms and dose table (`spec/E18_dose_table.csv`, deck appendix) |
 | **v3.1 freeze** | **11b_efg_curation_freeze_v3** | y2y-geo | the block curation (rule R0), both curated stacks, window footprints, targets, `spec/manifest_v3.1.csv` |
 | **Gate 4 (v3.1)** | **12 → 13 → 15 → 18** | y2y-r / y2y-geo | the same steps on the curated block (`runs_v3.1/`, `spec/v3.1/`) |
 | **E19 (v3.1)** | **18b_e19_solves → 18c_e19_analysis** | y2y-r / y2y-geo | the necessity test: leave-EFG-out anchors, adequacy-forced set, the 50% gate |
-| **Package** | **19_director_surfaces → 20_director_figures** | y2y-geo | the director package (`director_package/`) |
+| **Package** | **19_tiers_and_clusters → 20_figures → 21_director_outputs** | y2y-geo | 19: frequency surfaces (F rasters), tiers, clusters, tables; 20: EVERY figure, table and the draft deck (the record); 21: the curated few for the presentation (`director_package/director_outputs/`). Acts: 0 = the values (prologue), 1 = core, 2 = scenario tiers, 3 = opportunity |
 
 The v3.1 block (11b onward) is one command from the repo root: `caffeinate -i bash analyses/y2y/run_v31.sh`
 (in place, resumable, logs in `logs/`; skips finished steps).
