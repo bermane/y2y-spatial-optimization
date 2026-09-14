@@ -722,14 +722,6 @@ titles, tier labels and the deck now match them (`director_core.ACT_TITLE`). A p
 carry. Also added: `21_director_outputs` (the curated presentation set) beside `20_figures` (the complete record), both
 drawing from `director_plot.py`.
 
-**M4.33 addendum (Ethan, 2026-09-14): the acts follow THIS analysis.** The package spec's v1.6 renumbering (value maps as
-Act 1, core as Act 2, scenarios as Act 3, opportunity as Act 4) is reverted for every output: **Act 0** = where the values
-are (the value maps and the convergence count — a prologue, "something totally different" from the optimization acts),
-**Act 1** = the core, **Act 2** = the value-specific (scenario) tiers, **Act 3** = the opportunity landscape as the measured
-gap; the hinge cross-tab sits between Acts 2 and 3. 19's internal identifiers already used these numbers; figure files,
-titles, tier labels and the deck now match them (`director_core.ACT_TITLE`). A package-spec deviation for the chat to
-carry. Also added: `21_director_outputs` (the curated presentation set) beside `20_figures` (the complete record), both
-drawing from `director_plot.py`.
 
 ## 5. Solver configuration and numerical integrity
 
@@ -850,3 +842,58 @@ drawing from `director_plot.py`.
 
 *Maintainer note: entries M-numbered for stable citation from drafts. Update same-session, every
 methods-relevant change. Last updated 2026-09-03 (spec v0.14.1 + director package build).*
+
+**M4.33 addendum (Ethan, 2026-09-14): consequences-table refinements.** (a) Ratios print with two decimals below 1 and one
+decimal at or above 1, the branch decided after rounding to two decimals (0.998 → "1.0×", not "1.00×"). (b) Two REFERENCE
+rows join every consequences table, computed in 19 with the same allocatable-land denominator and stored in T-D7:
+"Existing protected areas" (the locked cells; mean F undefined) and "Proposed IPCAs (unprotected part)" (the declared IPCA
+footprint minus the locked cells — what a declaration would add; mean F reported). (c) Every ratio column is tinted red →
+green on its own scale across the rows of the table (log-ratio, min → max over clusters AND reference rows; RdYlGn blended
+55% toward white; `dp.STYLE["conseq_*"]`), so a cell's colour reads "relative to the other rows of this column", never an
+absolute threshold. Naturalness is kept as a ratio although the layer is compressed against its ceiling (allocatable
+mean 0.941, median 0.982, 77% of cells ≥ 0.95, so the ratio spans 0.84–1.05 while the star percentiles span the 12th–79th):
+Ethan's call, "fine how it is"; the stars carry the rank reading.
+
+**M4.33 addendum (Ethan, 2026-09-14): the table spec and the Act 1 maps.** (a) Every director table now renders to Ethan's
+"Y2Y Table Spec" (`director_plot.spec_table_png`; tokens in `TABLE`, sizes as ratios of `STYLE["table_base_px"]`): a mat card on
+a charcoal page, Cronos Pro 400/600, caps accent label + sentence-case header, 1 px hairlines (rule between rows, frame under the
+header and at real groupings only), numbers right-aligned in accent 600, Note/Source lines in mut. The values table and both
+consequences tables are built on it; the poster / digest / plain renderings of the values table are kept behind
+`STYLE["values_table"]`. (b) The consequences tables are TRANSPOSED: rows = area, mean F and the six value ratios; columns =
+the clusters (grouped by leading scenario for Act 2) then the two reference columns; the red → green tint now runs across each
+ROW (relative to the other columns), blended toward the mat. (c) The Act 1 maps are two single-panel files at 1 km — (a) F over
+unprotected land with the IPCA proposals, (b) the same with the numbered core clusters — replacing the 250 km² hex pair
+(`core_map_hex250`, superseded, kept); the by-future pairs and the two-way bivariate map in 20 follow at 1 km. Hexes remain
+for the Act 0 value maps and the Act 2 pairings until ruled on.
+Later the same day (Ethan): (d) maps and star plots take the spec's TYPE only (`director_plot.SPEC_RC`: Cronos Pro, weights
+400/600, ink titles, cap text, mut fine print; white map ground kept) — applied inside the asset functions and as the notebook
+rc for every figure in 20 and 21; (e) the consequences tint hinges at 1.0× (pale yellow), reds scaled to the row's minimum and
+greens to the row's maximum, so a value reads both against average and against the other columns; numerals on a tinted cell
+are ink 600 (accent fails contrast on colour); the mean-F row is dropped from the consequences table (it stays in T-D7 and on
+the star-plot titles).
+(f) **Basemap on the director maps (Ethan, 2026-09-14): the northern package's cartography ported to the Y2Y frame**
+(`director_core.basemap_layer` / `draw_basemap` / `read_hillshade`; tokens = `corridors_mapstyle.BASE`): ocean and land fills,
+Natural Earth lakes and rivers (scalerank ≤ 6), dashed admin lines and coast in the northern tokens, the Y2Y outline dashed,
+a Copernicus GLO-90 hillshade warped to 300 m on this frame and multiplied at 18%, full province / state names in tracked
+caps placed at the pole of inaccessibility of each jurisdiction's open land (outside the region + 50 km and 45 km from every
+town; a name with no open country ≥ 45 km wide is left off — Yukon and Idaho on the Act 1 maps), and a hand-listed set of
+towns (`STYLE["towns"]`). Display only: nothing enters any computation. Legend: "never selected" dropped, larger type,
+placed beside the frame (outside the region); scale bar and a grid-north arrow in the south-west corner above the colour ramp.
+(g) **Act 1 maps are slide-shaped with two zoom insets (Ethan, 2026-09-14):** `STYLE["map_layout"] = "wide"` renders a 13.33 × 7.5 in
+figure — the frame at left (basemap type scaled 0.72), zoom windows around clusters `STYLE["inset_clusters"]` = (1, 2) at right
+(members' bounds + 45 km, at least 320 km wide, at the inset's aspect; the 300 m hillshade read for the window; every listed town;
+the five largest protected areas and, on the F map, up to three IPCA proposals named in italics with a greedy declutter; a 50 km bar),
+each window titled A, B and tagged so on the frame (not by cluster: the windows are extents, the clusters are content); colour ramp and legend below the insets. `"tall"` keeps the single map.
+Later (Ethan): on the wide layout the Y2Y-wide panel carries jurisdiction POSTAL CODES only (large, `STYLE["wide_main_name_fs"]`; open land
+≥ 18 km wide; none in the scale-bar corner) and no towns; inset text (names, towns, bar, cluster numbers) enlarged (`STYLE["inset_fs"]`,
+`inset_number_fs`). Full names and towns remain on the tall single map and on every other map in 20.
+(h) **Cluster colours (Ethan, 2026-09-14):** the four core clusters carry their own colour on the maps (outline + number, white halo,
+outline 1.5 pt, ×1.5 in the insets) and on the star plots — red, magenta, charcoal, brown north → south (`STYLE["cluster_colors"]`;
+orange stays the IPCA colour, viridis carries F); core complexes that are not deck picks draw in neutral grey. Legend labels are
+"Protected areas (locked in)" and "IPCA proposals (not locked in)"; legend type 13 pt.
+(i) **Regional clusters absorb nearby core complexes (Ethan, 2026-09-14):** after the top-k complexes are grouped into regional
+clusters (75 km single linkage), every other kept core complex within 75 km of a cluster joins the NEAREST one, passes repeating so
+a chain joins through an absorbed member; clusters never merge (`director_core.absorb_complexes`; T-D1 / T-D7 / picks carry the
+enlarged clusters; `members` lists the absorbed complexes as +cxN). Trigger: the two complexes north of cluster 3 (402 + 441 km²)
+read as part of it. Unpicked complexes are no longer outlined on the maps; the 53°N line is off; cluster 3 is blue (charcoal
+failed); outlines 0.9 pt on the Y2Y-wide frame, ×2.5 in the insets; the wide maps' ramp caption is "F = frequency in 30×30 plans".

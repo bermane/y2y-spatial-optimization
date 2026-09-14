@@ -477,7 +477,7 @@ def graticule(ax, G, lats=(45, 50, 53, 55, 60, 65), lons=(-130, -125, -120, -115
         if inside.any():
             i = np.argmax(inside)
             ax.text(px[i] + 4, py[i] - 3, f"{la}°N", fontsize=7 if not e else 8, color="#b00020" if e else color,
-                    fontweight="bold" if e else "normal", zorder=4)
+                    fontweight=600 if e else 400, zorder=4)
     for lo in lons:
         la = np.linspace(38, 72, 200)
         x, y = T.transform(np.full_like(la, lo, dtype=float), la)
@@ -486,12 +486,12 @@ def graticule(ax, G, lats=(45, 50, 53, 55, 60, 65), lons=(-130, -125, -120, -115
     ax.set_xlim(0, W); ax.set_ylim(H, 0)
 
 
-def scalebar(ax, G, km=250, loc=(0.70, 0.94)):     # north-east corner is empty on every Y2Y map
+def scalebar(ax, G, km=250, loc=(0.70, 0.94), fs=8):     # loc = (x from left, y from bottom) as axes fractions
     H, W = G.shape
     px_per_km = 1000 / abs(G.transform.a)
     x0, y0 = loc[0] * W, (1 - loc[1]) * H
     ax.plot([x0, x0 + km * px_per_km], [y0, y0], color="black", lw=2.5, solid_capstyle="butt", zorder=5)
-    ax.text(x0 + km * px_per_km / 2, y0 - 12, f"{km} km", ha="center", fontsize=8, zorder=5)
+    ax.text(x0 + km * px_per_km / 2, y0 - 12, f"{km} km", ha="center", fontsize=fs, zorder=5)
 
 
 def corner_note(ax, text, loc="lower right"):
@@ -598,6 +598,43 @@ def group_picks(G, lab, picks, link_km=PICK_LINK_KM):
                         members=";".join(str(r.number) for r in mem)))
     out = sorted(out, key=lambda r: -r["lat"])                      # north -> south
     return pd.DataFrame(out)
+
+
+def absorb_complexes(G, lab, gp, cx, link_km=PICK_LINK_KM):
+    """Regional clusters (group_picks output) ABSORB the kept complexes that are not deck picks: a complex within link_km
+    of a cluster joins the NEAREST one; passes repeat so a chain of complexes can join through an absorbed member; two
+    clusters never merge (Ethan 2026-09-14: 'the stuff just north of 3 belongs to 3'). Returns gp with cids / km2 / meanF /
+    lat / lon / members updated (`absorbed` = the complex rows taken in)."""
+    gp = gp.copy().reset_index(drop=True)
+    cl_cids = [[int(c) for c in str(r.cids).split(";")] for r in gp.itertuples()]
+    taken = set(c for cc in cl_cids for c in cc)
+    free = [(j, [int(c) for c in r.cids], float(r.km2), float(r.meanF), float(r.lat), float(r.lon)) for j, r in cx.reset_index(drop=True).iterrows()
+            if not set(int(c) for c in r.cids) & taken]
+    absorbed = {i: [] for i in range(len(gp))}
+    while free:
+        dts = [ndimage.distance_transform_edt(~np.isin(lab, cc)) for cc in cl_cids]
+        joins = []
+        for f in free:
+            m = np.isin(lab, f[1]); d = [float(dt[m].min()) for dt in dts]
+            i = int(np.argmin(d))
+            if d[i] <= link_km:
+                joins.append((f, i))
+        if not joins:
+            break
+        for f, i in joins:
+            cl_cids[i] += f[1]; absorbed[i].append(f); free.remove(f)
+    for i, r in gp.iterrows():
+        if not absorbed[i]:
+            continue
+        km2 = float(r.km2) + sum(f[2] for f in absorbed[i])
+        gp.loc[i, "meanF"] = (float(r.meanF) * float(r.km2) + sum(f[3] * f[2] for f in absorbed[i])) / km2
+        gp.loc[i, "lat"] = (float(r.lat) * float(r.km2) + sum(f[4] * f[2] for f in absorbed[i])) / km2
+        gp.loc[i, "lon"] = (float(r.lon) * float(r.km2) + sum(f[5] * f[2] for f in absorbed[i])) / km2
+        gp.loc[i, "km2"] = km2
+        gp.loc[i, "cids"] = ";".join(str(c) for c in cl_cids[i])
+        gp.loc[i, "n_components"] = int(r.n_components) + sum(len(f[1]) for f in absorbed[i])
+        gp.loc[i, "members"] = str(r.members) + "".join(f"+cx{f[0] + 1}" for f in absorbed[i])
+    return gp.sort_values("lat", ascending=False).reset_index(drop=True)
 
 
 class ValueRatios:
@@ -746,38 +783,44 @@ def e17_shifts(G, version=None):
 
 
 # ---- star grid + deck --------------------------------------------------------------------------
-def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5):
+def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11, fs_title=13, fs_tick=9, fs_suptitle=15, lw=2.0, footnote=True):
     """profiles: list of dict(title=, values={axis: v}, color=). One shared radial scale."""
     import matplotlib.pyplot as plt
     import textwrap
     n = len(profiles)
     ncols = min(ncols, max(n, 1))
     nrows = int(math.ceil(n / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.6 * ncols, 5.0 * nrows), subplot_kw=dict(polar=True))
-    fig.subplots_adjust(wspace=0.6, hspace=0.55)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5.8 * ncols, 5.2 * nrows), subplot_kw=dict(polar=True))
+    fig.subplots_adjust(wspace=1.05, hspace=0.6)                    # room for the outward-anchored axis labels
     axes = np.atleast_1d(axes).ravel()
     k = len(STAR_AXES)
     ang = np.linspace(0, 2 * np.pi, k, endpoint=False)
     for ax, pr in zip(axes, profiles):
         vals = [pr["values"][a] for a in STAR_AXES]
         closed = np.r_[vals, vals[0]]
-        ax.plot(np.r_[ang, ang[0]], closed, color=pr.get("color", "#2b4f7d"), lw=2.0)
+        ax.plot(np.r_[ang, ang[0]], closed, color=pr.get("color", "#2b4f7d"), lw=lw)
         ax.fill(np.r_[ang, ang[0]], closed, color=pr.get("color", "#2b4f7d"), alpha=0.25)
         ax.plot(np.r_[ang, ang[0]], [ref] * (k + 1), color="#888888", lw=0.9, ls="--")
         # naturalness (1 - gHM) drawn as a plain sixth axis (Ethan 2026-09-04): it is in the formulation; that it
         # cannot move the answer (leverage 0.042) is a paper finding, not a director-meeting caption
         ax.set_xticks(ang)
-        ax.set_xticklabels([a.replace(" ", "\n") for a in STAR_AXES], fontsize=11)
+        ax.set_xticklabels([a.replace(" ", "\n") for a in STAR_AXES], fontsize=fs_axis)
+        for t, a in zip(ax.get_xticklabels(), ang):                  # labels sit OUTSIDE the ring: anchor by their angle
+            c, sn = math.cos(a), math.sin(a)
+            t.set_ha("left" if c > 0.1 else "right" if c < -0.1 else "center")
+            t.set_va("bottom" if sn > 0.1 else "top" if sn < -0.1 else "center")
         ax.set_ylim(0, rmax)
-        ax.set_yticks([0.25, 0.5, 0.75, 1.0]); ax.set_yticklabels(["", "0.5", "", "1"], fontsize=9)
+        ax.set_yticks([0.25, 0.5, 0.75, 1.0]); ax.set_yticklabels(["", "0.5", "", "1"], fontsize=fs_tick)
         ax.tick_params(axis="x", pad=8)
-        ax.set_title("\n".join(textwrap.fill(t, 34) for t in pr["title"].split("\n")), fontsize=13, fontweight="bold", pad=18)
+        ax.set_title("\n".join(textwrap.fill(t, 34) for t in pr["title"].split("\n")), fontsize=fs_title, fontweight=600, pad=18)
     for ax in axes[n:]:
         ax.axis("off")
-    fig.suptitle(title, fontsize=15, y=1.01)
-    fig.text(0.01, -0.01, "axes = cluster mean percentile vs the ALLOCATABLE landscape (dashed ring 0.5 = the typical unprotected cell); "
-             "representativeness = percentile of ecosystem classes present per cell; naturalness = 1 - human modification",
-             fontsize=9, color="#444444")
+    if title:
+        fig.suptitle(title, fontsize=fs_suptitle, y=1.01, fontweight=600)
+    if footnote:
+        fig.text(0.01, -0.01, "axes = cluster mean percentile vs the ALLOCATABLE landscape (dashed ring 0.5 = the typical unprotected cell); "
+                 "representativeness = percentile of ecosystem classes present per cell; naturalness = 1 - human modification",
+                 fontsize=9, color="#444444")
     fig.savefig(path, dpi=200, bbox_inches="tight")
     return fig
 
@@ -890,15 +933,17 @@ def _lines_px(G, geom):
     return out
 
 
-def draw_admin(ax, G, A, color="#8c8c8c", lw=0.5, coast_color="#b5b5b5", coast_lw=0.35,
-               border_color="#4a4a4a", border_lw=1.0, labels=True, fs=7):
+def draw_admin(ax, G, A, color="#7A7A7A", lw=0.6, coast_color="#9CB3C0", coast_lw=0.3,
+               border_color="#4a4a4a", border_lw=1.0, labels=False, fs=7, dash=(4, 2)):
+    """Coast, admin-1 lines (dashed) and the shared border in the corridors_mapstyle BASE tokens (2026-09-14; postal
+    labels off by default -- draw_basemap places full province names on open land)."""
     import matplotlib.patheffects as _pe
     for geom in A.coast:
         for ln in _lines_px(G, geom):
             ax.plot(ln[:, 0], ln[:, 1], color=coast_color, lw=coast_lw, zorder=0.3)
     for geom in A.admin1_lines.geometry:
         for ln in _lines_px(G, geom):
-            ax.plot(ln[:, 0], ln[:, 1], color=color, lw=lw, zorder=0.32)
+            ax.plot(ln[:, 0], ln[:, 1], color=color, lw=lw, ls=(0, dash) if dash else "-", zorder=0.32)
     if A.border is not None:
         for ln in _lines_px(G, A.border):
             ax.plot(ln[:, 0], ln[:, 1], color=border_color, lw=border_lw, zorder=0.35)
@@ -907,3 +952,197 @@ def draw_admin(ax, G, A, color="#8c8c8c", lw=0.5, coast_color="#b5b5b5", coast_l
             px, py = xy_to_px(G, r.pt.x, r.pt.y)
             ax.text(px, py, r.postal, fontsize=fs, color="#555555", ha="center", va="center", zorder=4.5,
                     path_effects=[_pe.withStroke(linewidth=2, foreground="white", alpha=0.8)])
+
+
+# ---- basemap: the northern package's cartography (corridors_mapstyle BASE tokens) ported to the Y2Y frame ------------
+# DISPLAY ONLY -- nothing here enters any computation. Land / ocean / lakes / rivers from Natural Earth 10 m, the
+# Copernicus GLO-90 hillshade warped to 300 m on this frame (input_data/basemap/hillshade_y2y_300m.tif, multiply at 18%),
+# province names placed on open land OUTSIDE the region, hand-listed towns.
+BASEMAP = dict(land="#F7F7F5", water="#CFE0EA", ocean="#E4EEF3", coast=("#9CB3C0", 0.3), admin=("#7A7A7A", 0.6, (4, 2)),
+               border=("#4a4a4a", 1.0), y2y=("#333333", 0.8, (6, 3)), hillshade_alpha=0.18,
+               jurisdiction=("#8A8A8A", 9.5), town=("#2B2B2B", 8.0))
+HILLSHADE_PATH = config.INPUT_DIR / "basemap" / "hillshade_y2y_300m.tif"
+Y2Y_TOWNS = {                                   # name: (lat, lon); the director maps draw STYLE["towns"] of these
+    "Inuvik": (68.36, -133.72), "Norman Wells": (65.28, -126.83), "Dawson City": (64.06, -139.43),
+    "Fort Simpson": (61.86, -121.35), "Whitehorse": (60.72, -135.06), "Watson Lake": (60.06, -128.71),
+    "Fort Nelson": (58.81, -122.70), "Fort St. John": (56.25, -120.85), "Smithers": (54.78, -127.17),
+    "Prince George": (53.92, -122.75), "Edmonton": (53.55, -113.49), "Jasper": (52.87, -118.08),
+    "Kamloops": (50.67, -120.33), "Banff": (51.18, -115.57), "Calgary": (51.05, -114.07),
+    "Revelstoke": (51.00, -118.20), "Cranbrook": (49.51, -115.77), "Nelson": (49.49, -117.29),
+    "Kalispell": (48.20, -114.31), "Spokane": (47.66, -117.43), "Missoula": (46.87, -114.00),
+    "Helena": (46.59, -112.04), "Bozeman": (45.68, -111.04), "Salmon": (45.18, -113.90),
+    "Boise": (43.62, -116.21), "Jackson": (43.48, -110.76),
+}
+PROVINCE_LABEL = {"British Columbia": "BRITISH\nCOLUMBIA", "Northwest Territories": "NORTHWEST\nTERRITORIES",
+                  "Yukon": "YUKON", "Alberta": "ALBERTA", "Alaska": "ALASKA", "Saskatchewan": "SASKATCHEWAN",
+                  "Nunavut": "NUNAVUT", "Montana": "MONTANA", "Idaho": "IDAHO", "Wyoming": "WYOMING",
+                  "Washington": "WASHINGTON", "Oregon": "OREGON", "Nevada": "NEVADA", "Utah": "UTAH",
+                  "California": "CALIFORNIA", "North Dakota": "NORTH\nDAKOTA", "South Dakota": "SOUTH\nDAKOTA"}
+
+
+def _frame_bounds(G):
+    x0 = G.transform.c; y1 = G.transform.f
+    return x0, y1 + G.shape[0] * G.transform.e, x0 + G.shape[1] * G.transform.a, y1
+
+
+def _poly_rings_px(G, geom):
+    """Exterior rings of a (Multi)Polygon in pixel coordinates (holes ignored: basemap fills only)."""
+    out = []
+    for p in (geom.geoms if hasattr(geom, "geoms") else [geom]):
+        if p.is_empty or p.geom_type != "Polygon":
+            continue
+        x, y = np.asarray(p.exterior.coords)[:, :2].T
+        px, py = xy_to_px(G, x, y)
+        out.append(np.c_[px, py])
+    return out
+
+
+def basemap_layer(G, pad_m=150e3, river_rank=6, min_share=0.015, keepout_km=50, edge_margin=0.035):
+    """Land polygons, lakes, rivers, the Y2Y outline, province label points and towns for the frame (map coordinates;
+    drawn in pixel coordinates by draw_basemap). Province names sit at the pole of inaccessibility of the province's
+    open land OUTSIDE the region (region buffered `keepout_km`) when that is at least a quarter of its area in frame."""
+    from shapely.ops import polylabel
+    x0, y0, x1, y1 = _frame_bounds(G)
+    bbox = shp_box(x0 - pad_m, y0 - pad_m, x1 + pad_m, y1 + pad_m); inner = shp_box(x0, y0, x1, y1)
+    bm = config.INPUT_DIR / "basemap"
+    adm = gpd.read_file(ADMIN_PATH).to_crs(G.crs)
+    adm = adm[adm.intersects(bbox)].copy(); adm["geometry"] = adm.geometry.intersection(bbox)
+    land = adm.dissolve(by="admin").reset_index()
+    lakes = pd.concat([gpd.read_file(bm / "ne_10m_lakes.shp"), gpd.read_file(bm / "ne_10m_lakes_north_america.shp")], ignore_index=True)
+    lakes = gpd.GeoDataFrame(lakes, crs="EPSG:4326").to_crs(G.crs)
+    lakes = lakes[lakes.intersects(bbox)].copy(); lakes["geometry"] = lakes.geometry.intersection(bbox)
+    rivers = pd.concat([gpd.read_file(bm / "ne_10m_rivers_lake_centerlines.shp"), gpd.read_file(bm / "ne_10m_rivers_north_america.shp")], ignore_index=True)
+    rivers = gpd.GeoDataFrame(rivers, crs="EPSG:4326").to_crs(G.crs)
+    rivers = rivers[(rivers.scalerank <= river_rank) & rivers.intersects(bbox)].copy(); rivers["geometry"] = rivers.geometry.intersection(bbox)
+    region = gpd.read_file(config.CORRIDOR_REF).to_crs(G.crs).geometry.union_all()
+    T = Transformer.from_crs("EPSG:4326", G.crs, always_xy=True)
+    town_pts = {n: T.transform(lon, lat) for n, (lat, lon) in Y2Y_TOWNS.items()}
+    keep_out = unary_union([region.buffer(keepout_km * 1000)] + [Point(*xy).buffer(45_000) for xy in town_pts.values()])
+    frame_area = (x1 - x0) * (y1 - y0)
+    labels = []
+    for _, r in adm.iterrows():
+        g = r.geometry.intersection(inner)
+        if g.is_empty or g.area / frame_area < min_share:
+            continue
+        free = g.difference(keep_out)                       # open land: outside the region and away from every town
+        if free.is_empty:
+            continue
+        best, best_r = None, 0.0
+        for piece in (list(free.geoms) if hasattr(free, "geoms") else [free]):
+            if piece.geom_type != "Polygon" or piece.area < 0.02 * g.area:
+                continue
+            pt = polylabel(piece, tolerance=2000); rad = pt.distance(piece.boundary)
+            if rad > best_r:
+                best, best_r = pt, rad
+        if best is None:
+            continue
+        fx, fy = (best.x - x0) / (x1 - x0), (best.y - y0) / (y1 - y0)
+        if min(fx, 1 - fx, fy, 1 - fy) < edge_margin:                 # a name pinned to the frame edge is a sliver: skip it
+            continue
+        labels.append(dict(name=PROVINCE_LABEL.get(r["name"], str(r["name"]).upper()), postal=str(r["postal"]), x=best.x, y=best.y,
+                           r_km=best_r / 1000))                        # draw_basemap applies the width threshold per mode
+    return SimpleNamespace(land=land, lakes=lakes, rivers=rivers, region=region, labels=labels, towns=town_pts)
+
+
+def read_hillshade(G, path=HILLSHADE_PATH):
+    """The 300 m hillshade resampled onto this 1 km frame (0-255; None if the file is absent)."""
+    if not Path(path).exists():
+        return None
+    from rasterio.windows import from_bounds
+    from rasterio.enums import Resampling
+    x0, y0, x1, y1 = _frame_bounds(G)
+    with rasterio.open(path) as src:
+        win = from_bounds(x0, y0, x1, y1, src.transform)
+        return src.read(1, window=win, out_shape=G.shape, resampling=Resampling.average, boundless=True, fill_value=255)
+
+
+def draw_basemap(ax, G, B, hs=None, water=True, names=True, towns=(), z_hs=0.6, alpha=None, fs_scale=1.0, window=None, name_fs=None,
+                 min_radius_km=(45, 18), avoid_sw=True):
+    """names: True = full names in tracked caps (open land >= 45 km wide), 'abbrev' = postal codes (>= 18 km), False = none."""
+    """Ocean ground, land fill, lakes + rivers, the region outline, province names, towns -- pixel coordinates."""
+    from matplotlib.collections import PolyCollection
+    import matplotlib.patheffects as _pe
+    ax.set_facecolor(BASEMAP["ocean"])
+    ax.add_collection(PolyCollection([r for g in B.land.geometry for r in _poly_rings_px(G, g)], facecolors=BASEMAP["land"], edgecolors="none", zorder=0.1))
+    if hs is not None:                                           # darkening-only multiply: alpha = 0.18 x (1 - shade)
+        rgba = np.zeros(hs.shape + (4,), np.float32); rgba[..., 3] = (alpha or BASEMAP["hillshade_alpha"]) * (1.0 - hs.astype(np.float32) / 255.0)
+        ax.imshow(rgba, interpolation="bilinear", zorder=z_hs)
+    if water:
+        ax.add_collection(PolyCollection([r for g in B.lakes.geometry for r in _poly_rings_px(G, g)], facecolors=BASEMAP["water"], edgecolors="none", zorder=0.7))
+        for _, r in B.rivers.iterrows():
+            lw = float(np.clip(1.0 - 0.08 * float(r.scalerank), 0.3, 0.9))
+            for ln in _lines_px(G, r.geometry):
+                ax.plot(ln[:, 0], ln[:, 1], color=BASEMAP["water"], lw=lw, zorder=0.7)
+    col, lw, dash = BASEMAP["y2y"]
+    for ln in _lines_px(G, B.region.boundary):
+        ax.plot(ln[:, 0], ln[:, 1], color=col, lw=lw, ls=(0, dash), zorder=3.2)
+    px0, px1, py0, py1 = window or (0, G.shape[1], 0, G.shape[0])          # pixel window (x0, x1, y_top, y_bottom)
+    inside = lambda px, py: px0 < px < px1 and py0 < py < py1
+    if names:
+        jc, jfs = BASEMAP["jurisdiction"]; fs = (name_fs or jfs) * fs_scale
+        abbrev = names == "abbrev"; r_min = min_radius_km[1] if abbrev else min_radius_km[0]
+        for L in B.labels:
+            px, py = xy_to_px(G, L["x"], L["y"])
+            if not inside(px, py) or L["r_km"] < r_min:
+                continue
+            if avoid_sw and px < px0 + 0.26 * (px1 - px0) and py > py1 - 0.13 * (py1 - py0):   # the scale bar / north arrow corner
+                continue
+            text = L["postal"] if abbrev else " ".join(L["name"])
+            ax.text(px, py, text, fontsize=fs, fontweight=600, color=jc, alpha=0.9, ha="center", va="center", zorder=4.5,
+                    linespacing=1.15, clip_on=True, path_effects=[_pe.withStroke(linewidth=0.3 * fs, foreground="white", alpha=0.8)])
+    tc, tfs = BASEMAP["town"]
+    for n in towns:
+        if n not in B.towns:
+            continue
+        px, py = xy_to_px(G, *B.towns[n])
+        if not inside(px, py):
+            continue
+        ax.plot(px, py, marker="o", ms=3.2 * fs_scale, color=tc, mec="white", mew=0.7, zorder=6)
+        ax.annotate(n, (px, py), xytext=(4, 3), textcoords="offset points", fontsize=tfs * fs_scale, color=tc, zorder=6, clip_on=True,
+                    path_effects=[_pe.withStroke(linewidth=2.0, foreground="white")])
+
+
+def north_arrow(ax, G, loc=(0.06, 0.055), length_px=70, fs=9):
+    """A plain north arrow (grid north) at an axes fraction (x from left, y from bottom)."""
+    H, W = G.shape
+    x, y1 = loc[0] * W, (1 - loc[1]) * H; y0 = y1 - length_px
+    ax.annotate("", xy=(x, y0), xytext=(x, y1), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
+    ax.text(x, y0 - 6, "N", ha="center", va="bottom", fontsize=fs, fontweight=600, zorder=5)
+
+
+def read_hillshade_window(G, window, scale=3, path=HILLSHADE_PATH):
+    """The 300 m hillshade for a pixel window (x0, x1, y_top, y_bottom) of the 1 km frame, at `scale` x the 1 km pixels."""
+    if not Path(path).exists():
+        return None
+    from rasterio.windows import from_bounds
+    from rasterio.enums import Resampling
+    px0, px1, py0, py1 = window
+    x0 = G.transform.c + px0 * G.transform.a; x1 = G.transform.c + px1 * G.transform.a
+    yt = G.transform.f + py0 * G.transform.e; yb = G.transform.f + py1 * G.transform.e
+    with rasterio.open(path) as src:
+        win = from_bounds(x0, yb, x1, yt, src.transform)
+        return src.read(1, window=win, out_shape=(int(round((py1 - py0) * scale)), int(round((px1 - px0) * scale))),
+                        resampling=Resampling.average, boundless=True, fill_value=255)
+
+
+def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, taken=None):
+    """Label the biggest named areas intersecting a pixel window (italic, white halo), greedy declutter on a 45 km grid."""
+    import matplotlib.patheffects as _pe
+    px0, px1, py0, py1 = window
+    x0 = G.transform.c + px0 * G.transform.a; x1 = G.transform.c + px1 * G.transform.a
+    yt = G.transform.f + py0 * G.transform.e; yb = G.transform.f + py1 * G.transform.e
+    win = shp_box(x0, yb, x1, yt)
+    g = gdf[gdf.intersects(win)].copy()
+    if not len(g):
+        return taken or []
+    g["geometry"] = g.geometry.intersection(win); g = g[~g.geometry.is_empty]
+    g["_a"] = g.geometry.area; g = g.sort_values("_a", ascending=False).head(top_n)
+    taken = list(taken or [])
+    for _, r in g.iterrows():
+        pt = r.geometry.representative_point(); px, py = xy_to_px(G, pt.x, pt.y)
+        if any(abs(px - tx) < 16 * fs and abs(py - ty) < 3.3 * fs for tx, ty in taken):
+            continue
+        ax.text(px, py, str(r[name_col]).split(" [")[0].split(" (")[0], fontsize=fs, fontstyle="italic", color=color, ha="center", va="center", zorder=5.5, clip_on=True,
+                path_effects=[_pe.withStroke(linewidth=2.0, foreground="white", alpha=0.9)])
+        taken.append((px, py))
+    return taken

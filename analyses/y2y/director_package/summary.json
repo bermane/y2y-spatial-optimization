@@ -194,17 +194,17 @@
    },
    {
     "unit": "pick 3: N of Granby Park (49.9\u00b0N 118.7\u00b0W)",
-    "km2": 952,
+    "km2": 2037,
     "forced_pct": 0.0,
-    "multi_claim_pct": 99.68487394957984,
-    "other_pct": 0.31512605042016806
+    "multi_claim_pct": 99.65635738831615,
+    "other_pct": 0.3436426116838488
    },
    {
     "unit": "pick 4: NW of Frank Church River Of No Return Wilderness (45.2\u00b0N 115.6\u00b0W)",
-    "km2": 3977,
+    "km2": 4871,
     "forced_pct": 0.0,
-    "multi_claim_pct": 83.65602212723158,
-    "other_pct": 16.34397787276842
+    "multi_claim_pct": 81.68753849312256,
+    "other_pct": 18.312461506877437
    },
    {
     "unit": "pick 5: Tahltan - Sacred Headwaters (Klappan) vicinity (57.0\u00b0N 128.9\u00b0W)",

@@ -51,29 +51,36 @@ figure: `act0_value_convergence_hex250.png`
 
 ## Slide 6 — Act 1 — Core commitments
 
-figure: `act1_core_hex250.png`
+figure: `act1_core_F_1km.png`
 
 - Of everything in Act 0, these areas recur in near-optimal plans no matter whose values prevail: 29,194 km² (F ≥ 0.70 across all 12 positions)
 - No value theme left more than 5% behind in any plan
-- Numbered = the largest core clusters (full register in the appendix)
+- F at 1 km over unprotected land; declared IPCA proposals outlined
 
-## Slide 7 — Act 1 under the high-emissions refugia future
+## Slide 7 — Act 1 — The core clusters
 
-figure: `act1_core_ssp585_hex250.png`
+figure: `act1_core_clusters_1km.png`
+
+- The four regional core clusters, numbered north → south (full register in the appendix)
+- Star plots and the consequences table follow the same numbering
+
+## Slide 8 — Act 1 under the high-emissions refugia future
+
+figure: `act1_core_ssp585_1km.png`
 
 - 6 value positions at SSP585: core 31,358 km²
 - 83% of the 12-position core lies inside it
 - The 12-position core = what survives BOTH refugia futures
 
-## Slide 8 — Act 1 under the low-emissions refugia future
+## Slide 9 — Act 1 under the low-emissions refugia future
 
-figure: `act1_core_ssp245_hex250.png`
+figure: `act1_core_ssp245_1km.png`
 
 - 6 value positions at SSP245: core 41,083 km²
 - 83% of the 12-position core lies inside it
 - The 12-position core = what survives BOTH refugia futures
 
-## Slide 9 — Where the core depends on the climate future
+## Slide 10 — Where the core depends on the climate future
 
 figure: `act1_two_way_climate.png`
 
@@ -81,7 +88,7 @@ figure: `act1_two_way_climate.png`
 - Yellow = core under both futures; orange = only if emissions run high; green = only if they stay low
 - The 12-position core is what survives both
 
-## Slide 10 — Why these places — core clusters
+## Slide 11 — Why these places — core clusters
 
 figure: `act1_star_grid.png`
 
@@ -89,14 +96,14 @@ figure: `act1_star_grid.png`
 - Axes = percentile vs the allocatable landscape; naturalness = 1 − human modification
 - Histogram of F: act1_F_histogram.png
 
-## Slide 11 — Act 1 — consequences
+## Slide 12 — Act 1 — consequences
 
 figure: `td7_consequences_core.png`
 
 - Each cell: the cluster's mean value divided by the mean over allocatable (unprotected) land — 2.3× = 2.3 times the average cell
 - Carbon combines the two pools mass-weighted; representativeness = ecosystem classes present per cell; naturalness = 1 − human modification
 
-## Slide 12 — Act 2 — Core-habitat-forward: value vs irreplaceability
+## Slide 13 — Act 2 — Core-habitat-forward: value vs irreplaceability
 
 figure: `act2_s1_hex250.png`
 
@@ -105,7 +112,7 @@ figure: `act2_s1_hex250.png`
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 
-## Slide 13 — Act 2 — Connectivity-forward: value vs irreplaceability
+## Slide 14 — Act 2 — Connectivity-forward: value vs irreplaceability
 
 figure: `act2_s2_hex250.png`
 
@@ -114,7 +121,7 @@ figure: `act2_s2_hex250.png`
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 
-## Slide 14 — Act 2 — Biodiversity-forward: value vs irreplaceability
+## Slide 15 — Act 2 — Biodiversity-forward: value vs irreplaceability
 
 figure: `act2_s3_hex250.png`
 
@@ -124,7 +131,7 @@ figure: `act2_s3_hex250.png`
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 - almost no land of its own; every near-optimal plan holds 29–35% of AOH richness whichever value leads — the finding IS the product: the value map (left) is where to work
 
-## Slide 15 — Act 2 — Carbon-forward: value vs irreplaceability
+## Slide 16 — Act 2 — Carbon-forward: value vs irreplaceability
 
 figure: `act2_s4_hex250.png`
 
@@ -135,20 +142,20 @@ figure: `act2_s4_hex250.png`
 - carbon-forward is the only scenario that also states a security target (55% of dense soil carbon); its own land comes from that target, not from the share doubling the other values get
 - carbon has a target lever because its geometry admitted a stopping rule; the diffuse values cannot; the asymmetry is the landscape's
 
-## Slide 16 — Scenario clusters — value profiles
+## Slide 17 — Scenario clusters — value profiles
 
 figure: `act2_star_grid.png`
 
 - Each scenario's two largest clusters outside the core
 - Same radial scale as the core stars
 
-## Slide 17 — Act 2 — consequences
+## Slide 18 — Act 2 — consequences
 
 figure: `td7_consequences_scenarios.png`
 
 - The same ratio-to-average table for the scenario clusters; 'leads with' = the value position that makes the cluster frequent
 
-## Slide 18 — Hinge — value convergence × what can be promised
+## Slide 19 — Hinge — value convergence × what can be promised
 
 figure: `hinge_convergence_x_F.png`
 
@@ -157,14 +164,14 @@ figure: `hinge_convergence_x_F.png`
 - High value / opportunity = Act 3's territory — near-optimal plans absorb it
 - Low value / core = the E13 surprise: binding claims in unglamorous places — point at it in the room
 
-## Slide 19 — Why these places (driver attribution)
+## Slide 20 — Why these places (driver attribution)
 
 figure: `why_these_places.png`
 
 - High frequency follows binding scarcity, not the most-valued layer
 - Dense climate refugia pin the core under every value position; dense soil carbon under carbon-forward values
 
-## Slide 20 — Act 3 — The opportunity landscape: the measured gap
+## Slide 21 — Act 3 — The opportunity landscape: the measured gap
 
 figure: `act3_opportunity.png`
 
@@ -173,7 +180,7 @@ figure: `act3_opportunity.png`
 - The analysis does not forbid working anywhere relationships and feasibility are positive — it tells you what can be promised about each tier
 - PRIORITY ≠ PERMISSION
 
-## Slide 21 — What each tier delivers
+## Slide 22 — What each tier delivers
 
 figure: `tier_achievement.png`
 
@@ -181,7 +188,7 @@ figure: `tier_achievement.png`
 - Red line/band = what a single optimal plan captures (balanced; range across all positions)
 - Pairs with T-D6: the promise per tier, in the currency of each value
 
-## Slide 22 — E17 — the southern lean of representativeness, re-measured
+## Slide 23 — E17 — the southern lean of representativeness, re-measured
 
 figure: `e17_one_pager.png`
 
@@ -189,7 +196,7 @@ figure: `e17_one_pager.png`
 - Removing representativeness moves the balanced plan +0.14° north on the curated block (it was +2.11° on the 40-class block: the artifact classes did the pulling)
 - Decision for Y2Y: affirm the representativeness anchor at its measured price?
 
-## Slide 23 — What we can promise — the map in one picture
+## Slide 24 — What we can promise — the map in one picture
 
 figure: `summary_tiers_1km.png`
 
@@ -198,7 +205,7 @@ figure: `summary_tiers_1km.png`
 - Light blue = defensible wherever feasibility is positive (Act 3)
 - Tiers are levels of reliability, not a fence
 
-## Slide 24 — What we can promise
+## Slide 25 — What we can promise
 
 figure: `td2_bands.png`
 
@@ -207,7 +214,7 @@ figure: `td2_bands.png`
 - Opportunity: defensible wherever feasibility is positive (enable)
 - Next: cluster naming, E17 placement, ecoregion layer for T-D4
 
-## Slide 25 — Appendix — The necessity test (E19): what the ecosystem block forces
+## Slide 26 — Appendix — The necessity test (E19): what the ecosystem block forces
 
 figure: `td_e19_partition.png`
 
@@ -216,7 +223,7 @@ figure: `td_e19_partition.png`
 - Multi-claim = not forced and rich for ≥ 2 other themes; other = the remainder
 
 ## Appendix
-- `act1_core_1km.png` (the core pair at 1 km, no hexes), `act1_F_histogram.png` (distribution of F), `act1_core_1km_tiers.png` (five-tier analytic surface)
+- `act1_F_histogram.png` (distribution of F), `act1_core_1km_tiers.png` (five-tier analytic surface)
 - `td1_picks.png` + `tables/T-D1_cluster_register.csv` (full register), `tables/cluster_sensitivity.csv` (0.60/0.80)
 - `td6_value_coverage.png` + `tables/T-D6_value_coverage.csv` / `T-D6b_value_share_by_tier.csv` (value vs irreplaceability by theme), `tables/hinge_crosstab.csv`
 - `td2_acts.png`, `td3_scenarios.png`, `td5_protected_baseline.png` (what PAs already bank), `td5b_enrichment_by_scenario.png`, `tables/pooling_check.csv`, 1 km GeoTIFFs in `geotiffs/` (incl. `value_top30_*.tif`, `value_convergence.tif`, `value_gap.tif`)
