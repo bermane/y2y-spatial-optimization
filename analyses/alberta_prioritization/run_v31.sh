@@ -32,4 +32,5 @@ else
 fi
 run 12_tiers_and_clusters        y2y-geo   # surfaces, tiers, clusters, tables (archives the v1 artifact-block package first)
 run 13_figures                   y2y-geo   # every figure, table and the draft deck (the record)
+run 14_director_outputs          y2y-geo   # the curated few for the presentation (shared director_plot assets)
 echo "DONE $(date '+%F %T') -- analyses/alberta_prioritization/director_package/ rebuilt on manifest v3.1"

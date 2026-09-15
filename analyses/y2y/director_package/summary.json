@@ -180,31 +180,31 @@
    },
    {
     "unit": "pick 1: SW of Tahltan - Sacred Headwaters (Klappan) (56.8\u00b0N 129.3\u00b0W)",
-    "km2": 10962,
+    "km2": 11490,
     "forced_pct": 0.0,
-    "multi_claim_pct": 84.12698412698413,
-    "other_pct": 15.873015873015873
+    "multi_claim_pct": 83.92515230635335,
+    "other_pct": 16.07484769364665
    },
    {
     "unit": "pick 2: Purcell Wilderness Conservancy Park vicinity (50.1\u00b0N 116.4\u00b0W)",
-    "km2": 11591,
+    "km2": 12105,
     "forced_pct": 0.0,
-    "multi_claim_pct": 97.73962557156415,
-    "other_pct": 2.2603744284358553
+    "multi_claim_pct": 97.78603882693102,
+    "other_pct": 2.21396117306898
    },
    {
     "unit": "pick 3: N of Granby Park (49.9\u00b0N 118.7\u00b0W)",
-    "km2": 2037,
+    "km2": 2507,
     "forced_pct": 0.0,
-    "multi_claim_pct": 99.65635738831615,
-    "other_pct": 0.3436426116838488
+    "multi_claim_pct": 99.68089349820502,
+    "other_pct": 0.3191065017949741
    },
    {
     "unit": "pick 4: NW of Frank Church River Of No Return Wilderness (45.2\u00b0N 115.6\u00b0W)",
-    "km2": 4871,
+    "km2": 5229,
     "forced_pct": 0.0,
-    "multi_claim_pct": 81.68753849312256,
-    "other_pct": 18.312461506877437
+    "multi_claim_pct": 81.54522853318034,
+    "other_pct": 18.45477146681966
    },
    {
     "unit": "pick 5: Tahltan - Sacred Headwaters (Klappan) vicinity (57.0\u00b0N 128.9\u00b0W)",

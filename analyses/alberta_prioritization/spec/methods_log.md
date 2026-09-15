@@ -485,4 +485,26 @@ one codebase (Ethan's asset rule), and fold the Alberta-specific rows/labels in 
 reference labels). The Alberta record figures keep their present 1 km cartography (admin lines, 53°N, AOIs) meanwhile. The
 GLO-90 hillshade already covers the Alberta frame (`hillshade_y2y_300m.tif`, same grid), so no new basemap data is needed.
 
+**M18.5 Speck absorption mirrored (parent M4.33 addendum k, Ethan 2026-09-15).** Core components below the cluster floor within
+`SPECK_LINK_KM` of a regional cluster join the nearest one and are vectorized with it (`dc.absorb_complexes(..., reg=, speck_km=)`);
+T-D1, T-D7 and the stars follow. Alberta keeps the parent's **10 km** — a vicinity-on-the-map distance (the yellow cells beside a
+cluster belong to it), not an extent-relative grouping like the pick link, which is scaled (30 vs 75 km). The 10 km² floor
+itself (D-AB7) is unchanged; `summary.json` records both constants.
+
+**M18.6 The presentation assets mirrored after all (Ethan 2026-09-15: "build 13 Act 1 like the Y2Y-wide 21 — one inset on the key
+cluster"; then "make notebook 14, director outputs").** `director_plot.load()` gained keyword-only parameters — `grid`, `manifest`,
+`overlay` (a SimpleNamespace(gdf, mask2d, label) in the IPCA role; a `ls` column sets each polygon's linestyle), `window` (a pixel
+window every frame-level map clips to, with its own scale bar/north arrow and jurisdiction codes placed at their poles inside the
+window) and `hex_grid` — plus `WIDE_RECTS` (one landscape inset when `STYLE["inset_clusters"]` lists one cluster; the single map when
+it lists none), `values_table(rows=, metrics=, label=, units=)` for another package's objectives rows, consequences reference
+columns labelled from T-D7's names (the parent's two map to their current text exactly), and two STYLE knobs
+(`pa_layer_min_km2`, `window_scale_km`). **Every default reproduces the Y2Y-wide outputs unchanged.** Alberta: 12 writes the
+objectives rows (`T-D0_values_rows.csv`, with a metric column) so 13 and 14 render the same record; 13 loads the package through
+`dp.load` beside its local helpers and calls the shared Act 1 maps (frame + one inset), `core_stars`, `cluster_locators`,
+`scenario_stars`, `values_table`, `core_/scenario_consequences` as its record copies; **`14_director_outputs`** = the curated set
+(01 values, 01b simple, 02a/02b core maps, 03 stars + 03b locators, 04 consequences → `director_package/director_outputs/`),
+knobs in `dp.STYLE` set before load (named-PA floor 50 km², window scale bar 100 km, inset 160 km min / 25 km pad, the four
+Alberta towns, postal codes on the frame), the key cluster = the largest regional core cluster (`inset_clusters=(KEY,)`, one
+line to override). M18.4's deferral is closed. `run_v31.sh` runs 14 after 13.
+
 *Last updated 2026-09-15 (M18).*

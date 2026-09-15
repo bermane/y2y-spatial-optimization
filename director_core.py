@@ -52,6 +52,7 @@ HEX_KM2_ALT = 800          # board-level legibility variant, rendered for compar
 POOL_JACCARD_MIN = 0.80    # decision (g): pool the two climate levels unless their frequent tiers diverge
 TOPK_ACT1 = 6              # deck shows top-k by area (tie-break mean guarded F); the register ships in full
 PICK_LINK_KM = 75          # deck picks: the top-k complexes are grouped into REGIONAL clusters by single linkage at this
+SPECK_LINK_KM = 10         # core components below MIN_KM2 within this distance of a regional cluster join it (Ethan 2026-09-15: 10 km)
                            # edge-to-edge distance and numbered north -> south (Ethan 2026-09-14: "3, 4 and 6 become one")
 COMPLEX_LINK_KM = 25       # presentational grouping: kept components within this edge-to-edge distance (single
                            # linkage) form one COMPLEX for the deck picks (Ethan 2026-09-04: the two Frank Church /
@@ -600,11 +601,11 @@ def group_picks(G, lab, picks, link_km=PICK_LINK_KM):
     return pd.DataFrame(out)
 
 
-def absorb_complexes(G, lab, gp, cx, link_km=PICK_LINK_KM):
-    """Regional clusters (group_picks output) ABSORB the kept complexes that are not deck picks: a complex within link_km
-    of a cluster joins the NEAREST one; passes repeat so a chain of complexes can join through an absorbed member; two
-    clusters never merge (Ethan 2026-09-14: 'the stuff just north of 3 belongs to 3'). Returns gp with cids / km2 / meanF /
-    lat / lon / members updated (`absorbed` = the complex rows taken in)."""
+def absorb_complexes(G, lab, gp, cx, link_km=PICK_LINK_KM, reg=None, speck_km=SPECK_LINK_KM):
+    """Regional clusters (group_picks output) ABSORB (1) the kept complexes that are not deck picks -- a complex within
+    link_km of a cluster joins the NEAREST one, passes repeating so a chain joins through an absorbed member -- and (2) the
+    SPECKS: core components under MIN_KM2 within speck_km of a cluster (Ethan 2026-09-15: the yellow cells in a cluster's
+    vicinity belong to it). Two clusters never merge. Returns gp with cids / km2 / meanF / lat / lon / members updated."""
     gp = gp.copy().reset_index(drop=True)
     cl_cids = [[int(c) for c in str(r.cids).split(";")] for r in gp.itertuples()]
     taken = set(c for cc in cl_cids for c in cc)
@@ -623,6 +624,15 @@ def absorb_complexes(G, lab, gp, cx, link_km=PICK_LINK_KM):
             break
         for f, i in joins:
             cl_cids[i] += f[1]; absorbed[i].append(f); free.remove(f)
+    # the specks: core components under MIN_KM2 (never complexes) within speck_km of a cluster join the nearest one
+    n_specks = {i: 0 for i in range(len(gp))}
+    if reg is not None and speck_km:
+        dts = [ndimage.distance_transform_edt(~np.isin(lab, cc)) for cc in cl_cids]
+        for r_ in reg[~reg.kept].itertuples():
+            m = lab == int(r_.cid); d = [float(dt[m].min()) for dt in dts]; i = int(np.argmin(d))
+            if d[i] <= speck_km:
+                cl_cids[i].append(int(r_.cid)); n_specks[i] += 1
+                absorbed[i].append((None, [int(r_.cid)], float(r_.km2), float(r_.meanF), float(r_.lat), float(r_.lon)))
     for i, r in gp.iterrows():
         if not absorbed[i]:
             continue
@@ -633,7 +643,7 @@ def absorb_complexes(G, lab, gp, cx, link_km=PICK_LINK_KM):
         gp.loc[i, "km2"] = km2
         gp.loc[i, "cids"] = ";".join(str(c) for c in cl_cids[i])
         gp.loc[i, "n_components"] = int(r.n_components) + sum(len(f[1]) for f in absorbed[i])
-        gp.loc[i, "members"] = str(r.members) + "".join(f"+cx{f[0] + 1}" for f in absorbed[i])
+        gp.loc[i, "members"] = str(r.members) + "".join(f"+cx{f[0] + 1}" for f in absorbed[i] if f[0] is not None) + (f"+{n_specks[i]}specks" if n_specks[i] else "")
     return gp.sort_values("lat", ascending=False).reset_index(drop=True)
 
 
@@ -786,7 +796,7 @@ def e17_shifts(G, version=None):
 STAR_GRID = dict(panel_w=5.8, panel_h=5.2, wspace=1.05, hspace=0.6, top=0.82, bottom=0.10)   # shared by the locator maps (same geometry)
 
 
-def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11, fs_title=13, fs_tick=9, fs_suptitle=15, lw=2.0, footnote=True, tight=True, label_pad=8):
+def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11, fs_title=13, fs_tick=9, fs_suptitle=15, lw=2.0, footnote=True, tight=True, label_pad=8, dpi=200):
     """profiles: list of dict(title=, values={axis: v}, color=). One shared radial scale."""
     import matplotlib.pyplot as plt
     import textwrap
@@ -825,7 +835,7 @@ def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11
         fig.text(0.01, -0.01, "axes = cluster mean percentile vs the ALLOCATABLE landscape (dashed ring 0.5 = the typical unprotected cell); "
                  "representativeness = percentile of ecosystem classes present per cell; naturalness = 1 - human modification",
                  fontsize=9, color="#444444")
-    fig.savefig(path, dpi=200, bbox_inches="tight" if tight else None)
+    fig.savefig(path, dpi=dpi, bbox_inches="tight" if tight else None)
     return fig
 
 
@@ -976,6 +986,9 @@ Y2Y_TOWNS = {                                   # name: (lat, lon); the director
     "Kalispell": (48.20, -114.31), "Spokane": (47.66, -117.43), "Missoula": (46.87, -114.00),
     "Helena": (46.59, -112.04), "Bozeman": (45.68, -111.04), "Salmon": (45.18, -113.90),
     "Boise": (43.62, -116.21), "Jackson": (43.48, -110.76),
+    # Tahltan territory / Highway 37 (inset A, Ethan 2026-09-15)
+    "Iskut": (57.84, -129.98), "Dease Lake": (58.44, -130.01), "Telegraph Creek": (57.90, -131.16), "Stewart": (55.94, -129.99),
+    "Hazelton": (55.26, -127.67),
 }
 POSTAL_DISPLAY = {"NT": "NWT"}                   # display form of a postal code where the common usage differs (Ethan 2026-09-15)
 PROVINCE_LABEL = {"British Columbia": "BRITISH\nCOLUMBIA", "Northwest Territories": "NORTHWEST\nTERRITORIES",
@@ -1083,6 +1096,8 @@ def draw_basemap(ax, G, B, hs=None, water=True, names=True, towns=(), z_hs=0.6, 
         ax.plot(ln[:, 0], ln[:, 1], color=col, lw=lw, ls=(0, dash), zorder=3.2)
     px0, px1, py0, py1 = window or (0, G.shape[1], 0, G.shape[0])          # pixel window (x0, x1, y_top, y_bottom)
     inside = lambda px, py: px0 < px < px1 and py0 < py < py1
+    mx, my = 0.12 * (px1 - px0), 0.03 * (py1 - py0)                          # a town's label must fit inside the window
+    town_inside = lambda px, py: px0 + 0.02 * (px1 - px0) < px < px1 - mx and py0 + my < py < py1 - my
     if names:
         jc, jfs = BASEMAP["jurisdiction"]; fs = (name_fs or jfs) * fs_scale
         abbrev = names == "abbrev"; r_min = min_radius_km[1] if abbrev else min_radius_km[0]
@@ -1102,7 +1117,7 @@ def draw_basemap(ax, G, B, hs=None, water=True, names=True, towns=(), z_hs=0.6, 
         if n not in B.towns:
             continue
         px, py = xy_to_px(G, *B.towns[n])
-        if not inside(px, py):
+        if not town_inside(px, py):
             continue
         ax.plot(px, py, marker="o", ms=3.2 * fs_scale, color=tc, mec="white", mew=0.7, zorder=6)
         ax.annotate(n, (px, py), xytext=(4, 3), textcoords="offset points", fontsize=tfs * fs_scale, color=tc, zorder=6, clip_on=True,

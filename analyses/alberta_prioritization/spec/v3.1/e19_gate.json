@@ -1,0 +1,19 @@
+{
+ "version": "v3.1",
+ "applied_g": 0.02,
+ "applied_tag": "g02",
+ "rule": "T3 (the no-EFG ensemble) runs iff the ensemble-forced share of the core > 0.50",
+ "forced_share_core_all": 0.0,
+ "forced_share_core_any": 0.0,
+ "core_km2": 31,
+ "forced_all_km2": 0,
+ "forced_any_km2": 0,
+ "n_classes_forced_all": 0,
+ "t3_triggered": false,
+ "t2_necessary_km2": 0,
+ "t2_necessary_share_core": 0.0,
+ "t2_necessary_and_forced": 0,
+ "t2_necessary_not_forced": 0,
+ "t2_forced_not_necessary": 0,
+ "t2_mean_lat_shift": -0.052478472391761954
+}

@@ -912,3 +912,22 @@ the "Core clusters" legend entry is drawn as the four cluster colours side by si
 black box. Fonts: matplotlib's weight substitution (700 where a fallback face has no 600, and 600 where Noto Sans has no 700) is
 the intended behaviour, so its per-lookup log line is filtered in `director_plot` and `corridors_mapstyle.apply`; the northern
 director's "bold" text is now 600 (the face Noto Sans ships).
+(k) **Regional clusters absorb the specks (Ethan, 2026-09-15):** the pre-stated clustering keeps only components ≥ 100 km², so
+489 small core components (4,003 km² in all, median 2 km²) sat outside every cluster and read as stray yellow cells beside them.
+Rule: a core component under 100 km² within 10 km (`SPECK_LINK_KM`; Ethan chose 10 over the 25 km first cut, which took in
+320 components / 2,789 km²) of a regional cluster joins the nearest one (199 components, 1,870 km²: clusters 1–4 gain
+528 / 514 / 470 / 358 km²). The absorbed specks are vectorized with
+their cluster so the outlines show them; T-D1, T-D7 and the stars follow. The 100 km² floor itself is unchanged for the paper.
+Later (Ethan, 2026-09-15): inset A names Dease Lake, Stewart and Hazelton (Highway 37; the Tahltan communities Iskut and Telegraph Creek were
+added to `Y2Y_TOWNS` then left off the inset at Ethan's call); inset B drops the Jasper and Banff town markers (the park names carry them,
+`STYLE["inset_town_skip"]`); a town whose label cannot fit inside a window is not drawn.
+(l) **Act 2 = one map (Ethan, 2026-09-15):** the presentation's Act 2 is the summary map alone — the reliability tiers at 1 km with
+the scenario tier split by the value position that earns each cell (`director_plot.scenario_map`, on the Act 1 wide layout: frame at
+left, three windows on the largest scenario picks — Sacred Headwaters, Purcells, Fishing Branch — at right, legend below giving
+each position's area and share of allocatable land: core 29,194 km² 2.7%; core-habitat-forward +31,308 km² 2.9%; connectivity-forward
++8,429 km² 0.8%; biodiversity-forward +271 km² 0.03%; carbon-forward +23,805 km² 2.2%; two or more positions +6,353 km² 0.6%;
+in at least one plan 955,262 km² 88.3%). No Act 2 pairings, stars or consequences table in 21; 20 keeps them all as the record and
+its summary map now renders from the same function.
+Later (Ethan, 2026-09-15): the opportunity tier ("in at least one near-optimal plan") is off the Act 2 map and its legend
+(`STYLE["show_opportunity"]`; it is Act 3's story); the IPCA proposals are outlined on the frame and in the windows with a legend
+entry under the protected areas.
