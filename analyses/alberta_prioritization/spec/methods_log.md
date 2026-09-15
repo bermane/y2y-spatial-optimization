@@ -444,4 +444,45 @@ by tier (D-AB8 disclosure), placeholder names (M13.5).
 **M17.4 Runner.** `run_v31.sh` mirrors the parent's: 09b → 10 → 11 → 11b → 11c → (T3 if gated) → 12 → 13, in place, resumable, logs
 in `logs/` (gitignored).
 
-*Last updated 2026-09-14 (M14–M17).*
+## M18. Comb of the parent, 2026-09-15 — methods frozen, outputs moving; what the mirror absorbs now and what waits
+
+**M18.1 Split.** Since the v0.5 re-pin the parent changed nothing in the formulation, the estimand, the block or the solver
+standards (study plan still v0.17.3, package spec still v1.7 with logged deviations M4.32–M4.33). Methods-side additions:
+(a) M4.32 — the package is built on v3.1 ONLY, and the E17 leave-one-theme-out anchors were re-solved on the curated block
+at S0 (18b's E17-T3 cell); (b) the necessity test came back EMPTY on the parent (R10.21: no adequacy-forced land, T3 not
+triggered; the EFG-out latitude shift fell from +2.11° to +0.02–0.22°); (c) a developed-land PU mask was sized and PARKED
+(R10.23 — a scoping choice, not adopted). Output-side (M4.33 + addenda): regional deck picks, "naturalness", T-D7
+consequences with reference rows, acts 0–3, the table spec, two 1 km Act 1 maps, the basemap/hillshade port, the wide slide
+layout, cluster locators, `director_plot.py` as the one asset codebase, 19/20/21 = tiers-and-clusters / the record / the
+curated presentation set. Ethan (2026-09-15): the methods spec is set; only the Y2Y outputs are still changing.
+
+**M18.2 Absorbed on the methods side.** 11b gains the parent's E17-T3 cell verbatim in Alberta terms (five S0 anchors at
+level A: four PROACT block-outs at 1e-4, the EFG-out by the T2 convention; seconds each; `runs_v3.1/ab_l/A/e17_t3/`); 12
+records the shifts (`E17_shifts.csv`, `summary.json: e17`) as a T-D line — the E17 one-pager stays not mirrored (M11.4;
+the 2° southern-lean question is Y2Y-wide). T2 leave-EFG-out anchors keep the PRE-REGISTERED 1e-4 gap (seconds here) and
+mirror only the parent's 20-minute cap (the parent relaxed to a 1e-3 witness gap for cost on 1.27 M cells — M4.28
+addendum); disclosed. The `dc.BLOCK_AXES`/`STAR_AXES` rename (intactness → naturalness) flows into 11's cluster register
+automatically (column `pct_naturalness`).
+
+**M18.3 Absorbed on the record side (settled M4.33 rules), notebooks renamed to the parent's:** `12_tiers_and_clusters` (was
+12_director_surfaces) — deck picks grouped a second time into REGIONAL clusters by single linkage at **`PICK_LINK_KM` = 30 km**
+(3× the 10 km complex link, as the parent's 75 km is 3× its 25 km; D-AB7, disclosed) and numbered north → south, the core
+first, then each scenario's picks (`dc.group_picks` + `dc.absorb_complexes`; `picks_raw_complexes.csv` keeps the complexes);
+T-D1 lists the deck picks first, then every other kept complex; `dc.ValueRatios` (the parent stack IS the AB stack on this
+grid; the denominator is Alberta's allocatable land) → `ratio_*` columns and **T-D7** with three REFERENCE rows — existing
+protected areas, the Upper Smoky Nature-First zone's unprotected part (the IPCA analogue), the SRP planning area's unprotected
+part; acts 0–3 in every label (`dc.ACT_TITLE`/`ACT_DISPLAY`). `13_figures` (was 13_director_figures) — file names, titles,
+tier labels and the deck follow acts 0–3; stars titled "Cluster N"; "naturalness" everywhere; the objectives table (T-D0,
+Alberta rows: level-A budget, m_soc 0.322/0.772, 13 curated features, the tenure line) and both T-D7 tables render to the
+Y2Y table spec through `director_plot.spec_table_png` (transposed; red → green across each row, 1.0× the hinge; reference
+column labels from 12's names); every figure takes `director_plot.SPEC_RC`. `run_v31.sh` updated.
+
+**M18.4 Deferred until the parent's presentation layer settles (Ethan is iterating it):** the `director_plot` asset functions
+(`load()` is hardwired to the Y2Y grid, package, IPCA layer and frame: basemap + hillshade, the wide slide layout with insets,
+cluster locators, `STYLE`), and an Alberta `14_director_outputs` for the curated presentation set. Plan when it settles:
+parameterize `director_plot.load()` on (grid, package, manifest, alignment overlay, frame) so BOTH packages draw from the
+one codebase (Ethan's asset rule), and fold the Alberta-specific rows/labels in as parameters (`values_rows`, the T-D7
+reference labels). The Alberta record figures keep their present 1 km cartography (admin lines, 53°N, AOIs) meanwhile. The
+GLO-90 hillshade already covers the Alberta frame (`hillshade_y2y_300m.tif`, same grid), so no new basemap data is needed.
+
+*Last updated 2026-09-15 (M18).*

@@ -388,7 +388,7 @@ def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, 
             if XL[0] < r.pt.x < XL[1] and YL[0] < r.pt.y < YL[1]:
                 ax.text(r.pt.x, r.pt.y, PROVINCE_LABEL.get(r["name"], str(r["name"]).upper()),
                         fontsize=13, color="#555555", alpha=0.75, ha="center", va="center",
-                        zorder=4.5, fontweight="bold",
+                        zorder=4.5, fontweight=600,
                         path_effects=[pe.withStroke(linewidth=3, foreground="white", alpha=0.8)])
     if cities:
         if not hasattr(R, "_towns"):
@@ -399,7 +399,7 @@ def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, 
                 left = TOWN_LABEL_SIDE.get(n) == "left"
                 ax.annotate(n, (x, y), xytext=(-5 if left else 5, 4), textcoords="offset points",
                             ha="right" if left else "left", fontsize=8.5,
-                            color="0.1", zorder=6, fontweight="bold",
+                            color="0.1", zorder=6, fontweight=600,
                             path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
     if area_names:
         cc.label_named_areas(R, ax, top_n=area_names, overrides=area_overrides, fontsize=8.5,
@@ -485,7 +485,7 @@ def _number_marker(ax, xy, num, color, XL, YL, side="nw"):
         dy = 22 if side in ("ne", "nw") else -22
         ax.annotate(str(num), (x, y), xytext=(dx, dy),
                     textcoords="offset points",
-                    fontsize=11, fontweight="bold", ha="center", va="center", zorder=8,
+                    fontsize=11, fontweight=600, ha="center", va="center", zorder=8,
                     bbox=dict(boxstyle="circle,pad=0.3", fc="white", ec=color, lw=1.8),
                     arrowprops=dict(arrowstyle="-", color=color, lw=1.2, shrinkB=0))
         return True
@@ -571,7 +571,7 @@ def map_adjacency(P, adjacency_dir=None, pad=0.07, area_names=14, show_degree=Tr
         for r in nodes.itertuples():
             c = xy(r.label)
             if c is not None and XL[0] < c[0] < XL[1] and YL[0] < c[1] < YL[1]:
-                axR.annotate(str(int(r.n_neighbours)), c, fontsize=7.5, fontweight="bold", ha="center",
+                axR.annotate(str(int(r.n_neighbours)), c, fontsize=7.5, fontweight=600, ha="center",
                              va="center", zorder=7, color="0.1",
                              bbox=dict(boxstyle="circle,pad=0.22", fc="white", ec="0.4", lw=0.7, alpha=0.95))
     axR.set_title("The neighbour universe — every possible partner link", fontsize=15, pad=12)
@@ -816,13 +816,13 @@ def add_insets(P, fig, ax_main, draw, area_names=6, scale_km=50):
         iax.text(x0 + scale_km * 500, y0 + 0.025 * h, f"{scale_km} km", ha="center", va="bottom",
                  fontsize=8, zorder=9, path_effects=[pe.withStroke(linewidth=2.5, foreground="white")])
         iax.text(0.015, 0.975, title, transform=iax.transAxes, ha="left", va="top", fontsize=9,
-                 fontweight="bold", zorder=9,
+                 fontweight=600, zorder=9,
                  bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="0.15", lw=0.8, alpha=0.95))
         # box on the main map + connectors (matplotlib draws the box from the inset's data limits)
         # connectors from the two corners tangent to the panel's direction (UL + LR for a panel
         # to the NE or the SW of its box)
         mark_inset(ax_main, iax, loc1=2, loc2=4, fc="none", ec="0.15", lw=1.3, zorder=8)
-        ax_main.text(XL[0], YL[1], f" {key}", ha="left", va="bottom", fontsize=10, fontweight="bold",
+        ax_main.text(XL[0], YL[1], f" {key}", ha="left", va="bottom", fontsize=10, fontweight=600,
                      zorder=9, path_effects=[pe.withStroke(linewidth=2.5, foreground="white")])
 
 
@@ -1242,12 +1242,12 @@ def _table_png_grouped(shown, path, title):
     tbl.auto_set_font_size(False); tbl.set_fontsize(8.5); tbl.scale(1.0, 1.35)
     for (r, c), cell in tbl.get_celld().items():
         if r == 0:
-            cell.set_text_props(fontweight="bold", va="center"); cell.set_height(cell.get_height() * 2.2)
+            cell.set_text_props(fontweight=600, va="center"); cell.set_height(cell.get_height() * 2.2)
             cell.set_facecolor("#dfe6ea")
         elif r > 0:
             cell.set_facecolor(row_colors[r - 1])
             if row_colors[r - 1] != "white":
-                cell.set_text_props(fontweight="bold", color="#2b4f7d")
+                cell.set_text_props(fontweight=600, color="#2b4f7d")
     # group header line above the columns
     groups = [c[0] for c in shown.columns]
     ax.set_title(title + "\n" + "   |   ".join(f"{g}: {groups.count(g)} column{'s' if groups.count(g)>1 else ''}"
@@ -1353,12 +1353,12 @@ def profile_pages(P):
                 rows.append(("Who's at the table", jur or "pending authoritative layer"))
         axm.set_title("")
         y = 0.97
-        axt.text(0, y, f"{_example_label(ex)}", fontsize=15, fontweight="bold", va="top")
+        axt.text(0, y, f"{_example_label(ex)}", fontsize=15, fontweight=600, va="top")
         y -= 0.08
         axt.text(0, y, textwrap.fill(words, 78), fontsize=10.5, va="top", linespacing=1.4)
         y -= 0.42
         for k, v in rows:
-            axt.text(0, y, textwrap.fill(k, 26), fontsize=9.5, fontweight="bold", va="top")
+            axt.text(0, y, textwrap.fill(k, 26), fontsize=9.5, fontweight=600, va="top")
             axt.text(0.46, y, textwrap.fill(str(v), 40), fontsize=10, va="top")
             y -= 0.075
         if chips:

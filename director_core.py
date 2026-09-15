@@ -783,15 +783,19 @@ def e17_shifts(G, version=None):
 
 
 # ---- star grid + deck --------------------------------------------------------------------------
-def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11, fs_title=13, fs_tick=9, fs_suptitle=15, lw=2.0, footnote=True):
+STAR_GRID = dict(panel_w=5.8, panel_h=5.2, wspace=1.05, hspace=0.6, top=0.82, bottom=0.10)   # shared by the locator maps (same geometry)
+
+
+def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11, fs_title=13, fs_tick=9, fs_suptitle=15, lw=2.0, footnote=True, tight=True, label_pad=8):
     """profiles: list of dict(title=, values={axis: v}, color=). One shared radial scale."""
     import matplotlib.pyplot as plt
     import textwrap
     n = len(profiles)
     ncols = min(ncols, max(n, 1))
     nrows = int(math.ceil(n / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(5.8 * ncols, 5.2 * nrows), subplot_kw=dict(polar=True))
-    fig.subplots_adjust(wspace=1.05, hspace=0.6)                    # room for the outward-anchored axis labels
+    L = STAR_GRID
+    fig, axes = plt.subplots(nrows, ncols, figsize=(L["panel_w"] * ncols, L["panel_h"] * nrows), subplot_kw=dict(polar=True))
+    fig.subplots_adjust(wspace=L["wspace"], hspace=L["hspace"], top=L["top"], bottom=L["bottom"])   # room for the outward-anchored labels
     axes = np.atleast_1d(axes).ravel()
     k = len(STAR_AXES)
     ang = np.linspace(0, 2 * np.pi, k, endpoint=False)
@@ -811,7 +815,7 @@ def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11
             t.set_va("bottom" if sn > 0.1 else "top" if sn < -0.1 else "center")
         ax.set_ylim(0, rmax)
         ax.set_yticks([0.25, 0.5, 0.75, 1.0]); ax.set_yticklabels(["", "0.5", "", "1"], fontsize=fs_tick)
-        ax.tick_params(axis="x", pad=8)
+        ax.tick_params(axis="x", pad=label_pad)
         ax.set_title("\n".join(textwrap.fill(t, 34) for t in pr["title"].split("\n")), fontsize=fs_title, fontweight=600, pad=18)
     for ax in axes[n:]:
         ax.axis("off")
@@ -821,7 +825,7 @@ def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11
         fig.text(0.01, -0.01, "axes = cluster mean percentile vs the ALLOCATABLE landscape (dashed ring 0.5 = the typical unprotected cell); "
                  "representativeness = percentile of ecosystem classes present per cell; naturalness = 1 - human modification",
                  fontsize=9, color="#444444")
-    fig.savefig(path, dpi=200, bbox_inches="tight")
+    fig.savefig(path, dpi=200, bbox_inches="tight" if tight else None)
     return fig
 
 
@@ -973,6 +977,7 @@ Y2Y_TOWNS = {                                   # name: (lat, lon); the director
     "Helena": (46.59, -112.04), "Bozeman": (45.68, -111.04), "Salmon": (45.18, -113.90),
     "Boise": (43.62, -116.21), "Jackson": (43.48, -110.76),
 }
+POSTAL_DISPLAY = {"NT": "NWT"}                   # display form of a postal code where the common usage differs (Ethan 2026-09-15)
 PROVINCE_LABEL = {"British Columbia": "BRITISH\nCOLUMBIA", "Northwest Territories": "NORTHWEST\nTERRITORIES",
                   "Yukon": "YUKON", "Alberta": "ALBERTA", "Alaska": "ALASKA", "Saskatchewan": "SASKATCHEWAN",
                   "Nunavut": "NUNAVUT", "Montana": "MONTANA", "Idaho": "IDAHO", "Wyoming": "WYOMING",
@@ -1041,7 +1046,7 @@ def basemap_layer(G, pad_m=150e3, river_rank=6, min_share=0.015, keepout_km=50, 
             continue
         labels.append(dict(name=PROVINCE_LABEL.get(r["name"], str(r["name"]).upper()), postal=str(r["postal"]), x=best.x, y=best.y,
                            r_km=best_r / 1000))                        # draw_basemap applies the width threshold per mode
-    return SimpleNamespace(land=land, lakes=lakes, rivers=rivers, region=region, labels=labels, towns=town_pts)
+    return SimpleNamespace(land=land, lakes=lakes, rivers=rivers, region=region, labels=labels, towns=town_pts, admin1=adm[["postal", "name", "geometry"]].copy())
 
 
 def read_hillshade(G, path=HILLSHADE_PATH):
@@ -1057,7 +1062,7 @@ def read_hillshade(G, path=HILLSHADE_PATH):
 
 
 def draw_basemap(ax, G, B, hs=None, water=True, names=True, towns=(), z_hs=0.6, alpha=None, fs_scale=1.0, window=None, name_fs=None,
-                 min_radius_km=(45, 18), avoid_sw=True):
+                 min_radius_km=(45, 18), avoid_sw=True, skip=()):
     """names: True = full names in tracked caps (open land >= 45 km wide), 'abbrev' = postal codes (>= 18 km), False = none."""
     """Ocean ground, land fill, lakes + rivers, the region outline, province names, towns -- pixel coordinates."""
     from matplotlib.collections import PolyCollection
@@ -1083,11 +1088,13 @@ def draw_basemap(ax, G, B, hs=None, water=True, names=True, towns=(), z_hs=0.6, 
         abbrev = names == "abbrev"; r_min = min_radius_km[1] if abbrev else min_radius_km[0]
         for L in B.labels:
             px, py = xy_to_px(G, L["x"], L["y"])
-            if not inside(px, py) or L["r_km"] < r_min:
+            if not inside(px, py) or L["r_km"] < r_min or L["postal"] in skip:
                 continue
             if avoid_sw and px < px0 + 0.26 * (px1 - px0) and py > py1 - 0.13 * (py1 - py0):   # the scale bar / north arrow corner
-                continue
-            text = L["postal"] if abbrev else " ".join(L["name"])
+                if not abbrev:
+                    continue
+                py = py1 - 0.16 * (py1 - py0)                                                    # a code is short: lift it above the bar
+            text = POSTAL_DISPLAY.get(L["postal"], L["postal"]) if abbrev else " ".join(L["name"])
             ax.text(px, py, text, fontsize=fs, fontweight=600, color=jc, alpha=0.9, ha="center", va="center", zorder=4.5,
                     linespacing=1.15, clip_on=True, path_effects=[_pe.withStroke(linewidth=0.3 * fs, foreground="white", alpha=0.8)])
     tc, tfs = BASEMAP["town"]
@@ -1138,11 +1145,60 @@ def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, 
     g["geometry"] = g.geometry.intersection(win); g = g[~g.geometry.is_empty]
     g["_a"] = g.geometry.area; g = g.sort_values("_a", ascending=False).head(top_n)
     taken = list(taken or [])
+    import textwrap as _tw
+    span = px1 - px0
     for _, r in g.iterrows():
         pt = r.geometry.representative_point(); px, py = xy_to_px(G, pt.x, pt.y)
         if any(abs(px - tx) < 16 * fs and abs(py - ty) < 3.3 * fs for tx, ty in taken):
             continue
-        ax.text(px, py, str(r[name_col]).split(" [")[0].split(" (")[0], fontsize=fs, fontstyle="italic", color=color, ha="center", va="center", zorder=5.5, clip_on=True,
+        ax_w_in = ax.get_position(original=True).width * ax.figure.get_figwidth()                      # the axes box width in inches (before aspect)
+        px_per_in = span / max(ax_w_in, 1e-6)                                                             # data px per inch
+        chars = max(12, int(0.55 * ax_w_in * 72 / (0.5 * fs)))                                          # a line <= ~55% of the panel width
+        name = "\n".join(_tw.wrap(str(r[name_col]).split(" [")[0].split(" (")[0], chars))
+        half = 0.5 * max(len(l) for l in name.split("\n")) * 0.5 * fs / 72 * px_per_in                  # ~half label width (data px)
+        hh = 0.5 * len(name.split("\n")) * 1.2 * fs / 72 * px_per_in                                    # ~half label height
+        px = float(np.clip(px, px0 + half + 3, px1 - half - 3)); py = float(np.clip(py, py0 + hh + 3, py1 - hh - 3))   # inside the window
+        ax.text(px, py, name, fontsize=fs, fontstyle="italic", color=color, ha="center", va="center", zorder=5.5, clip_on=True, linespacing=1.1,
                 path_effects=[_pe.withStroke(linewidth=2.0, foreground="white", alpha=0.9)])
         taken.append((px, py))
     return taken
+
+
+def label_jurisdictions_window(ax, G, B, window, fs=14, min_share=0.04, avoid_sw=True, skip=(), force=()):
+    """Postal codes of the provinces / states inside a pixel window, each at the pole of inaccessibility of its part of the
+    window (faint caps, white halo) -- for insets and locator windows. Returns the label positions (for decluttering)."""
+    from shapely.ops import polylabel
+    import matplotlib.patheffects as _pe
+    px0, px1, py0, py1 = window
+    x0 = G.transform.c + px0 * G.transform.a; x1 = G.transform.c + px1 * G.transform.a
+    yt = G.transform.f + py0 * G.transform.e; yb = G.transform.f + py1 * G.transform.e
+    win = shp_box(x0, yb, x1, yt); jc, _ = BASEMAP["jurisdiction"]; out = []; span = px1 - px0
+    outside = win.difference(B.region)                                     # the open land around the region (Ethan: codes only there)
+    for _, r in B.admin1.iterrows():
+        code = str(r["postal"])
+        if code in skip:
+            continue
+        g = r.geometry.intersection(win)
+        if g.is_empty or (g.area < min_share * win.area and code not in force):
+            continue
+        free = g.intersection(outside)
+        best, best_r = None, 0.0
+        for q in (free.geoms if hasattr(free, "geoms") else [free]):
+            if q.geom_type != "Polygon" or q.is_empty:
+                continue
+            pt = polylabel(q, tolerance=1000); rad = pt.distance(q.boundary)
+            if rad > best_r:
+                best, best_r = pt, rad
+        if best is None or (best_r < 0.055 * span * abs(G.transform.a) and code not in force):   # no white space wide enough: leave it off (unless forced)
+            continue
+        px, py = xy_to_px(G, best.x, best.y)
+        if avoid_sw and px < px0 + 0.30 * span and py > py1 - 0.17 * span:      # the scale-bar corner: lift the code above the bar
+            py = py1 - 0.20 * span
+        for _ in range(6):                                                      # stack upward if it lands on an earlier code
+            if not any(abs(px - tx) < 0.14 * span and abs(py - ty) < 0.08 * span for tx, ty in out):
+                break
+            py -= 0.09 * span
+        ax.text(px, py, POSTAL_DISPLAY.get(code, code), fontsize=fs, fontweight=600, color=jc, alpha=0.9, ha="center", va="center", zorder=4.6, clip_on=True,
+                path_effects=[_pe.withStroke(linewidth=0.3 * fs, foreground="white", alpha=0.85)])
+        out.append((px, py))
+    return out

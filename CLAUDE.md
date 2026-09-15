@@ -422,9 +422,14 @@ trigger for the parent's v0.17 curation.**
 **Build record (spec §12): 01 extent/stack → 02 audit → 03 tenure/AOI → 04 arms (R) → 05 scenarios →
 06 anchors (R) → 07 MGA pilots (R) → 08 AB-2 analysis → 09 freeze (v1) → **09b curation freeze v3.1** → 10 ensemble
 (R; VERSION switch, no k-best on v3.1) → 11 analysis (D-AB13, M4.31, C1 at the same parent version) → **11b E19
-solves (R) → 11c E19 analysis** → 12 director surfaces → 13 director figures/deck; or `run_v31.sh` (mirror of the
-parent's runner). Status 2026-09-14: 01–11 RUN on v1; **09b/10/11/11b/11c/12/13 BUILT for v3.1, PENDING-RUN
-(commit `config.py` first — 09b asserts the pipeline modules clean vs HEAD).** Data: `data/acquire.py`.
+solves + E17-T3 (R) → 11c E19 analysis** → **12_tiers_and_clusters → 13_figures** (renamed 2026-09-15 to the parent's
+names; acts 0–3, regional picks at 30 km numbered N→S, "naturalness", T-D7 consequences with the Upper Smoky reference
+rows, tables to the Y2Y table spec via `director_plot.spec_table_png`); or `run_v31.sh`. **Status 2026-09-15: the
+parent's METHODS are frozen (Ethan) and the Alberta methods chain 09b → 11c is the exact mirror — RUN IT (commit
+`config.py` first: 09b asserts the pipeline modules clean vs HEAD). 12/13 carry the settled record rules; the
+`director_plot` presentation assets (basemap/hillshade, wide layout, locators) and an Alberta `14_director_outputs`
+are DEFERRED until Ethan's Y2Y output iteration settles (M18.4) — then parameterize `director_plot.load()` on
+(grid, package, manifest, overlay, frame) so both packages draw from one codebase.** Data: `data/acquire.py`.
 
 ## Structure — two notebooks + shared config
 

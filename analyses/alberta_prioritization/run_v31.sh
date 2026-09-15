@@ -30,6 +30,6 @@ if $PY -c "import json,sys; sys.exit(0 if json.load(open('$NB/spec/v3.1/e19_gate
 else
   echo "T3 gate not triggered (pre-stated expectation)"
 fi
-run 12_director_surfaces        y2y-geo   # tiers, clusters, tables (archives the v1 artifact-block package first)
-run 13_director_figures         y2y-geo   # figures + deck
+run 12_tiers_and_clusters        y2y-geo   # surfaces, tiers, clusters, tables (archives the v1 artifact-block package first)
+run 13_figures                   y2y-geo   # every figure, table and the draft deck (the record)
 echo "DONE $(date '+%F %T') -- analyses/alberta_prioritization/director_package/ rebuilt on manifest v3.1"

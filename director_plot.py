@@ -11,6 +11,9 @@ import numpy as np
 import pandas as pd
 import rasterio
 import geopandas as gpd
+import logging
+import math
+import pathlib
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
@@ -130,7 +133,7 @@ def load(pkg=None, allow_partial=False):
     def finish(ax, title, handles, note=N_NOTE, legend_loc="upper right", scale=True, names=None, towns=None, name_fs=None):
         dc.draw_basemap(ax, G, BM, hs=HS if STYLE["hillshade"] else None, water=STYLE["water"],
                         names=STYLE["province_names"] if names is None else names, towns=STYLE["towns"] if towns is None else towns,
-                        name_fs=name_fs, fs_scale=STYLE.get("_fs_scale", 1.0), avoid_sw=scale)   # ocean / land / hillshade / water / outline / names
+                        name_fs=name_fs, fs_scale=STYLE.get("_fs_scale", 1.0), avoid_sw=scale, skip=STYLE["main_skip_codes"])   # ocean / land / hillshade / water / outline / names
         dc.draw_admin(ax, G, ADMIN)                                   # coast, admin lines, border
         if STYLE["lat53"]:
             dc.graticule(ax, G, lats=(53,), lons=(), emph_lat=53)     # the 53°N line (E17 tie-in) -- off by default (Ethan 2026-09-14)
@@ -142,7 +145,7 @@ def load(pkg=None, allow_partial=False):
         ax.set_xticks([]); ax.set_yticks([])
         for sp in ax.spines.values():
             sp.set_visible(False)
-        lkw = dict(fontsize=STYLE["legend_fs"], frameon=True, framealpha=0.92, edgecolor="#9a9a9a")
+        lkw = dict(fontsize=STYLE["legend_fs"], frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handler_map=cluster_handler_map(*(handles or [])))
         if legend_loc == "none" or not handles:
             pass
         elif handles and legend_loc == "outside":       # beside the frame, top right (the single-panel assets)
@@ -303,17 +306,24 @@ STYLE = dict(
     cluster_colors={1: "#D7263D", 2: "#E040A0", 3: "#1E90FF", 4: "#8B5A2B"},   # the core clusters, N → S: red, magenta, blue, brown (Ethan 2026-09-14)
     core_color="#2b4f7d",      # star fill/line for core clusters
     scenario_color="#a50f2d",  # star fill/line for scenario clusters
-    star_fs_axis=17, star_fs_title=20, star_fs_tick=13, star_fs_suptitle=15, star_lw=2.6, star_title=False, star_footnote=False,   # Ethan 2026-09-14: no suptitle / footnote, big type
+    star_fs_axis=20, star_fs_title=20, star_fs_tick=16, star_fs_suptitle=15, star_lw=2.6, star_title=False, star_footnote=False, star_label_pad=1,   # Ethan 2026-09-15: big type, labels tight to the ring
+    star_tight=False,          # full canvas (not cropped) so the cluster locators below align panel-for-panel
+    locator_fs_scale=1.5, locator_pa_names=2, locator_towns=False, locator_panel_in=4.6,   # the locator windows: 4.6 in squares on the star centres, type scaled up, two park names, no towns
+    locator_codes={1: dict(force=["AK"]), 2: dict(skip=["WA"]), 3: dict(skip=["WA"])},   # per-window code edits (Ethan 2026-09-15): AK on the coast of 1; no WA on 2 and 3
+    inset_codes={"A": dict(force=["AK"], skip=["WA"]), "B": dict(skip=["WA"])},       # the wide-map insets: AK on A, no WA
     map_title_fs=11.5, map_suptitle_fs=12.5,
     ramp_label="F = frequency in near-optimal plans; light grey = never (F = 0), yellow = core (F ≥ 0.70)",
-    ramp_label_short="F = frequency in 30×30 plans", cbar_fs=12,          # the wide Act 1 maps
+    ramp_label_short="F = frequency in 30×30 plans", cbar_fs=15,          # the wide Act 1 maps
     values_table="spec",      # the objectives-table rendering: "spec" (the table spec, 2026-09-14) | "poster" | "digest" | "plain"
     conseq_cmap="RdYlGn", conseq_tint=0.55, conseq_scale_rows="all",   # consequences: red -> green per column, over "all" rows or "clusters" only
     legend_fs=13,              # map legends (bigger, outside the region)
+    wide_legend_fs=16,         # the wide Act 1 maps: legend under inset B
     lat53=False,               # the 53°N graticule line on maps
+    titles=True,               # figure / table titles (21 sets False: the slide carries the title)
     map_layout="wide",         # Act 1 maps: "wide" = slide-shaped with two zoom insets (clusters 1 and 2) | "tall" = the map alone
-    inset_clusters=(1, 2), inset_pad_km=45, inset_min_km=320, inset_pa_names=5, inset_fs=11.5, inset_number_fs=18,
+    inset_clusters=(1, 2), inset_pad_km=45, inset_min_km=320, inset_pa_names=5, inset_fs=11.5, inset_number_fs=18, inset_abbrev=True, inset_abbrev_fs=15,
     wide_main_names="abbrev", wide_main_name_fs=15, wide_main_towns=(),      # the Y2Y-wide panel of the wide layout: postal codes only, big
+    main_skip_codes=("CA",),  # jurisdictions never labelled on the Y2Y-wide frame (California is a sliver)
     hillshade=True, water=True, province_names=True,                     # the basemap (corridors_mapstyle tokens, display only)
     towns=("Dawson City", "Whitehorse", "Watson Lake", "Fort Nelson", "Fort St. John", "Prince George", "Smithers", "Jasper",
            "Edmonton", "Calgary", "Banff", "Kamloops", "Cranbrook", "Missoula", "Helena", "Bozeman", "Boise", "Jackson", "Norman Wells"),
@@ -361,7 +371,47 @@ def _stars(C, rows, color, path, title):
     with plt.rc_context(SPEC_RC):
         dc.plot_star_grid(C.star_rows(rows, color), path, title if STYLE["star_title"] else None,
                           fs_axis=STYLE["star_fs_axis"], fs_title=STYLE["star_fs_title"], fs_tick=STYLE["star_fs_tick"],
-                          fs_suptitle=STYLE["star_fs_suptitle"], lw=STYLE["star_lw"], footnote=STYLE["star_footnote"])
+                          fs_suptitle=STYLE["star_fs_suptitle"], lw=STYLE["star_lw"], footnote=STYLE["star_footnote"], tight=STYLE["star_tight"],
+                          label_pad=STYLE["star_label_pad"])
+        plt.show()
+
+
+def cluster_locators(C, path, act="Act 1", layer="act1", panel_px=None):
+    """One inset-style window per cluster on the star grid's geometry (same figure size, same panel rectangles, full canvas)
+    so it sits under the star plots panel-for-panel: F at 1 km, hillshade, PAs, cluster outlines and numbers, towns, the five
+    largest protected areas named, a 50 km bar. No titles, no legend (Ethan 2026-09-15)."""
+    rows = C.numbered(act); nums = [int(n) for n in rows.number]
+    n = len(nums); ncols = min(4, max(n, 1)); nrows = int(math.ceil(n / ncols)); L = dc.STAR_GRID
+    with plt.rc_context(SPEC_RC):
+        # the star grid's panel CENTRES, but square windows of STYLE["locator_panel_in"] (bigger than the star circles)
+        fig_w, fig_h = L["panel_w"] * ncols, max(L["panel_h"], STYLE["locator_panel_in"] + 0.4) * nrows
+        fig = plt.figure(figsize=(fig_w, fig_h))
+        left, right = 0.125, 0.9                                          # matplotlib's subplot defaults, as the star grid uses
+        aw = (right - left) / (ncols + (ncols - 1) * L["wspace"])         # star axes width (figure fraction)
+        pw = STYLE["locator_panel_in"] / fig_w; ph = STYLE["locator_panel_in"] / fig_h
+        axes = []
+        for i in range(n):
+            r_, c_ = divmod(i, ncols)
+            cx = left + aw * (c_ + 0.5) + c_ * aw * L["wspace"]
+            cy = 1 - (r_ + 0.5) / nrows
+            axes.append(fig.add_axes([cx - pw / 2, cy - ph / 2, pw, ph]))
+        axes = np.array(axes)
+        draw = lambda ax: C.draw_clusters(ax, layer, C.picks_for(act), fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"])
+        sc = STYLE["locator_fs_scale"]
+        STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"] * sc; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"] * sc
+        fs0, pa0 = STYLE["inset_fs"], STYLE["inset_pa_names"]; STYLE["inset_fs"] = fs0 * sc; STYLE["inset_pa_names"] = STYLE["locator_pa_names"]
+        try:
+            for ax, num in zip(axes, nums):
+                win, _ = _inset_window(C, num, aspect_hw=1.0)
+                _draw_inset(C, ax, win, draw, "", with_ipca_names=False, towns=STYLE["locator_towns"], codes=STYLE["locator_codes"].get(num))
+        finally:
+            STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE["inset_fs"] = fs0; STYLE["inset_pa_names"] = pa0
+        fig.savefig(path, dpi=200)
+        if panel_px:                                                   # each window as its own file, ~panel_px wide (Ethan 2026-09-15)
+            fig.canvas.draw(); r = fig.canvas.get_renderer(); stem = pathlib.Path(path)
+            for ax, num in zip(axes, nums):
+                bb = ax.get_tightbbox(r).transformed(fig.dpi_scale_trans.inverted()).padded(0.02)
+                fig.savefig(stem.with_name(f"{stem.stem}_{num}{stem.suffix}"), bbox_inches=bb, dpi=panel_px / bb.width)
         plt.show()
 
 
@@ -547,6 +597,16 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.font_manager import FontProperties
 
+class _WeightFallbackFilter(logging.Filter):
+    """matplotlib logs 'findfont: Failed to find font weight 600, now using 700' for every lookup that reaches the DejaVu
+    fallback family (no 600 face). The substitution is the intended behaviour (Ethan 2026-09-15: use 700 where 600 is
+    missing), so the message is dropped; every other font_manager message still shows."""
+    def filter(self, rec):
+        return "Failed to find font weight" not in rec.getMessage()
+
+
+logging.getLogger("matplotlib.font_manager").addFilter(_WeightFallbackFilter())
+
 TABLE = dict(bg="#211E1B", mat="#F6F2E9", ink="#29261F", cap="#403B31", mut="#6C6557", accent="#8A5F27",   # accent darkened for the mat
              rule=(0, 0, 0, 0.10), frame=(0, 0, 0, 0.18))
 TABLE_FONT = ["Cronos Pro", "DejaVu Sans"]                  # (Jost, the spec fallback, is not installed) DejaVu carries the thin space / × / − that Cronos lacks
@@ -683,6 +743,30 @@ def spec_table_png(path, stub, cols, cells, *, label=None, title=None, units=Non
     fig.savefig(path, dpi=dpi, facecolor=T["bg"]); plt.show()
 
 
+from matplotlib.legend_handler import HandlerBase
+
+
+class _ClusterSwatches(HandlerBase):
+    """Legend handler: the cluster colours as small outlined squares side by side (STYLE["cluster_colors"], N -> S)."""
+    def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+        cols = [STYLE["cluster_colors"][k] for k in sorted(STYLE["cluster_colors"])]
+        n = len(cols); gap = 0.12 * width / n; w = (width - gap * (n - 1)) / n; h = min(height, w * 1.15)
+        y = ydescent + (height - h) / 2
+        return [Rectangle((xdescent + i * (w + gap), y), w, h, facecolor="none", edgecolor=c, lw=STYLE["cluster_lw"] * 2.2, transform=trans)
+                for i, c in enumerate(cols)]
+
+
+def cluster_handle(label="Core clusters"):
+    """A legend entry drawn by _ClusterSwatches; pass `handler_map=cluster_handler_map(*handles)` to the legend call."""
+    h = Patch(facecolor="none", edgecolor="none", label=label); h._cluster_swatches = True
+    return h
+
+
+def cluster_handler_map(*handles):
+    """Only the entries made by cluster_handle get the swatch handler; everything else keeps matplotlib's default."""
+    return {h: _ClusterSwatches() for h in handles if getattr(h, "_cluster_swatches", False)}
+
+
 SOURCE_NOTE = "Y2Y spatial decision tool, frequency ensemble on manifest v3.1 (in review)."
 
 # maps and star plots share the spec's type: Cronos Pro, weights 400/600, ink titles, cap text, mut fine print
@@ -719,7 +803,7 @@ def consequences_table(C, rows, path, label, title):
         for j, v in enumerate(x):                      # 1.0× (log 0) = the inflection; reds scale to the row min, greens to the row max
             t = 0.5 + 0.5 * (v / hi if v > 0 and hi > 0 else (-v / lo if v < 0 and lo < 0 else 0.0))
             fills[r][j] = tuple(mat * (1 - tint) + np.array(cmap(float(np.clip(t, 0, 1)))[:3]) * tint)
-    spec_table_png(path, stub, cols, cells, label=label, title=title, groups=groups, numeric=numeric, fills=fills,
+    spec_table_png(path, stub, cols, cells, label=label, title=title if STYLE["titles"] else None, groups=groups, numeric=numeric, fills=fills,
                    units="Ratios: mean value inside the area ÷ mean over allocatable (unprotected) land · 1.0× = the average allocatable cell",
                    notes=[("Note", "Blocks combine their layers with the block weights (carbon 74 / 26 by mass); representativeness = ecosystem "
                                    "classes present per cell; naturalness = 1 − human modification. Colour runs red → green across each row, "
@@ -745,7 +829,7 @@ def values_table_spec(C, path, title="Y2Y Objectives Hierarchy"):
         numeric.append([False, False, False])
     # stub rendered in ink 600: pass through the head style by prefixing the stub as a run (spec_table_png draws stubs in cap 400)
     spec_table_png(path, stub, ["Sub-objective and performance measure", "Source", "How it enters the analysis"], cells,
-                   label="Y2Y SPATIAL DECISION TOOL  ·  PROACT OBJECTIVES", title=title,
+                   label="Y2Y SPATIAL DECISION TOOL  ·  PROACT OBJECTIVES", title=title if STYLE["titles"] else None,
                    units="How each objective is measured, and how it enters the optimization",
                    stub_head="Fundamental objective", col_w=col_w, stub_w=stub_w, numeric=numeric, stub_sep=True,
                    notes=[("Note", "Shares are of the objective's influence in the balanced position; each forward position doubles one "
@@ -768,7 +852,8 @@ def _single_map(C, path, title, draw, handles, cbar_label=None):
         cax = fig.add_axes([0.20, 0.048, 0.60, 0.013])
         cb = fig.colorbar(ScalarMappable(norm=C.FNORM, cmap=C.FCMAP), cax=cax, orientation="horizontal", extend="both")
         cb.set_label("\n".join(textwrap.wrap(cbar_label or STYLE["ramp_label"], 62)), fontsize=9, color=TABLE["mut"])
-        fig.suptitle(title, fontsize=STYLE["map_suptitle_fs"], y=0.975, color=TABLE["ink"], fontweight=600)
+        if STYLE["titles"]:
+            fig.suptitle(title, fontsize=STYLE["map_suptitle_fs"], y=0.975, color=TABLE["ink"], fontweight=600)
         fig.savefig(path, dpi=200, bbox_inches="tight"); plt.show()
 
 
@@ -785,17 +870,19 @@ def _inset_window(C, number, aspect_hw):
     return (float(px0), float(px1), float(pyt), float(pyb)), p
 
 
-def _draw_inset(C, ax, win, draw, title, with_ipca_names):
+def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None):
     px0, px1, pyt, pyb = win
     ax.imshow(_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, interpolation="nearest", zorder=0.5)
-    dc.draw_basemap(ax, C.G, C.BM, hs=None, water=STYLE["water"], names=False, towns=list(dc.Y2Y_TOWNS), window=win, fs_scale=STYLE["inset_fs"] / 8.0)
+    dc.draw_basemap(ax, C.G, C.BM, hs=None, water=STYLE["water"], names=False, towns=list(dc.Y2Y_TOWNS) if towns else (), window=win, fs_scale=STYLE["inset_fs"] / 8.0)
     hs = dc.read_hillshade_window(C.G, win, scale=3) if STYLE["hillshade"] else None
     if hs is not None:
         rgba = np.zeros(hs.shape + (4,), np.float32); rgba[..., 3] = dc.BASEMAP["hillshade_alpha"] * (1.0 - hs.astype(np.float32) / 255.0)
         ax.imshow(rgba, extent=[px0, px1, pyb, pyt], interpolation="bilinear", zorder=0.6)
     C.draw_pa(ax); draw(ax); dc.draw_admin(ax, C.G, C.ADMIN)
-    fs = STYLE["inset_fs"]
-    taken = dc.label_areas_px(ax, C.G, C.PAN, "PA_Name", win, top_n=STYLE["inset_pa_names"], color="0.25", fs=fs)
+    fs = STYLE["inset_fs"]; taken = []
+    if STYLE["inset_abbrev"]:                                     # jurisdiction codes first; the area names keep clear of them
+        taken = dc.label_jurisdictions_window(ax, C.G, C.BM, win, fs=STYLE["inset_abbrev_fs"] * (fs / 11.5), **(codes or {}))
+    taken = dc.label_areas_px(ax, C.G, C.PAN, "PA_Name", win, top_n=STYLE["inset_pa_names"], color="0.25", fs=fs, taken=taken)
     if with_ipca_names:
         dc.label_areas_px(ax, C.G, C.IP.gdf, "name", win, top_n=3, color="#a04a00", fs=fs, taken=taken)
     ax.set_xlim(px0, px1); ax.set_ylim(pyb, pyt); ax.set_aspect("equal")
@@ -827,19 +914,24 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             win, p = _inset_window(C, num, aspect_hw)
             iax = fig.add_axes(rect); STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"]; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"]
             try:
-                _draw_inset(C, iax, win, draw, tag, with_ipca_names)
+                _draw_inset(C, iax, win, draw, tag, with_ipca_names, codes=STYLE["inset_codes"].get(tag))
             finally:
                 STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None)
             px0, px1, pyt, pyb = win                                                   # the window on the frame, tagged
             ax.add_patch(Rectangle((px0, pyt), px1 - px0, pyb - pyt, fill=False, edgecolor="#333333", lw=1.0, zorder=7))
             ax.text(px0 + 8, pyt + 8, tag, fontsize=8, fontweight=600, color="white", ha="left", va="top", zorder=8,
                     bbox=dict(boxstyle="square,pad=0.15", facecolor="#333333", edgecolor="none"))
-        cax = fig.add_axes([0.29, 0.085, 0.30, 0.03])
-        cb = fig.colorbar(ScalarMappable(norm=C.FNORM, cmap=C.FCMAP), cax=cax, orientation="horizontal", extend="both")
+        cax = fig.add_axes([0.27 + 0.015, 0.085, 0.335 - 0.03, 0.04])                          # the full width of inset A, centred under it
+        cb = fig.colorbar(ScalarMappable(norm=C.FNORM, cmap=C.FCMAP), cax=cax, orientation="horizontal", extend="both",
+                          ticks=np.arange(0, 0.71, 0.1))
+        cb.ax.set_xticklabels([f"{t:.1f}" for t in np.arange(0, 0.71, 0.1)])
         cb.set_label(STYLE["ramp_label_short"], fontsize=STYLE["cbar_fs"], color=TABLE["cap"])
-        cb.ax.tick_params(labelsize=STYLE["cbar_fs"] - 1)
-        fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.635, 0.012), fontsize=STYLE["legend_fs"], frameon=True, framealpha=0.92, edgecolor="#9a9a9a")
-        fig.suptitle(title, fontsize=STYLE["map_suptitle_fs"], y=0.995, color=TABLE["ink"], fontweight=600)
+        cb.ax.tick_params(labelsize=STYLE["cbar_fs"] - 1, length=4)
+        fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.635 + 0.335 / 2, 0.012), fontsize=STYLE["wide_legend_fs"],
+                   frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.6, handleheight=1.3, borderpad=0.7, labelspacing=0.6,
+                   handler_map=cluster_handler_map(*handles))   # centred under inset B; the cluster entry = four colour swatches
+        if STYLE["titles"]:
+            fig.suptitle(title, fontsize=STYLE["map_suptitle_fs"], y=0.995, color=TABLE["ink"], fontweight=600)
         fig.savefig(path, dpi=200, bbox_inches="tight"); plt.show()
 
 
@@ -864,7 +956,7 @@ def core_map_clusters(C, path, title=None):
     _act1_map(C, path, title or ("Act 1 — the core clusters, numbered north → south\n"
                                  f"core = {core_km2:,} km² of unprotected land at F ≥ 0.70"),
               draw=lambda ax: C.draw_clusters(ax, "act1", C.picks_for("Act 1"), fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"]),
-              handles=C.BASE_HANDLES[:1] + [Patch(facecolor="none", edgecolor="#444444", lw=1.5, label="Core clusters")])
+              handles=C.BASE_HANDLES[:1] + [cluster_handle("Core clusters")])
 
 
 # ---- the bare-bones objectives table for the presentation (Ethan, 2026-09-14): fundamental → sub-objective → measure, no numbers ----
@@ -887,5 +979,5 @@ def values_table_simple(C, path, title="Y2Y Objectives Hierarchy"):
     cells = [[[(sub, "head")], [("\n".join(meas), "body")]] for _, sub, meas in VALUES_SIMPLE]
     numeric = [[False, False] for _ in VALUES_SIMPLE]
     spec_table_png(path, stub, ["Sub-objective", "Performance measure"], cells, label="Y2Y SPATIAL DECISION TOOL  ·  PROACT OBJECTIVES",
-                   title=title, stub_head="Fundamental objective", stub_w=stub_w, numeric=numeric, stub_sep=True,
+                   title=title if STYLE["titles"] else None, stub_head="Fundamental objective", stub_w=stub_w, numeric=numeric, stub_sep=True,
                    notes=[("Source", SOURCE_NOTE)])

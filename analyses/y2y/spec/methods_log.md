@@ -897,3 +897,18 @@ a chain joins through an absorbed member; clusters never merge (`director_core.a
 enlarged clusters; `members` lists the absorbed complexes as +cxN). Trigger: the two complexes north of cluster 3 (402 + 441 km²)
 read as part of it. Unpicked complexes are no longer outlined on the maps; the 53°N line is off; cluster 3 is blue (charcoal
 failed); outlines 0.9 pt on the Y2Y-wide frame, ×2.5 in the insets; the wide maps' ramp caption is "F = frequency in 30×30 plans".
+(j) **Cluster locators (Ethan, 2026-09-15):** `director_plot.cluster_locators` renders one inset-style window per core cluster on the
+star grid's geometry (same figure size and panel rectangles, both saved on the full canvas) so it sits under the star plots
+panel-for-panel on a slide; no titles or legend. Titles are off on every 21 asset (`STYLE["titles"]`; the 20 record keeps them).
+Later (Ethan): the locator windows carry two park names, no towns, full-size type, and the jurisdiction postal codes placed at the
+pole of inaccessibility of each province's part of the window (also on the wide-map insets); each locator panel is exported as its
+own ~410 px file (`03b_act1_cluster_locators_<n>.png`) beside the aligned grid.
+Later (Ethan, 2026-09-15): on the wide Act 1 maps the colour bar is centred under inset A and the legend (16 pt) under inset B; the
+Northwest Territories code displays as NWT; codes that land in the scale-bar corner are lifted rather than dropped (OR returns);
+California's sliver is never labelled; per-window code edits (`STYLE["inset_codes"]`, `STYLE["locator_codes"]`): AK forced onto the
+coast of window A / locator 1, WA skipped on the southern windows.
+Later (Ethan, 2026-09-15): the wide maps' colour bar spans inset A's full width with ticks at every 0.1 from 0.0 to 0.7 (15 pt);
+the "Core clusters" legend entry is drawn as the four cluster colours side by side (`director_plot.cluster_handle`) instead of a
+black box. Fonts: matplotlib's weight substitution (700 where a fallback face has no 600, and 600 where Noto Sans has no 700) is
+the intended behaviour, so its per-lookup log line is filtered in `director_plot` and `corridors_mapstyle.apply`; the northern
+director's "bold" text is now 600 (the face Noto Sans ships).

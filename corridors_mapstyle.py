@@ -89,6 +89,11 @@ def apply():
         for f in sorted((BASEMAP_DIR / "fonts").glob("NotoSans-*.ttf")):
             fm.fontManager.addfont(str(f))
         _fonts_registered = True
+    import logging
+    lg = logging.getLogger("matplotlib.font_manager")
+    if not any(getattr(f, "_weight_fallback", False) for f in lg.filters):        # Noto Sans has 400/600 faces only (DejaVu 400/700):
+        flt = logging.Filter(); flt.filter = lambda rec: "Failed to find font weight" not in rec.getMessage(); flt._weight_fallback = True
+        lg.addFilter(flt)                                                            # the nearest-weight substitution is intended; drop the log line
     mpl.rcParams.update({"font.family": "sans-serif", "font.sans-serif": FONT_FAMILY,
                          "pdf.fonttype": 42, "ps.fonttype": 42, "svg.fonttype": "none",
                          "axes.unicode_minus": False, "hatch.linewidth": 0.6})
