@@ -423,29 +423,87 @@ Parent exposure measured the same day (Y2Y results_log R10.18): 8.2% of the Y2Y 
 Act 1 representativeness layer. Both extents' class tables + options A–D + costs → `analyses/y2y/spec/efg_block_reportback.md`
 (the report-back for the spec chat). **12–13 PARKED pending the rule decision.**
 
-## R8. The curated block on Alberta (v3.1) — PENDING-RUN (09b → 10 → 11 → 11b/11c → 12 → 13; AB spec v0.5)
+## R8. The curated block on Alberta (v3.1) — MEASURED (09b → 10 → 11 → 11b/11c → 12 → 13 → 14, Ethan's runs 2026-09-15; AB spec v0.5.1). Report-back: `spec/gate_ab_v31_reportback.md`.
 
-**R8.1 (placeholder) Block card v3 on Alberta (09b):** 27 → 15 classes → 13 features (inherited R0); rare-attainable count, the
-≤1%-footprint companion, banked shares, the extent-relative rule re-application (disclosure) and the boundary-proximity flags
-(R0 iii) on the Alberta study boundary. To record beside R2.3 (v1: 27 present / 20 rare-attainable / 7 unsaturated).
+**R8.1 Block card v3 on Alberta (09b, `spec/v3.1/efg_curation_v3.csv` + `efg_block_card_v3.csv`).** 27 → 15 classes → **13
+features** by the inherited R0 curation (D-AB11): out F2.10, F3.5, SF2.2, F2.9 (the four v1 core-pinning classes, R7.9–R7.11),
+F3.1, F3.2, SF2.1, T7.1–T7.5; merged TF1.6+TF1.7, S1.1+SF1.1. Re-reading the extent rule (< 1%) on the Alberta extent would drop
+none of the 15 retained; the boundary rule (R0 iii) flags **one clip-edge class, T6.1** (247 cells, 98.0% inside PAs, 99.6% within
+10 km of the study boundary) — reported, not dropped (the parent's disposition). Block card: **rare-attainable 9/13** (v1: 20/27),
+≤1%-footprint companion 1 (T6.1), none banked ≥ 0.999 (v1's artefact classes sat at 0), median banked 0.33: T6.1 0.98, S1.1_SF1.1
+0.96, T6.2 0.92, T6.3 0.78, T6.4 0.62, F2.4 0.45, F1.3 0.33, T2.1 0.29, T4.4 0.03, the rest < 0.01. cap_max < 1 for the four big
+classes (F2.4 0.85, T6.4 0.58, SF1.2 0.55, T2.1 0.37). Compare R2.3.
 
-**R8.2 (placeholder) Window targets (D-AB12; 09b):** window areas (+100/+250/+500 km around the Alberta extent), each feature's
-footprint and target at +250 km vs on-extent vs the parent's +250 km target for the same feature; the window-rare set (≤ 1% of the
-window); the number of features at the 0.10 floor. Manifest v3.1 sha.
+**R8.2 Window targets (D-AB12; 09b, `spec/v3.1/efg_window_footprints.csv`, `efg_targets.json`).** Footprints in the Alberta extent
+buffered 250 km (GET archive maps) vs on-extent: T6.1 1,062 → 5,597 km² (0.69% of the window), T6.3 15,226 → 34,859, T6.2 11,928
+→ 57,137, T4.4 3,924 → 70,004, S1.1_SF1.1 16,428 → 80,008, TF1.6_TF1.7 8,999 → 128,041, SF1.2 66,222 → 133,056, T5.1 8,195 →
+144,510, F1.3 19,504 → 149,559, T2.2 12,923 → 175,173, T6.4 46,607 → 362,392, F2.4 44,141 → 422,415, T2.1 101,030 → 664,142.
+**Targets (rarity-scaled log-linear, +250 km): T6.1 0.719, T6.3 0.421, T6.2 0.341, T4.4 0.307, S1.1_SF1.1 0.286, TF1.6_TF1.7 0.209,
+SF1.2 0.203, T5.1 0.189, F1.3 0.184, T2.2 0.158; T6.4 / F2.4 / T2.1 at the 0.10 floor (3/13).** The parent's targets for the same
+features (written beside): T6.1 0.359, T2.2 0.148, eleven at the floor — the Alberta window is the stronger block. On-extent (no
+window) the same rule would give 0.28–1.00 (T6.1 1.00, T4.4 0.95). Sensitivity: +100 km → T6.1 0.729, T4.4 0.533, T6.3 0.442, one at
+the floor (T2.1); +500 km → T6.1 0.525, nine at the floor. **Window-rare (≤ 1% of the window) = T6.1 only** (5 unlocked
+cells) = the Act 0 representativeness vote. Manifest v3.1 frozen `6e66ec3f9c9517add6bbdc5fae748152daac829125a724b365b543037cb5cf35`
+(12 design rows; weights asserted = v1; EFG targets in the target vector; `applied_band_rule` recorded).
 
-**R8.3 (placeholder) The v3.1 ensemble (10):** 12/12 formulations — anchors, twins (LP ≤ MILP), MGA at 5% and 2% (plain + guarded)
-certificates; z* per formulation vs the v1 block and the absolute band widths (M4.31); solve time.
+**R8.3 The v3.1 ensemble (10; `runs_v3.1/ab_l/A/<fid>/`).** 12/12 design formulations (no crossed hybrids, no k-best): anchors
+0.5–1.5 s, rel. drift vs the compiled model ≤ 8.6e-6; Gurobi LP twins ≤ MILP 12/12; **four sweeps × 12 × 50 members (plain and
+guarded at g = 5% and 2%): 2,400/2,400 certificates in band, 0 time-limited, 8 duplicates** (plain 5%, two in each of S3@245/585 and
+S5@245/585), solver time ≈ 61 min (0.6–2.1 min per sweep). **z\* vs the v1 block (M4.31): −5.2% (S5) to −10.1% (S1@245) on every
+formulation** — the removed classes carried that much of the objective; absolute band widths: 2% = 0.077–0.174, 5% = 0.19–0.44
+(`analysis/ab4_v3.1/tables/band_width_abs.csv`). 11b: 12 leave-EFG-out anchors (T2) + the five E17-T3 leave-one-block-out anchors
+(`e17_t3/`); T3 not triggered (R8.5).
 
-**R8.4 (placeholder) Analysis on the curated block (11):** the D-AB13 decision (5% guarded frequent tier vs the 100 km² flatness
-threshold → applied band); F bands at 5% and at the applied band; E1/E3/E11 on the 12 design formulations (crossed contrast = v1
-record); C1 at the same parent version (+ C1b guarded); C4, tenure, clusters; where the v1 core went (the four artifact classes are
-gone by construction — compare R7.7–R7.11).
+**R8.4 Analysis on the curated block (11 run 2026-09-15; `analysis/ab4_v3.1/`, `spec/v3.1/gate_ab4_summary.json`).**
+**D-AB13 FIRED: the 5% guarded frequent tier is 27 km² < 100 km² → applied band = 2% guarded (D-AB10).** At 5%: never 0 / rare 53,833 /
+conditional 3,301 / frequent 27 / always 0 km²; **D = 1.000 for all twelve formulations**. At 2%: guarded never 2,020 / rare 49,978 /
+conditional 5,132 / **frequent 28 / always 3 → core 31 km² = 0.054% of allocatable land** (v1: 1,117 km², R7.3); plain never 2,110 /
+rare 51,226 / conditional 3,825 / frequent 0 / always 0; guarded-vs-plain tier Jaccard 0.0; D at 2% 0.938–1.000 (S1@245 lowest).
+Threshold ladder (guarded, allocatable, patches ≥ 10 km²): F ≥ 0.95 → 3 km²; 0.80 → 15; **0.70 → 31 (one patch of 17)**; 0.60 → 75;
+0.50 → 205 (three patches 68/28/21, east of Jasper 52.1–52.9°N); 0.40 → 1,111 (23 patches, largest 315); 0.30 → 5,163.
+E1 mean |F − F_naive| 0.241 / max 0.825. E3 within 99.98% / scenario 0.013% / climate 0.0005% (crossed contrast = the v1 record
+R7.1). **E11: 132/132 ordered pairs mutually in-band**; anchor Jaccard 0.383–0.818 (mean 0.560); Δ-diagonal ≤ 1.3e-11. Anchor
+captures (T1): refugia 0.571–0.597, connectivity 0.560–0.587, corridors 0.476–0.483, m_soc 0.731–0.772 (S4 0.772 = its θ2× target),
+biomass 0.393–0.464, birds 0.425–0.429, mammals 0.448–0.453, gHM 0.479–0.483, EFG mean 0.548–0.552. Pooling: S0/S2/S5 POOLED
+(climate Jaccard 0.818/0.838/0.882), S1/S3/S4 SEPARATE (0.193/0.714/0.692).
+**Why (measured on the stack; additions 10,083 km²):** banked share inside PAs — refugia 45.6%, connectivity 38.5%, corridors 36.0%,
+**m_soc 71.4%**, biomass 23.9%, mammals 32.5%, birds 29.8%, naturalness 35.6%; best additions-sized set ÷ random fill — refugia 1.63×,
+connectivity 2.17×, corridors 1.21×, m_soc 4.71×, biomass 2.37×, mammals 1.12×, birds 1.11×, naturalness 1.14× (Y2Y: 1.4–2.3×). Soil
+carbon is the only concentrated value and its banked share already exceeds S0's target (0.332); nothing unprotected is both
+concentrated and unsatisfied, so the objective is flat over the discretionary land.
+**C1 at the same parent version:** 5% Spearman 0.284 (v1 0.85), tier overlap 0 (both tiers < 30 km²); **C1b guarded at the applied band:
+Spearman 0.650, overlap coefficient 0.742, Jaccard 0.085 (AB core 31 km² vs the parent's Alberta-clip core 263 km²)**; per formulation
+the 10,083 additions fall 73–93% inside the parent anchor's Alberta selection (v1 91–99%; parent anchors select 6,351–15,851 AB cells).
+**C4:** core inside the Upper Smoky Nature-First zone 0 km² (mean F 0.343 vs 0.176 allocatable, 1.95×); inside the SRP area 0 km²
+(0.190). **Tenure:** core 29/31 km² crown Green, 0 ranchland; scenario tiers 847/870 crown, 10 km² ranchland (connectivity-forward).
+**Where the v1 core went:** the 412 km² F2.10 pick (53.4°N) gone by construction; the T4.4 fescue-woodland pick (275 km², 49.9°N; the one
+genuine multi-value v1 core, R7.10) is now a core-habitat-forward SSP245 scenario cluster (265 km², mean F 0.3); the v3.1 core patch
+(E of White Goat, 52.3°N 116.4°W; 17 km² + specks = 23; mean F 0.83; 100% crown; 5.9% in the m_soc tail; 0% rare-EFG driver).
 
-**R8.5 (placeholder) The necessity test (E19; 11b/11c):** per-class forced ledger, forced land (≥ 1 / all formulations), the
-ensemble-forced share of the core vs the 50% gate, T2 necessary-vs-forced agreement, T3 outcome if triggered, adequacy pins.
+**R8.5 The necessity test (E19; 11b/11c, `spec/v3.1/E19_forced.csv`, `E19_t2_anchors.csv`, `e19_gate.json`).** **T1 — forced set EMPTY**
+on the applied band: no class is captured in full by every member of any formulation (min guarded capture of each class's unlocked
+cells 0.00–0.26; T6.1's 5 unlocked cells 0.00); forced in ≥ 1 formulation 0 km², in all twelve 0 km²; core 31 km² **0.0% forced**;
+**T3 gate (> 50%) NOT triggered**, the no-EFG ensemble did not run. Per class, share of unlocked cells inside the core: T6.2 0.70,
+S1.1_SF1.1 0.54, T6.3 0.20, T6.4 0.17, the rest ≤ 0.06. **T2 — leave-EFG-out anchors: Jaccard with the with-EFG anchor 0.68–0.87
+(S4 highest), 0 core cells dropped without the block, mean latitude shift −0.05°** — the block relocates 13–32% of each plan and pins
+none of the core (v1: 71% of the core on four classes, R7.9–R7.11). Adequacy pins in the package: none (`pct_adequacy_forced` = 0
+everywhere). Extra (E17-T3 mirror, `E17_shifts.csv`): leave-one-block-out anchors vs S0 — core habitat out +0.58° (Jaccard 0.52),
+connectivity −0.04° (0.64), biodiversity −0.03° (0.66), carbon −0.05° (0.78), EFG −0.10° (0.75).
 
-**R8.6 (placeholder) Package v1.7 on the curated block (12/13):** core/tier/gap areas vs the v1 artifact-block package (archived);
-the Act 1 representativeness layer on the window-rare classes; picks that changed; the E19 partition of core/tiers/picks; AOI
-alignment and tenure by tier re-read.
+**R8.6 Package v1.7 on the curated block (12/13/14 on v3.1, 2026-09-15; `director_package/`; the v1 package archived in
+`_superseded_v1_artifact_block/`).** Allocatable land 57,161 km². **Tiers: core 31 km² (0.054%); scenario tiers 319 km² (0.558%) —
+core-habitat-forward 160, connectivity-forward 151, 2+ scenarios 8, biodiversity-forward 0, carbon-forward 0; opportunity 56,811 km²
+(99.39%); never 0** (v1 package: core 1,094 / scenarios 921 / opportunity 95.1%). By refugia future: SSP585 core 33 km², SSP245 30, union
+34, intersection 29, Jaccard 0.853. Regional picks (30 km linkage, N→S): **one core pick — Cluster 1, E of White Goat (23 km² incl. 1
+speck; mean F 0.83)** — and four scenario picks: Upper Smoky Nature-First vicinity 39 km² (core-habitat-forward, 64–77% inside the NFZ),
+S of White Goat 63 (core-habitat), SE of Whitehorse Wildland 17 (connectivity), E of White Goat 41 (connectivity). T-D7 ratios (cluster
+mean ÷ allocatable mean): Cluster 1 core habitat 1.68× / carbon 3.14× / representativeness 0.74× vs existing PAs 1.71 / 3.95 / 1.40,
+the NFZ unprotected part 1.27 / 2.00 / 1.29 (F 0.34), the SRP area 0.72 / 0.76 / 1.09 (F 0.19). Biodiversity capture over all 612 guarded
+plans 0.431–0.441 (median 0.434). **Act 0 values:** top-30% footprints 17,149 km² per theme (biodiversity 17,215); representativeness
+footprint 5 km² (T6.1); value convergence 0 → 13,500 / 1 → 25,569 / 2 → 11,811 / 3 → 5,648 / 4 → 633 / 5 → 0 km²; high-value land
+(≥ 1 theme) 43,661 km², **gap 43,321 km² = 99.2% of it outside core ∪ scenario tiers.** E19 partition: 0% forced in every unit;
+multi-claim 100% for the core and every pick (92% for the connectivity tier). 13: 41 record figures (acts 0–3, T-D tables); 14: the
+curated director outputs (objectives tables, the value-convergence Act 1 map with/without clusters, Cluster 1 star + locator, the
+consequences table with three reference columns) — 14's first run predates the values-led Act 1 (M18.7) and is re-run for the record.
 
-*Last updated 2026-09-14 (R8 placeholders).*
+*Last updated 2026-09-15 (R8.1–R8.6 measured; report-back written).*

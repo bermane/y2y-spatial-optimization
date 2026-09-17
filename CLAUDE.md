@@ -337,7 +337,7 @@ anchors ×12 ~15 min; gated no-EFG ensemble T3) → **`18c_e19_analysis`** (py: 
 gate → `spec/v3/e19_gate.json`) → 19 → 20 (v1.7: archive the artifact-block package, `pct_adequacy_forced` + ADEQUACY PIN captions,
 E19 partition table/appendix slide, curation disclosure on slide 1). 22 pinned to v1 (E18 = evidence). E12/E17-T3/E18 stand as v1
 evidence. Logs M2.11, M4.26–M4.28, supersession rows, R10.19 (+ R10.20–R10.22 placeholders). **Naming convention (binding): name things by
-what they are, code in parentheses.** Alberta re-run = stage 2 (its v3 stack exists; spec mirror re-pin pending).
+what they are, code in parentheses.** Alberta re-run = stage 2 (its v3 stack exists; spec mirror re-pin pending). **REPORT-BACK for the v3.1 run + package: `spec/v31_reportback.md` (2026-09-15; R10.22 measured) → chat.** **SPEC v0.18 = FROZEN; post-freeze register PF-1 = E20 refugia transform conditionality (M4.34, R10.24): `18d_e20_refugia_audit` (py, RAN: floor inert, log1p(1/v) kills the θ-tail, ordering unchanged) → `18e_e20_solves` (R, Ethan ~1 h: S0@585 guarded under log1p(1/v) → `runs_v3.1/e20_log/`) → `18g_e20_analysis` (py: transform-conditional share per arm). **PF-2 (2026-09-16, M4.35, R10.25): the uniform value-shape audit in 18d (every continuous value × {linear, saturating, convex}; I² transboundary = concentrated-satiating → R2 target 0.198; Carroll layer = compressed index, I² not adopted; AOH log1p inexpressible; gHM convex tail only below precision) → `18f_e20_consistent_solves` (R, Ethan ~1 h: S0@585 under log1p(1/v) + I² connectivity at t 0.198 → `runs_v3.1/e20_consistent/`) → 18g reads every solved arm. **PF-1 RESULT (R10.24 cont.): transform-conditional share 4.3% — the core rests on the refugia ORDERING, not the 1/v tail; RULING: 1/v stays registered, log1p in the pocket. PF-2 arms (18f: t = 1 and R2-target 0.198; corridors squared too, M4.35 add. 4) pending Ethan's run. **PF-3 BUILT (spec v0.18 sequence, M4.36): 18d writes four block-split arms (A: five blocks at 20%; B: corridors removed) × (S0, S2) on the step-2 shapes; 18f runs all six arms (PF-3 gated on the step-2 baseline `e20_consistent`); 18g reports own land (E18 definition), pinch-point pinning, D, Jaccards vs the registered run and the baseline (`spec/v3.1/E20_pf3_summary.csv`). Weights per arm in `e20_refugia_transform.json`.**** Outside run_v31.sh; director outputs untouched.**
 **v0.17.3 (same day) → MANIFEST v3.1 = the one to solve:** the clip-edge flags were resolved by deriving the rarity-scaled targets from each
 class's footprint in the extent BUFFERED by 250 km (GET archive maps, 100/500 km sensitivity; M4.29, R10.19 cont.): F1.1 0.50, F2.1 0.49,
 T6.1 0.36, twelve features at the 0.10 floor; rare-in-window = F1.1 + F2.1 only (the Act 1 representativeness vote). `config.Y2Y_VERSION`
@@ -424,13 +424,46 @@ trigger for the parent's v0.17 curation.**
 (R; VERSION switch, no k-best on v3.1) → 11 analysis (D-AB13, M4.31, C1 at the same parent version) → **11b E19
 solves + E17-T3 (R) → 11c E19 analysis** → **12_tiers_and_clusters → 13_figures** (renamed 2026-09-15 to the parent's
 names; acts 0–3, regional picks at 30 km numbered N→S, "naturalness", T-D7 consequences with the Upper Smoky reference
-rows, tables to the Y2Y table spec via `director_plot.spec_table_png`); or `run_v31.sh`. **Status 2026-09-15: the
-parent's METHODS are frozen (Ethan) and the Alberta methods chain 09b → 11c is the exact mirror — RUN IT (commit
-`config.py` first: 09b asserts the pipeline modules clean vs HEAD). 12/13 carry the settled record rules and, since
+rows, tables to the Y2Y table spec via `director_plot.spec_table_png`); or `run_v31.sh`. **Status 2026-09-15: v3.1 RUN END-TO-END
+(09b → 14; R8.1–R8.6 measured; report-back `spec/gate_ab_v31_reportback.md` → chat). HEADLINE: the curated block REMOVED
+the core — 5% guarded frequent tier 27 km² → D-AB13 fired → applied band 2% guarded → core 31 km² (v1: 1,117); E19 forced
+set EMPTY, T3 not triggered; D = 1.000 at 5% on all 12, E11 132/132; cause MEASURED = values flat on unprotected land
+(best additions-sized set 1.1–1.6× a random fill for 5/8 themes) + banked (m_soc 71%, refugia 46%); tiers: scenario 319 km²,
+opportunity 99.4%, value gap 99.2%; threshold ladder 0.5 → 205 km², 0.4 → 1,111. Open with chat: deliverable = the flatness
+finding carried by the value map + tiers; keep F ≥ 0.70; confirm D-AB12 window + D-AB13. 12/13 carry the settled record rules and, since
 2026-09-15 (M18.6), `director_plot.load()` takes an external package (grid, manifest, overlay in the IPCA role, window,
 hex_grid) with Y2Y defaults unchanged — 13 and **`14_director_outputs`** (the mirror of 21: values table, Act 1 core maps
 as the Alberta frame + ONE inset on the key cluster, stars + locators, consequences) draw from the same asset functions;
 Alberta knobs live in `dp.STYLE` set before load. `run_v31.sh` ends at 14.** Data: `data/acquire.py`.
+
+## ANALYSIS 4 — `analyses/communities/`: bear coexistence groups (started 2026-09-16)
+
+The last analysis piece. Input = `input_data/bear_coexistence/CoexistenceGroup_CDCounty_SpatJoin/` (Y2Y Communities &
+Conservation team; `.shp` + `.gpkg` twins of ONE layer + `README_MetaData.docx`): counts of active local/regional bear
+coexistence groups per **2021 Canadian Census Division / US county, ALREADY CLIPPED to the unbuffered Y2Y boundary**
+(108 units, 99.99% coverage, no overlaps; EPSG:4326; `country`, `MappingUnit` = `<name>_<province/state>`, `n_groups`
+float with NA = "no group recorded"; current to July 2026; only the TOTAL ships — the three group types in the metadata
+are not in the file). **`01_bear_coexistence_explore.ipynb`** (py, kernel y2y-geo, read-only on the input; writes
+`audit/bear_coexistence_units.csv` + `audit/bear_coexistence_label_qa.csv` + `figures/`) characterises it — no
+alignment, no rasterization, no config registration yet. **Measured on first build: 30/108 units hold ≥1 group, 53 groups
+as shipped; 21/108 units carry the WRONG province/state suffix** (polygons right, suffix from a neighbouring
+jurisdiction — checked against the NE admin-1 basemap layer), and **4 of those collide with a same-name county next door
+and copy its `n_groups`** (Madison ID/MT, Teton ID/WY, Lincoln WY/MT, Park WY/MT → true total possibly 47). Unit areas
+span 0.02–296,959 km², so count ≠ density ≠ presence. **ROLE DECIDED (Ethan 2026-09-16): a PROXIMITY measure — distance of clusters / land identified for
+conservation to bear-smart communities; NOT a feature in the optimizer.** Ethan is not worried about the label QA per se;
+the check that matters is whether the suffix bug signals wider corruption. **Assessed the same day:** geometry sound
+(genuine CD/county polygons, tessellating, clipped); 19/21 wrong suffixes name an ADJACENT jurisdiction (spatial-join
+tie-break at state borders, label-only); the 2 non-adjacent cases (Madison ID, Lincoln WY, both far from Montana)
+prove the 4 collision counts were copied by NAME from the Montana namesakes → treat those 4 as false positives (all in
+the Greater Yellowstone / ID–WY corner, material for a southern proximity measure); false negatives on the 17
+mislabelled NA units are possible but unverifiable from the file. Bigger limitation for the stated use: `n_groups` sums
+three group types (Bear Smart is one), and the support is a county/CD polygon (0.02–296,959 km²) — proximity to a
+297,000 km² CD is meaningless. Best fix for all of it = the C&C tracking-database rows (group, type, county, town). **Second use (Ethan, same day): a
+NAMING gazetteer for clusters ("Kootenays", "Peace region") — overlay of the 12 deck picks shows it works in BC, needs a
+lookup in Alberta (numbered CDs), fails in the north (one 297,000 km² Yukon unit, NT "Region N") and is too fine in the US
+south; deliverable = a curated unit→region lookup beside `director_core.placeholder_name`. REPORT-BACK for the spec chat =
+`analyses/communities/spec/bear_coexistence_reportback.md` (decisions D-C1–D-C5; next build 02_proximity / 03_region_names
+waits on them). NA RULE (Ethan 2026-09-16): `n_groups` NA stays NA — the file has no zeros (78 NA / 30 counted); never recode to 0.**
 
 ## Structure — two notebooks + shared config
 

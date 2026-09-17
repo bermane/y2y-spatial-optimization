@@ -705,9 +705,20 @@ Deck: no adequacy pins in the register; the caption rule stays armed. Products: 
 `E19_t2_anchors.csv`, `e19_gate.json` (t3_triggered false), `runs_v3.1/e19_forced.tif` (all zero), `e19_necessary.tif`
 (all zero), `figures/v3.1/e19_forced.png`.
 
-**R10.22 (placeholder) Package v1.7 on the curated block — PENDING 19/20.** To record: core/tier/gap areas vs the
-artifact-block package (R10.17), the Act 1 representativeness layer on the retained ≤1% classes, cluster picks that
-changed, the E19 partition of core/tiers/picks.
+**R10.22 Package v1.7 on the curated block — measured (19/20/21 on v3.1, 2026-09-14/15; zero-solve; supersedes the placeholder).**
+Tiers (guarded, 12 design formulations; allocatable land 1,081,885 km²): core 29,194 km² (2.7%); scenario tiers 70,166 km² (6.5%)
+by owner — core-habitat-forward 31,308, carbon-forward 23,805, connectivity-forward 8,429,
+biodiversity-forward 271, two or more 6,353; opportunity 955,262 km² (88.3%); never 27,263 km² (2.5%).
+By refugia future: SSP585 core 31,358 km², SSP245 41,083, both 19,296 (Jaccard 585/245 0.36).
+Deck clusters (four, N → S, after absorbing nearby complexes ≤ 75 km and sub-100 km² specks ≤ 10 km): 1 SW of Tahltan - Sacred Headwaters 11,490 km² (mean F 0.78, core habitat 3.5×, carbon 1.4×); 2 Purcell Wilderness Conservancy Park vicinity 12,105 km² (mean F 0.83, core habitat 3.9×, carbon 1.2×); 3 N of Granby Park 2,507 km² (mean F 0.80, core habitat 3.1×, carbon 0.81×); 4 NW of Frank Church River Of No Return Wilderness 5,229 km² (mean F 0.84, core habitat 4.5×, carbon 0.19×).
+Reference rows: existing PAs core habitat 1.3× / carbon 1.1× / naturalness 1.0× (value-average, R10.4 holds);
+the IPCA proposals' unprotected part (86,360 km²) mean F 0.15, connectivity 1.1×, otherwise ≈ 1.0×.
+Hinge: 90% of the core is top-30% land for ≥ 2 themes, 24% for ≥ 3; the representativeness vote (F1.1 + F2.1)
+covers 6,287 km² (0.6% of allocatable land), 0.3% inside the core.
+E19 partition: core 0% forced / 90% multi-claim; carbon-forward tier 45% multi-claim. E17 (v3.1 basis): block-out
+shifts core habitat +0.66°N, connectivity −1.76, biodiversity +2.26, carbon −0.91, EFG +0.14 (v1 EFG +2.11). Naturalness ratios span
+0.88–1.05 on a layer whose allocatable mean is 0.94 (77% of cells ≥ 0.95). Products: `director_package/` (tables T-D0–T-D7, E17, E19,
+picks; `director_outputs/` = the presentation set at 300 dpi); report-back `spec/v31_reportback.md`.
 
 **R10.23 Sizing a developed-land PU mask (Ethan's parked idea, 2026-09-14; zero-solve on the v3.1 record).** Question:
 would removing urban/developed cells from the planning-unit set enlarge the applied core the way the v3.1 block change
@@ -763,3 +774,56 @@ count corrected to **12/40** (S2.1 anthropogenic subterranean voids included). F
 (A map-method rule / B sliver floor / C purpose rule / D presentation-only) and costs → `spec/efg_block_reportback.md`.
 
 *Last updated 2026-09-03 (R10 placeholders; R9.7 E15b).*
+
+**R10.24 Refugia transform conditionality (E20 / PF-1) — the zero-solve audit (18d, 2026-09-15; M4.34; guarded run pending 18e/18g).**
+(a) **Numerics: the floor is inert.** One cell width over the 110-yr span = 0.0091 km/yr; the slowest cell on the PU moves 0.097 km/yr
+(SSP585) / 0.043 (SSP245), so no cell is a v → 0 artifact and `1/max(v, v_floor)` equals `1/v` exactly. The tail top (10.3 yr/km) is a
+real cell ~10 km from its nearest current analog over the span. (b) **The registered layer** (SSP585 / SSP245): leverage 0.408 / 0.470,
+diffuse-linear under R2/R3; θ = 5× tail on 0.48% / 0.87% of allocatable cells holding 3.2% / 5.9% of the mass; Gini 0.34 / 0.39. The v3.1
+core sits at mean refugia percentile 0.978 / 0.974, 99.8% of it inside the refugia top-30%, and 17.6% / 23.0% of it inside the θ-tail.
+(c) **Every monotone variant keeps the ordering** (top-30% Jaccard 1.000, the core's percentile unchanged by construction), so the
+question is convexity alone: `log1p(1/v)` keeps leverage 0.338 / 0.353 (above λ = 0.10; class unchanged) while the θ-tail collapses to
+0.03% / 0.006% of cells (mass 0.2% / 0.0%) and the core's share inside the tail falls to 1.1% / 0.1%; the horizon cap (7.5 yr/km)
+changes 0% / 0.06% of cells (inert, as expected at any horizon-derived level); the cap ladder shows the tail only yields below ~2 yr/km
+(2.0: 0.5% / 5.0% of cells changed; 1.5: 1.2% / 9.4%). Rank (reference only) has leverage 0.428 and no tail. (d) **The guarded run's
+weights** under constant intended influence: refugia 1.460 → 1.693, the others −4% (S0@585; the refugia swing per unit weight fell
+with the flattened tail). (e) **Distributions of the candidate forms** (allocatable land; `E20_refugia_distributions.csv`, `figures/v3.1/e20_refugia_distributions.png`):
+v is right-skewed (SSP585 median 3.3 km/yr, p99 7.3, max 16.5; SSP245 median 1.9, max 9.4) with a thin fast tail; the two additive
+flips (`vmax − v`, `1 − v/vmax`) are the same shape by construction — left-skewed, Gini 0.07 / 0.09, leverage 0.090 / 0.108 — the
+crushed contrast of M-2026-08-17; `1/v` is heavy-tailed to the right (median 0.31 yr/km, p99 1.6, max 10.3; Gini 0.34); `log1p(1/v)`
+keeps the right skew without the tail (max 2.4; Gini 0.28). Products: `spec/v3.1/E20_refugia_audit.csv`, `E20_refugia_distributions.csv`, `e20_refugia_transform.json`, `figures/v3.1/e20_refugia_audit.png`, `e20_refugia_distributions.png`,
+`input_data/aligned_stack/e20_log_refugia_{585,245}.tif`. Next: 18e (Ethan, ~1 h) → 18g (the transform-conditional share; R10.24 cont.).
+
+**R10.25 The uniform value-shape audit (E20 / PF-2; 18d, 2026-09-16; zero-solve; M4.35) and the PF-1 precision test.**
+(a) **Precision-relative contrast (PF-1 correction):** on SSP585 the θ-tail (5,134 cells at 1/v ≥ 2.0 yr/km, i.e. analog ≤ 55 km away)
+spans ~147 precision-distinct levels (median precision in the tail 0.057 yr/km; 0.97 at the top cell, 10.3 yr/km ≈ analog 10.7 km
+away) and 94% of tail cells sit above the threshold by more than their own precision — the tail's ordering is real at the data's
+grain. Across realizations it is only moderately stable: Spearman 0.58 within the 585 tail against the 245 values, 62% of the 585
+tail inside the 245 tail (245: 90% above precision, Spearman 0.21, 34% overlap). (b) **The audit** (allocatable land, SSP585 for
+refugia; leverage / class / θ-tail area): refugia 1/v 0.408 diffuse-linear tail 0.48% → log1p 0.338 diffuse-linear tail 0.03% →
+sqrt 0.201 tail 0 → (1/v)² 0.758 CONCENTRATED-SATIATING (t 0.343, tail 3.0%, 80% of the core inside it); transboundary connectivity
+I 0.441 diffuse-linear (spike 0.17%) → I² 0.719 CONCENTRATED-SATIATING (t 0.198; tail 2.0% of cells, 19.8% of mass; 7.3% of the core
+inside it) → log1p 0.307 / sqrt 0.252; climate corridors I 0.258 → I² 0.436 still diffuse-linear (tail 0.009%) → log1p 0.126;
+m_soc identity 0.893 concentrated-satiating (t 0.358) → log1p 0.502 diffuse-linear (the E9 flip); biomass identity 0.795
+diffuse-linear (tail 0.98%) → square 0.937 concentrated-satiating (t 0.403); AOH birds / mammals identity 0.235 / 0.185 → log1p
+0.060 / 0.054 INEXPRESSIBLE, sqrt 0.123 / 0.095 (mammals inexpressible), square 0.423 / 0.347; naturalness 1 − gHM 0.047
+inexpressible → 1/max(gHM, 0.01) 0.460 diffuse-linear with NO tail, 1/max(gHM, 0.001) 0.529 with a 0.64% tail (2.9% of the core),
+−log forms 0.19–0.20. (c) **Provenance:** the Carroll `currentflow` layer is tail-less (max/median 2.8, skew −0.28) against the
+Pither raw current's max/median 45.7, skew 2.64 — an already-compressed index; I² not adopted for it. (d) **The consistent arm's
+weights** (S0@585; refugia log1p, transboundary I² at t 0.198): refugia 1.460 → 1.769, transboundary 0.669 → 0.355, the rest within
+0.2% (the target lowers the connectivity weight the way m_soc's does: the swing per unit weight is measured against the capture the target asks for). Products: `spec/v3.1/E20_value_shape_audit.csv`, `E20_refugia_precision_contrast.csv`, `e20_refugia_transform.json` (arms),
+`input_data/aligned_stack/e20_conn_sq.tif`. Next: 18f (Ethan, ~1 h each arm) → 18g (R10.25 cont.: the transform-conditional share per arm).
+
+**R10.24 (cont.) The PF-1 guarded run and the transform-conditional share (18e Ethan's run + 18g, 2026-09-16; S0@SSP585 under
+log1p(1/v), weights re-derived, registered targets; k = 50, g = 5%, block floors).** Integrity: 50/50 members; anchor z 4.9513 vs the
+registered 4.9025 (a different objective, not comparable in level); anchor Jaccard with the registered anchor 0.957 over allocatable
+land. **The core is robust to the saturating shape: transform-conditional share 4.3%.** S0 keeps 26,499 km² of the 29,194 km² core
+frequent (f ≥ 0.70) under 1/v and 25,373 km² under log1p(1/v) — 25,352 km² under both — so whole-core survival moves 91% → 87%;
+S0's own tier shrinks 42,733 → 36,287 km² (Jaccard 0.85); corr(f) over the core 0.93, mean f 0.92 → 0.87. What the variant drops
+(1,147 km²) is the less refugia-dense part of the core (46% inside the densest-refugia mask against 92% for the cells kept under both,
+83% vs 90% multi-claim); what it gains (21 km²) is connectivity-spike land. **Reading against the pre-stated expectation:** the
+expectation that a saturating value model "shrinks the refugia share of the core materially" is NOT met — the core rests on the
+refugia ORDERING (99.8% of it is refugia top-30% land), not on the reciprocal's tail (17.6% of it), and removing the tail's
+convexity costs S0 4% of its core land. Ruling (Ethan, 2026-09-16): 1/v stays the registered value model ("persistence within the
+horizon, linear in residence time"); the log transform is kept in the pocket as the reported sensitivity. Products:
+`spec/v3.1/E20_transform_conditionality.json` / `_e20_log.csv`, `figures/v3.1/e20_s0_f_arms.png`. Next: 18f (the two consistent arms) → 18g again.

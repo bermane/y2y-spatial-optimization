@@ -931,3 +931,103 @@ its summary map now renders from the same function.
 Later (Ethan, 2026-09-15): the opportunity tier ("in at least one near-optimal plan") is off the Act 2 map and its legend
 (`STYLE["show_opportunity"]`; it is Act 3's story); the IPCA proposals are outlined on the frame and in the windows with a legend
 entry under the protected areas.
+
+**M4.34 — Refugia transform conditionality (E20; study plan v0.18 post-freeze register PF-1; pre-registered 2026-09-15 before any
+solve; a disclosed sensitivity, never an amendment to the registered design).** Question: how much of the curated core is the
+`1/v` transform's doing? (a) **Numerics.** Velocity floor at the data's grain = one cell width over the elapsed span: 1 km / 110 yr
+(1961–1990 → 2071–2100, midpoint to midpoint) = 0.0091 km/yr; the tail top is a division artifact only if cells sit below it (the
+PU minimum is 0.097 km/yr, so the floor is expected inert — reported either way). (b) **Value model.** Variants audited zero-solve on
+both realizations: rank (reference only — inadmissible as a feature, spec §2.5), floored `1/max(v, v_floor)`, `log1p(1/v)` (the
+saturating model = R1's concave candidate on the oriented layer), horizon-capped `min(1/v, H)` with H = the 2100 horizon (75 yr)
+over a 10 km habitat span = 7.5 yr/km, plus a cap ladder (1.5 / 2 / 3 / 5 yr/km) for context. Audit battery per variant: leverage
+and class (R2/R3), θ = 5× tail area and mass, Gini, top-30% Jaccard against the registered layer, where the v3.1 core sits (mean
+percentile, share inside the variant's top-30% and θ-tail). (c) **The one guarded run** (PF-1's "log or capped variant"): S0 at
+SSP585 under `log1p(1/v)` — chosen a priori as the saturating model that changes the geometry, the cap being expected inert at any
+horizon-derived level — with S0's weights re-derived under constant intended influence (`scenario_weights(layer_paths=…)`, the
+SSP245 mechanism), registered targets, anchor at 1e-4, guarded MGA k = 50, g = 5%, per-block floors at 95% of the anchor's capture;
+output `runs_v3.1/e20_log/s0_ssp585_theta5/` (the registered formulation folders are untouched). (d) **Reading.** Transform-
+conditional share = of the core cells S0@585 keeps frequent (f ≥ 0.70 over 51 plans) under `1/v`, the fraction it drops under
+`log1p(1/v)`; also whole-core survival, tier areas and Jaccard, anchor Jaccard, and the composition of surviving / lost / gained
+core cells by the E13 masks (densest refugia, soil-carbon tail) and multi-claim land (E19 definition). Pre-stated expectation
+(from PF-1): ordering real; extreme tail partly numerical; a saturating value model shrinks the refugia share of the core
+materially; carbon tail + multi-claim land are the more durable core. Disposition: the paper reports the sensitivity; the applied
+paper chooses the refugia value model deliberately. Notebooks 18d (py, audit + layers + weights) → 18e (R, ~1 h, Ethan) → 18g (py);
+outside `run_v31.sh`. Test layers `input_data/aligned_stack/e20_log_refugia_{585,245}.tif` sit beside `e9_log_msoc.tif`, outside the manifest.
+
+**M4.35 — The uniform value-shape audit (E20 / PF-2; study plan v0.18 post-freeze register; pre-registered 2026-09-16 before the
+solve) and the PF-1 correction.** (a) **Correction to M4.34:** the rank transform is not a realness test — ranking ANY layer yields
+the same leverage by construction (why R1 bans it); it stays in the audit table labelled as a construction check. The valid
+numerics diagnostic is the **precision-relative contrast test**: velocity is a distance at the 1 km grain over the 110-yr span, so
+its precision is δv = 1/110 km/yr and the precision of 1/v at a cell is δv / v² (largest in the tail); the test asks whether tail
+cells' separation from the θ-threshold exceeds their own precision, how many precision-distinct levels the tail spans, and (as an
+uncertainty proxy on disk) how the tail's ordering holds across the two realizations (Spearman; tail overlap). (b) **The uniform
+audit.** Inconsistency owned: refugia received a convex transform (1/v) and connectivity did not, and the trigger was leverage
+rescue, not a value-model judgment — a selection effect on which values had their shape examined. Per continuous feature, a
+value-model statement (physical quantity; defensible shapes with rationale) and leverage / class / θ-tail under each candidate,
+zero-solve: refugia {1/v, log1p(1/v), sqrt(1/v), (1/v)²}; transboundary connectivity and climate corridors {I, I², √I, log1p I};
+carbon {identity, log1p, sqrt, square} — linear retained (physics); AOH richness {identity, log1p, sqrt, square} — the deferred
+saturating case reopened, audited, not adopted; naturalness {1 − gHM, 1/max(gHM, ε), −log max(gHM, ε)} at ε = 0.01 (the index's
+precision) and 0.001 — to demonstrate that a convex tail exists only below precision (the noise-manufacture R1 forbids) and that
+the exclusion is principled; intactness belongs to the cost/exclusion channel in the applied paper. (c) **Provenance ruling for the
+Carroll layer:** the on-disk `currentflow.tif` has no 5× tail at all (max/median ≈ 2.8, near-symmetric on a log-count axis) — the
+signature of an already-compressed centrality index, not raw cumulative current — so I² is NOT adopted for it; the shape question
+belongs to the index's construction (one switch, `CORRIDORS_CONVEX`, reverses this if provenance says otherwise). (d) **The
+consistent-set guarded run (18f):** S0@SSP585 under log1p(1/v) refugia + I² transboundary connectivity (`e20_conn_sq.tif`; scale
+is irrelevant under sum-normalization), weights re-derived under constant intended influence, registered targets, anchor 1e-4,
+guarded MGA k = 50 g = 5% with block floors → `runs_v3.1/e20_consistent/s0_ssp585_theta5/`. 18g reads every solved arm and reports
+the transform-conditional share per arm with the composition of surviving / lost / gained core cells (densest refugia, soil-carbon
+tail, the connectivity spike, multi-claim). Pre-stated expectation (PF-2): refugia share of the core falls, pinch points and
+multi-claim land rise, the core becomes easier to defend. Disposition: reported beside PF-1; the science team chooses the
+value-shape family for the applied paper. Paper point: expressivity is a property of layer × value model, not of a layer — the R3
+floor test must be run against a stated shape.
+**M4.35 addendum (2026-09-16, before the 18g solve): R2 applies to the stated shape.** The uniform audit classifies I² transboundary
+connectivity as concentrated-satiating (leverage 0.719; θ-tail on 2.0% of allocatable cells holding 19.8% of the mass; a_min and
+t_min both met), so the protocol's lever for it is a TARGET at the θ-tail capture — t = 0.198 — exactly as m_soc received t = 0.332
+(M-2026-08-17); running the convex shape at t = 1.0 would apply the shape and withhold the lever. The consistent-set arm therefore
+carries `targets = registered ∪ {transboundary_connectivity: 0.198}` and weights re-derived under those targets (`APPLY_R2_TARGET`,
+one switch). Refugia under log1p(1/v) stays diffuse-linear (weight). Also measured in the audit and reported, not adopted: (1/v)²
+would classify concentrated-satiating (t 0.343, 80% of the core inside its tail) — the convex direction pins hard; AOH log1p falls
+under the R3 floor (birds 0.060, mammals 0.054) as the v0.8 screening found; 1/max(gHM, 0.01) passes R3 (0.460) with no θ-tail while
+1/max(gHM, 0.001) grows a 0.64% tail — the tail exists only below the index's precision, and the exclusion rests on the value-model
+statement (the unmodified fraction is the physical quantity; 1/gHM has no reading).
+**M4.35 addendum 2 (Ethan, 2026-09-16): the PF-2 run is the shape change alone.** Ethan does not want connectivity's contribution
+capped, so `e20_consistent` runs saturating refugia + convex transboundary connectivity at the registered t = 1.0 (the spec's literal
+wording), with weights re-derived under constant intended influence; R2's target (t = 0.198) is a SECOND arm `e20_consistent_target`,
+and 18g runs BOTH (Ethan: "test both"; ~1 h each) — an E10-style comparison of shape-only vs shape-plus-lever.
+What the target would do: once 19.8% of the squared-current total is captured — the densest ~2% of allocatable cells, raw current
+≥ 5.1, the 98th percentile — connectivity stops contributing; without it the convex layer keeps rewarding the diffuse 80% of its
+mass spread over the other 98% of cells. Addendum 1's reading (R2 applies to the stated shape) stands as the protocol's answer; the
+applied choice is the science team's.
+**M4.35 addendum 3 (2026-09-16): provenance of the two connectivity layers, read from the shipped files.** (i) `transboundary_connectivity`
+= `Raw_CurrentDensity_Map.tif` (the file `config.pick_representative` selects; O'Brien et al.'s transboundary extension of Pither et al.
+2023): Circuitscape omnidirectional cumulative current density in current units — heavy-tailed by nature (max/median 46, skew 2.6).
+(ii) `climate_corridors` = Carroll et al. 2018 `currentflow.tif`; the archive's readme and R script (SuppInfo_Text_S1, Part 3) show it
+is the SUM over climate-type bins of gdistance `passage()` rasters with θ = 0 — per-bin random-walk passage probabilities, each
+bounded 0–1 — so the layer is a count-like sum of bounded probabilities (a cell scores the number of climate types whose analog flow
+must pass it, weighted by passage probability), NOT log-compressed current as addendum (c) inferred from the distribution. The
+tail-less shape is by construction (the per-bin bound), so I² cannot recover a pinch-point tail on it (audit: leverage 0.26 → 0.44,
+tail 0.009%); the quantity is cumulative current FLOW in the passage sense, not current density. Ruling unchanged pending Ethan:
+not adopted by default; `CORRIDORS_CONVEX` adopts it (the value-model claim would be "a bottleneck for many climate types is worth
+disproportionately more than for one").
+**M4.35 addendum 4 (Ethan, 2026-09-16): climate corridors squared too** (`CORRIDORS_CONVEX = True`; `e20_corr_sq.tif`), so both consistent arms
+carry three shape changes: log1p(1/v) refugia, I² transboundary connectivity, I² climate-corridor flow centrality (the many-types-bottleneck claim);
+weights re-derived accordingly. AOH richness stays identity: the saturating shapes fall under the R3 floor (log1p 0.06 / 0.05, sqrt 0.12 / 0.10)
+and the convex shape has no tail or ecological reading — richness is diffuse (Gini 0.19 / 0.15), not integer-limited.
+
+**M4.36 — The post-freeze sequence PF-1 → PF-3 (study plan v0.18, 2026-09-16; pre-registered before the step-2 and step-3 solves).**
+Step 1 (zero solves) = the uniform value-shape audit (M4.35; one table `spec/v3.1/E20_shape_audit_table.csv`: shapes × features ×
+leverage / tail area / implied target / class; refugia velocity-floored, log, horizon-capped + the precision-relative contrast test;
+transboundary identity and I²; corridors identity and I² with provenance reported (addendum 3); AOH identity, log, sqrt with the
+floor flags — log drops birds to 0.060 and mammals to 0.054, sqrt drops mammals to 0.095; carbon identity; naturalness identity,
+1/gHM, −log gHM to show the tail sits below index precision). Step 2 (PF-2) = the selected-shape balanced run: refugia log1p(1/v),
+transboundary I², corridors I² (Ethan's call), richness identity (saturating fails the floor), carbon linear, naturalness outside —
+`e20_consistent` (t = 1) is THE BASELINE; `e20_consistent_target` (R2's t = 0.198) runs beside it. **Step 3 (PF-3) = block-split runs
+on the step-2 shapes, gated in 18f on the baseline's existence:** (A) five discretionary blocks at 20% — core habitat, transboundary,
+corridors, carbon, biodiversity — with S2 (connectivity-forward) placing the registered 0.5 connectivity share half on each
+connectivity block (0.25 / 0.25) and 1/6 on the rest; (B) corridors removed (weight 0, out of the floors), transboundary alone at the
+connectivity block's share (S0: 0.25; S2: 0.5); each on S0 and S2 → `runs_v3.1/e20_pf3_{A,B}_{s0,s2}/`. Weights re-derived under the
+arm's own block structure (`scenario_weights(blocks=…, layer_paths=…)`), targets registered, floors on the arm's blocks. Per run
+(18g): transboundary own land (E18's definition: the tier outside the frozen core and outside the other named scenarios' registered
+SSP585 tiers), core composition and survival, whether pinch points pin (share of the raw-current spike inside the tier, share of the
+spike at f ≥ 0.70, max f on the spike), the MGA diversity D, Jaccard against the registered run of the same scenario and against the
+step-2 baseline. Note carried from the spec: E18's pinning bracket (0.33–0.42 per layer at identity) is expected to shift down under I².

@@ -1,0 +1,79 @@
+{
+  "spec": "v0.18 PF-1 / PF-2",
+  "base_formulation": "s0_ssp585_theta5",
+  "arms": {
+    "e20_log": {
+      "label": "PF-1: saturating refugia (log1p(1/v))",
+      "core_km2": 29194,
+      "s0_reg_tier_km2": 42733,
+      "s0_variant_tier_km2": 36287,
+      "tiers_jaccard": 0.8463911021800593,
+      "anchors_jaccard": 0.9568728178784011,
+      "core_frequent_under_registered_km2": 26499,
+      "core_frequent_under_registered_pct": 90.76865109269028,
+      "core_frequent_under_variant_km2": 25373,
+      "core_frequent_under_variant_pct": 86.91169418373639,
+      "core_kept_both_km2": 25352,
+      "transform_conditional_share_pct": 4.328465225102828,
+      "core_mean_f_registered": 0.9191064238548279,
+      "core_mean_f_variant": 0.8718565702438354,
+      "core_f_corr": 0.934045289807675,
+      "composition": {
+        "core": {
+          "km2": 29194.0,
+          "m_soc theta-tail": 2.747,
+          "connectivity spike (top 0.2%)": 1.028,
+          "refugia densest (area-matched to the m_soc tail)": 82.335,
+          "rare-attainable EFG footprint": 75.43,
+          "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 0.072,
+          "multi-claim (>=2 themes top-30%)": 89.94
+        },
+        "core kept frequent under both": {
+          "km2": 25352.0,
+          "m_soc theta-tail": 2.974,
+          "connectivity spike (top 0.2%)": 1.037,
+          "refugia densest (area-matched to the m_soc tail)": 92.438,
+          "rare-attainable EFG footprint": 76.637,
+          "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 0.047,
+          "multi-claim (>=2 themes top-30%)": 90.249
+        },
+        "core lost under the variant": {
+          "km2": 1147.0,
+          "m_soc theta-tail": 0.61,
+          "connectivity spike (top 0.2%)": 0.0,
+          "refugia densest (area-matched to the m_soc tail)": 46.033,
+          "rare-attainable EFG footprint": 79.337,
+          "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 0.174,
+          "multi-claim (>=2 themes top-30%)": 83.348
+        },
+        "core gained under the variant": {
+          "km2": 21.0,
+          "m_soc theta-tail": 4.762,
+          "connectivity spike (top 0.2%)": 61.905,
+          "refugia densest (area-matched to the m_soc tail)": 0.0,
+          "rare-attainable EFG footprint": 95.238,
+          "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 0.0,
+          "multi-claim (>=2 themes top-30%)": 100.0
+        },
+        "S0 variant tier (all)": {
+          "km2": 36287.0,
+          "m_soc theta-tail": 2.883,
+          "connectivity spike (top 0.2%)": 1.259,
+          "refugia densest (area-matched to the m_soc tail)": 84.523,
+          "rare-attainable EFG footprint": 79.646,
+          "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 0.033,
+          "multi-claim (>=2 themes top-30%)": 90.278
+        },
+        "S0 registered tier (all)": {
+          "km2": 42733.0,
+          "m_soc theta-tail": 2.483,
+          "connectivity spike (top 0.2%)": 1.002,
+          "refugia densest (area-matched to the m_soc tail)": 78.698,
+          "rare-attainable EFG footprint": 80.542,
+          "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 0.033,
+          "multi-claim (>=2 themes top-30%)": 89.409
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+feature,shape,leverage,tail_area_pct,implied_target,class,passes_R3
+climate_type_macrorefugia,1/v (registered),0.408,0.4745421186170434,1.0,diffuse-linear,True
+climate_type_macrorefugia,log1p(1/v) [saturating],0.338,0.030132592650790057,1.0,diffuse-linear,True
+climate_type_macrorefugia,sqrt(1/v) [saturating],0.201,9.24312657999695e-05,1.0,diffuse-linear,True
+climate_type_macrorefugia,(1/v)^2 [convex],0.758,3.0284179926702004,0.343,concentrated-satiating,True
+transboundary_connectivity,identity (registered),0.441,0.17275403578014298,1.0,diffuse-linear,True
+transboundary_connectivity,log1p [saturating],0.307,0.0,1.0,diffuse-linear,True
+transboundary_connectivity,sqrt [saturating],0.252,0.000554587594799817,1.0,diffuse-linear,True
+transboundary_connectivity,square [convex],0.719,2.0202701765899334,0.198,concentrated-satiating,True
+climate_corridors,identity (registered),0.258,0.0,1.0,diffuse-linear,True
+climate_corridors,log1p [saturating],0.126,0.0,1.0,diffuse-linear,True
+climate_corridors,sqrt [saturating],0.139,0.0,1.0,diffuse-linear,True
+climate_corridors,square [convex],0.436,0.00924312657999695,1.0,diffuse-linear,True
+irrecoverable_carbon_m_soc,identity (registered),0.893,4.1795569769430205,0.358,concentrated-satiating,True
+irrecoverable_carbon_m_soc,log1p [saturating],0.502,0.0,1.0,diffuse-linear,True
+irrecoverable_carbon_m_soc,sqrt [saturating],0.654,0.6562619871797835,1.0,diffuse-linear,True
+irrecoverable_carbon_m_soc,square [convex],0.993,4.036843102547868,0.711,concentrated-satiating,True
+irrecoverable_carbon_biomass,identity (registered),0.795,0.9804184363402765,1.0,diffuse-linear,True
+irrecoverable_carbon_biomass,log1p [saturating],0.562,0.0,1.0,diffuse-linear,True
+irrecoverable_carbon_biomass,sqrt [saturating],0.625,0.0,1.0,diffuse-linear,True
+irrecoverable_carbon_biomass,square [convex],0.937,5.236600932631472,0.403,concentrated-satiating,True
+aoh_richness_birds,identity (registered),0.235,0.0,1.0,diffuse-linear,True
+aoh_richness_birds,log1p [saturating],0.06,0.0,1.0,low-contrast-inexpressible,False
+aoh_richness_birds,sqrt [saturating],0.123,0.0,1.0,diffuse-linear,True
+aoh_richness_birds,square [convex],0.423,0.0,1.0,diffuse-linear,True
+aoh_richness_mammals,identity (registered),0.185,0.0,1.0,diffuse-linear,True
+aoh_richness_mammals,log1p [saturating],0.054,0.0,1.0,low-contrast-inexpressible,False
+aoh_richness_mammals,sqrt [saturating],0.095,0.0,1.0,low-contrast-inexpressible,False
+aoh_richness_mammals,square [convex],0.347,0.0,1.0,diffuse-linear,True
+human_modification,1 - gHM (registered),0.047,0.0,1.0,low-contrast-inexpressible,False
+human_modification,"1/max(gHM, 0.01) [convex]",0.46,0.0,1.0,diffuse-linear,True
+human_modification,"-log(max(gHM, 0.01)) [convex]",0.193,0.0,1.0,diffuse-linear,True
+human_modification,"1/max(gHM, 0.001) [convex]",0.529,0.6363892650327899,1.0,diffuse-linear,True
+human_modification,"-log(max(gHM, 0.001)) [convex]",0.204,0.0,1.0,diffuse-linear,True
+climate_type_macrorefugia,"floored 1/max(v, v_floor)",0.408,0.4745421186170434,,diffuse-linear,True
+climate_type_macrorefugia,"capped min(1/v, 7.5)",0.408,0.4745421186170434,,diffuse-linear,True

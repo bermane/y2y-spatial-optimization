@@ -1,0 +1,109 @@
+fid,country,MappingUnit,name,label_state,ne_state,state_label_ok,name_collision,n_groups,area_km2,in_y2y_km2,frac_in_y2y,n_parts
+0,Canada,Division No. 3_Alberta,Division No. 3,Alberta,Alberta,True,False,2.0,6641.31,6641.27,0.99999,1
+1,Canada,Division No. 6_Alberta,Division No. 6,Alberta,Alberta,True,False,2.0,2097.12,2097.1,0.99999,2
+2,Canada,Division No. 9_Alberta,Division No. 9,Alberta,Alberta,True,False,1.0,14845.62,14845.62,1.0,1
+3,Canada,Division No. 11_Alberta,Division No. 11,Alberta,Alberta,True,False,,191.51,191.51,0.99998,1
+4,Canada,Division No. 14_Alberta,Division No. 14,Alberta,Alberta,True,False,,16843.36,16843.36,1.0,1
+5,Canada,Division No. 15_Alberta,Division No. 15,Alberta,Alberta,True,False,3.0,28569.79,28569.78,1.0,1
+6,Canada,Division No. 18_Alberta,Division No. 18,Alberta,Alberta,True,False,,16673.75,16673.5,0.99999,1
+7,Canada,Division No. 19_Alberta,Division No. 19,Alberta,Alberta,True,False,,1681.61,1681.47,0.99992,2
+8,Canada,East Kootenay_British Columbia,East Kootenay,British Columbia,British Columbia,True,False,3.0,27849.81,27849.81,1.0,1
+9,Canada,Central Kootenay_British Columbia,Central Kootenay,British Columbia,British Columbia,True,False,4.0,23144.28,23144.28,1.0,1
+10,Canada,Kootenay Boundary_British Columbia,Kootenay Boundary,British Columbia,British Columbia,True,False,1.0,3815.31,3815.29,1.0,1
+11,Canada,Thompson-Nicola_British Columbia,Thompson-Nicola,British Columbia,British Columbia,True,False,,16617.24,16617.21,1.0,1
+12,Canada,Central Okanagan_British Columbia,Central Okanagan,British Columbia,British Columbia,True,False,,135.02,135.02,1.0,1
+13,Canada,North Okanagan_British Columbia,North Okanagan,British Columbia,British Columbia,True,False,,6559.88,6559.88,1.0,1
+14,Canada,Columbia-Shuswap_British Columbia,Columbia-Shuswap,British Columbia,British Columbia,True,False,1.0,29698.42,29698.42,1.0,2
+15,Canada,Cariboo_British Columbia,Cariboo,British Columbia,British Columbia,True,False,,9892.98,9892.98,1.0,1
+16,Canada,Kitimat-Stikine_British Columbia,Kitimat-Stikine,British Columbia,British Columbia,True,False,,42294.19,42294.19,1.0,2
+17,Canada,Bulkley-Nechako_British Columbia,Bulkley-Nechako,British Columbia,British Columbia,True,False,,22669.8,22669.8,1.0,1
+18,Canada,Fraser-Fort George_British Columbia,Fraser-Fort George,British Columbia,British Columbia,True,False,1.0,38002.52,38002.52,1.0,1
+19,Canada,Peace River_Alberta,Peace River,Alberta,British Columbia,False,False,,99905.4,99905.35,1.0,1
+20,Canada,Stikine_British Columbia,Stikine,British Columbia,British Columbia,True,False,,79119.53,79119.53,1.0,1
+21,Canada,Northern Rockies_British Columbia,Northern Rockies,British Columbia,British Columbia,True,False,,44260.17,44260.17,1.0,1
+22,Canada,Yukon_British Columbia,Yukon,British Columbia,Yukon,False,False,,296959.23,296959.19,1.0,1
+23,Canada,Region 1_Yukon,Region 1,Yukon,Northwest Territories,False,False,,12924.74,12924.31,0.99997,1
+24,Canada,Region 2_Yukon,Region 2,Yukon,Northwest Territories,False,False,,80819.06,80818.85,1.0,1
+25,Canada,Region 4_British Columbia,Region 4,British Columbia,Northwest Territories,False,False,,78679.52,78679.5,1.0,1
+26,USA,Ada County_Idaho,Ada County,Idaho,Idaho,True,False,,50.05,50.04,0.99973,2
+27,USA,Adams County_Idaho,Adams County,Idaho,Idaho,True,False,,3547.01,3547.01,1.0,1
+28,USA,Bear Lake County_Idaho,Bear Lake County,Idaho,Idaho,True,False,,1033.69,1033.67,0.99999,1
+29,USA,Benewah County_Idaho,Benewah County,Idaho,Idaho,True,False,,2007.43,2007.43,1.0,1
+30,USA,Bingham County_Idaho,Bingham County,Idaho,Idaho,True,False,,173.02,173.02,1.0,1
+31,USA,Blaine County_Idaho,Blaine County,Idaho,Idaho,True,False,,3923.84,3923.78,0.99999,1
+32,USA,Boise County_Idaho,Boise County,Idaho,Idaho,True,False,,4813.9,4813.89,1.0,1
+33,USA,Bonner County_Idaho,Bonner County,Idaho,Idaho,True,False,1.0,4967.94,4967.94,1.0,1
+34,USA,Bonneville County_Idaho,Bonneville County,Idaho,Idaho,True,False,,2704.42,2704.42,1.0,1
+35,USA,Boundary County_Idaho,Boundary County,Idaho,Idaho,True,False,,3310.15,3310.15,1.0,1
+36,USA,Butte County_Idaho,Butte County,Idaho,Idaho,True,False,,3032.93,3032.85,0.99998,1
+37,USA,Camas County_Idaho,Camas County,Idaho,Idaho,True,False,,1827.1,1827.07,0.99999,4
+38,USA,Canyon County_Idaho,Canyon County,Idaho,Idaho,True,False,,0.02,0.02,0.99173,1
+39,USA,Caribou County_Idaho,Caribou County,Idaho,Idaho,True,False,,2331.17,2331.17,1.0,1
+40,USA,Clark County_Idaho,Clark County,Idaho,Idaho,True,False,,2962.29,2962.21,0.99997,1
+41,USA,Clearwater County_Idaho,Clearwater County,Idaho,Idaho,True,False,,6444.01,6444.01,1.0,1
+42,USA,Custer County_Idaho,Custer County,Idaho,Idaho,True,False,,12790.9,12790.9,1.0,1
+43,USA,Elmore County_Idaho,Elmore County,Idaho,Idaho,True,False,,3755.81,3755.77,0.99999,1
+44,USA,Fremont County_Idaho,Fremont County,Idaho,Idaho,True,False,2.0,3633.78,3633.77,1.0,1
+45,USA,Gem County_Idaho,Gem County,Idaho,Idaho,True,False,,1409.82,1409.81,1.0,1
+46,USA,Idaho County_Idaho,Idaho County,Idaho,Idaho,True,False,,22024.12,22024.12,1.0,1
+47,USA,Jefferson County_Idaho,Jefferson County,Idaho,Idaho,True,False,,42.16,42.15,0.99993,2
+48,USA,Kootenai County_Idaho,Kootenai County,Idaho,Idaho,True,False,,3390.28,3390.28,1.0,1
+49,USA,Latah County_Idaho,Latah County,Idaho,Idaho,True,False,,2723.39,2723.39,1.0,1
+50,USA,Lemhi County_Idaho,Lemhi County,Idaho,Idaho,True,False,,11834.02,11834.02,1.0,1
+51,USA,Lewis County_Idaho,Lewis County,Idaho,Idaho,True,False,,1242.48,1242.48,1.0,1
+52,USA,Madison County_Montana,Madison County,Montana,Idaho,False,True,2.0,701.23,701.23,1.0,1
+53,USA,Nez Perce County_Idaho,Nez Perce County,Idaho,Idaho,True,False,,2200.44,2200.44,1.0,1
+54,USA,Payette County_Idaho,Payette County,Idaho,Idaho,True,False,,823.58,823.58,1.0,1
+55,USA,Shoshone County_Idaho,Shoshone County,Idaho,Idaho,True,False,,6844.86,6844.86,1.0,1
+56,USA,Teton County_Wyoming,Teton County,Wyoming,Idaho,False,True,1.0,1166.01,1166.01,1.0,1
+57,USA,Valley County_Idaho,Valley County,Idaho,Idaho,True,False,,9669.72,9669.72,1.0,1
+58,USA,Washington County_Idaho,Washington County,Idaho,Idaho,True,False,,3816.1,3816.1,1.0,1
+59,USA,Beaverhead County_Montana,Beaverhead County,Montana,Montana,True,False,2.0,14433.84,14433.84,1.0,1
+60,USA,Broadwater County_Montana,Broadwater County,Montana,Montana,True,False,,3206.69,3206.69,1.0,1
+61,USA,Carbon County_Montana,Carbon County,Montana,Montana,True,False,1.0,1899.39,1899.38,0.99999,1
+62,USA,Cascade County_Montana,Cascade County,Montana,Montana,True,False,,1748.28,1748.28,1.0,2
+63,USA,Deer Lodge County_Montana,Deer Lodge County,Montana,Montana,True,False,,1920.19,1920.19,1.0,1
+64,USA,Flathead County_Montana,Flathead County,Montana,Montana,True,False,2.0,13612.97,13612.97,1.0,1
+65,USA,Gallatin County_Idaho,Gallatin County,Idaho,Montana,False,False,,6821.47,6821.47,1.0,1
+66,USA,Glacier County_Montana,Glacier County,Montana,Montana,True,False,1.0,4127.44,4127.42,0.99999,1
+67,USA,Granite County_Montana,Granite County,Montana,Montana,True,False,,4487.86,4487.86,1.0,1
+68,USA,Jefferson County_Montana,Jefferson County,Montana,Montana,True,False,,4297.84,4297.84,1.0,1
+69,USA,Judith Basin County_Montana,Judith Basin County,Montana,Montana,True,False,,2729.41,2729.4,1.0,1
+70,USA,Lake County_Montana,Lake County,Montana,Montana,True,False,2.0,4283.83,4283.83,1.0,1
+71,USA,Lewis and Clark County_Montana,Lewis and Clark County,Montana,Montana,True,False,1.0,9005.03,9005.03,1.0,1
+72,USA,Lincoln County_Montana,Lincoln County,Montana,Montana,True,True,1.0,9518.0,9518.0,1.0,1
+73,USA,Madison County_Montana,Madison County,Montana,Montana,True,True,2.0,9333.12,9333.12,1.0,1
+74,USA,Meagher County_Montana,Meagher County,Montana,Montana,True,False,,6185.66,6185.66,1.0,1
+75,USA,Mineral County_Montana,Mineral County,Montana,Montana,True,False,2.0,3168.7,3168.7,1.0,1
+76,USA,Missoula County_Montana,Missoula County,Montana,Montana,True,False,4.0,6780.44,6780.44,1.0,1
+77,USA,Park County_Montana,Park County,Montana,Montana,True,True,2.0,7286.24,7286.24,1.0,1
+78,USA,Pondera County_Montana,Pondera County,Montana,Montana,True,False,1.0,1162.54,1162.54,1.0,1
+79,USA,Powell County_Montana,Powell County,Montana,Montana,True,False,2.0,6040.65,6040.65,1.0,1
+80,USA,Ravalli County_Idaho,Ravalli County,Idaho,Montana,False,False,,6216.85,6216.85,1.0,1
+81,USA,Sanders County_Idaho,Sanders County,Idaho,Montana,False,False,,7225.79,7225.79,1.0,1
+82,USA,Silver Bow County_Montana,Silver Bow County,Montana,Montana,True,False,,1861.08,1861.08,1.0,1
+83,USA,Stillwater County_Montana,Stillwater County,Montana,Montana,True,False,,1506.7,1506.7,1.0,1
+84,USA,Sweet Grass County_Montana,Sweet Grass County,Montana,Montana,True,False,,3069.38,3069.33,0.99999,1
+85,USA,Teton County_Montana,Teton County,Montana,Montana,True,False,2.0,3049.51,3049.48,0.99999,1
+86,USA,Wheatland County_Montana,Wheatland County,Montana,Montana,True,False,,2024.93,2024.9,0.99999,1
+87,USA,Baker County_Idaho,Baker County,Idaho,Oregon,False,False,,4839.8,4839.76,0.99999,1
+88,USA,Grant County_Oregon,Grant County,Oregon,Oregon,True,False,,24.72,24.71,0.9999,3
+89,USA,Malheur County_Idaho,Malheur County,Idaho,Oregon,False,False,,490.84,490.84,1.0,1
+90,USA,Umatilla County_Oregon,Umatilla County,Oregon,Oregon,True,False,,1327.59,1327.59,1.0,2
+91,USA,Union County_Oregon,Union County,Oregon,Oregon,True,False,,4772.7,4772.69,1.0,1
+92,USA,Wallowa County_Idaho,Wallowa County,Idaho,Oregon,False,False,,8162.04,8162.04,1.0,1
+93,USA,Asotin County_Idaho,Asotin County,Idaho,Washington,False,False,,1564.63,1564.63,1.0,1
+94,USA,Columbia County_Oregon,Columbia County,Oregon,Washington,False,False,,970.43,970.43,1.0,1
+95,USA,Ferry County_Washington,Ferry County,Washington,Washington,True,False,,289.96,289.96,1.0,1
+96,USA,Garfield County_Oregon,Garfield County,Oregon,Washington,False,False,,586.59,586.59,1.0,1
+97,USA,Pend Oreille County_Idaho,Pend Oreille County,Idaho,Washington,False,False,,3692.02,3692.02,1.0,1
+98,USA,Spokane County_Idaho,Spokane County,Idaho,Washington,False,False,,1787.24,1787.24,1.0,1
+99,USA,Stevens County_Washington,Stevens County,Washington,Washington,True,False,,3825.07,3825.07,1.0,1
+100,USA,Walla Walla County_Oregon,Walla Walla County,Oregon,Washington,False,False,,139.54,139.54,1.0,1
+101,USA,Fremont County_Wyoming,Fremont County,Wyoming,Wyoming,True,False,,11476.76,11476.63,0.99999,1
+102,USA,Hot Springs County_Wyoming,Hot Springs County,Wyoming,Wyoming,True,False,,1629.07,1629.02,0.99997,1
+103,USA,Lincoln County_Montana,Lincoln County,Montana,Wyoming,False,True,1.0,6929.49,6929.42,0.99999,1
+104,USA,Park County_Montana,Park County,Montana,Wyoming,False,True,2.0,15948.65,15948.59,1.0,1
+105,USA,Sublette County_Wyoming,Sublette County,Wyoming,Wyoming,True,False,,10994.57,10994.54,1.0,1
+106,USA,Sweetwater County_Wyoming,Sweetwater County,Wyoming,Wyoming,True,False,,363.24,363.22,0.99995,1
+107,USA,Teton County_Wyoming,Teton County,Wyoming,Wyoming,True,True,1.0,10922.65,10922.65,1.0,1

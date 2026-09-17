@@ -1,0 +1,22 @@
+fid,country,MappingUnit,label_state,ne_state,n_groups,area_km2,name_collision
+19,Canada,Peace River_Alberta,Alberta,British Columbia,,99905.4,False
+52,USA,Madison County_Montana,Montana,Idaho,2.0,701.23,True
+56,USA,Teton County_Wyoming,Wyoming,Idaho,1.0,1166.01,True
+65,USA,Gallatin County_Idaho,Idaho,Montana,,6821.47,False
+80,USA,Ravalli County_Idaho,Idaho,Montana,,6216.85,False
+81,USA,Sanders County_Idaho,Idaho,Montana,,7225.79,False
+23,Canada,Region 1_Yukon,Yukon,Northwest Territories,,12924.74,False
+24,Canada,Region 2_Yukon,Yukon,Northwest Territories,,80819.06,False
+25,Canada,Region 4_British Columbia,British Columbia,Northwest Territories,,78679.52,False
+87,USA,Baker County_Idaho,Idaho,Oregon,,4839.8,False
+89,USA,Malheur County_Idaho,Idaho,Oregon,,490.84,False
+92,USA,Wallowa County_Idaho,Idaho,Oregon,,8162.04,False
+93,USA,Asotin County_Idaho,Idaho,Washington,,1564.63,False
+94,USA,Columbia County_Oregon,Oregon,Washington,,970.43,False
+96,USA,Garfield County_Oregon,Oregon,Washington,,586.59,False
+97,USA,Pend Oreille County_Idaho,Idaho,Washington,,3692.02,False
+98,USA,Spokane County_Idaho,Idaho,Washington,,1787.24,False
+100,USA,Walla Walla County_Oregon,Oregon,Washington,,139.54,False
+103,USA,Lincoln County_Montana,Montana,Wyoming,1.0,6929.49,True
+104,USA,Park County_Montana,Montana,Wyoming,2.0,15948.65,True
+22,Canada,Yukon_British Columbia,British Columbia,Yukon,,296959.23,False

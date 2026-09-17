@@ -882,16 +882,19 @@ def _f_1km(C):
     return dc.to_grid(C.G, np.where(C.G.disc, C.Fg, np.nan))
 
 
-def _single_map(C, path, title, draw, handles, cbar_label=None):
+def _single_map(C, path, title, draw, handles, cbar_label=None, surface=None):
+    S_ = surface or _f_surface(C)
     with plt.rc_context(SPEC_RC):
         fig, ax = plt.subplots(figsize=(8.2, 11.5))
         fig.subplots_adjust(left=0.02, right=0.98, top=0.89, bottom=0.085)
-        ax.imshow(_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, interpolation="nearest", zorder=0.5)
+        ax.imshow(S_["img"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.5)
         C.draw_pa(ax); draw(ax)
         C.finish(ax, "", handles, note="", legend_loc="outside")
         cax = fig.add_axes([0.20, 0.048, 0.60, 0.013])
-        cb = fig.colorbar(ScalarMappable(norm=C.FNORM, cmap=C.FCMAP), cax=cax, orientation="horizontal", extend="both")
-        cb.set_label("\n".join(textwrap.wrap(cbar_label or STYLE["ramp_label"], 62)), fontsize=9, color=TABLE["mut"])
+        cb = fig.colorbar(ScalarMappable(norm=S_["norm"], cmap=S_["cmap"]), cax=cax, orientation="horizontal", extend=S_["extend"], ticks=S_.get("ticks"))
+        if S_.get("ticklabels") is not None:
+            cb.ax.set_xticklabels(S_["ticklabels"])
+        cb.set_label("\n".join(textwrap.wrap(cbar_label or S_["label"] or STYLE["ramp_label"], 62)), fontsize=9, color=TABLE["mut"])
         if STYLE["titles"]:
             fig.suptitle(title, fontsize=STYLE["map_suptitle_fs"], y=0.975, color=TABLE["ink"], fontweight=600)
         fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches="tight"); plt.show()
@@ -941,12 +944,14 @@ WIDE_RECTS = {2: [(0.27, 0.19, 0.335, 0.66), (0.635, 0.19, 0.335, 0.66)],      #
               1: [(0.30, 0.17, 0.67, 0.70)]}                                   # one landscape inset (a narrow region: the Alberta mirror)
 
 
-def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=False):
-    """Slide-shaped Act 1 map: the frame at left, zoom insets around STYLE['inset_clusters'] at right, legend + ramp below."""
+def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=False, surface=None):
+    """Slide-shaped Act 1 map: the frame at left, zoom insets around STYLE['inset_clusters'] at right, legend + ramp below.
+    `surface` (dict: img, cmap, norm, extend, ticks, ticklabels, label) swaps the F ramp for another 1 km layer; default = F."""
+    S_ = surface or _f_surface(C)
     with plt.rc_context(SPEC_RC):
         fig = plt.figure(figsize=(13.33, 7.5))
         ax = fig.add_axes([0.03, 0.04, 0.215, 0.84]); ax.set_anchor("E")      # the frame hugs inset A
-        ax.imshow(_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, interpolation="nearest", zorder=0.5)
+        ax.imshow(S_["img"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.5)
         C.draw_pa(ax); STYLE["_fs_scale"] = 0.9
         try:
             draw(ax); C.finish(ax, "", None, note="", legend_loc="none", names=STYLE["wide_main_names"], towns=STYLE["wide_main_towns"],
@@ -959,7 +964,8 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             win, p = _inset_window(C, num, aspect_hw)
             iax = fig.add_axes(rect); STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"]; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"]
             try:
-                _draw_inset(C, iax, win, draw, tag, with_ipca_names, codes=STYLE["inset_codes"].get(tag), skip_towns=STYLE["inset_town_skip"].get(tag, ()))
+                _draw_inset(C, iax, win, draw, tag, with_ipca_names, codes=STYLE["inset_codes"].get(tag), skip_towns=STYLE["inset_town_skip"].get(tag, ()),
+                            img=S_["img"], cmap=S_["cmap"], norm=S_["norm"])
             finally:
                 STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None)
             px0, px1, pyt, pyb = win                                                   # the window on the frame, tagged
@@ -967,10 +973,10 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             ax.text(px0 + 8, pyt + 8, tag, fontsize=8, fontweight=600, color="white", ha="left", va="top", zorder=8,
                     bbox=dict(boxstyle="square,pad=0.15", facecolor="#333333", edgecolor="none"))
         cax = fig.add_axes([0.27 + 0.015, 0.12, 0.335 - 0.03, 0.04])                           # inset A's full width; bar + ticks + caption centred in the strip below it
-        ticks = np.arange(0, 0.71, 0.1); ticks[0] = C.FNORM.vmin                                  # the norm starts a hair above 0 (0 = never, grey); label it 0.0
-        cb = fig.colorbar(ScalarMappable(norm=C.FNORM, cmap=C.FCMAP), cax=cax, orientation="horizontal", extend="both", ticks=ticks)
-        cb.ax.set_xticklabels([f"{t:.1f}" for t in np.arange(0, 0.71, 0.1)])
-        cb.set_label(STYLE["ramp_label_short"], fontsize=STYLE["cbar_fs"], color=TABLE["cap"])
+        cb = fig.colorbar(ScalarMappable(norm=S_["norm"], cmap=S_["cmap"]), cax=cax, orientation="horizontal", extend=S_["extend"], ticks=S_.get("ticks"))
+        if S_.get("ticklabels") is not None:
+            cb.ax.set_xticklabels(S_["ticklabels"])
+        cb.set_label(cbar_label or S_["label"] or STYLE["ramp_label_short"], fontsize=STYLE["cbar_fs"], color=TABLE["cap"])
         cb.ax.tick_params(labelsize=STYLE["cbar_fs"] - 1, length=4)
         fig.legend(handles=handles, loc="center", bbox_to_anchor=(0.635 + 0.335 / 2, 0.103), fontsize=STYLE["wide_legend_fs"],
                    frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.6, handleheight=1.3, borderpad=0.7, labelspacing=0.6,
@@ -980,11 +986,48 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
         fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches="tight"); plt.show()
 
 
-def _act1_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=False):
+def _act1_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=False, surface=None):
     if STYLE["map_layout"] == "wide" and len(STYLE["inset_clusters"]):
-        _wide_map(C, path, title, draw, handles, cbar_label, with_ipca_names)
+        _wide_map(C, path, title, draw, handles, cbar_label, with_ipca_names, surface=surface)
     else:
-        _single_map(C, path, title, draw, handles, cbar_label)
+        _single_map(C, path, title, draw, handles, cbar_label, surface=surface)
+
+
+# ---- surfaces the Act 1 layout can carry: F (the default) and the values-convergence count ------------------------------
+def _f_surface(C):
+    ticks = np.arange(0, 0.71, 0.1); ticks[0] = C.FNORM.vmin                                  # the norm starts a hair above 0 (0 = never, grey); label it 0.0
+    return dict(img=_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, extend="both", ticks=ticks, ticklabels=[f"{t:.1f}" for t in np.arange(0, 0.71, 0.1)], label=STYLE["ramp_label_short"])
+
+
+CONV_COLORS = ["#f2f2f2", "#dbe7f1", "#9ecae1", "#4292c6", "#08519c", "#08306b"]              # 0..5 themes (the Act 0 convergence map's ramp)
+
+
+def conv_surface(C):
+    """The values-convergence count at 1 km (Ethan 2026-09-15): the number of the five PROACT themes (0-5) in which a cell is in the
+    top 30% of the allocatable landscape by percentile (19's value_convergence.tif; Act 0), as a categorical surface for the Act 1 layout."""
+    img = dc.to_grid(C.G, np.where(C.G.disc, C.CONV.astype(np.float32), np.nan))
+    km2 = C.SV["convergence_km2"]
+    return dict(img=img, cmap=ListedColormap(CONV_COLORS), norm=BoundaryNorm(np.arange(-0.5, 6.5, 1), 6), extend="neither", ticks=list(range(6)),
+                ticklabels=[f"{k}\n{km2[str(k)]:,} km²" if str(k) in km2 else str(k) for k in range(6)],
+                label="number of the five value themes (of 5) in which the cell is in the top 30% of allocatable land")
+
+
+def values_map(C, path, title=None, with_clusters=False):
+    """Act 1 in the VALUES currency (Ethan 2026-09-15, the Alberta deck leads with it): the same frame + inset layout as core_map_F, but the
+    surface is the convergence count (0-5 themes top-30%) instead of F; (a) with the overlay outlined, (b) with the core clusters
+    outlined and numbered. The F maps stay in the record (core_map_F / core_map_clusters)."""
+    S_ = conv_surface(C); high = C.SV["high_value_km2"]; core_km2 = C.S["frequent_km2"]["guarded"]
+    if with_clusters:
+        draw = lambda ax: C.draw_clusters(ax, "act1", C.picks_for("Act 1"), fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"])
+        handles = C.BASE_HANDLES[:1] + [cluster_handle("Core clusters")]
+        ttl = title or (f"Act 1 — where the values converge, with the core clusters (F ≥ 0.70: {core_km2:,} km²)\n"
+                        f"{high:,} km² of unprotected land is top-30% for at least one theme")
+    else:
+        draw = lambda ax: C.draw_ipca(ax)
+        handles = C.BASE_HANDLES[:1] + [C.IPCA_HANDLE]
+        ttl = title or (f"Act 1 — where the values converge: number of themes (of 5) rating the cell top-30%\n"
+                        f"{high:,} km² of unprotected land is top-30% for at least one theme")
+    _act1_map(C, path, ttl, draw=draw, handles=handles, with_ipca_names=not with_clusters, surface=S_)
 
 
 def core_map_F(C, path, title=None):

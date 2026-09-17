@@ -507,4 +507,12 @@ knobs in `dp.STYLE` set before load (named-PA floor 50 km², window scale bar 10
 Alberta towns, postal codes on the frame), the key cluster = the largest regional core cluster (`inset_clusters=(KEY,)`, one
 line to override). M18.4's deferral is closed. `run_v31.sh` runs 14 after 13.
 
+**M18.7 The Alberta deck's Act 1 leads with the VALUES (Ethan 2026-09-15).** `director_plot.values_map` = the Act 1 layout (frame + inset,
+overlay or core clusters on top) with the surface swapped from F to the values-convergence count — the number of the five PROACT
+themes (0–5) in which a cell is in the top 30% of the allocatable landscape by percentile (19/12's `value_convergence.tif`, the Act 0
+layer) — on a categorical bar with the km² per class. The layout helpers take an optional `surface` (F is the default, so the
+Y2Y-wide assets are unchanged). 14's 02a/02b are the values maps; the F maps stay one call away and in 13's record. Rationale on
+Alberta: with a ~30 km² core, F reads as an almost blank map; the convergence count shows where the values actually stack up on
+allocatable land, and the core clusters are drawn on top of it.
+
 *Last updated 2026-09-15 (M18).*

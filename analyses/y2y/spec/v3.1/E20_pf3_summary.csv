@@ -1,0 +1,2 @@
+arm,scenario,label,tier_km2,own_land_km2,registered_tier_km2,registered_own_km2,jaccard_vs_registered,jaccard_vs_step2_baseline,core_kept_frequent_pct,spike_in_tier_pct,spike_frequent_pct,spike_max_f,tier_share_in_spike_pct,tier_share_densest_refugia_pct,tier_multi_claim_pct,D,transboundary_share
+e20_log,s0,PF-1: saturating refugia (log1p(1/v)),36287,0,42733,0,0.8463911021800593,,86.91169418373639,24.412393162393162,24.412393162393162,1.0,1.2594041943395706,84.52338302973517,90.27750985201311,0.8379155993461609,
