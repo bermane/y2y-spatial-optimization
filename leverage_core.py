@@ -62,7 +62,7 @@ def pu_mask(handoff_dir=None):
 
     02 applies ONE mask to every feature and to `cost_uniform` alike, so the cost layer's valid
     cells ARE the PU set -- no need to re-derive it by intersecting the features."""
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     return np.isfinite(_read(handoff_dir / "cost_uniform.tif"))
 
 
@@ -76,7 +76,7 @@ def continuous_features():
 
 
 def efg_paths(handoff_dir=None):
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     return [p for p in sorted((handoff_dir / config.EFG_SUBDIR).glob("*.tif"))    # block version: config.EFG_SUBDIR
             if p.stem not in config.EXCLUDE_FEATURES]
 
@@ -120,7 +120,7 @@ def leverage_table(handoff_dir=None, budget_pct=None, include_efg=True, pu=None)
     group ranks below both carbon pools in Morris despite topping this table. Leverage bounds the
     achievable swing; it says nothing about the area price of achieving it. Use
     `target_cost_curve` for the price."""
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     pu = pu_mask(handoff_dir) if pu is None else pu
 
     rows = []
@@ -178,7 +178,7 @@ def target_cost_curve(feature, multiples=(10, 5, 3, 2, 1), handoff_dir=None, pu=
 
     Only meaningful for layers still in interpretable native units (the carbon pools, t/ha). A
     transformed layer (intactness, 1/v refugia) has no "regional mean density" worth quoting."""
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     pu = pu_mask(handoff_dir) if pu is None else pu
     v = _read(handoff_dir / f"{feature}.tif")[pu]
     v = np.clip(v[np.isfinite(v)], 0.0, None)
@@ -283,7 +283,7 @@ def transform_response(name, handoff_dir=None, pu=None, audit=None):
     per-cell species value is ecologically arguable): reported, identity retained for paper 1.
 
     Returns {label: dict(leverage, cls, target, admissible, note)}."""
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     pu = pu_mask(handoff_dir) if pu is None else pu
     audit = audit or config.AUDIT
     orient = config.DATASETS[name].get("orient")
@@ -354,7 +354,7 @@ def classify(name, handoff_dir=None, pu=None, audit=None):
       R3  inexpressible  : leverage < leverage_min after the adopted transform -- no admissible
                            lever; excluded from scenario tilts and disclosed (expected: gHM).
       else diffuse-linear: 100% target; weight is the value dial."""
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     pu = pu_mask(handoff_dir) if pu is None else pu
     audit = audit or config.AUDIT
     v = _read(handoff_dir / f"{name}.tif")[pu]
@@ -371,7 +371,7 @@ def characterization_table(handoff_dir=None, audit=None):
     EFGs are audited per raster for rare-attainability but summarised as ONE block row, because
     the block is weight-levered as a group (each EFG at 1/n) and is locked adequacy foundation in
     the design; the unsaturated minority is the disclosure the spec requires."""
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     pu = pu_mask(handoff_dir)
     audit = audit or config.AUDIT
 
@@ -407,7 +407,7 @@ def audit_archive(out_dir, tbl=None, handoff_dir=None):
     recompute. Layer hashes pin exactly which rasters the classification was frozen against."""
     import hashlib, json as _json
     from datetime import datetime, timezone
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     out_dir = Path(out_dir); out_dir.mkdir(parents=True, exist_ok=True)
     pu = pu_mask(handoff_dir)
 
@@ -438,7 +438,7 @@ def trajectory_figure(fig_path=None, handoff_dir=None, audit=None):
     (a long high shelf: >= 5x mean sustained over 4% of the region) and biomass does not (a spike
     that collapses almost immediately), with no equations in sight."""
     import matplotlib.pyplot as plt
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     pu = pu_mask(handoff_dir)
     audit = audit or config.AUDIT
 
@@ -507,7 +507,7 @@ def feature_card(name, out_dir, handoff_dir=None, pu=None, audit=None):
     each test's actual values, so card review is a read, not a recomputation)."""
     import matplotlib.pyplot as plt
     from scipy.stats import skew as _skew
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     pu = pu_mask(handoff_dir) if pu is None else pu
     audit = audit or config.AUDIT
     out_dir = Path(out_dir); out_dir.mkdir(parents=True, exist_ok=True)
@@ -659,7 +659,7 @@ def feature_cards(cards_dir, handoff_dir=None, audit=None):
     resolved. EFG block card: per-raster extent + cap_max, occurrence-richness thumbnail,
     rare-attainable verdict."""
     import matplotlib.pyplot as plt
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     pu = pu_mask(handoff_dir)
     audit = audit or config.AUDIT
     cards_dir = Path(cards_dir); cards_dir.mkdir(parents=True, exist_ok=True)
@@ -816,7 +816,7 @@ def scenario_weights(block_shares, within_block=None, targets=None,
     failure means a wiring bug, not a modelling problem). The caveat stays the spec's: this is
     FIRST-ORDER calibration ignoring competition and spatial correlation; intended-vs-realized
     is verified per solved cell and the biomass weight iterated once if the miss is large."""
-    handoff_dir = Path(handoff_dir or config.HANDOFF_DIR)
+    handoff_dir = Path(handoff_dir or config.Y2Y_STACK_DIR)
     blocks = blocks if blocks is not None else config.BLOCKS
     targets = targets or {}
     within_block = within_block or {}

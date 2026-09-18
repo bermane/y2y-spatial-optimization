@@ -49,7 +49,8 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
     def rd(name):
         with rasterio.open(GEO / name) as src:
             return src.read(1)[G.pu]
-    Fg, Fp, Ug = rd("F_guarded.tif"), rd("F_unguarded.tif"), rd("union_membership_guarded.tif")
+    Fg, Ug = rd("F_guarded.tif"), rd("union_membership_guarded.tif")
+    Fp = rd("F_unguarded.tif") if (GEO / "F_unguarded.tif").exists() else (rd("f_unguarded_reference.tif") if (GEO / "f_unguarded_reference.tif").exists() else None)   # v4: reference cell only
     with rasterio.open(GEO / "act_tiers_guarded.tif") as src:
         TIERS = src.read(1)
     LAB = dict(np.load(GEO / "cluster_labels.npz"))
@@ -199,7 +200,7 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
 
     def star_rows(rows, color):
         """One star per pick; a cluster with its own colour in STYLE["cluster_colors"] keeps it here (map ↔ stars ↔ numbers)."""
-        return [dict(title=f"Cluster {int(r.number)}\n{r.area_km2:,.0f} km² · mean F {r.mean_guarded_F:.2f}"
+        return [dict(title=f"{cluster_label(r, wrap=22)}\n{r.area_km2:,.0f} km² · mean F {r.mean_guarded_F:.2f}"
                            + (f"\nADEQUACY PIN: only {r.adequacy_pin_class} on the extent" if bool(r.get("adequacy_pin", False)) else ""),
                      values={a: r[f"pct_{a}"] for a in dc.STAR_AXES}, color=STYLE["cluster_colors"].get(int(r.number), color))
                 for _, r in rows.iterrows()]
@@ -241,6 +242,19 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
     return SimpleNamespace(**ns)
 
 
+def cluster_label(r, wrap=None):
+    """'Cluster N (Region)' -- the region words from the communities lookup (package spec v1.12 decision e) when T-D1 carries
+    them and STYLE['cluster_region_labels'] is on; 'Cluster N' otherwise. `wrap` folds the region onto its own line(s)."""
+    n = int(r.number) if hasattr(r, "number") else int(r["number"])
+    mode = STYLE.get("cluster_region_labels", "region")            # "region" = the region word; "full" = "Sub-region(s), Region"; False = none
+    col = {"region": "region", "full": "region_label", True: "region"}.get(mode)
+    reg = (getattr(r, col, "") if hasattr(r, col) else r.get(col, "")) if col else ""
+    reg = "" if reg is None or (isinstance(reg, float) and np.isnan(reg)) else str(reg)
+    if not reg or reg == "nan":
+        return f"Cluster {n}"
+    return f"Cluster {n}\n({textwrap.fill(reg, wrap)})" if wrap else f"Cluster {n} ({reg})"
+
+
 def ratio_fmt(v):
     """'0.84×' below 1, '1.0×' / '2.3×' at or above 1 -- decided AFTER rounding to two decimals, so 0.998 prints 1.0× not 1.00×."""
     if pd.isna(v): return "—"
@@ -269,29 +283,38 @@ def table_png(df, path, title, fs=7.5, scale=1.45, colw=None, cell_colors=None, 
 
 
 # ---- the values table (Laura's objectives hierarchy; biodiversity as its own sub-objective) -------------------------
+SCENARIOS_FILE = "scenarios_v4.json" if dc.VP.version == "v4" else "scenarios_v2.json"
+BLOCK_SHARE = "20%" if dc.VP.version == "v4" else "25%"        # each discretionary block's share in the balanced position
+
+
 def values_rows(C):
-    sc = json.loads((dc.SPEC / "scenarios_v2.json").read_text()); t0 = sc["S0_balanced"]["targets"]; t4 = sc["S4_carbon"]["targets"]
+    sc = json.loads((dc.SPEC / SCENARIOS_FILE).read_text()); t0 = sc["S0_balanced"]["targets"]; t4 = sc["S4_carbon"]["targets"]
     efg_t = json.loads((dc.SPEC_REC / "efg_targets.json").read_text())["targets"] if (dc.SPEC_REC / "efg_targets.json").exists() else {}
     pa_pct = C.S["protected_baseline"]["pa_pct_of_region"]; MS = "irrecoverable_carbon_m_soc"
     return [
      ("PROTECT — wildlife have sufficient core habitat", "Quantity of core habitat", "Protected land: today's protected areas are locked in and every plan protects 30% of Y2Y",
       "Y2Y protected areas 2025 (IUCN definitions)", f"The budget: 30% of the region, including the {pa_pct:.0f}% already protected"),
      ("", "Quality of core habitat", "Climate refugia: refugial residence time (1 / backward climate velocity), 2071–2100, two emission futures",
-      "AdaptWest 2023, CMIP6 backward climate velocity (8-GCM ensemble)", "Core-habitat theme: 25% of the objective in the balanced position; the two futures (SSP2-4.5, SSP5-8.5) are separate value positions"),
+      "AdaptWest 2023, CMIP6 backward climate velocity (8-GCM ensemble)", f"Core-habitat theme: {BLOCK_SHARE} of the objective in the balanced position; the two futures (SSP2-4.5, SSP5-8.5) are separate value positions"),
      ("", "Quality of core habitat", "Naturalness: 1 − human modification", "Theobald et al., global human modification (gHM v3)",
       "In every formulation at its baseline weight; it cannot move the answer — disclosed, not a driver"),
      ("", "Biodiversity", "Mammal richness (species per km², area-of-habitat maps, all species)", "Lumbierres et al., AOH species richness (mammals)",
-      "Biodiversity theme: 25% (balanced); the two layers weighted equally"),
+      f"Biodiversity theme: {BLOCK_SHARE} (balanced); the two layers weighted equally"),
      ("", "Biodiversity", "Bird richness (species per km², area-of-habitat maps, all species)", "Lumbierres et al., AOH species richness (birds)", ""),
      ("", "Representativeness", f"Presence of {dc.N_EFG} ecosystem functional groups (curated from 40 under the input pre-screen, rule R0)",
       "IUCN Global Ecosystem Typology, indicative maps (Keith et al. 2022)",
       (f"A representation floor, not a weighted theme: rarity-scaled targets of {100*min(efg_t.values()):.0f}–{100*max(efg_t.values()):.0f}% per class, rarity judged in the region + 250 km"
        if efg_t else "A representation floor, not a weighted theme")),
-     ("CONNECT — wildlife corridors connect core habitats", "Quality of connectivity", "Climate corridors: current-flow centrality", "Carroll et al. 2018",
-      "Connectivity theme: 25% (balanced); the two layers weighted equally"),
-     ("", "Quality of connectivity", "Habitat connectivity: transboundary omnidirectional current density", "Pither et al. 2023 / O'Brien et al. (transboundary extension)", ""),
+     *([("CONNECT — wildlife corridors connect core habitats", "Structural connectivity", "Habitat connectivity: transboundary omnidirectional current density, valued convexly (current squared: a pinch point is worth more than its share of flow)",
+         "Pither et al. 2023 / O'Brien et al. (transboundary extension)", "Structural-connectivity theme: 20% (balanced); no target -- pinch points are places, secured by the shape"),
+        ("", "Climate corridors", "Climate corridors: current-flow centrality (breadth of climate-analog flow through a cell)", "Carroll et al. 2018",
+         "Climate-corridors theme: 20% (balanced); its own value since manifest v4 (the two connectivity layers are spatially independent)")]
+       if dc.VP.version == "v4" else
+       [("CONNECT — wildlife corridors connect core habitats", "Quality of connectivity", "Climate corridors: current-flow centrality", "Carroll et al. 2018",
+         "Connectivity theme: 25% (balanced); the two layers weighted equally"),
+        ("", "Quality of connectivity", "Habitat connectivity: transboundary omnidirectional current density", "Pither et al. 2023 / O'Brien et al. (transboundary extension)", "")]),
      ("ADDRESS CLIMATE CHANGE — keep carbon out of the air", "Carbon", "Irrecoverable carbon in biomass", "Berman & McDowell, irrecoverable carbon",
-      "Carbon theme: 25% (balanced); the two pools split 74 / 26 by mass"),
+      f"Carbon theme: {BLOCK_SHARE} (balanced); the two pools split 74 / 26 by mass"),
      ("", "Carbon", "Irrecoverable carbon in mineral soil", "Berman & McDowell, irrecoverable carbon",
       f"Security target: {100*t0[MS]:.0f}% of the regional total ({100*t4[MS]:.0f}% in the carbon-forward position)"),
      ("NOT IN THIS ANALYSIS", "Communities · Water · Cost", "Bear-smart communities; water; dollars", "—",
@@ -339,16 +362,17 @@ STYLE = dict(
     locator_codes={1: dict(force=["AK"]), 2: dict(skip=["WA"]), 3: dict(skip=["WA"])},   # per-window code edits (Ethan 2026-09-15): AK on the coast of 1; no WA on 2 and 3
     inset_codes={"A": dict(force=["AK"], skip=["WA"]), "B": dict(skip=["WA"])},       # the wide-map insets: AK on A, no WA
     inset_town_skip={"A": ("Iskut", "Telegraph Creek"), "B": ("Jasper", "Banff")},   # towns left off a wide-map inset (Ethan 2026-09-15)
-    scenario_colors={"s1": "#1b9e77", "s2": "#7570b3", "s3": "#d95f02", "s4": "#e7298a"},   # Act 2 tiers by owning scenario (Dark2; distinct from core yellow)
+    scenario_colors={"s1": "#1b9e77", "s2": "#7570b3", "s2c": "#66a61e", "s3": "#d95f02", "s4": "#e7298a"},   # Act 2 tiers by owning scenario (Dark2; distinct from core yellow); s2c = climate corridors (v4)
     scenario_multi_color="#1f3a63", opportunity_color="#f7f7f7", never_color="#f7f7f7", show_opportunity=False,   # Ethan 2026-09-15: the opportunity tier off the Act 2 map
     scenario_insets=(5, 6, 11),                                                     # Act 2 map: windows on these scenario picks (A, B, C)
     scenario_inset_codes={"A": dict(force=["AK"], skip=["WA"]), "B": dict(skip=["WA"])},
     scenario_inset_town_skip={"A": ("Iskut", "Telegraph Creek"), "B": ("Jasper", "Banff")},
     scenario_legend_fs=16,     # same size as the Act 1 map legend (Ethan 2026-09-15); no legend title
-    scenario_legend_order=("s1", "s3", "s2", "s4"),   # core-habitat, biodiversity, connectivity, carbon (Ethan 2026-09-15)
+    scenario_legend_order=(("s1", "s3", "s2", "s2c", "s4") if dc.VP.version == "v4" else ("s1", "s3", "s2", "s4")),   # core-habitat, biodiversity, (structural) connectivity, (climate corridors,) carbon (Ethan 2026-09-15)
     map_title_fs=11.5, map_suptitle_fs=12.5,
     ramp_label="F = frequency in near-optimal plans; light grey = never (F = 0), yellow = core (F ≥ 0.70)",
     ramp_label_short="F = frequency in 30×30 plans", cbar_fs=15,          # the wide Act 1 maps
+    cluster_region_labels="region",   # "Cluster N (Region)" wherever a cluster is named (package spec v1.12 decision e): "region" = the region word, "full" = "Sub-region(s), Region", False = "Cluster N"
     values_table="spec",      # the objectives-table rendering: "spec" (the table spec, 2026-09-14) | "poster" | "digest" | "plain"
     conseq_cmap="RdYlGn", conseq_tint=0.55, conseq_scale_rows="all",   # consequences: red -> green per column, over "all" rows or "clusters" only
     legend_fs=13,              # map legends (bigger, outside the region)
@@ -479,13 +503,15 @@ def scenario_consequences(C, path, title="What the value-specific clusters hold"
 # =====================================================================================================================
 def values_metrics(C):
     """The scannable metric per row (the poster's 'metric line' / the digest's numeric cell), in row order of values_rows."""
-    sc = json.loads((dc.SPEC / "scenarios_v2.json").read_text()); t0 = sc["S0_balanced"]["targets"]; t4 = sc["S4_carbon"]["targets"]
+    sc = json.loads((dc.SPEC / SCENARIOS_FILE).read_text()); t0 = sc["S0_balanced"]["targets"]; t4 = sc["S4_carbon"]["targets"]
     MS = "irrecoverable_carbon_m_soc"
     efg_t = json.loads((dc.SPEC_REC / "efg_targets.json").read_text())["targets"] if (dc.SPEC_REC / "efg_targets.json").exists() else {}
     tgt = f"targets {100*min(efg_t.values()):.0f}–{100*max(efg_t.values()):.0f}% per class" if efg_t else "representation floor"
-    return ["30% of the region", "25% of the objective", "baseline weight · not a driver", "12.5% of the objective", "12.5% of the objective",
-            tgt, "12.5% of the objective", "12.5% of the objective", f"{100*0.25*0.258:.1f}% of the objective",
-            f"{100*0.25*0.742:.1f}% · target {100*t0[MS]:.0f}% ({100*t4[MS]:.0f}%)", "—"]
+    b = 0.20 if dc.VP.version == "v4" else 0.25                                                    # the balanced block share
+    conn = ["20% of the objective", "20% of the objective"] if dc.VP.version == "v4" else ["12.5% of the objective", "12.5% of the objective"]
+    return ["30% of the region", f"{100*b:.0f}% of the objective", "baseline weight · not a driver", f"{100*b/2:g}% of the objective", f"{100*b/2:g}% of the objective",
+            tgt, *conn, f"{100*b*0.258:.1f}% of the objective",
+            f"{100*b*0.742:.1f}% · target {100*t0[MS]:.0f}% ({100*t4[MS]:.0f}%)", "—"]
 
 
 def _tracked(s, gap=" "):
@@ -806,7 +832,7 @@ def cluster_handler_map(*handles):
     return {h: _ClusterSwatches() for h in handles if getattr(h, "_cluster_swatches", False)}
 
 
-SOURCE_NOTE = "Y2Y spatial decision tool, frequency ensemble on manifest v3.1 (in review)."
+SOURCE_NOTE = f"Y2Y spatial decision tool, frequency ensemble on manifest {dc.VP.version} (in review)."
 REF_LABELS = {"Existing protected areas": "Existing\nprotected areas", "Proposed IPCAs (unprotected part)": "Proposed IPCAs\n(unprotected)"}   # reference-column header text (other names wrap)
 
 # maps and star plots share the spec's type: Cronos Pro, weights 400/600, ink titles, cap text, mut fine print
@@ -822,7 +848,7 @@ def consequences_table(C, rows, path, label, title):
     ref = C.TD7[C.TD7.act.eq("reference")]
     body = pd.concat([rows, ref], ignore_index=True)
     nclu = len(rows)
-    cols = [f"Cluster {int(n)}" for n in rows.number] + [REF_LABELS.get(str(nm), textwrap.fill(str(nm).replace(" (unprotected part)", "\n(unprotected part)"), 20)) for nm in ref.name]
+    cols = [cluster_label(r, wrap=18) for r in rows.itertuples()] + [REF_LABELS.get(str(nm), textwrap.fill(str(nm).replace(" (unprotected part)", "\n(unprotected part)"), 20)) for nm in ref.name]
     if "driving_label" in rows and rows.driving_label.nunique() > 1:
         groups, j0 = [], 0
         for k, (lab, grp) in enumerate(rows.groupby("driving_label", sort=False)):
@@ -833,12 +859,22 @@ def consequences_table(C, rows, path, label, title):
     stub = ["Area (km²)"] + [a[0].upper() + a[1:] for a in dc.STAR_AXES]
     cells = [[f"{v:,.0f}" for v in body.area_km2]]
     cells += [[ratio_fmt(v) for v in body[f"ratio_{a}"]] for a in dc.STAR_AXES]
+    # package spec v1.14 reading guard: a high carbon ratio can mean uniformly carbon-rich or ordinary-with-a-hotspot, so the
+    # concentration reading (share of the area inside the soil-carbon theta-tail, T-D1's driver attribution) sits beside it
+    tail_col = "driver_m_soc theta-tail"
+    if tail_col in rows:
+        k = stub.index("Carbon") + 1
+        tail_vals = list(rows[tail_col]) + [np.nan] * len(ref)
+        stub.insert(k, "  of which in the soil-carbon tail (% of area)")
+        cells.insert(k, [("—" if pd.isna(v) else f"{v:.0f}%") for v in tail_vals])
     numeric = [[True] * len(cols) for _ in stub]
     # fills: per ratio row, red -> green on log ratio, min -> max over the columns in scope, blended toward the mat
     cmap = plt.get_cmap(STYLE["conseq_cmap"]); tint = STYLE["conseq_tint"]; mat = np.array(matplotlib.colors.to_rgb(TABLE["mat"]))
     scope = np.arange(len(body)) if STYLE["conseq_scale_rows"] == "all" else np.arange(nclu)
     fills = [[None] * len(cols) for _ in stub]
-    for r, a in enumerate(dc.STAR_AXES, start=1):
+    axis_rows = {a: stub.index(a[0].upper() + a[1:]) for a in dc.STAR_AXES}          # row index per ratio axis (the tail row is untinted)
+    for a in dc.STAR_AXES:
+        r = axis_rows[a]
         x = np.log(body[f"ratio_{a}"].astype(float).values); lo, hi = np.nanmin(x[scope]), np.nanmax(x[scope])
         for j, v in enumerate(x):                      # 1.0× (log 0) = the inflection; reds scale to the row min, greens to the row max
             t = 0.5 + 0.5 * (v / hi if v > 0 and hi > 0 else (-v / lo if v < 0 and lo < 0 else 0.0))
@@ -999,17 +1035,18 @@ def _f_surface(C):
     return dict(img=_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, extend="both", ticks=ticks, ticklabels=[f"{t:.1f}" for t in np.arange(0, 0.71, 0.1)], label=STYLE["ramp_label_short"])
 
 
-CONV_COLORS = ["#f2f2f2", "#dbe7f1", "#9ecae1", "#4292c6", "#08519c", "#08306b"]              # 0..5 themes (the Act 0 convergence map's ramp)
+CONV_COLORS_ALL = ["#f2f2f2", "#dbe7f1", "#9ecae1", "#4292c6", "#08519c", "#08306b", "#041e42"]  # 0..6 themes (the Act 0 convergence map's ramp)
+CONV_COLORS = CONV_COLORS_ALL[:len(dc.VALUE_THEMES) + 1]                                          # 0..5 before v4, 0..6 under v4
 
 
 def conv_surface(C):
     """The values-convergence count at 1 km (Ethan 2026-09-15): the number of the five PROACT themes (0-5) in which a cell is in the
     top 30% of the allocatable landscape by percentile (19's value_convergence.tif; Act 0), as a categorical surface for the Act 1 layout."""
     img = dc.to_grid(C.G, np.where(C.G.disc, C.CONV.astype(np.float32), np.nan))
-    km2 = C.SV["convergence_km2"]
-    return dict(img=img, cmap=ListedColormap(CONV_COLORS), norm=BoundaryNorm(np.arange(-0.5, 6.5, 1), 6), extend="neither", ticks=list(range(6)),
-                ticklabels=[f"{k}\n{km2[str(k)]:,} km²" if str(k) in km2 else str(k) for k in range(6)],
-                label="number of the five value themes (of 5) in which the cell is in the top 30% of allocatable land")
+    km2 = C.SV["convergence_km2"]; n = len(dc.VALUE_THEMES)
+    return dict(img=img, cmap=ListedColormap(CONV_COLORS), norm=BoundaryNorm(np.arange(-0.5, n + 1.5, 1), n + 1), extend="neither", ticks=list(range(n + 1)),
+                ticklabels=[f"{k}\n{km2[str(k)]:,} km²" if str(k) in km2 else str(k) for k in range(n + 1)],
+                label=f"number of the {n} value themes (of {n}) in which the cell is in the top 30% of allocatable land")
 
 
 def values_map(C, path, title=None, with_clusters=False):
@@ -1025,7 +1062,7 @@ def values_map(C, path, title=None, with_clusters=False):
     else:
         draw = lambda ax: C.draw_ipca(ax)
         handles = C.BASE_HANDLES[:1] + [C.IPCA_HANDLE]
-        ttl = title or (f"Act 1 — where the values converge: number of themes (of 5) rating the cell top-30%\n"
+        ttl = title or (f"Act 1 — where the values converge: number of themes (of {len(dc.VALUE_THEMES)}) rating the cell top-30%\n"
                         f"{high:,} km² of unprotected land is top-30% for at least one theme")
     _act1_map(C, path, ttl, draw=draw, handles=handles, with_ipca_names=not with_clusters, surface=S_)
 
@@ -1053,7 +1090,9 @@ VALUES_SIMPLE = [
     ("", "Quality of core habitat", ["Climate refugia", "Naturalness"]),
     ("", "Biodiversity", ["Mammal richness", "Bird richness"]),
     ("", "Representativeness", ["Ecosystem functional groups"]),
-    ("CONNECT — wildlife corridors connect core habitats", "Quality of connectivity", ["Climate corridors", "Habitat connectivity"]),
+    *([("CONNECT — wildlife corridors connect core habitats", "Structural connectivity", ["Habitat connectivity"]),
+       ("", "Climate corridors", ["Climate corridors"])] if dc.VP.version == "v4"
+      else [("CONNECT — wildlife corridors connect core habitats", "Quality of connectivity", ["Climate corridors", "Habitat connectivity"])]),
     ("ADDRESS CLIMATE CHANGE — keep carbon out of the air", "Carbon", ["Irrecoverable carbon (biomass)", "Irrecoverable carbon (mineral soil)"]),
     ("NOT IN THIS ANALYSIS", "Communities · Water · Cost", ["—"]),
 ]
@@ -1080,15 +1119,17 @@ def scenario_map(C, path, title=None):
     with rasterio.open(C.GEO / "act2_owner.tif") as src:
         OWN = src.read(1)                                   # 2-D, like TIERS (rd() would give the PU vector)
     T = C.TIERS; SC = STYLE["scenario_colors"]
+    NS = len(dc.ACT2_SCENARIOS)                          # owner codes 1..NS (19 cell 3); MULTI_OWNER = frequent under two or more
     cls = np.full(G.shape, np.nan, np.float32); cls[G.pu] = 0; cls[T == 1] = 1
     for i, sid in enumerate(dc.ACT2_SCENARIOS, 1):
         cls[(T == 2) & (OWN == i)] = 1 + i
-    cls[(T == 2) & (OWN == 5)] = 6; cls[T == 3] = 7; cls[~G.pu] = np.nan
+    cls[(T == 2) & (OWN == dc.MULTI_OWNER)] = NS + 2; cls[T == 3] = NS + 3; cls[~G.pu] = np.nan
     cmap = ListedColormap([STYLE["never_color"], STYLE["opportunity_color"]] + [SC[sid] for sid in dc.ACT2_SCENARIOS] + [STYLE["scenario_multi_color"], "#ffd93b"])
-    norm = BoundaryNorm(np.arange(-0.5, 8.5, 1), 8)
+    norm = BoundaryNorm(np.arange(-0.5, NS + 4.5, 1), NS + 4)
     nd = G.n_disc; own = S["act2_owner_km2"]; core = S["frequent_km2"]["guarded"]; opp = int(((T == 1) & G.pu).sum())
     pct = lambda km2: f"{100 * km2 / nd:.1f}%" if 100 * km2 / nd >= 0.1 else f"{100 * km2 / nd:.2f}%"
-    short = {"s1": "Core-habitat", "s2": "Connectivity", "s3": "Biodiversity", "s4": "Carbon"}       # legend words (Ethan 2026-09-15)
+    short = ({"s1": "Core-habitat", "s2": "Structural connectivity", "s2c": "Climate corridors", "s3": "Biodiversity", "s4": "Carbon"} if dc.VP.version == "v4"
+             else {"s1": "Core-habitat", "s2": "Connectivity", "s3": "Biodiversity", "s4": "Carbon"})       # legend words (Ethan 2026-09-15)
     handles = [Patch(facecolor="#ffd93b", label=f"Core · {core:,} km² · {pct(core)}")]
     for sid in STYLE["scenario_legend_order"]:                                                  # core first, then the PROACT order
         km2 = own[dc.SCENARIO_LABEL[sid]]

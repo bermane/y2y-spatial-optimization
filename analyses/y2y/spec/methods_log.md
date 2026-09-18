@@ -1031,3 +1031,118 @@ arm's own block structure (`scenario_weights(blocks=…, layer_paths=…)`), tar
 SSP585 tiers), core composition and survival, whether pinch points pin (share of the raw-current spike inside the tier, share of the
 spike at f ≥ 0.70, max f on the spike), the MGA diversity D, Jaccard against the registered run of the same scenario and against the
 step-2 baseline. Note carried from the spec: E18's pinning bracket (0.33–0.42 per layer at identity) is expected to shift down under I².
+**M4.36 addendum (2026-09-17, after the 18f solves; analysis only, no formulation change):** 18g's PF-3 summary carries the
+registered S0 and S2 runs (identity shapes) as reference rows in the same columns (own land, pinch-point pinning, D, Jaccards), so
+every arm reads against the v3.1 record rather than against E18's v1-era numbers. "Own land" for an S0 arm = its tier outside the
+frozen core and outside s1–s4's registered SSP585 tiers (E18's definition applied to the balanced scenario; the registered S0 owns
+0 km² by it). The step-2 baseline's per-layer transboundary share is 0.125 (the standing equal within-block split of the 0.25
+connectivity block), which is the lower end of the PF-3 ownership bracket. PF-2 / PF-3 are post-freeze evidence (R10.25 cont.;
+report-back `spec/e20_reportback.md`); nothing registered changes.
+
+**M4.37 — The corridors-out isolation test (PF-4; study plan v0.18.1 post-freeze register; pre-registered 2026-09-17 before
+Ethan's run).** Question: does climate corridors influence the registered balanced map at all? ONE certified anchor solve on the
+registered balanced formulation (S0 at SSP585, identity shapes, manifest v3.1 targets): climate corridors removed from the objective
+(feature weight 0) and the connectivity block's full 25% share carried by transboundary connectivity alone; weights re-derived under
+constant intended influence for the other blocks via `scenario_weights` with a four-block structure whose connectivity block has one
+member (transboundary's intended per-layer share 0.125 → 0.25; the other blocks' shares and carbon's 0.742 / 0.258 split unchanged;
+derived weights rescaled to mean 1 over the six blocked features, the standing convention, so every other weight scales by 0.923;
+outside features at their baselines). Anchor at opt_gap 1e-4 (Gurobi, binary, NumericFocus); no guarded sweep, no MGA; nothing
+registered changes. Comparison to the registered S0 anchor: Jaccard on discretionary selections (locked protected areas excluded),
+the swap's composition (driver masks, multi-claim, frozen-core membership), per-value captures for the eight continuous values and
+the EFG block (mean capture, capture ÷ target, targets met of 20) under both anchors and under the locked protected areas alone,
+and corridor capture as a co-benefit under the new anchor (share of the registered discretionary corridor capture retained at weight
+0). **Reading rule (register, verbatim): Jaccard near 1 → corridors is a decoration and Decision 1 = B ("removing a layer that was not
+shaping the map"); Jaccard noticeably below → corridors was shaping the balanced map and B is a real change to be stated as such.**
+The rule is qualitative; the operationalization is DISCLOSED in the notebook, not written into the register: "near 1" = at or above
+the level a pure shape change on this formulation reached (PF-1 saturating-refugia anchor 0.957, read as robust; the LP-vs-MILP
+numerical near-tie 0.9957) → threshold 0.95; below it the value is read against the record's scale of real value changes
+(between-scenario anchors 0.373–0.931, PF-2 consistent shapes 0.873). Build (numeric order = run order): `18h_pf4_corridors_out_arm` (py: writes the arm
+`spec/v3.1/pf4_corridors_out.json`) → `18i_pf4_corridors_out_solve` (R: the anchor →
+`runs_v3.1/pf4_corridors_out/s0_ssp585_theta5/`) → `18j_pf4_corridors_out_analysis` (py: the comparison + the reading rule). Process note: a headless first pass of both notebooks was executed
+by Claude on 2026-09-17 and DISCARDED at Ethan's instruction (the standing rule: Claude builds, Ethan runs); the record is Ethan's
+run → R10.26.
+
+**M2.12 — The v4 stack (`input_data/aligned_stack_v4/`; study plan v0.20; built by `11c_manifest_v4_freeze`, 2026-09-17).**
+Manifest v4 registers two re-shaped feature layers, so the flagship reads a self-contained copy of the hand-off stack: every
+unchanged layer copied byte-identical to `aligned_stack/` (sha256 asserted equal; `spec/v4/stack_v4_layer_sha256.json`), the two
+v4 layers written fresh, the curated EFG block copied, its own `manifest.json`. (i) **Refugia velocity floor.** Backward climate
+velocity = distance to the nearest current analog over the elapsed span; 1961–1990 → 2071–2100 is **110 yr midpoint to midpoint**
+(the spec's "~80 yr" was a placeholder), so the floor = one cell width / 110 yr = **0.00909 km/yr**, applied per realization as
+`1/max(v, floor)`; implemented as a cap on the registered 1/v layer at 110 yr/km (mask and dust handling untouched) and asserted
+equal to `1/max(v_raw, floor)` on the PU. Pre-checks recorded first (`spec/v4/velocity_precheck.csv`: existing minimum velocity,
+cells at 0 / ≤ floor / ≤ 2× / ≤ 5× / ≤ 10× floor, both realizations). Expected inert (minimum 0.097 / 0.043 km/yr, R10.24) —
+reported either way. (ii) **Structural connectivity squared.** The transboundary current layer squared (I², float32) with the
+registered dust rule (M-2026-08-26, `DUST_SHARE_MIN`) re-applied to the squared layer and the count disclosed — squaring pushes
+float residue toward the matrix range the rule exists for. Scale is irrelevant under sum-normalization. (iii) **The switch.**
+`config.Y2Y_VERSION = "v4"` (default) → `config.stack_dir_for` / `Y2Y_STACK_DIR` (`aligned_stack_v4/`), `Y2Y_MANIFEST_PATH`,
+`Y2Y_REALIZATIONS_DIR`; the switch is FLAGSHIP-scoped: `HANDOFF_DIR` (= `aligned_stack/`) stays the canonical stack for 02, the
+northern co-benefit audit and every other analysis; the flagship readers (leverage_core defaults, director_core, ensemble_core,
+notebooks 13/15/19/20, `write_manifest(analysis="y2y")`) read `Y2Y_STACK_DIR`; the R side follows the manifest path Python
+prints (`pr_refresh_manifest`). `efg_subdir_for` became a table (v1 → `iucn_efg`; every later version → `iucn_efg_v3`: the block
+folder is unchanged by v4). `Y2Y_VERSION=v3.1` in the environment points everything back at the prior registration.
+
+**M4.38 — Manifest v4: the re-registered design (study plan v0.20, Ethan 2026-09-17; supersedes v3.1; built the same day,
+pre-registered before any solve).** Trigger, disclosed as a post-freeze formulation change discovered from results: the post-freeze
+sequence (E20, R10.24–R10.25) and the corridors-out isolation (PF-4, R10.26) showed (i) the two-layer connectivity block halved each
+layer's expressivity while both are live, spatially independent values (top-30% Jaccard 0.21; corridors steers ~18% of
+discretionary land on its own), (ii) structural connectivity's pinch points pin at balanced weights only under a convex shape with
+NO target (the target un-pins them, 100% → 7%), (iii) 1/v's tail top is partly a v → 0 artifact. **Design:** FIVE discretionary
+blocks at 20% (`config.BLOCKS_FIVE`, `blocks_for("v4")`): core habitat (macrorefugia, floored 1/v), structural connectivity
+(transboundary I², t = 1), climate corridors (Carroll centrality, identity), carbon (m_soc θ-target + biomass, 74.2 / 25.8),
+biodiversity (equal); the EFG block (20 features, window-derived targets, sha asserted equal to v3.1's) and naturalness (w = 1,
+outside) unchanged. **Scenarios** (`spec/scenarios_v4.json`; doubling rule unchanged: forward block 0.40, the other four 0.15):
+S0 balanced, S1 core-habitat-, S2 structural-connectivity-, **S2c climate-corridors- (new: every block gets its forward)**, S3
+biodiversity-, S4 carbon-forward (θ 3×, m_soc t 0.552 + block doubled), S5 naturalness push (S0 + gHM ×10); climate SSP245 /
+SSP585 (2071–2100), weights re-derived per cell under constant intended influence from the v4 stack (the 245 cells swap the
+floored 245 refugia layer in) → **14 voting cells** (`s0|s1|s2|s2c|s3|s4|s5` × `ssp585|ssp245`). s1x / s3x not re-run.
+**Protocol amendments now registered:** R1 — value shape assigned per LAYER from its physical construction (raw current → convex
+admissible; bounded probability sum → identity; additive physical quantity → identity); R2 — the SEMANTIC GATE precedes the
+θ / t_min test: the satiation/target lever applies only to amount-semantic values; place-semantic values are secured by convex
+shape on the linear arm with t = 1. 11c's re-audit records both cards (floored refugia: expected diffuse-linear; I² transboundary:
+concentrated-satiating, R2 target ≈ 0.198) with the gate's ruling beside them. Constants unchanged: k = 50, g = 5%, opt_gap 1e-4,
+NumericFocus 2, per-block floors at 95% of the anchor (now five floors), estimator `mga_maxham_v1`, verdict rule v2.
+**Manifest columns** (beyond v3.1's): `block_structure` (JSON), `value_shapes` (JSON), `macrorefugia_path` (per cell, v4 stack),
+`reference_cell`, `unguarded_probes`, `e12_seed`, `floor_g`, `efg_block_version = "v3"`, `manifest_version = 4`, `supersedes`,
+`trigger`; write-once freeze (`spec/manifest_v4.csv` + `.sha256`). **The unguarded band is generated for the REFERENCE cell only**
+(spec run plan step 1: `s0_ssp585_theta5` at g = 2 / 5 / 10%, for the Claim-A estimand's own cell and f(g)); the GUARDED band
+(18) is the estimand for all 14 cells. Consequences, stated so the record is honest: F, E1, E3 (within-share included), E11's
+D_s, E13's high-f sets and E19-T1 are computed on the guarded members (13, 15, 18c: `BAND = "guard"` under v4); E14's trigger is
+evaluated on the reference cell's unguarded members only (the floors ARE the guard, so the guarded band cannot fire it); the
+E4 core-erosion probe comes from the reference cell (`spec/v4/E4_reference_core_erosion.csv`); no ensemble `F_unguarded` surface
+exists under v4 (19 writes `f_unguarded_reference.tif` and labels every "unguarded" column as reference-only). **Solve notebooks:**
+12 (`VERSION <- "v4"`: anchors + Gurobi-proportion twins for all 14, the anchor written before any MGA so every cell is resumable
+on its own; unguarded MGA per `unguarded_probes` on the reference cell; refugia path per row from the manifest; block folder from
+`efg_block_version`), 18 (guarded MGA k = 50, g = 5% for all 14 with floors on the manifest's five blocks; MAA seed from
+`e12_seed`), 18b (leave-EFG-out anchors × 14; leave-one-block-out at S0 = SIX arms: five blocks + EFG; T3 gated as before). Every
+new behaviour is keyed on the presence of the new columns, so `VERSION <- "v3.1"` reproduces the prior notebooks exactly.
+**Not re-run:** k-best pools (E5 discharged), s1x / s3x, E18 / E20 / PF-4 (v3.1 evidence, the motivation for v4); E12 / E9 / E10
+(notebook 16) after the workshop (Ethan 2026-09-17), 16 / 17 unswitched until then. Notebooks pinned to an earlier version
+(18d–18j to v3.1; 22 / 23 to v1) keep their asserts and run only with that `Y2Y_VERSION` in the environment.
+
+**M4.39 — Package v2 on manifest v4 (package spec v1.11–v1.14; 19 / 20 / 21, `director_core`, `director_plot`; built
+2026-09-17).** (a) Version-scoped tables: `BLOCK_AXES_FIVE` → seven star axes (structural connectivity and climate corridors in
+place of connectivity), `VALUE_THEMES` = six (five discretionary blocks + representativeness; convergence 0–6), `ACT2_SCENARIOS`
+= s1, s2, s2c, s3, s4 (owner codes 1..5; the "two or more" class moved from the hard-coded 5 to `MULTI_OWNER = 99` in 19 and
+`scenario_map`), `N_DESIGN` 14, s2c colour Dark2 green and legend order core → core-habitat → biodiversity → structural
+connectivity → climate corridors → carbon; every "12 design formulations" / "/40" / four-theme literal in 19 / 20 derived from the
+version. (b) **Cluster naming (decision e):** "Cluster N (Region)" — the region words from the bear-coexistence communities
+tessellation through the curated lookup `analyses/communities/spec/region_lookup.csv` (`02_region_names`; Ethan vets the words);
+`director_core.coexistence_layer` + `region_of` (largest-share unit names the region; units holding ≥ 15% add their sub-region;
+label "Sub-region(s), Region" per the spec's examples); T-D1 and picks gain `region` / `subregions` / `region_label`; star titles,
+locators and consequences columns use `director_plot.cluster_label` (`STYLE["cluster_region_labels"]`). Naming only — no number
+depends on the layer. (c) **NO Act 3 clusters (Ethan, 2026-09-17):** the coexistence-presence column of package spec v1.12 is
+NOT built; the layer is naming only. (d) **Consequence statistics (v1.14):** ratios stay mean-to-mean; the refugia column is native
+on the floored layer under v4 (footnoted); the concentration reading (share of the area inside the soil-carbon θ-tail, T-D1's
+driver attribution) sits as a row beside the carbon ratio; the one-time mean-vs-median check (`T-D7_mean_vs_median_check.csv`,
+> 1.5× flags printed) runs in 19. (e) The E17 one-pager leaves the deck outline (decision f); the figure stays in the record.
+(f) T-D4 by ecoregion: the layer first arrived without its `.dbf`; `ecoregion_layer` now names that case and 19 records T-D4 as blocked
+rather than failing; the attribute table landed the same evening (RESOLVE Ecoregions 2017 clipped to the frame: 25 ecoregions by
+`ECO_NAME`; 6,740 PU cells = 0.53% outside every polygon at the clip edge, disclosed in the table's summary line). (g) 19 archives the v3.1 package to
+`director_package/_superseded_v3.1/` on its first v4 run and scores the four v3.1 regional core clusters against the v4 tiers
+(`spec/v4/v31_cluster_survival.csv`; the pre-stated expectation: reported, not repaired). (h) `driver_masks`' area-matched refugia
+mask takes exactly k cells (argsort) so a floor tie cannot inflate it; the "connectivity spike" key (transboundary current, a
+quantile cut, identical under I²) is kept verbatim for column continuity. Regression (2026-09-17, headless zero-solve runs under `Y2Y_VERSION=v3.1`): 13 / 15 / 18c reproduce every v3.1 record
+byte-identical (T1 captures / tails, E11 matrices, E19 ledger + gate, e17 geography; `e_round_v13.json` differs only in two added
+expectation keys; `T1_pinning.csv` and `E4_reference_core_erosion.csv` are new records); 19 / 20 / 21 run clean and every package
+table is identical on its shared columns (T-D1 and picks gain the region columns; `T-D7_mean_vs_median_check.csv` is new; one T-D6
+theme label reworded). The ported R notebooks 12 / 18 / 18b dry-plan under v3.1 exactly as before (ingest, four blocks, 12 cells).

@@ -1,16 +1,16 @@
-# Y2Y director package — deck outline (spec v1.6, value-first)
+# Y2Y director package — deck outline (study plan v0.16.1; package spec v1.6; value-first)
 
 _generated from analyses/y2y/director_package; n = 12 formulations_
 
 ## Slide 1 — Where Y2Y's values agree — and where they diverge
 
 - 12 value positions (6 scenarios × 2 climate futures for refugia) × 51 near-optimal plans each
-- 30% of the region; existing PAs locked in — they are 15% of the region (50% of the budget) and already bank 12–19% of every value (19/40 ecosystem groups present) — remarkably AVERAGE land for these values
+- 30% of the region; existing PAs locked in — they are 15% of the region (50% of the budget) and already bank 12–19% of every value (19/20 ecosystem groups present) — remarkably AVERAGE land for these values
 - Every plan keeps every value theme within 5% of its best
 - Representativeness block curated before this run (rule R0): 20 ecosystem features kept of 40 — anthropogenic biomes, a point-record class, sub-grain slivers and one uninformative envelope removed; two duplicate footprints merged
 - The spine of the story: VALUE (where a theme is rich) is not IRREPLACEABILITY (where near-optimal plans cannot do without it)
 
-> Context slide. Methods live in the study plan v0.16.1; this package = director_package_spec v1.6.
+> Context slide. Methods live in the study plan v0.16.1; package spec v1.6.
 
 ## Slide 2 — How to read the maps
 
@@ -20,7 +20,6 @@ figure: `slide2_how_to_read.png`
 - 1 km tiers drive the clustering; cluster outlines are 1 km polygons, not hex unions
 - Hexes (~250 km²) are for legibility only — our DISPLAY hex ≈ the national 30×30 analysis's PLANNING unit (100 km²); our analysis runs at 1 km², two orders of magnitude finer ('this valley', not 'this ecodistrict')
 - 51 near-optimal plans × 12 value positions, versus 4 plans in the national analysis
-- 53°N marked: see the E17 one-pager
 - Ecosystem classes (IUCN GET) are coarse indicative maps (10 arcmin–1° grain): they enter as a representation floor, never draw a boundary, and any cluster they force is captioned as an adequacy pin
 
 ## Slide 3 — The values in the analysis
@@ -28,7 +27,7 @@ figure: `slide2_how_to_read.png`
 figure: `values_table.png`
 
 - The PROACT objectives hierarchy: fundamental objective → sub-objective → the layer that measures it → how it enters the optimization
-- Four weighted themes share the objective equally in the balanced position (core habitat, connectivity, biodiversity, carbon); each forward position doubles one theme's share
+- 4 weighted themes share the objective equally in the balanced position (core habitat, connectivity, biodiversity, carbon); each forward position doubles one theme's share
 - Representativeness is a floor (rarity-scaled targets), not a weighted theme; naturalness is in the formulation but cannot move the answer
 - Communities, water and cost are not in this analysis; the 30% budget stands in for cost
 
@@ -45,7 +44,7 @@ figure: `act0_values_hex250.png`
 
 figure: `act0_value_convergence_hex250.png`
 
-- Count of the five themes (0–5) in which a cell is top-30%: 0: 204,062 km², 1: 500,024 km², 2: 329,798 km², 3: 46,997 km², 4: 1,004 km², 5: 0 km²
+- Count of the 5 themes (0–5) in which a cell is top-30%: 0: 204,062 km², 1: 500,024 km², 2: 329,798 km², 3: 46,997 km², 4: 1,004 km², 5: 0 km²
 - 877,823 km² (81% of unprotected land) is high-value for at least one theme
 - Value is not irreplaceability: Acts 1–2 show how much of this the ensemble can promise
 
@@ -188,15 +187,7 @@ figure: `tier_achievement.png`
 - Red line/band = what a single optimal plan captures (balanced; range across all positions)
 - Pairs with T-D6: the promise per tier, in the currency of each value
 
-## Slide 23 — E17 — the southern lean of representativeness, re-measured
-
-figure: `e17_one_pager.png`
-
-- 9/20 ecosystem classes >90% south of 53°N (20/40 before the curation)
-- Removing representativeness moves the balanced plan +0.14° north on the curated block (it was +2.11° on the 40-class block: the artifact classes did the pulling)
-- Decision for Y2Y: affirm the representativeness anchor at its measured price?
-
-## Slide 24 — What we can promise — the map in one picture
+## Slide 23 — What we can promise — the map in one picture
 
 figure: `summary_tiers_1km.png`
 
@@ -205,16 +196,16 @@ figure: `summary_tiers_1km.png`
 - Light blue = defensible wherever feasibility is positive (Act 3)
 - Tiers are levels of reliability, not a fence
 
-## Slide 25 — What we can promise
+## Slide 24 — What we can promise
 
 figure: `td2_bands.png`
 
 - Core: recurs under every value position (commit)
 - Scenario tiers: join the core if that value leads (choose)
 - Opportunity: defensible wherever feasibility is positive (enable)
-- Next: cluster naming, E17 placement, ecoregion layer for T-D4
+- Next: the ecoregion layer for T-D4 (attribute table pending)
 
-## Slide 26 — Appendix — The necessity test (E19): what the ecosystem block forces
+## Slide 25 — Appendix — The necessity test (E19): what the ecosystem block forces
 
 figure: `td_e19_partition.png`
 
@@ -227,5 +218,5 @@ figure: `td_e19_partition.png`
 - `td1_picks.png` + `tables/T-D1_cluster_register.csv` (full register), `tables/cluster_sensitivity.csv` (0.60/0.80)
 - `td6_value_coverage.png` + `tables/T-D6_value_coverage.csv` / `T-D6b_value_share_by_tier.csv` (value vs irreplaceability by theme), `tables/hinge_crosstab.csv`
 - `td2_acts.png`, `td3_scenarios.png`, `td5_protected_baseline.png` (what PAs already bank), `td5b_enrichment_by_scenario.png`, `tables/pooling_check.csv`, 1 km GeoTIFFs in `geotiffs/` (incl. `value_top30_*.tif`, `value_convergence.tif`, `value_gap.tif`)
-- `act2_scenarios_overview.png` (all scenarios as small multiples), `agreement_matrix.png` (pairwise Jaccard between the 12 optimal plans), `td4_ecoregions.png` + `tables/T-D4_ecoregions.csv` (tier area by ecoregion — needs an ecoregion layer in `input_data/ecoregions/`)
-- Decided: (c) hex 250 km², (h) IPCA dataset. Open: (e) cluster names, (f) E17 placement
+- `act2_scenarios_overview.png` (all scenarios as small multiples), `agreement_matrix.png` (pairwise Jaccard between the 12 optimal plans), `e17_one_pager.png` (the representativeness lean, record only), `td4_ecoregions.png` + `tables/T-D4_ecoregions.csv` (tier area by ecoregion — needs an ecoregion layer in `input_data/ecoregions/`)
+- Decided: (c) hex 250 km², (h) IPCA dataset, (e) cluster names = 'Cluster N (Region)' from the communities lookup, (f) E17 one-pager out of the deck

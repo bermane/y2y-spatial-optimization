@@ -1,0 +1,170 @@
+{
+  "spec": "study plan v0.18.1 post-freeze register PF-4 (corridors-out isolation)",
+  "base_formulation": "s0_ssp585_theta5",
+  "arm": "pf4_corridors_out",
+  "weights": {
+    "climate_type_macrorefugia": 1.348138,
+    "transboundary_connectivity": 1.236056,
+    "irrecoverable_carbon_m_soc": 0.429034,
+    "irrecoverable_carbon_biomass": 0.183344,
+    "aoh_richness_birds": 1.226764,
+    "aoh_richness_mammals": 1.576664,
+    "climate_corridors": 0.0
+  },
+  "weights_registered": {
+    "climate_type_macrorefugia": 1.460018,
+    "transboundary_connectivity": 0.669317,
+    "climate_corridors": 1.171387,
+    "irrecoverable_carbon_m_soc": 0.464638,
+    "irrecoverable_carbon_biomass": 0.19856,
+    "aoh_richness_birds": 1.328571,
+    "aoh_richness_mammals": 1.707509
+  },
+  "anchor_objective_pf4": 4.1826199932,
+  "anchor_objective_registered": 4.9024841138,
+  "objectives_comparable": false,
+  "anchor_gap_pf4": 2.0290031579e-06,
+  "anchor_runtime_s_pf4": 38.8815419674,
+  "jaccard_discretionary": 0.685738639625833,
+  "dropped_km2": 35578,
+  "gained_km2": 35578,
+  "swapped_pct_of_registered_discretionary": 18.642353742565955,
+  "core_cells_in_anchor": {
+    "registered": 29088,
+    "pf4": 28782,
+    "core_km2": 29194
+  },
+  "captures": {
+    "human_modification": {
+      "registered": 0.30585714088496396,
+      "pf4": 0.30528908315386266,
+      "locked_only": 0.1550002460804126
+    },
+    "transboundary_connectivity": {
+      "registered": 0.3542246336399612,
+      "pf4": 0.38612961249390587,
+      "locked_only": 0.14932034976347894
+    },
+    "climate_corridors": {
+      "registered": 0.2811783897474507,
+      "pf4": 0.26691181183258084,
+      "locked_only": 0.14275511020887854
+    },
+    "climate_type_macrorefugia": {
+      "registered": 0.47421549245691796,
+      "pf4": 0.453986584937864,
+      "locked_only": 0.1916639009547981
+    },
+    "irrecoverable_carbon_biomass": {
+      "registered": 0.3718199245923812,
+      "pf4": 0.34381961547334206,
+      "locked_only": 0.12255610701016842
+    },
+    "irrecoverable_carbon_m_soc": {
+      "registered": 0.3320032052487363,
+      "pf4": 0.331993925103972,
+      "locked_only": 0.17637122346878273
+    },
+    "aoh_richness_mammals": {
+      "registered": 0.32603994118334256,
+      "pf4": 0.3306121113296668,
+      "locked_only": 0.15910148413544126
+    },
+    "aoh_richness_birds": {
+      "registered": 0.32941830937600014,
+      "pf4": 0.3337639316934932,
+      "locked_only": 0.15293635706775793
+    }
+  },
+  "capture_shift_pts": {
+    "human_modification": -0.05680577311013013,
+    "transboundary_connectivity": 3.1904978853944668,
+    "climate_corridors": -1.426657791486985,
+    "climate_type_macrorefugia": -2.0228907519053987,
+    "irrecoverable_carbon_biomass": -2.800030911903917,
+    "irrecoverable_carbon_m_soc": -0.0009280144764256537,
+    "aoh_richness_mammals": 0.4572170146324217,
+    "aoh_richness_birds": 0.4345622317493081
+  },
+  "efg_block": {
+    "mean_capture_registered": 0.33559313215755676,
+    "mean_capture_pf4": 0.34593204910121045,
+    "targets_met_registered": 20,
+    "targets_met_pf4": 19,
+    "not_met_pf4": [
+      "F2.1.web.alt_v4.0"
+    ],
+    "not_met_registered": []
+  },
+  "corridor_co_benefit": {
+    "capture_registered": 0.2811783897474507,
+    "capture_pf4": 0.26691181183258084,
+    "capture_locked_only": 0.14275511020887854,
+    "discretionary_retained_share": 0.8969351256347425,
+    "budget_line": 0.3
+  },
+  "swap_composition": {
+    "registered discretionary selection": {
+      "km2": 190845.0,
+      "m_soc theta-tail": 5.007,
+      "connectivity spike (top 0.2%)": 0.972,
+      "refugia densest (area-matched to the m_soc tail)": 18.112,
+      "rare-attainable EFG footprint": 68.989,
+      "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 1.225,
+      "multi-claim (>=2 themes top-30%)": 75.26,
+      "inside the frozen core": 15.242
+    },
+    "PF-4 discretionary selection": {
+      "km2": 190845.0,
+      "m_soc theta-tail": 5.467,
+      "connectivity spike (top 0.2%)": 0.981,
+      "refugia densest (area-matched to the m_soc tail)": 17.789,
+      "rare-attainable EFG footprint": 71.604,
+      "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 1.237,
+      "multi-claim (>=2 themes top-30%)": 69.311,
+      "inside the frozen core": 15.081
+    },
+    "kept by both": {
+      "km2": 155267.0,
+      "m_soc theta-tail": 5.423,
+      "connectivity spike (top 0.2%)": 1.195,
+      "refugia densest (area-matched to the m_soc tail)": 21.863,
+      "rare-attainable EFG footprint": 70.506,
+      "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 1.387,
+      "multi-claim (>=2 themes top-30%)": 78.043,
+      "inside the frozen core": 18.525
+    },
+    "dropped under PF-4": {
+      "km2": 35578.0,
+      "m_soc theta-tail": 3.19,
+      "connectivity spike (top 0.2%)": 0.0,
+      "refugia densest (area-matched to the m_soc tail)": 1.74,
+      "rare-attainable EFG footprint": 62.37,
+      "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 0.52,
+      "multi-claim (>=2 themes top-30%)": 63.112,
+      "inside the frozen core": 0.913
+    },
+    "gained under PF-4": {
+      "km2": 35578.0,
+      "m_soc theta-tail": 5.661,
+      "connectivity spike (top 0.2%)": 0.048,
+      "refugia densest (area-matched to the m_soc tail)": 0.011,
+      "rare-attainable EFG footprint": 76.398,
+      "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)": 0.585,
+      "multi-claim (>=2 themes top-30%)": 31.202,
+      "inside the frozen core": 0.053
+    }
+  },
+  "reading_rule": {
+    "text": "Jaccard near 1 -> corridors is a decoration and Decision 1 = B; Jaccard noticeably below -> corridors was shaping the balanced map and B is a real change to be stated as such",
+    "near_one_operationalized": 0.95,
+    "reference_jaccards": {
+      "LP-vs-MILP twin, numerical near-tie (Gate 2)": 0.9957,
+      "PF-1 saturating refugia vs registered (one shape change)": 0.957,
+      "PF-2 consistent shapes vs registered (three shape changes)": 0.873,
+      "between-scenario anchors (E11, v1 record)": "0.373-0.931"
+    },
+    "branch": "noticeably below 1",
+    "reading": "corridors WAS SHAPING the balanced map -> B is a real change and must be stated as such"
+  }
+}

@@ -22,6 +22,7 @@
   "freq_km2_mga": 42733,
   "freq_km2_maa": 45036
  },
+ "unguarded_basis": "all formulations",
  "by_level": {
   "585": {
    "n": 6,
@@ -125,6 +126,7 @@
   "banked_min": 12.255610701016842,
   "banked_max": 19.16639009547981
  },
+ "td4_blocker": "ecoregions2017_clipped.shp has no .dbf beside it (attributes missing: ['geometry']) -- re-export the ecoregion layer WITH its attribute table (RESOLVE 2017: ECO_NAME / BIOME_NAME) into input_data/ecoregions/",
  "td4": "pending (no ecoregion layer)",
  "biodiversity_plan_capture": {
   "n_plans": 612,
@@ -456,7 +458,7 @@
     "% of footprint in never": 14.188006998568474
    },
    {
-    "theme": "representativeness \u2014 36 rare-attainable classes (NOT used)",
+    "theme": "representativeness \u2014 rare-attainable classes (NOT used)",
     "top-value footprint km2": 733560,
     "% of unprotected land": 67.80387934022562,
     "% of footprint in core": 3.0019357653089047,
@@ -515,10 +517,10 @@
     "basis": "v3.1"
    },
    {
-    "block_out": "connectivity",
-    "mean_lat": 51.16481399536133,
-    "delta_lat": -1.7616233825683594,
-    "jaccard_vs_s0": 0.7668350032040234,
+    "block_out": "carbon",
+    "mean_lat": 52.017616271972656,
+    "delta_lat": -0.9088211059570312,
+    "jaccard_vs_s0": 0.8665306222200498,
     "basis": "v3.1"
    },
    {
@@ -529,10 +531,10 @@
     "basis": "v3.1"
    },
    {
-    "block_out": "carbon",
-    "mean_lat": 52.017616271972656,
-    "delta_lat": -0.9088211059570312,
-    "jaccard_vs_s0": 0.8665306222200498,
+    "block_out": "connectivity",
+    "mean_lat": 51.16481399536133,
+    "delta_lat": -1.7616233825683594,
+    "jaccard_vs_s0": 0.7668350032040234,
     "basis": "v3.1"
    },
    {
@@ -545,9 +547,9 @@
   ],
   "v1_shifts": {
    "core_habitat": -0.170684814453125,
-   "connectivity": -0.9567031860351562,
-   "biodiversity": 1.1756820678710938,
    "carbon": -1.1840934753417969,
+   "biodiversity": 1.1756820678710938,
+   "connectivity": -0.9567031860351562,
    "efg": 2.1075477600097656
   },
   "efg_out_curated": {

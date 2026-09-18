@@ -58,12 +58,25 @@ AB_HANDOFF_DIR = INPUT_DIR / "aligned_stack_ab"
 # ONE switch: the flagship VERSION (below) selects the block; Y2Y_VERSION=v1 in the environment reproduces the as-frozen
 # run without editing this file (nbconvert kernels inherit it; VS Code kernels do not, so they see the default).
 import os as _os
-Y2Y_VERSION = _os.environ.get("Y2Y_VERSION", "v3.1")
+Y2Y_VERSION = _os.environ.get("Y2Y_VERSION", "v4")
+EFG_SUBDIR_BY_VERSION = {"v1": "iucn_efg"}          # every later version (v3, v3.1, v4) shares the curated block folder
 def efg_subdir_for(version):
-    """The block folder for a manifest version: v1 -> iucn_efg; v3, v3.1, ... -> iucn_efg_v3 (a minor version changes
-    targets or weights, never the block itself)."""
-    return "iucn_efg" if version == "v1" else "iucn_efg_v" + version.lstrip("v").split(".")[0]
+    """The block folder for a manifest version: v1 -> iucn_efg; v3, v3.1, v4, ... -> iucn_efg_v3 (a version changes
+    targets, weights, shapes or blocks -- never the block folder itself, until a curation does)."""
+    return EFG_SUBDIR_BY_VERSION.get(version, "iucn_efg_v3")
 EFG_SUBDIR = efg_subdir_for(Y2Y_VERSION)
+# ---- the flagship STACK directory (manifest v4, study plan v0.20; methods_log M2.12) ------------------------------
+# v4 registers two re-shaped feature layers (macrorefugia 1/v with a velocity floor; transboundary current squared),
+# so the flagship reads a self-contained copy of the stack, input_data/aligned_stack_v4/ (built by
+# analyses/y2y/11c_manifest_v4_freeze: unchanged layers byte-identical to aligned_stack/, the two v4 layers written
+# fresh, its own manifest.json). HANDOFF_DIR stays the canonical stack for 02, the northern co-benefit audit and every
+# other analysis; ONLY the flagship (leverage_core defaults, director_core, ensemble_core, notebooks 11c-21) reads
+# Y2Y_STACK_DIR. Y2Y_VERSION=v3.1 (or v1) in the environment points it back at aligned_stack/.
+def stack_dir_for(version):
+    return INPUT_DIR / ("aligned_stack_v4" if version == "v4" else "aligned_stack")
+Y2Y_STACK_DIR = stack_dir_for(Y2Y_VERSION)
+Y2Y_MANIFEST_PATH = Y2Y_STACK_DIR / "manifest.json"
+Y2Y_REALIZATIONS_DIR = Y2Y_STACK_DIR / "climate_realizations"
 # v3.1 (study plan v0.17.3): the rarity-scaled targets are derived from each class's footprint in the study extent
 # BUFFERED by EFG_TARGET_WINDOW_KM (zonal count on the GET archive maps), not the on-extent footprint, so range edges of
 # classes abundant just outside the line stop pinning by construction; 100/500 km reported as sensitivity. The same
@@ -98,8 +111,8 @@ def efg_target(footprint_km2, rule=None, anchors=None):
 # v1 = the as-frozen 2026-08-30 record (spec/manifest.csv, runs/, records at spec/ root) -- kept byte-identical;
 # v3 = the curated-block re-solve (spec/manifest_v3.csv, runs_v3/, records at spec/v3/). Notebooks 12/13/15/18/19/20/21
 # read every path through y2y_paths(); 23 (the E18 dose analysis) is pinned to v1 because its arms are v1 evidence.
-# NOTE aligned_stack/manifest.json is rewritten by every R notebook from the ACTIVE version -- never run two versions'
-# R notebooks concurrently. Y2Y_VERSION is defined above, beside EFG_SUBDIR.
+# NOTE the active stack's manifest.json (aligned_stack_v4/ under v4; aligned_stack/ before) is rewritten by every R
+# notebook from the ACTIVE version -- never run two versions' R notebooks concurrently. Y2Y_VERSION is defined above.
 
 def y2y_paths(version=None):
     """Version-scoped locations for the flagship: runs, manifest (+ freeze hash), records dir, expected EFG subdir."""
@@ -108,9 +121,11 @@ def y2y_paths(version=None):
     y = PROJECT_DIR / "analyses" / "y2y"
     if v == "v1":
         return SimpleNamespace(version="v1", runs=y / "runs", manifest=y / "spec" / "manifest.csv",
-                               freeze=y / "spec" / "manifest_freeze.sha256", records=y / "spec", efg_subdir="iucn_efg")
+                               freeze=y / "spec" / "manifest_freeze.sha256", records=y / "spec", efg_subdir="iucn_efg",
+                               stack=stack_dir_for("v1"), stack_manifest=stack_dir_for("v1") / "manifest.json")
     return SimpleNamespace(version=v, runs=y / f"runs_{v}", manifest=y / "spec" / f"manifest_{v}.csv",
-                           freeze=y / "spec" / f"manifest_{v}.sha256", records=y / "spec" / v, efg_subdir=efg_subdir_for(v))
+                           freeze=y / "spec" / f"manifest_{v}.sha256", records=y / "spec" / v, efg_subdir=efg_subdir_for(v),
+                           stack=stack_dir_for(v), stack_manifest=stack_dir_for(v) / "manifest.json")
 
 
 def ab_paths(version=None):
@@ -338,12 +353,28 @@ EXCLUDE_FEATURES = ["irrecoverable_carbon_sl_soc"]   # subsoil carbon; keep only
 # the EFGs (locked adequacy foundation at 1/40 weights) and gHM intactness (R3-inexpressible,
 # w = 1, published as a Claim B finding) -- their realized influence is reported in T1, never
 # budgeted. Consumed by leverage_core.scenario_weights and, later, the E-experiment code.
-BLOCKS = {
+BLOCKS_FOUR = {                       # manifests v1 / v3 / v3.1: connectivity = one block of two layers
     "core_habitat": ["climate_type_macrorefugia"],
     "connectivity": ["transboundary_connectivity", "climate_corridors"],
     "carbon":       ["irrecoverable_carbon_m_soc", "irrecoverable_carbon_biomass"],
     "biodiversity": ["aoh_richness_birds", "aoh_richness_mammals"],
 }
+# Manifest v4 (study plan v0.20; methods_log M4.38): the elicited "connectivity" compound value is DE-BUNDLED into its two
+# components -- structural (transboundary current, convex I^2, no target: the R2 semantic gate) and climate corridors
+# (Carroll centrality, identity) -- so five discretionary blocks share influence at 20% each. Measured basis: the two layers
+# are spatially independent (top-30% Jaccard 0.21), bundling halved each one's expressivity (E20 / PF-3), and corridors
+# steers ~18% of discretionary land on its own (PF-4, R10.26).
+BLOCKS_FIVE = {
+    "core_habitat":            ["climate_type_macrorefugia"],
+    "structural_connectivity": ["transboundary_connectivity"],
+    "climate_corridors":       ["climate_corridors"],
+    "carbon":                  ["irrecoverable_carbon_m_soc", "irrecoverable_carbon_biomass"],
+    "biodiversity":            ["aoh_richness_birds", "aoh_richness_mammals"],
+}
+def blocks_for(version):
+    """The PROACT block structure a manifest version budgets influence over (v4 = five blocks; earlier = four)."""
+    return BLOCKS_FIVE if version == "v4" else BLOCKS_FOUR
+BLOCKS = blocks_for(Y2Y_VERSION)
 
 # ---- Theta-tail carbon features: RESCINDED (Ethan, 2026-08-28) ----------------------------
 # The v0.10 "places locks" and v0.11's pre-authorized escalation are BOTH withdrawn: tail
@@ -1208,7 +1239,7 @@ def build_roi(analysis, handoff_dir=HANDOFF_DIR):
 
 
 # ---- Python -> R hand-off contract ---------------------------------------
-def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFEST_PATH):
+def write_manifest(analysis="y2y", handoff_dir=None, manifest_path=None):
     """Describe the aligned hand-off stack + one analysis' run params as JSON so 03x (R) reads
     an explicit contract instead of globbing/guessing. Metadata-only -- safe to run anytime
     without re-warping. The grid + layers are analysis-agnostic; the `params` block is assembled
@@ -1221,6 +1252,12 @@ def write_manifest(analysis="y2y", handoff_dir=HANDOFF_DIR, manifest_path=MANIFE
 
     rel = _rel
     a = ANALYSES[analysis]
+    # defaults are analysis-keyed: the flagship ("y2y") describes ITS version's stack (Y2Y_STACK_DIR; aligned_stack_v4/
+    # under v4) and writes that stack's manifest.json; every other analysis keeps the canonical HANDOFF_DIR.
+    if handoff_dir is None:
+        handoff_dir = Y2Y_STACK_DIR if analysis == "y2y" else HANDOFF_DIR
+    if manifest_path is None:
+        manifest_path = Path(handoff_dir) / "manifest.json"
 
     def clean_nodata(nd):
         # NaN is not valid JSON; emit null. R reads the actual NaN NoData from the

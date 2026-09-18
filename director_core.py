@@ -65,19 +65,33 @@ BANDS = [("never", 0.0, NEVER_THR), ("rare", NEVER_THR, 0.30), ("conditional", 0
          ("frequent", FREQ_THR, 0.95), ("always", 0.95, 1.0001)]
 # block star axes: member percentiles are averaged with these weights (carbon = mass split 74.2/25.8,
 # the Gate-1 measurement); representativeness is a DIFFERENT construction (EFG classes present / 40)
-BLOCK_AXES = {
+BLOCK_AXES_FOUR = {                 # manifests v1 / v3 / v3.1: connectivity = one axis averaging its two layers
     "core habitat":  {"climate_type_macrorefugia": 1.0},
     "connectivity":  {"transboundary_connectivity": 0.5, "climate_corridors": 0.5},
     "biodiversity":  {"aoh_richness_birds": 0.5, "aoh_richness_mammals": 0.5},
     "carbon":        {"irrecoverable_carbon_m_soc": 0.742, "irrecoverable_carbon_biomass": 0.258},
     "naturalness":   {"human_modification": 1.0},     # plain sixth axis in the package (Ethan 2026-09-04); "naturalness" = 1 - gHM (terminology, 2026-09-14)
 }
-STAR_AXES = ["core habitat", "connectivity", "biodiversity", "carbon", "representativeness", "naturalness"]
+BLOCK_AXES_FIVE = {                 # manifest v4 (study plan v0.20): the connectivity compound value de-bundled into its two components
+    "core habitat":            {"climate_type_macrorefugia": 1.0},
+    "structural connectivity": {"transboundary_connectivity": 1.0},
+    "climate corridors":       {"climate_corridors": 1.0},
+    "biodiversity":            {"aoh_richness_birds": 0.5, "aoh_richness_mammals": 0.5},
+    "carbon":                  {"irrecoverable_carbon_m_soc": 0.742, "irrecoverable_carbon_biomass": 0.258},
+    "naturalness":             {"human_modification": 1.0},
+}
+BLOCK_AXES = BLOCK_AXES_FIVE if VP.version == "v4" else BLOCK_AXES_FOUR
+AXIS_OF_BLOCK = {b: b.replace("_", " ") for b in config.BLOCKS}          # config block name -> star-axis name
+STAR_AXES = [a for a in BLOCK_AXES if a != "naturalness"] + ["representativeness", "naturalness"]   # 7 under v4, 6 before
+MULTI_OWNER = 99                     # act2_owner.tif code for "frequent under two or more named scenarios" (was 5 = 4 + 1 before v4)
 N_EFG = len(lc.efg_paths())          # 20 under the curated block (v3); 40 under v1
-SCENARIO_LABEL = {"s0": "Balanced", "s1": "Core-habitat-forward", "s2": "Connectivity-forward",
+SCENARIO_LABEL = {"s0": "Balanced", "s1": "Core-habitat-forward", "s2": "Connectivity-forward", "s2c": "Climate-corridors-forward",
                   "s3": "Biodiversity-forward", "s4": "Carbon-forward", "s5": "Intactness push (S0 + gHM x10)",
                   "s1x": "Core-habitat x carbon regime", "s3x": "Biodiversity x carbon regime"}
-ACT2_SCENARIOS = ["s1", "s2", "s3", "s4"]   # the four named forward scenarios (spec Act 2)
+if VP.version == "v4":               # manifest v4: s2 = structural connectivity alone; s2c = the climate-corridors forward (new)
+    SCENARIO_LABEL["s2"] = "Structural-connectivity-forward"; SCENARIO_LABEL["s5"] = "Naturalness push (S0 + gHM x10)"
+ACT2_SCENARIOS = ["s1", "s2", "s2c", "s3", "s4"] if VP.version == "v4" else ["s1", "s2", "s3", "s4"]   # the named forward scenarios (Act 2)
+N_DESIGN = 14 if VP.version == "v4" else 12   # voting cells: 7 x 2 under v4, 6 x 2 before
 # Director package votes = the 12 ELICITED positions (6 scenarios x 2 climate futures). The two crossed
 # diagnostic hybrids (s1x, s3x: shares held, carbon target regime flipped alone) are near-duplicate votes for
 # S1/S3 at SSP585 (frequent-tier Jaccard 0.84 / 0.95) and are EXCLUDED here (Ethan, 2026-09-04; R10.9).
@@ -90,7 +104,7 @@ def package_manifest(MAN):
     falls back to PACKAGE_EXCLUDE (identical membership) before that."""
     if "role" in MAN.columns:                          # manifest v3+ carries role itself
         m = MAN[MAN.role.eq("design")].reset_index(drop=True)
-        assert len(m) == 12, f"expected 12 design formulations, got {len(m)}"
+        assert len(m) == N_DESIGN, f"expected {N_DESIGN} design formulations, got {len(m)}"
         return m
     v2 = SPEC / "manifest_v2.csv"
     if v2.exists():
@@ -98,12 +112,14 @@ def package_manifest(MAN):
         m = MAN[MAN.formulation_id.map(roles).eq("design")].reset_index(drop=True)
     else:
         m = MAN[~MAN.scenario_id.isin(PACKAGE_EXCLUDE)].reset_index(drop=True)
-    assert len(m) == 12, f"expected 12 design formulations, got {len(m)}"
+    assert len(m) == N_DESIGN, f"expected {N_DESIGN} design formulations, got {len(m)}"
     return m
 SCENARIO_STATEMENT = {
-    "s0": "all four value themes hold their intended influence shares",
+    "s0": f"all {'five' if VP.version == 'v4' else 'four'} value themes hold their intended influence shares",
     "s1": "climate macrorefugia (core habitat) carries a doubled influence share",
-    "s2": "connectivity (transboundary current + climate corridors) carries a doubled share",
+    "s2": ("structural connectivity (transboundary current, valued convexly) carries a doubled share" if VP.version == "v4"
+           else "connectivity (transboundary current + climate corridors) carries a doubled share"),
+    "s2c": "climate corridors (Carroll current-flow centrality) carry a doubled share",
     "s3": "AOH richness (birds + mammals) carries a doubled share",
     "s4": "carbon carries a doubled share and the mineral-soil target rises 0.332 -> 0.552 (theta 3x)",
     "s5": "S0 with the (inexpressible) intactness layer pushed x10 -- the Claim-B demonstration",
@@ -116,9 +132,10 @@ ACT_TITLE = {"act0": "Act 0 — Where the values are", "act1": "Act 1 — Core c
 # the acts follow THIS analysis (Ethan 2026-09-14): Act 0 = the values before any optimization (the v1.6 "value-first" prologue),
 # Act 1 = the core, Act 2 = the scenario tiers, Act 3 = the opportunity landscape; 19's registers use the same numbers
 ACT_DISPLAY = {"Act 1": "Act 1 core", "Act 2": "Act 2 scenario", "Act 1 (585)": "Act 1 core (SSP585)", "Act 1 (245)": "Act 1 core (SSP245)"}
-VALUE_THEMES = ["core habitat", "connectivity", "biodiversity", "carbon", "representativeness"]   # the five PROACT themes
+VALUE_THEMES = [a for a in BLOCK_AXES if a != "naturalness"] + ["representativeness"]   # the PROACT themes: five before v4, six under v4
 VALUE_TOP = 0.70                     # "top 30% of the discretionary landscape" = block percentile >= 0.70
-THEME_OF_SCENARIO = {"s1": "core habitat", "s2": "connectivity", "s3": "biodiversity", "s4": "carbon"}
+THEME_OF_SCENARIO = ({"s1": "core habitat", "s2": "structural connectivity", "s2c": "climate corridors", "s3": "biodiversity", "s4": "carbon"}
+                     if VP.version == "v4" else {"s1": "core habitat", "s2": "connectivity", "s3": "biodiversity", "s4": "carbon"})
 # E18 carry-overs (package spec v1.6 / study plan v0.16). The deck is built on v3.1 only (Ethan, 2026-09-14): the E18
 # dose numbers were measured on the 40-class block and stay in the paper's record (R10.13-R10.15), so the caveat and its
 # mirror are stated STRUCTURALLY here -- what the design does, not a v1 measurement.
@@ -135,7 +152,7 @@ IPCA_SPEC = dict(vector=config.PROPOSED_PA_VECTOR, name_field="PA_NAME")
 # (e.g. CEC North American Level II/III ecoregions, seamless US+Canada) into this folder and 19 picks it
 # up; until then the T-D4 cell reports itself PENDING rather than failing the run.
 ECOREGIONS_DIR = config.INPUT_DIR / "ecoregions"
-ECOREGION_NAME_FIELDS = ("NA_L2NAME", "NA_L3NAME", "ECOZONE_NAME", "ZONE_NAME", "ECOREGION", "REGION_NAM", "NAME", "name")
+ECOREGION_NAME_FIELDS = ("ECO_NAME", "BIOME_NAME", "NA_L2NAME", "NA_L3NAME", "ECOZONE_NAME", "ZONE_NAME", "ECOREGION", "REGION_NAM", "NAME", "name")
 def ipca_rule(df):
     # declared IPCA proposals only (+ the Kaska-led Ross River NPR proposal). The Indigenous-governed "Great Caribou
     # Rainforest" (PA_TYPE Conservation Area, 52% already inside Wells Gray / Bowron / Cariboo Mountains parks) is
@@ -152,10 +169,10 @@ def ensure_dirs(pkg=PKG):
 # ---- grid ------------------------------------------------------------------------------------
 def grid():
     """The 1 km analysis grid + PU / locked / discretionary masks (1-D vectors run over PU cells)."""
-    with rasterio.open(config.HANDOFF_DIR / "cost_uniform.tif") as src:
+    with rasterio.open(config.Y2Y_STACK_DIR / "cost_uniform.tif") as src:
         tr, shp, prof = src.transform, src.shape, src.profile
     pu = lc.pu_mask()
-    with rasterio.open(config.HANDOFF_DIR / "mask_protected_areas.tif") as src:
+    with rasterio.open(config.Y2Y_STACK_DIR / "mask_protected_areas.tif") as src:
         locked2d = (src.read(1) == 1) & pu
     locked = locked2d[pu]
     G = SimpleNamespace(pu=pu, locked2d=locked2d, locked=locked, disc=~locked, n_pu=int(pu.sum()),
@@ -208,7 +225,7 @@ def load_guarded(G, MAN, allow_partial=False, diameters=True):
     for _, row in MAN.iterrows():
         fid = row.formulation_id
         cd = RUNS / fid
-        need = [cd / "anchor.tif", cd / "mga_g05.tif", cd / "mga_guard_g05.tif", cd / "certificates_guard.csv"]
+        need = [cd / "anchor.tif", cd / "mga_guard_g05.tif", cd / "certificates_guard.csv"]      # the unguarded band is optional (v4: reference cell only)
         if not all(p.exists() for p in need):
             missing.append(fid)
             continue
@@ -217,16 +234,19 @@ def load_guarded(G, MAN, allow_partial=False, diameters=True):
         assert len(cert) == int(row.k_requested), f"{fid}: {len(cert)} guarded members, expected {row.k_requested}"
         A = ec.read_selections(cd / "anchor.tif", G.pu)[0]
         Sg = np.vstack([A[None, :], ec.read_selections(cd / "mga_guard_g05.tif", G.pu)])
-        Sp = np.vstack([A[None, :], ec.read_selections(cd / "mga_g05.tif", G.pu)])
+        plain = cd / "mga_g05.tif"
+        Sp = np.vstack([A[None, :], ec.read_selections(plain, G.pu)]) if plain.exists() else None
         m_disc = int(A[G.disc].sum())
         L.f_guard[fid] = Sg.mean(axis=0).astype(np.float32)
-        L.f_plain[fid] = Sp.mean(axis=0).astype(np.float32)
         L.union_guard[fid] = Sg.any(axis=0)
-        L.union_plain[fid] = Sp.any(axis=0)
         L.anchors[fid] = A
         if diameters:
             L.D_guard[fid] = _diam(Sg, G.disc, m_disc)
-            L.D_plain[fid] = _diam(Sp, G.disc, m_disc)
+        if Sp is not None:
+            L.f_plain[fid] = Sp.mean(axis=0).astype(np.float32)
+            L.union_plain[fid] = Sp.any(axis=0)
+            if diameters:
+                L.D_plain[fid] = _diam(Sp, G.disc, m_disc)
         L.cert[fid] = dict(n=len(cert), dup=int(cert.duplicate.sum()), runtime_min=float(cert.runtime_s.sum() / 60),
                            time_limited=int((cert.status == "TIME_LIMIT").sum()))
         L.meta[fid] = json.loads((cd / "formulation_meta.json").read_text())
@@ -238,8 +258,9 @@ def load_guarded(G, MAN, allow_partial=False, diameters=True):
         L.forms.append(fid)
         del Sg, Sp
         print(f"{fid:<22} f_guard freq {int((L.f_guard[fid][G.disc] >= FREQ_THR).sum()):>7,} km2 | "
-              f"plain {int((L.f_plain[fid][G.disc] >= FREQ_THR).sum()):>7,} km2"
-              + (f" | D {L.D_plain[fid]:.3f} -> {L.D_guard[fid]:.3f}" if diameters else ""))
+              + (f"plain {int((L.f_plain[fid][G.disc] >= FREQ_THR).sum()):>7,} km2" if fid in L.f_plain else "plain      (none)")
+              + (f" | D {L.D_plain[fid]:.3f} -> {L.D_guard[fid]:.3f}" if diameters and fid in L.D_plain else (f" | D_guard {L.D_guard[fid]:.3f}" if diameters else "")))
+    L.plain_forms = [f for f in L.forms if f in L.f_plain]         # v4: the reference cell only; v3.1 and before: every formulation
     if missing:
         msg = f"guarded sweep missing for {len(missing)} formulation(s): {missing} -- run 18_guarded_sweep first"
         if not allow_partial:
@@ -256,6 +277,7 @@ def ensemble(fdict, forms):
 
 def union_membership(L, forms, guarded=True):
     U = L.union_guard if guarded else L.union_plain
+    forms = [c for c in forms if c in U]
     return np.mean([U[c] for c in forms], axis=0).astype(np.float32)
 
 
@@ -509,7 +531,7 @@ def block_percentiles(G):
     pct = {}
     feats = sorted({f for d in BLOCK_AXES.values() for f in d})
     for f in feats:
-        v = np.nan_to_num(lc._read(config.HANDOFF_DIR / f"{f}.tif")[G.pu], nan=0.0)
+        v = np.nan_to_num(lc._read(config.Y2Y_STACK_DIR / f"{f}.tif")[G.pu], nan=0.0)
         ref = np.sort(v[G.disc])
         pct[f] = (np.searchsorted(ref, v, side="right") / len(ref)).astype(np.float32)
     for ax, members in BLOCK_AXES.items():
@@ -534,12 +556,12 @@ def value_layers(G, P, rare_mask, top=VALUE_TOP):
     Representativeness: presence of any rare-EFG class (rare_mask; the <=1%-footprint set by default, disclosed --
     the 36 rare-attainable classes cover 79% of the region and would vote almost everywhere).
     Naturalness (1 - gHM): same rule, a sixth map ("disclosed, not a driver") NOT counted in the convergence tally.
-    Returns 1-D masks over PU (discretionary only) + convergence = number of the five themes voting (0-5)."""
+    Returns 1-D masks over PU (discretionary only) + convergence = number of the VALUE_THEMES voting (0-5; 0-6 under v4)."""
     # exact top-(1-top) share of the DISCRETIONARY landscape by the block score: for single-layer blocks this equals
     # "block percentile >= top"; for two-layer blocks (mean of two percentiles) a 0.70 cut on the mean would keep only
     # ~20% of cells, so the cut is the score's own (top)-quantile over unprotected land (ties may add a little)
     masks = {}
-    for ax in ("core habitat", "connectivity", "biodiversity", "carbon", "naturalness"):
+    for ax in BLOCK_AXES:                                          # every block axis incl. naturalness (disclosed, not counted)
         thr = float(np.quantile(P.axes[ax][G.disc], top))
         masks[ax] = (P.axes[ax] >= thr) & G.disc
     masks["representativeness"] = rare_mask & G.disc
@@ -562,12 +584,13 @@ def coverage_table(G, V, tier_code):
 
 
 def crosstab(G, conv, tier_code):
-    """Hinge figure: value-convergence count (0-5 themes) x reliability class, km2 over the discretionary landscape."""
+    """Hinge figure: value-convergence count (0..len(VALUE_THEMES)) x reliability class, km2 over the discretionary landscape."""
     cols = {3: "core (F ≥ 0.70)", 2: "scenario tier", 1: "opportunity", 0: "never"}
-    T = pd.DataFrame(0, index=[f"{k} of 5 themes" for k in range(6)], columns=list(cols.values()), dtype=int)
-    for k in range(6):
+    n = len(VALUE_THEMES)
+    T = pd.DataFrame(0, index=[f"{k} of {n} themes" for k in range(n + 1)], columns=list(cols.values()), dtype=int)
+    for k in range(n + 1):
         for code, nm in cols.items():
-            T.loc[f"{k} of 5 themes", nm] = int(((conv == k) & (tier_code == code) & G.disc).sum())
+            T.loc[f"{k} of {n} themes", nm] = int(((conv == k) & (tier_code == code) & G.disc).sum())
     return T
 
 
@@ -654,7 +677,7 @@ class ValueRatios:
     naturalness = 1 - gHM."""
     def __init__(self, G, P):
         self.G = G
-        self.raw = {f: np.nan_to_num(lc._read(config.HANDOFF_DIR / f"{f}.tif")[G.pu], nan=0.0) for d in BLOCK_AXES.values() for f in d}
+        self.raw = {f: np.nan_to_num(lc._read(config.Y2Y_STACK_DIR / f"{f}.tif")[G.pu], nan=0.0) for d in BLOCK_AXES.values() for f in d}
         self.raw["__efg_count"] = P.efg_count.astype(np.float32)
         self.base = {k: float(v[G.disc].mean()) for k, v in self.raw.items()}
     def of(self, mask1d):
@@ -677,15 +700,18 @@ def efg_classes_present(P, mask1d):
 def driver_masks(G):
     theta = config.AUDIT["theta"]
     rare_cap = config.AUDIT["rare_cap"]
-    v = lc._read(config.HANDOFF_DIR / "irrecoverable_carbon_m_soc.tif")
+    v = lc._read(config.Y2Y_STACK_DIR / "irrecoverable_carbon_m_soc.tif")
     masks = {"m_soc theta-tail": np.nan_to_num(v, nan=-1)[G.pu] >= theta * float(np.nanmean(v[G.pu]))}
-    conn = lc._read(config.HANDOFF_DIR / "transboundary_connectivity.tif")[G.pu]
+    conn = lc._read(config.Y2Y_STACK_DIR / "transboundary_connectivity.tif")[G.pu]
+    # the STRUCTURAL-connectivity spike (transboundary current only; a quantile cut, so identical under v4's I^2); the key is
+    # kept verbatim because it names CSV columns across versions
     masks["connectivity spike (top 0.2%)"] = conn >= np.nanquantile(conn, 0.998)
     # refugia has no theta rule of its own (t = 1.0); its dense core is defined AREA-MATCHED to the m_soc
     # theta-tail so the two attribution columns are comparable (R10.6: refugia pins the core)
-    refu = np.nan_to_num(lc._read(config.HANDOFF_DIR / "climate_type_macrorefugia.tif")[G.pu], nan=0.0)
+    refu = np.nan_to_num(lc._read(config.Y2Y_STACK_DIR / "climate_type_macrorefugia.tif")[G.pu], nan=0.0)
     k = int(masks["m_soc theta-tail"].sum())
-    masks["refugia densest (area-matched to the m_soc tail)"] = refu >= np.sort(refu)[-k]
+    dens = np.zeros(G.n_pu, bool); dens[np.argsort(refu, kind="stable")[-k:]] = True    # exactly k cells (a velocity floor can tie at the top)
+    masks["refugia densest (area-matched to the m_soc tail)"] = dens
     rare = np.zeros(G.n_pu, bool)
     n_rare = 0
     for p in lc.efg_paths():
@@ -769,6 +795,50 @@ def named_areas(G):
     return gpd.GeoDataFrame(pd.concat([pa, ip], ignore_index=True), geometry="geometry", crs=G.crs)
 
 
+# ---- cluster naming (package spec v1.12 decision e; communities analysis) ----------------------------------------------
+# Every cluster is labelled "Cluster N (Region)" with the region words from the bear-coexistence communities layer -- a
+# tessellation of Y2Y into 108 census divisions / counties -- through the CURATED lookup unit -> region / sub-region
+# (analyses/communities/02_region_names -> spec/region_lookup.csv; Ethan vets the words). Naming only: no number in the
+# optimization or the tiers depends on the layer. The landmark placeholder (placeholder_name) stays as the secondary descriptor.
+COEX_GPKG = config.INPUT_DIR / "bear_coexistence" / "CoexistenceGroup_CDCounty_SpatJoin" / "CoexistenceGroup_CDCounty_Join.gpkg"
+COEX_LOOKUP = ROOT / "analyses" / "communities" / "spec" / "region_lookup.csv"
+REGION_SECONDARY_MIN = 0.15          # a unit holding >= this share of a cluster adds its sub-region to the label
+
+
+def coexistence_layer(G):
+    """The 108-unit communities tessellation joined to the region lookup, rasterized to 1 km zone ids (1..108, 0 outside);
+    None when the lookup has not been written yet (labels then fall back to the landmark placeholder)."""
+    if not (COEX_GPKG.exists() and COEX_LOOKUP.exists()):
+        return None
+    g = gpd.read_file(COEX_GPKG).to_crs(G.crs).reset_index(drop=True)
+    lk = pd.read_csv(COEX_LOOKUP).set_index("fid")
+    assert len(g) == len(lk) == 108, (len(g), len(lk))
+    unit_col = "MappingUnit" if "MappingUnit" in g.columns else "MappingUni"
+    assert (g[unit_col].values == lk.loc[g.index, "MappingUnit"].values).all(), "region_lookup.csv rows do not line up with the gpkg (fid order)"
+    for c in ("region", "subregion", "admin1"):
+        g[c] = lk.loc[g.index, c].values
+    zones = rfeatures.rasterize(zip(g.geometry, g.index + 1), out_shape=G.shape, transform=G.transform, fill=0, dtype="int32")
+    return SimpleNamespace(gdf=g, zones=zones, source=COEX_LOOKUP.name)
+
+
+def region_of(CX, mask2d, secondary_min=REGION_SECONDARY_MIN):
+    """(region, subregions, label) for a cluster mask: the unit holding the largest share of the cluster's cells names the
+    region; every unit holding >= secondary_min adds its sub-region (share order, de-duplicated). label = 'Sub-region(s), Region'
+    -- the package spec's examples ('Purcell-Columbia, Kootenays'; 'Sacred Headwaters, Stikine')."""
+    if CX is None:
+        return "", "", ""
+    z = CX.zones[mask2d]; z = z[z > 0]
+    if z.size == 0:
+        return "", "", ""
+    ids, n = np.unique(z, return_counts=True); order = np.argsort(-n); share = n / n.sum()
+    lead = CX.gdf.loc[int(ids[order[0]]) - 1]
+    subs = [str(CX.gdf.loc[int(i) - 1, "subregion"]) for i, s in zip(ids[order], share[order]) if s >= secondary_min]
+    subs = [x for x in dict.fromkeys(subs) if x and x != "nan"]
+    region = str(lead["region"])
+    label = ", ".join([*(x for x in subs if x != region), region]) if subs else region
+    return region, "; ".join(subs), label
+
+
 # ---- E17 one-pager inputs ----------------------------------------------------------------------
 def e17_shifts(G, version=None):
     """Leave-one-theme-out latitude shifts vs the S0 anchor. Reads the ACTIVE version's runs (`runs_<version>/e17_t3`,
@@ -782,7 +852,7 @@ def e17_shifts(G, version=None):
     s0 = ec.read_selections(root / "s0_ssp585_theta5" / "anchor.tif", G.pu)[0]
     base = float(lat[s0 & G.disc].mean())
     rows = []
-    for b in ["core_habitat", "connectivity", "biodiversity", "carbon", "efg"]:
+    for b in ["core_habitat", "connectivity", "biodiversity", "carbon", "structural_connectivity", "climate_corridors", "efg"]:   # v3.1 order first; absent arms skipped
         p = root / "e17_t3" / f"{b}_out" / "run" / "portfolio.tif"
         if not p.exists():
             continue
@@ -876,6 +946,9 @@ def ecoregion_layer(G):
     g = gpd.read_file(files[0]).to_crs(G.crs)
     fld = next((f for f in ECOREGION_NAME_FIELDS if f in g.columns), None)
     if fld is None:
+        if files[0].suffix.lower() == ".shp" and not files[0].with_suffix(".dbf").exists():
+            raise FileNotFoundError(f"{files[0].name} has no .dbf beside it (attributes missing: {list(g.columns)}) -- re-export the "
+                                    "ecoregion layer WITH its attribute table (RESOLVE 2017: ECO_NAME / BIOME_NAME) into input_data/ecoregions/")
         raise ValueError(f"{files[0].name}: no recognised name field among {ECOREGION_NAME_FIELDS}")
     g = g.dissolve(by=fld).reset_index()
     g["zone_id"] = np.arange(1, len(g) + 1)
@@ -893,7 +966,7 @@ def tier_achievement(G, cumulative_masks):
     vals = {}
     for b, feats in config.BLOCKS.items():
         for f in feats:
-            vals[f] = np.nan_to_num(lc._read(config.HANDOFF_DIR / f"{f}.tif")[G.pu], nan=0.0)
+            vals[f] = np.nan_to_num(lc._read(config.Y2Y_STACK_DIR / f"{f}.tif")[G.pu], nan=0.0)
     for tier, m in cumulative_masks.items():
         for b, feats in config.BLOCKS.items():
             caps = [float(vals[f][m].sum() / vals[f].sum()) for f in feats]

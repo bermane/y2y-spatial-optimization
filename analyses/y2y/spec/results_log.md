@@ -827,3 +827,92 @@ refugia ORDERING (99.8% of it is refugia top-30% land), not on the reciprocal's 
 convexity costs S0 4% of its core land. Ruling (Ethan, 2026-09-16): 1/v stays the registered value model ("persistence within the
 horizon, linear in residence time"); the log transform is kept in the pocket as the reported sensitivity. Products:
 `spec/v3.1/E20_transform_conditionality.json` / `_e20_log.csv`, `figures/v3.1/e20_s0_f_arms.png`. Next: 18f (the two consistent arms) → 18g again.
+
+**R10.25 (cont.) PF-2 and PF-3 measured (18f Ethan's run 2026-09-16/17 + 18g, 2026-09-17; S0@SSP585 and S2@SSP585 under the
+consistent shapes — log1p(1/v) refugia, I² transboundary connectivity, I² climate corridors — weights re-derived per arm under the
+arm's block structure, registered targets, anchor 1e-4, guarded MGA k = 50 g = 5% with block floors on the arm's blocks).**
+Integrity: every arm 50/50 members OPTIMAL and in band (≤ 5.000% over the optimum; 381,874 cells in every plan); anchor z — not
+comparable across arms, each is its own objective — consistent 4.8485, consistent_target 4.6274, A@S0 4.8827, A@S2 4.8724,
+B@S0 4.1138, B@S2 3.8999. **Reference rows** (the registered runs at identity shapes, same columns, added to 18g): S0 — raw-current
+spike (top 0.2%, allocatable) frequent 22.9%, own land 0 km², D 0.804, tier 42,733 km², densest-refugia share of the tier 78.7%,
+multi-claim 89.4%; S2 — spike frequent 100%, own land 7,796 km², D 0.853, tier 30,509 km², core survival 59.8%.
+(a) **PF-2, the consistent set at t = 1 (`e20_consistent`, THE step-2 baseline): transform-conditional share 5.0%** (PF-1's
+refugia-only arm 4.3%); whole-core survival 91% → 87% (25,451 km² frequent; 25,164 km² frequent under both); S0's tier 42,733 →
+41,111 km² (Jaccard 0.758; PF-1 0.846); anchors Jaccard 0.873; corr(f) over the core 0.88, mean f 0.92 → 0.88. Lost 1,335 km²
+(50% densest-refugia land, 82% multi-claim); gained 287 km² (13% spike, 97% multi-claim). **Pinch points PIN: 100% of the spike is
+frequent** against 22.9% under the registered S0 and 24.4% under PF-1's log-only arm — the convex shape does at the balanced weights
+what identity shapes did only under S2's 0.5 block. The tier's composition moves little: spike share 1.0 → 4.6%, densest refugia
+78.7 → 73.9%, multi-claim 89.4 → 87.2%. **Own land 4 km²**: the spike lies inside S2's registered tier, so pinning is not ownership
+by E18's definition. D 0.812. Against M4.35(d)'s pre-stated expectation: pinch points rise (met); the refugia share falls only
+modestly and multi-claim does not rise (not met); the core is not materially reshaped.
+(b) **PF-2 with R2's target (`e20_consistent_target`, t = 0.198): share 1.5%, survival 91% → 91%** (26,673 km²); tier 46,197 km²
+(Jaccard 0.852 vs the registered run, 0.655 vs the t = 1 baseline; anchors 0.675). **The target UN-PINS the spike: 7.0% frequent** —
+the anchor meets 0.198 with margin, the feature then has no pull inside the band and the 95% floor is met off-spike (M6.7 again:
+targets secure amounts, not places); of the 398 km² lost, 34% is spike land; the tier's spike share is 0.28%; D 0.776.
+(c) **PF-3 block-split arms** (own land = the tier outside the frozen core and outside the other named scenarios' registered
+SSP585 tiers; survival = share of the 29,194 km² core frequent; the transform-conditional share in brackets):
+
+| arm | transboundary per-layer share | tier km² | own land km² | core survival | Jaccard vs registered / vs baseline | spike frequent | densest-refugia share of tier | multi-claim | D |
+|---|---|---|---|---|---|---|---|---|---|
+| A@S0 five blocks at 20% | 0.20 (+ corridors 0.20) | 45,137 | 12,832 | 63% (32.4%) | 0.341 / 0.463 | 100% | 41.3% | 73.3% | 0.788 |
+| B@S0 corridors removed | 0.25 | 45,749 | 12,713 | 65% (30.2%) | 0.349 / 0.468 | 100% | 41.6% | 73.9% | 0.793 |
+| A@S2 five blocks, connectivity 0.5 split | 0.25 (+ corridors 0.25) | 46,902 | 31,877 (registered S2 7,796) | 35% (62.6%) | 0.388 / 0.256 | 100% | 21.0% | 62.6% | 0.780 |
+| B@S2 corridors removed | 0.50 | 73,254 | 60,954 | 23% (76.3%) | 0.200 / 0.137 | 100% | 7.9% | 52.1% | 0.658 |
+
+Readings. (i) **The ownership crossover shifted DOWN, as the spec expected:** at identity shapes transboundary began to own land
+between per-layer shares 0.33 and 0.42 (E18, R10.13); under I² it owns ~12.8k km² at the BALANCED scenario with a per-layer share
+of 0.20–0.25, and 4 km² at the baseline's 0.125 (the standing equal within-block split of the 0.25 block) — the crossover now lies
+in (0.125, 0.20]. (ii) **The two-layer block dilutes transboundary by construction, and the second layer adds nothing:** A@S0 and
+B@S0 agree (own land 12,832 vs 12,713 km²; tiers Jaccard 0.846) — corridors squared at 0.20 or removed, the map is the same; at S2,
+B (the whole 0.5 on transboundary) owns 1.9× A's land (tiers Jaccard 0.543). (iii) **The connectivity land is bought with the refugia
+core:** the core cells the split arms drop are densest-refugia land (86% of A@S0's 8,580 km² lost, 87% of B@S0's 8,009, 92% of
+A@S2's 16,598, 94% of B@S2's 20,218); the tier's densest-refugia share falls 78.7% → 41% (S0 arms) → 7.9% (B@S2) and multi-claim
+89% → 73% → 52%. (iv) D stays plateau-rich on every arm (0.66–0.81 against the ≥ 0.10 rule); B@S2 is the least diverse guarded arm
+measured to date. Products: `spec/v3.1/E20_pf3_summary.csv` (with the two reference rows), `E20_transform_conditionality.json` +
+per-arm CSVs, `figures/v3.1/e20_s0_f_arms.png`; report-back `spec/e20_reportback.md`. Disposition: post-freeze register evidence
+for the spec chat; nothing registered changes (M4.34 ruling stands: 1/v registered, log1p in the pocket; I² not registered).
+
+**R10.26 The corridors-out isolation test (PF-4; M4.37) — Ethan's run 2026-09-17 (18h → 18i → 18j): ONE certified anchor,
+registered balanced formulation (S0 at SSP585, identity shapes, manifest v3.1 targets), climate corridors at weight 0, transboundary
+connectivity on the connectivity block's full 25% (weight 0.669 → 1.236; the other six blocked weights × 0.923 under the mean-1
+convention).** Integrity: anchor z 4.1826 (bound 4.1826, gap 2.0e-6, 39 s; not comparable in level to the registered 4.9025 — a
+different objective); budget 381,874 cells, locked areas selected in both.
+(a) **Jaccard on discretionary selections 0.686** — 35,578 km² dropped and 35,578 km² gained, 18.6% of the registered discretionary
+selection swapped. **Reading rule: noticeably below 1 (operational threshold 0.95; reference scale — numerical near-tie 0.9957,
+PF-1 shape change 0.957, PF-2 three shape changes 0.873, between-scenario anchors 0.373–0.931): corridors WAS shaping the balanced
+map; B (transboundary alone) is a real change and must be stated as such.** (b) **The swap is off-core land:** the frozen core stays
+in the anchor (29,088 → 28,782 of 29,194 km²; the dropped land is 0.9% core, the gained 0.1%); the dropped 35,578 km² is 63%
+multi-claim, 1.7% densest-refugia, 3.2% soil-carbon-tail land; the gained 35,578 km² is 31% multi-claim, 0% densest-refugia, 5.7%
+soil-carbon-tail, 76% rare-attainable-EFG footprint; neither side holds a spike cell (the raw-current spike is 1.0% of both
+selections). (c) **Per-value capture shifts (points, PF-4 − registered):** transboundary +3.2 (0.354 → 0.386), climate corridors
+−1.4 (0.281 → 0.267), refugia −2.0 (0.474 → 0.454), biomass −2.8 (0.372 → 0.344), soil carbon 0.0 (0.332, at target), birds +0.4,
+mammals +0.5, naturalness −0.1; EFG block mean +1.0 (0.336 → 0.346), capture ÷ target 1.000 → 1.000, targets met 20 → 19 (F2.1 at
+0.4912 vs 0.4912, a 2e-4 slip below the rounded target — at target). Locked protected areas alone: 0.12–0.19 of every value, 12/20
+EFG targets. (d) **Corridor capture as a co-benefit: 0.267 at weight 0 vs 0.281 registered and 0.143 from the locked areas alone —
+89.7% of the discretionary corridor capture survives with the layer out of the objective** (budget line 0.30; corridors was the one
+value below its area share in the registered anchor and stays there). Reading beyond the rule: corridors shapes WHERE the balanced
+anchor goes (an 18.6% place swap, none of it core), not WHAT it captures (every value within ±3.2 points, corridors itself keeps 90%
+of its discretionary capture) — E7's "places, not outcomes" once more, and Decision 1's "real change" is a map-level change with no
+core-level or capture-level cost. Products: `spec/v3.1/PF4_corridors_out_captures.csv`, `PF4_corridors_out_efg_captures.csv`,
+`PF4_corridors_out_swap_composition.csv`, `PF4_corridors_out_summary.json`, `figures/v3.1/pf4_corridors_out_swap.png`;
+run `runs_v3.1/pf4_corridors_out/s0_ssp585_theta5/`. Disposition: post-freeze evidence; Decision 1 (B vs the registered 50/50
+block, applied paper) → the spec chat; nothing registered changes.
+
+**R10.27 (placeholder) Manifest v4 pre-solve record (11c; M2.12 / M4.38) — Ethan's run pending.** To record from 11c: the velocity
+pre-checks per realization (existing minimum, near-zero counts, cells changed by the floor — expected inert), the transboundary I²
+dust count, the re-audit cards (floored refugia: class, leverage, θ-tail; I² transboundary: class, leverage, R2 target withheld by the
+semantic gate), the seven scenarios' weights per climate cell, the manifest v4 sha.
+
+**R11.1 (placeholder) The v4 ensemble (12 → 13 → 15 → 18) — pending.** To record: F on the guarded band over 14 cells; the v4 core
+(km², composition: densest refugia / soil-carbon tail / spike / multi-claim) against the pre-stated expectation (smaller than 29,194
+km², less refugia-dominated); tier ownership by scenario (five owners + 2+); **pinch-point pinning at S0** (`T1_pinning.csv`: spike
+share frequent, expected 100% at balanced weights; ~13k km² own land for structural connectivity); corridors-forward own land (expected
+little or nothing); E1 bias, E3 shares (guarded basis), E4 f(g) on the reference cell, E7 captures / tails, E11 Δ mutual-in-band
+share (expected to fall somewhat), D per cell.
+
+**R11.2 (placeholder) The necessity test and latitude attribution on v4 (18b → 18c; 15) — pending.** E19 forced share (expected
+~0), six leave-one-block-out shifts at S0 (E17-T3), E17-T1/T2.
+
+**R11.3 (placeholder) Package v2 on v4 (19 → 20 → 21) — pending.** Core clusters (regional, N→S, named "Cluster N (Region)"), the
+four v3.1 clusters' survival (`v31_cluster_survival.csv`), tiers by five owners, T-D7 with the mean-vs-median flags, T-D4 once the
+ecoregion attribute table lands.

@@ -51,7 +51,7 @@ pr_refresh_manifest <- function(proj, analysis) {
   # Regenerate manifest.json from config.py for THIS analysis, then confirm it exists.
   # A failed refresh STOPS the run rather than solving against a stale/other-analysis manifest.
   py       <- file.path(proj, ".venv", "bin", "python")
-  manifest <- file.path(proj, "input_data", "aligned_stack", "manifest.json")
+  manifest <- file.path(proj, "input_data", "aligned_stack", "manifest.json")      # the canonical stack (pre-v4 default)
   if (file.exists(py)) {
     code <- sprintf("import config; print(config.write_manifest(analysis='%s'))", analysis)
     out  <- suppressWarnings(system2(py, c("-c", shQuote(code)), stdout = TRUE, stderr = TRUE))
@@ -59,7 +59,11 @@ pr_refresh_manifest <- function(proj, analysis) {
     if (!is.null(st) && st != 0)
       stop(sprintf("manifest refresh FAILED for analysis '%s' (config.py error, or a required\n  input vector is missing -- e.g. the ab_foothills boundary/foothills gpkg):\n  %s",
                    analysis, paste(out, collapse = "\n  ")))
-    cat(sprintf("manifest refreshed from config.py (analysis=%s)\n", analysis))
+    # config.write_manifest returns the path it wrote: version-scoped for the flagship (aligned_stack_v4/manifest.json under
+    # manifest v4, study plan v0.20), the canonical stack otherwise -- the R side follows whatever config chose.
+    printed <- trimws(out[length(out)])
+    if (nzchar(printed) && file.exists(printed)) manifest <- printed
+    cat(sprintf("manifest refreshed from config.py (analysis=%s) -> %s\n", analysis, sub(paste0("^", proj, "/"), "", manifest)))
   } else {
     cat(sprintf("NOTE: %s not found -- using the existing manifest as-is\n", py))
   }

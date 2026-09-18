@@ -1,5 +1,5 @@
 {
-  "created_utc": "2026-09-10T16:18:34.726256+00:00",
+  "created_utc": "2026-09-17T21:49:54.748811+00:00",
   "e14": {
     "trigger": true,
     "rule": ">=20% of members below 0.95*anchor block capture in >=1 formulation"
@@ -69,7 +69,9 @@
       "efg": "UNKNOWN -- that is the point of the run",
       "carbon": "selection shifts SOUTH-of-current? pre-stated: south (tail is southern-interior)",
       "core_habitat": "shifts toward richness/carbon country (refugia mass is northern-interior)",
-      "connectivity": "small shift (diffuse)"
+      "connectivity": "small shift (diffuse)",
+      "structural_connectivity": "small shift; the pinch points are mid-latitude (v4)",
+      "climate_corridors": "small shift (diffuse breadth measure; v4)"
     },
     "blocks": {
       "core_habitat": [
