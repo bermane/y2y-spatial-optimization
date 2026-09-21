@@ -1,16 +1,16 @@
-# Y2Y director package — deck outline (study plan v0.16.1; package spec v1.6; value-first)
+# Y2Y director package — deck outline (study plan v0.20 (manifest v4); package spec v1.14; value-first)
 
-_generated from analyses/y2y/director_package; n = 12 formulations_
+_generated from analyses/y2y/director_package; n = 14 formulations_
 
 ## Slide 1 — Where Y2Y's values agree — and where they diverge
 
-- 12 value positions (6 scenarios × 2 climate futures for refugia) × 51 near-optimal plans each
+- 14 value positions (7 scenarios × 2 climate futures for refugia) × 51 near-optimal plans each
 - 30% of the region; existing PAs locked in — they are 15% of the region (50% of the budget) and already bank 12–19% of every value (19/20 ecosystem groups present) — remarkably AVERAGE land for these values
 - Every plan keeps every value theme within 5% of its best
 - Representativeness block curated before this run (rule R0): 20 ecosystem features kept of 40 — anthropogenic biomes, a point-record class, sub-grain slivers and one uninformative envelope removed; two duplicate footprints merged
 - The spine of the story: VALUE (where a theme is rich) is not IRREPLACEABILITY (where near-optimal plans cannot do without it)
 
-> Context slide. Methods live in the study plan v0.16.1; package spec v1.6.
+> Context slide. Methods live in the study plan v0.20 (manifest v4); package spec v1.14.
 
 ## Slide 2 — How to read the maps
 
@@ -19,7 +19,7 @@ figure: `slide2_how_to_read.png`
 - Grey = existing protected areas (fixed in every plan)
 - 1 km tiers drive the clustering; cluster outlines are 1 km polygons, not hex unions
 - Hexes (~250 km²) are for legibility only — our DISPLAY hex ≈ the national 30×30 analysis's PLANNING unit (100 km²); our analysis runs at 1 km², two orders of magnitude finer ('this valley', not 'this ecodistrict')
-- 51 near-optimal plans × 12 value positions, versus 4 plans in the national analysis
+- 51 near-optimal plans × 14 value positions, versus 4 plans in the national analysis
 - Ecosystem classes (IUCN GET) are coarse indicative maps (10 arcmin–1° grain): they enter as a representation floor, never draw a boundary, and any cluster they force is captioned as an adequacy pin
 
 ## Slide 3 — The values in the analysis
@@ -27,7 +27,7 @@ figure: `slide2_how_to_read.png`
 figure: `values_table.png`
 
 - The PROACT objectives hierarchy: fundamental objective → sub-objective → the layer that measures it → how it enters the optimization
-- 4 weighted themes share the objective equally in the balanced position (core habitat, connectivity, biodiversity, carbon); each forward position doubles one theme's share
+- 5 weighted themes share the objective equally in the balanced position (core habitat, structural connectivity, climate corridors, biodiversity, carbon); each forward position doubles one theme's share
 - Representativeness is a floor (rarity-scaled targets), not a weighted theme; naturalness is in the formulation but cannot move the answer
 - Communities, water and cost are not in this analysis; the 30% budget stands in for cost
 
@@ -36,7 +36,7 @@ figure: `values_table.png`
 figure: `act0_values_hex250.png`
 
 - Each PROACT theme's value before any optimization: the top 30% of unprotected land by that theme (share per hex)
-- Footprints: core habitat 324,566 km², connectivity 324,567 km², biodiversity 324,641 km², carbon 324,566 km², representativeness 6,287 km²
+- Footprints: core habitat 324,566 km², structural connectivity 324,566 km², climate corridors 324,566 km², biodiversity 324,641 km², carbon 324,566 km², representativeness 6,287 km²
 - Representativeness votes as presence of a class rare in the regional window; naturalness (1 − human modification) shown sixth — disclosed, not a driver
 - This is the map directors already hold in their heads — the national analyses (Currie, Jung) stop here; the next acts ask what of it can be promised
 
@@ -44,15 +44,15 @@ figure: `act0_values_hex250.png`
 
 figure: `act0_value_convergence_hex250.png`
 
-- Count of the 5 themes (0–5) in which a cell is top-30%: 0: 204,062 km², 1: 500,024 km², 2: 329,798 km², 3: 46,997 km², 4: 1,004 km², 5: 0 km²
-- 877,823 km² (81% of unprotected land) is high-value for at least one theme
+- Count of the 6 themes (0–6) in which a cell is top-30%: 0: 143,651 km², 1: 411,662 km², 2: 375,797 km², 3: 137,166 km², 4: 13,607 km², 5: 2 km², 6: 0 km²
+- 938,234 km² (87% of unprotected land) is high-value for at least one theme
 - Value is not irreplaceability: Acts 1–2 show how much of this the ensemble can promise
 
 ## Slide 6 — Act 1 — Core commitments
 
 figure: `act1_core_F_1km.png`
 
-- Of everything in Act 0, these areas recur in near-optimal plans no matter whose values prevail: 29,194 km² (F ≥ 0.70 across all 12 positions)
+- Of everything in Act 0, these areas recur in near-optimal plans no matter whose values prevail: 37,879 km² (F ≥ 0.70 across all 14 positions)
 - No value theme left more than 5% behind in any plan
 - F at 1 km over unprotected land; declared IPCA proposals outlined
 
@@ -67,17 +67,17 @@ figure: `act1_core_clusters_1km.png`
 
 figure: `act1_core_ssp585_1km.png`
 
-- 6 value positions at SSP585: core 31,358 km²
-- 83% of the 12-position core lies inside it
-- The 12-position core = what survives BOTH refugia futures
+- 7 value positions at SSP585: core 40,048 km²
+- 90% of the 14-position core lies inside it
+- The 14-position core = what survives BOTH refugia futures
 
 ## Slide 9 — Act 1 under the low-emissions refugia future
 
 figure: `act1_core_ssp245_1km.png`
 
-- 6 value positions at SSP245: core 41,083 km²
-- 83% of the 12-position core lies inside it
-- The 12-position core = what survives BOTH refugia futures
+- 7 value positions at SSP245: core 44,335 km²
+- 89% of the 14-position core lies inside it
+- The 14-position core = what survives BOTH refugia futures
 
 ## Slide 10 — Where the core depends on the climate future
 
@@ -85,7 +85,7 @@ figure: `act1_two_way_climate.png`
 
 - One hex, two refugia futures: bivariate F
 - Yellow = core under both futures; orange = only if emissions run high; green = only if they stay low
-- The 12-position core is what survives both
+- The 14-position core is what survives both
 
 ## Slide 11 — Why these places — core clusters
 
@@ -107,54 +107,63 @@ figure: `td7_consequences_core.png`
 figure: `act2_s1_hex250.png`
 
 - Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads — its frequent tier, clusters outside the core numbered
-- Frequent tier 66,090 km²; own land (outside the core and the other scenarios' tiers) 31,308 km²
+- Frequent tier 63,602 km²; own land (outside the core and the other scenarios' tiers) 27,580 km²
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 
-## Slide 14 — Act 2 — Connectivity-forward: value vs irreplaceability
+## Slide 14 — Act 2 — Structural-connectivity-forward: value vs irreplaceability
 
 figure: `act2_s2_hex250.png`
 
 - Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads — its frequent tier, clusters outside the core numbered
-- Frequent tier 27,811 km²; own land (outside the core and the other scenarios' tiers) 8,429 km²
+- Frequent tier 74,001 km²; own land (outside the core and the other scenarios' tiers) 37,330 km²
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 
-## Slide 15 — Act 2 — Biodiversity-forward: value vs irreplaceability
+## Slide 15 — Act 2 — Climate-corridors-forward: value vs irreplaceability
+
+figure: `act2_s2c_hex250.png`
+
+- Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads — its frequent tier, clusters outside the core numbered
+- Frequent tier 24,765 km²; own land (outside the core and the other scenarios' tiers) 12 km²
+- Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
+- Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
+
+## Slide 16 — Act 2 — Biodiversity-forward: value vs irreplaceability
 
 figure: `act2_s3_hex250.png`
 
 - Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads — its frequent tier, clusters outside the core numbered
-- Frequent tier 13,014 km²; own land (outside the core and the other scenarios' tiers) 271 km²
+- Frequent tier 32,785 km²; own land (outside the core and the other scenarios' tiers) 58 km²
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
-- almost no land of its own; every near-optimal plan holds 29–35% of AOH richness whichever value leads — the finding IS the product: the value map (left) is where to work
+- almost no land of its own; every near-optimal plan holds 28–34% of AOH richness whichever value leads — the finding IS the product: the value map (left) is where to work
 
-## Slide 16 — Act 2 — Carbon-forward: value vs irreplaceability
+## Slide 17 — Act 2 — Carbon-forward: value vs irreplaceability
 
 figure: `act2_s4_hex250.png`
 
 - Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads — its frequent tier, clusters outside the core numbered
-- Frequent tier 50,217 km²; own land (outside the core and the other scenarios' tiers) 23,805 km²
+- Frequent tier 57,450 km²; own land (outside the core and the other scenarios' tiers) 17,934 km²
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 - carbon-forward is the only scenario that also states a security target (55% of dense soil carbon); its own land comes from that target, not from the share doubling the other values get
 - carbon has a target lever because its geometry admitted a stopping rule; the diffuse values cannot; the asymmetry is the landscape's
 
-## Slide 17 — Scenario clusters — value profiles
+## Slide 18 — Scenario clusters — value profiles
 
 figure: `act2_star_grid.png`
 
 - Each scenario's two largest clusters outside the core
 - Same radial scale as the core stars
 
-## Slide 18 — Act 2 — consequences
+## Slide 19 — Act 2 — consequences
 
 figure: `td7_consequences_scenarios.png`
 
 - The same ratio-to-average table for the scenario clusters; 'leads with' = the value position that makes the cluster frequent
 
-## Slide 19 — Hinge — value convergence × what can be promised
+## Slide 20 — Hinge — value convergence × what can be promised
 
 figure: `hinge_convergence_x_F.png`
 
@@ -163,23 +172,23 @@ figure: `hinge_convergence_x_F.png`
 - High value / opportunity = Act 3's territory — near-optimal plans absorb it
 - Low value / core = the E13 surprise: binding claims in unglamorous places — point at it in the room
 
-## Slide 20 — Why these places (driver attribution)
+## Slide 21 — Why these places (driver attribution)
 
 figure: `why_these_places.png`
 
 - High frequency follows binding scarcity, not the most-valued layer
 - Dense climate refugia pin the core under every value position; dense soil carbon under carbon-forward values
 
-## Slide 21 — Act 3 — The opportunity landscape: the measured gap
+## Slide 22 — Act 3 — The opportunity landscape: the measured gap
 
 figure: `act3_opportunity.png`
 
-- 779,230 km² of high-value land (89% of it) sits outside the core and every scenario tier
-- Near-optimal plans absorb it: 97% of unprotected land appears in ≥1 near-optimal plan; 107/132 pairs of value positions are mutually near-optimal
+- 805,499 km² of high-value land (86% of it) sits outside the core and every scenario tier
+- Near-optimal plans absorb it: 97% of unprotected land appears in ≥1 near-optimal plan; 157/182 pairs of value positions are mutually near-optimal
 - The analysis does not forbid working anywhere relationships and feasibility are positive — it tells you what can be promised about each tier
 - PRIORITY ≠ PERMISSION
 
-## Slide 22 — What each tier delivers
+## Slide 23 — What each tier delivers
 
 figure: `tier_achievement.png`
 
@@ -187,7 +196,7 @@ figure: `tier_achievement.png`
 - Red line/band = what a single optimal plan captures (balanced; range across all positions)
 - Pairs with T-D6: the promise per tier, in the currency of each value
 
-## Slide 23 — What we can promise — the map in one picture
+## Slide 24 — What we can promise — the map in one picture
 
 figure: `summary_tiers_1km.png`
 
@@ -196,7 +205,7 @@ figure: `summary_tiers_1km.png`
 - Light blue = defensible wherever feasibility is positive (Act 3)
 - Tiers are levels of reliability, not a fence
 
-## Slide 24 — What we can promise
+## Slide 25 — What we can promise
 
 figure: `td2_bands.png`
 
@@ -205,7 +214,7 @@ figure: `td2_bands.png`
 - Opportunity: defensible wherever feasibility is positive (enable)
 - Next: the ecoregion layer for T-D4 (attribute table pending)
 
-## Slide 25 — Appendix — The necessity test (E19): what the ecosystem block forces
+## Slide 26 — Appendix — The necessity test (E19): what the ecosystem block forces
 
 figure: `td_e19_partition.png`
 
@@ -218,5 +227,5 @@ figure: `td_e19_partition.png`
 - `td1_picks.png` + `tables/T-D1_cluster_register.csv` (full register), `tables/cluster_sensitivity.csv` (0.60/0.80)
 - `td6_value_coverage.png` + `tables/T-D6_value_coverage.csv` / `T-D6b_value_share_by_tier.csv` (value vs irreplaceability by theme), `tables/hinge_crosstab.csv`
 - `td2_acts.png`, `td3_scenarios.png`, `td5_protected_baseline.png` (what PAs already bank), `td5b_enrichment_by_scenario.png`, `tables/pooling_check.csv`, 1 km GeoTIFFs in `geotiffs/` (incl. `value_top30_*.tif`, `value_convergence.tif`, `value_gap.tif`)
-- `act2_scenarios_overview.png` (all scenarios as small multiples), `agreement_matrix.png` (pairwise Jaccard between the 12 optimal plans), `e17_one_pager.png` (the representativeness lean, record only), `td4_ecoregions.png` + `tables/T-D4_ecoregions.csv` (tier area by ecoregion — needs an ecoregion layer in `input_data/ecoregions/`)
+- `act2_scenarios_overview.png` (all scenarios as small multiples), `agreement_matrix.png` (pairwise Jaccard between the 14 optimal plans), `e17_one_pager.png` (the representativeness lean, record only), `td4_ecoregions.png` + `tables/T-D4_ecoregions.csv` (tier area by ecoregion — needs an ecoregion layer in `input_data/ecoregions/`)
 - Decided: (c) hex 250 km², (h) IPCA dataset, (e) cluster names = 'Cluster N (Region)' from the communities lookup, (f) E17 one-pager out of the deck

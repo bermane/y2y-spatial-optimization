@@ -1,10 +1,10 @@
 {
- "version": "v3.1",
- "manifest": "manifest_v3.1.csv",
+ "version": "v4",
+ "manifest": "manifest_v4.csv",
  "efg_block": "iucn_efg_v3",
  "n_efg": 20,
  "efg_target_rule": "loglinear_window250km",
- "n_formulations": 12,
+ "n_formulations": 14,
  "excluded": [
   "s1x",
   "s3x"
@@ -14,109 +14,119 @@
  "min_km2": 100,
  "partial": false,
  "missing": [],
- "guard_runtime_h": 10.997231944444467,
+ "guard_runtime_h": 12.33276472222224,
  "maa_guard_spotcheck": {
   "formulation": "s0_ssp585_theta5",
-  "corr": 0.9783365541360398,
-  "tier_jaccard": 0.8397895442921226,
-  "freq_km2_mga": 42733,
-  "freq_km2_maa": 45036
+  "corr": 0.9831070442167726,
+  "tier_jaccard": 0.8580848476544436,
+  "freq_km2_mga": 53299,
+  "freq_km2_maa": 55189
  },
- "unguarded_basis": "all formulations",
+ "unguarded_basis": "unguarded (s0_ssp585_theta5 only)",
  "by_level": {
   "585": {
-   "n": 6,
-   "core_km2": 31358,
-   "jaccard_vs_12": 0.6650259850963786,
-   "pct_of_12_inside": 82.84236486949374
+   "n": 7,
+   "core_km2": 40048,
+   "jaccard_vs_12": 0.7848194040447997,
+   "pct_of_12_inside": 90.46173341429288
   },
   "245": {
-   "n": 6,
-   "core_km2": 41083,
-   "jaccard_vs_12": 0.5286913773601323,
-   "pct_of_12_inside": 83.25340823456875
+   "n": 7,
+   "core_km2": 44335,
+   "jaccard_vs_12": 0.6949942272802243,
+   "pct_of_12_inside": 88.99390163415084
   },
-  "jaccard_585_245": 0.36308213378492804,
-  "union_km2": 53145,
-  "intersection_km2": 19296
+  "jaccard_585_245": 0.5544155030762996,
+  "union_km2": 54286,
+  "intersection_km2": 30097
  },
  "frequent_km2": {
-  "guarded": 29194,
-  "unguarded": 4
+  "guarded": 37879,
+  "unguarded": 2411
  },
  "always_km2": {
-  "guarded": 4528,
-  "unguarded": 0
+  "guarded": 11592,
+  "unguarded": 981
  },
  "ever_in_band_pct": {
-  "guarded": 97.48004640049544,
-  "unguarded": 100.0
+  "guarded": 97.23695217144152,
+  "unguarded": 99.83316156523105
  },
+ "s0_g10_union_pct": 100.0,
  "e11_pairs_in_band": [
-  107,
-  132
+  157,
+  182
  ],
  "pooling": [
   {
    "scenario": "s0",
    "levels": 2,
-   "jaccard": 0.3903534662731265,
-   "decision": "POOLED (forced; rule would separate at Jaccard 0.39 < 0.8)",
-   "freq_km2_585": 42733,
-   "freq_km2_245": 53834
+   "jaccard": 0.5632620482756723,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.56 < 0.8)",
+   "freq_km2_585": 53299,
+   "freq_km2_245": 60297
   },
   {
    "scenario": "s1",
    "levels": 2,
-   "jaccard": 0.42193062947329785,
-   "decision": "POOLED (forced; rule would separate at Jaccard 0.42 < 0.8)",
-   "freq_km2_585": 74160,
-   "freq_km2_245": 80802
+   "jaccard": 0.460901285823693,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.46 < 0.8)",
+   "freq_km2_585": 68927,
+   "freq_km2_245": 76047
   },
   {
    "scenario": "s2",
    "levels": 2,
-   "jaccard": 0.4675540381554361,
-   "decision": "POOLED (forced; rule would separate at Jaccard 0.47 < 0.8)",
-   "freq_km2_585": 30509,
-   "freq_km2_245": 33108
+   "jaccard": 0.8305745471992323,
+   "decision": "POOLED",
+   "freq_km2_585": 74925,
+   "freq_km2_245": 77690
+  },
+  {
+   "scenario": "s2c",
+   "levels": 2,
+   "jaccard": 0.5676404621979956,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.57 < 0.8)",
+   "freq_km2_585": 27760,
+   "freq_km2_245": 27457
   },
   {
    "scenario": "s3",
    "levels": 2,
-   "jaccard": 0.28519435689629297,
-   "decision": "POOLED (forced; rule would separate at Jaccard 0.29 < 0.8)",
-   "freq_km2_585": 9636,
-   "freq_km2_245": 24617
+   "jaccard": 0.5197850613522194,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.52 < 0.8)",
+   "freq_km2_585": 32527,
+   "freq_km2_245": 41292
   },
   {
    "scenario": "s4",
    "levels": 2,
-   "jaccard": 0.551724620247853,
-   "decision": "POOLED (forced; rule would separate at Jaccard 0.55 < 0.8)",
-   "freq_km2_585": 50544,
-   "freq_km2_245": 60395
+   "jaccard": 0.6589551735760028,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.66 < 0.8)",
+   "freq_km2_585": 59022,
+   "freq_km2_245": 64031
   },
   {
    "scenario": "s5",
    "levels": 2,
-   "jaccard": 0.3824097316084186,
-   "decision": "POOLED (forced; rule would separate at Jaccard 0.38 < 0.8)",
-   "freq_km2_585": 39585,
-   "freq_km2_245": 46329
+   "jaccard": 0.5700899671960765,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.57 < 0.8)",
+   "freq_km2_585": 46267,
+   "freq_km2_245": 50416
   }
  ],
  "act2_owner_km2": {
-  "Core-habitat-forward": 31308,
-  "Connectivity-forward": 8429,
-  "Biodiversity-forward": 271,
-  "Carbon-forward": 23805,
-  "2+ scenarios": 6353
+  "Core-habitat-forward": 27580,
+  "Structural-connectivity-forward": 37330,
+  "Climate-corridors-forward": 12,
+  "Biodiversity-forward": 58,
+  "Carbon-forward": 17934,
+  "2+ scenarios": 11948
  },
  "tier_area_pct_disc": {
-  "core": 2.6984383737643096,
-  "scenario": 6.485532196120659,
-  "opportunity": 88.29607583061046
+  "core": 3.5012039172370444,
+  "scenario": 8.768214736316706,
+  "opportunity": 84.96753351788776
  },
  "protected_baseline": {
   "pa_km2": 191029,
@@ -126,13 +136,12 @@
   "banked_min": 12.255610701016842,
   "banked_max": 19.16639009547981
  },
- "td4_blocker": "ecoregions2017_clipped.shp has no .dbf beside it (attributes missing: ['geometry']) -- re-export the ecoregion layer WITH its attribute table (RESOLVE 2017: ECO_NAME / BIOME_NAME) into input_data/ecoregions/",
- "td4": "pending (no ecoregion layer)",
+ "td4": "from ecoregions2017_clipped.shp (ECO_NAME; 25 zones; 6,740 PU cells = 0.53% outside every polygon)",
  "biodiversity_plan_capture": {
-  "n_plans": 612,
-  "min": 0.28993144236586305,
-  "max": 0.35060055432994974,
-  "median": 0.31265400596687853
+  "n_plans": 714,
+  "min": 0.2827213517451431,
+  "max": 0.3420413318283327,
+  "median": 0.3079427787892141
  },
  "e19": {
   "core_forced_pct": 0.0,
@@ -140,213 +149,234 @@
   "partition": [
    {
     "unit": "core",
-    "km2": 29194,
+    "km2": 37879,
     "forced_pct": 0.0,
-    "multi_claim_pct": 89.93628827841337,
-    "other_pct": 10.063711721586627
+    "multi_claim_pct": 90.04989572058396,
+    "other_pct": 9.950104279416035
    },
    {
     "unit": "scenario tier: Core-habitat-forward",
-    "km2": 31308,
+    "km2": 27580,
     "forced_pct": 0.0,
-    "multi_claim_pct": 80.51616200332184,
-    "other_pct": 19.483837996678165
+    "multi_claim_pct": 85.73604060913705,
+    "other_pct": 14.263959390862944
    },
    {
-    "unit": "scenario tier: Connectivity-forward",
-    "km2": 8429,
+    "unit": "scenario tier: Structural-connectivity-forward",
+    "km2": 37330,
     "forced_pct": 0.0,
-    "multi_claim_pct": 56.56661525685135,
-    "other_pct": 43.43338474314865
+    "multi_claim_pct": 75.7889097240825,
+    "other_pct": 24.211090275917492
    },
    {
-    "unit": "scenario tier: Biodiversity-forward",
-    "km2": 271,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 78.96678966789668,
-    "other_pct": 21.03321033210332
-   },
-   {
-    "unit": "scenario tier: Carbon-forward",
-    "km2": 23805,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 44.88132745221592,
-    "other_pct": 55.11867254778408
-   },
-   {
-    "unit": "opportunity",
-    "km2": 955262,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 31.63550942045219,
-    "other_pct": 68.3644905795478
-   },
-   {
-    "unit": "pick 1: SW of Tahltan - Sacred Headwaters (Klappan) (56.8\u00b0N 129.3\u00b0W)",
-    "km2": 11490,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 83.92515230635335,
-    "other_pct": 16.07484769364665
-   },
-   {
-    "unit": "pick 2: Purcell Wilderness Conservancy Park vicinity (50.1\u00b0N 116.4\u00b0W)",
-    "km2": 12105,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 97.78603882693102,
-    "other_pct": 2.21396117306898
-   },
-   {
-    "unit": "pick 3: N of Granby Park (49.9\u00b0N 118.7\u00b0W)",
-    "km2": 2507,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 99.68089349820502,
-    "other_pct": 0.3191065017949741
-   },
-   {
-    "unit": "pick 4: NW of Frank Church River Of No Return Wilderness (45.2\u00b0N 115.6\u00b0W)",
-    "km2": 5229,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 81.54522853318034,
-    "other_pct": 18.45477146681966
-   },
-   {
-    "unit": "pick 5: Tahltan - Sacred Headwaters (Klappan) vicinity (57.0\u00b0N 128.9\u00b0W)",
-    "km2": 12198,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 81.07886538776849,
-    "other_pct": 18.921134612231512
-   },
-   {
-    "unit": "pick 6: Purcell Wilderness Conservancy Park vicinity (49.9\u00b0N 116.3\u00b0W)",
-    "km2": 8680,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 97.0852534562212,
-    "other_pct": 2.914746543778802
-   },
-   {
-    "unit": "pick 7: NW of Wilps Gwininitxw (56.6\u00b0N 128.3\u00b0W)",
-    "km2": 2677,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 91.25887187149794,
-    "other_pct": 8.741128128502055
-   },
-   {
-    "unit": "pick 8: S of Mount Robson Park (52.5\u00b0N 118.6\u00b0W)",
-    "km2": 1428,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 92.78711484593838,
-    "other_pct": 7.212885154061625
-   },
-   {
-    "unit": "pick 9: S of Purcell Wilderness Conservancy Park (49.6\u00b0N 116.4\u00b0W)",
-    "km2": 529,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 80.52930056710775,
-    "other_pct": 19.47069943289225
-   },
-   {
-    "unit": "pick 10: NE of Gospel Hump Wilderness (45.8\u00b0N 115.5\u00b0W)",
-    "km2": 157,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 61.78343949044586,
-    "other_pct": 38.21656050955414
-   },
-   {
-    "unit": "pick 11: E of Fishing Branch Wilderness Preserve (66.6\u00b0N 134.1\u00b0W)",
-    "km2": 4886,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 87.47441670077774,
-    "other_pct": 12.525583299222268
-   },
-   {
-    "unit": "pick 12: E of Nahanni National Park Reserve Of Canada (61.5\u00b0N 121.9\u00b0W)",
-    "km2": 4318,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 25.034738304770727,
-    "other_pct": 74.96526169522927
-   },
-   {
-    "unit": "pick 585-1: S of Tahltan - Sacred Headwaters (Klappan) (56.9\u00b0N 129.2\u00b0W)",
-    "km2": 13866,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 88.55473820856771,
-    "other_pct": 11.44526179143228
-   },
-   {
-    "unit": "pick 585-2: Purcell Wilderness Conservancy Park vicinity (50.1\u00b0N 116.4\u00b0W)",
-    "km2": 11522,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 98.21211595209165,
-    "other_pct": 1.7878840479083493
-   },
-   {
-    "unit": "pick 585-3: NW of Frank Church River Of No Return Wilderness (45.3\u00b0N 115.7\u00b0W)",
-    "km2": 1947,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 87.05701078582435,
-    "other_pct": 12.942989214175656
-   },
-   {
-    "unit": "pick 585-4: E of Frank Church River Of No Return Wilderness (45.0\u00b0N 114.3\u00b0W)",
-    "km2": 1342,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 93.6661698956781,
-    "other_pct": 6.333830104321907
-   },
-   {
-    "unit": "pick 585-5: NW of Anaconda Pintler Wilderness (46.1\u00b0N 113.8\u00b0W)",
-    "km2": 612,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 98.20261437908496,
-    "other_pct": 1.7973856209150327
-   },
-   {
-    "unit": "pick 585-6: NW of Granby Park (49.8\u00b0N 118.7\u00b0W)",
-    "km2": 598,
+    "unit": "scenario tier: Climate-corridors-forward",
+    "km2": 12,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 245-1: Purcell Wilderness Conservancy Park vicinity (50.0\u00b0N 116.4\u00b0W)",
-    "km2": 14828,
+    "unit": "scenario tier: Biodiversity-forward",
+    "km2": 58,
     "forced_pct": 0.0,
-    "multi_claim_pct": 93.36390612355004,
-    "other_pct": 6.6360938764499595
+    "multi_claim_pct": 98.27586206896552,
+    "other_pct": 1.7241379310344827
    },
    {
-    "unit": "pick 245-2: SW of Tahltan - Sacred Headwaters (Klappan) (56.8\u00b0N 129.3\u00b0W)",
-    "km2": 8533,
+    "unit": "scenario tier: Carbon-forward",
+    "km2": 17934,
     "forced_pct": 0.0,
-    "multi_claim_pct": 74.94433376303762,
-    "other_pct": 25.05566623696238
+    "multi_claim_pct": 56.390097022415524,
+    "other_pct": 43.609902977584476
    },
    {
-    "unit": "pick 245-3: NE of Gospel Hump Wilderness (45.7\u00b0N 115.4\u00b0W)",
-    "km2": 7425,
+    "unit": "opportunity",
+    "km2": 919251,
     "forced_pct": 0.0,
-    "multi_claim_pct": 46.666666666666664,
-    "other_pct": 53.333333333333336
+    "multi_claim_pct": 45.29067686627483,
+    "other_pct": 54.70932313372517
    },
    {
-    "unit": "pick 245-4: N of Granby Park (49.8\u00b0N 118.5\u00b0W)",
-    "km2": 3237,
+    "unit": "pick 1: E of Ddhaw Ghro (64.1\u00b0N 133.1\u00b0W)",
+    "km2": 1215,
     "forced_pct": 0.0,
-    "multi_claim_pct": 91.65894346617239,
-    "other_pct": 8.341056533827619
+    "multi_claim_pct": 89.30041152263375,
+    "other_pct": 10.699588477366255
    },
    {
-    "unit": "pick 245-5: SW of Wells Gray Park (51.7\u00b0N 120.3\u00b0W)",
-    "km2": 2484,
+    "unit": "pick 2: NW of Wilps Gwininitxw (56.4\u00b0N 128.3\u00b0W)",
+    "km2": 8287,
     "forced_pct": 0.0,
-    "multi_claim_pct": 99.19484702093398,
-    "other_pct": 0.8051529790660226
+    "multi_claim_pct": 90.6721370821769,
+    "other_pct": 9.327862917823097
    },
    {
-    "unit": "pick 245-6: NE of Frank Church River Of No Return Wilderness (45.6\u00b0N 114.4\u00b0W)",
-    "km2": 1011,
+    "unit": "pick 3: Purcell Wilderness Conservancy Park vicinity (50.1\u00b0N 116.4\u00b0W)",
+    "km2": 14417,
     "forced_pct": 0.0,
-    "multi_claim_pct": 89.31750741839762,
-    "other_pct": 10.682492581602373
+    "multi_claim_pct": 98.1965734896303,
+    "other_pct": 1.8034265103697025
+   },
+   {
+    "unit": "pick 4: W of Frank Church River Of No Return Wilderness (45.1\u00b0N 115.7\u00b0W)",
+    "km2": 6391,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 93.85072758566734,
+    "other_pct": 6.149272414332655
+   },
+   {
+    "unit": "pick 5: S of Tahltan - Sacred Headwaters (Klappan) (56.9\u00b0N 129.0\u00b0W)",
+    "km2": 12623,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 84.29058068604928,
+    "other_pct": 15.709419313950725
+   },
+   {
+    "unit": "pick 6: Purcell Wilderness Conservancy Park vicinity (50.3\u00b0N 116.5\u00b0W)",
+    "km2": 10414,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 97.50336086038025,
+    "other_pct": 2.4966391396197425
+   },
+   {
+    "unit": "pick 7: NE of Ddhaw Ghro (64.3\u00b0N 133.9\u00b0W)",
+    "km2": 13976,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 91.15626788780767,
+    "other_pct": 8.84373211219233
+   },
+   {
+    "unit": "pick 8: SE of Scapegoat Wilderness (47.0\u00b0N 112.0\u00b0W)",
+    "km2": 9272,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 58.0565142364107,
+    "other_pct": 41.9434857635893
+   },
+   {
+    "unit": "pick 9: NE of Ddhaw Ghro (64.3\u00b0N 133.7\u00b0W)",
+    "km2": 1346,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 92.86775631500743,
+    "other_pct": 7.132243684992571
+   },
+   {
+    "unit": "pick 10: NW of Wilps Gwininitxw (56.3\u00b0N 128.2\u00b0W)",
+    "km2": 392,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 90.3061224489796,
+    "other_pct": 9.693877551020408
+   },
+   {
+    "unit": "pick 11: Purcell Wilderness Conservancy Park vicinity (50.1\u00b0N 116.4\u00b0W)",
+    "km2": 2377,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 95.45645771981489,
+    "other_pct": 4.5435422801851075
+   },
+   {
+    "unit": "pick 12: NE of Gospel Hump Wilderness (45.8\u00b0N 115.5\u00b0W)",
+    "km2": 847,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 92.20779220779221,
+    "other_pct": 7.792207792207792
+   },
+   {
+    "unit": "pick 13: E of Fishing Branch Wilderness Preserve (66.6\u00b0N 134.0\u00b0W)",
+    "km2": 4190,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 89.40334128878281,
+    "other_pct": 10.596658711217184
+   },
+   {
+    "unit": "pick 14: Qat'Muk vicinity (50.3\u00b0N 116.5\u00b0W)",
+    "km2": 3926,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 95.28782475802343,
+    "other_pct": 4.712175241976566
+   },
+   {
+    "unit": "pick 585-1: Qat'Muk vicinity (50.4\u00b0N 116.4\u00b0W)",
+    "km2": 11154,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 98.43105612336382,
+    "other_pct": 1.5689438766361843
+   },
+   {
+    "unit": "pick 585-2: NW of Wilps Gwininitxw (56.5\u00b0N 128.4\u00b0W)",
+    "km2": 9546,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 91.31573433899015,
+    "other_pct": 8.684265661009848
+   },
+   {
+    "unit": "pick 585-3: W of Frank Church River Of No Return Wilderness (45.1\u00b0N 115.7\u00b0W)",
+    "km2": 2486,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 95.57522123893806,
+    "other_pct": 4.424778761061947
+   },
+   {
+    "unit": "pick 585-4: NW of Anaconda Pintler Wilderness (46.2\u00b0N 113.9\u00b0W)",
+    "km2": 2401,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 94.66888796334861,
+    "other_pct": 5.331112036651395
+   },
+   {
+    "unit": "pick 585-5: SE of Jasper National Park Of Canada (52.5\u00b0N 116.6\u00b0W)",
+    "km2": 1548,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 99.87080103359173,
+    "other_pct": 0.12919896640826872
+   },
+   {
+    "unit": "pick 585-6: E of Ddhaw Ghro (64.1\u00b0N 133.1\u00b0W)",
+    "km2": 900,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 86.0,
+    "other_pct": 14.0
+   },
+   {
+    "unit": "pick 245-1: S of Purcell Wilderness Conservancy Park (49.7\u00b0N 116.3\u00b0W)",
+    "km2": 12410,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 95.56809024979854,
+    "other_pct": 4.43190975020145
+   },
+   {
+    "unit": "pick 245-2: NE of Gospel Hump Wilderness (45.7\u00b0N 115.5\u00b0W)",
+    "km2": 6646,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 76.94854047547398,
+    "other_pct": 23.05145952452603
+   },
+   {
+    "unit": "pick 245-3: NW of Wilps Gwininitxw (56.3\u00b0N 128.2\u00b0W)",
+    "km2": 6211,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 84.8494606343584,
+    "other_pct": 15.150539365641604
+   },
+   {
+    "unit": "pick 245-4: S of Selway Bitterroot Wilderness (45.7\u00b0N 114.3\u00b0W)",
+    "km2": 1519,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 92.95589203423305,
+    "other_pct": 7.044107965766952
+   },
+   {
+    "unit": "pick 245-5: S of Granby Park (49.5\u00b0N 118.4\u00b0W)",
+    "km2": 1223,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 90.02452984464432,
+    "other_pct": 9.975470155355683
+   },
+   {
+    "unit": "pick 245-6: NE of Ddhaw Ghro (64.4\u00b0N 133.7\u00b0W)",
+    "km2": 1103,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 90.20852221214868,
+    "other_pct": 9.791477787851315
    }
   ]
  },
@@ -355,51 +385,60 @@
   "rare_efg_rule": "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)",
   "footprint_km2": {
    "core habitat": 324566,
-   "connectivity": 324567,
+   "structural connectivity": 324566,
+   "climate corridors": 324566,
    "biodiversity": 324641,
    "carbon": 324566,
    "naturalness": 324568,
    "representativeness": 6287
   },
   "convergence_km2": {
-   "0": 204062,
-   "1": 500024,
-   "2": 329798,
-   "3": 46997,
-   "4": 1004,
-   "5": 0
+   "0": 143651,
+   "1": 411662,
+   "2": 375797,
+   "3": 137166,
+   "4": 13607,
+   "5": 2,
+   "6": 0
   },
-  "high_value_km2": 877823,
-  "gap_km2": 779230,
-  "gap_pct_of_high_value": 88.76846471327363,
+  "high_value_km2": 938234,
+  "gap_km2": 805499,
+  "gap_pct_of_high_value": 85.85267641121511,
   "value_share_by_tier": {
    "biodiversity": {
     "existing PAs": 0.1560189206015996,
-    "core": 0.025323482909453764,
-    "scenario tiers": 0.052526474755624844,
-    "opportunity": 0.7493216752828364,
-    "never": 0.016809446450485304
+    "core": 0.032666879864046657,
+    "scenario tiers": 0.06991224128181292,
+    "opportunity": 0.7177153130884005,
+    "never": 0.02368664516414029
    },
    "carbon": {
     "existing PAs": 0.14946366523947557,
-    "core": 0.02681553647668334,
-    "scenario tiers": 0.13064246785622105,
-    "opportunity": 0.6861861712093764,
-    "never": 0.006892159218243578
+    "core": 0.03055541456480928,
+    "scenario tiers": 0.13158992508513612,
+    "opportunity": 0.6818556843298291,
+    "never": 0.006535310780749863
    },
-   "connectivity": {
-    "existing PAs": 0.14603772998617875,
-    "core": 0.024153790117087896,
-    "scenario tiers": 0.06251865806063583,
-    "opportunity": 0.751028161905108,
-    "never": 0.01626165993098938
+   "climate_corridors": {
+    "existing PAs": 0.14275511020887854,
+    "core": 0.02500053499926342,
+    "scenario tiers": 0.07294581638344598,
+    "opportunity": 0.7445646158602269,
+    "never": 0.014733922548185186
    },
    "core_habitat": {
     "existing PAs": 0.1916639009547981,
-    "core": 0.08601316763275808,
-    "scenario tiers": 0.08672016121021808,
-    "opportunity": 0.626227272727646,
-    "never": 0.009375497474579738
+    "core": 0.07652070937720903,
+    "scenario tiers": 0.10352599080542589,
+    "opportunity": 0.616738689923915,
+    "never": 0.011550708938651974
+   },
+   "structural_connectivity": {
+    "existing PAs": 0.171087760732944,
+    "core": 0.17547442555208312,
+    "scenario tiers": 0.1546335667237173,
+    "opportunity": 0.49620625036789345,
+    "never": 0.0025979966233620616
    }
   },
   "coverage": [
@@ -407,168 +446,264 @@
     "theme": "core habitat",
     "top-value footprint km2": 324566,
     "% of unprotected land": 30.0000462156329,
-    "% of footprint in core": 8.9775269128621,
-    "% of footprint in scenario tiers": 13.258628445370125,
-    "% of footprint in opportunity": 77.76384464176778,
+    "% of footprint in core": 8.211272899810824,
+    "% of footprint in scenario tiers": 13.072841887320298,
+    "% of footprint in opportunity": 78.71588521286888,
     "% of footprint in never": 0.0
    },
    {
-    "theme": "connectivity",
-    "top-value footprint km2": 324567,
-    "% of unprotected land": 30.0001386468987,
-    "% of footprint in core": 2.1702760909149728,
-    "% of footprint in scenario tiers": 6.773023751644499,
-    "% of footprint in opportunity": 91.05670015744053,
+    "theme": "structural connectivity",
+    "top-value footprint km2": 324566,
+    "% of unprotected land": 30.0000462156329,
+    "% of footprint in core": 9.379910403431044,
+    "% of footprint in scenario tiers": 17.535724629197144,
+    "% of footprint in opportunity": 73.08436496737181,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "climate corridors",
+    "top-value footprint km2": 324566,
+    "% of unprotected land": 30.0000462156329,
+    "% of footprint in core": 1.6757762673847538,
+    "% of footprint in scenario tiers": 8.31756869172988,
+    "% of footprint in opportunity": 90.00665504088536,
     "% of footprint in never": 0.0
    },
    {
     "theme": "biodiversity",
     "top-value footprint km2": 324641,
     "% of unprotected land": 30.006978560567898,
-    "% of footprint in core": 4.554569509088501,
-    "% of footprint in scenario tiers": 6.9140989585418975,
-    "% of footprint in opportunity": 88.5313315323696,
-    "% of footprint in never": 0.0
+    "% of footprint in core": 5.78854796529089,
+    "% of footprint in scenario tiers": 8.972680591792164,
+    "% of footprint in opportunity": 83.1389134459295,
+    "% of footprint in never": 2.0998579969874416
    },
    {
     "theme": "carbon",
     "top-value footprint km2": 324566,
     "% of unprotected land": 30.0000462156329,
-    "% of footprint in core": 3.628537801248436,
-    "% of footprint in scenario tiers": 10.839705945786065,
-    "% of footprint in opportunity": 84.43675554432689,
-    "% of footprint in never": 1.0950007086386129
+    "% of footprint in core": 3.503447680903114,
+    "% of footprint in scenario tiers": 12.51979566559652,
+    "% of footprint in opportunity": 83.30786342377205,
+    "% of footprint in never": 0.6688932297283141
    },
    {
     "theme": "naturalness",
     "top-value footprint km2": 324568,
     "% of unprotected land": 30.0002310781645,
-    "% of footprint in core": 3.1238446180769515,
-    "% of footprint in scenario tiers": 6.06991447092751,
-    "% of footprint in opportunity": 88.15410021936852,
-    "% of footprint in never": 2.6521406916270243
+    "% of footprint in core": 3.2424638288432623,
+    "% of footprint in scenario tiers": 9.593675285302309,
+    "% of footprint in opportunity": 86.90505533509157,
+    "% of footprint in never": 0.25880555076286016
    },
    {
     "theme": "representativeness",
     "top-value footprint km2": 6287,
     "% of unprotected land": 0.5811153680844082,
-    "% of footprint in core": 0.33402258628916814,
-    "% of footprint in scenario tiers": 1.3679020200413552,
-    "% of footprint in opportunity": 84.110068395101,
-    "% of footprint in never": 14.188006998568474
+    "% of footprint in core": 1.3360903451566726,
+    "% of footprint in scenario tiers": 2.958485764275489,
+    "% of footprint in opportunity": 62.82805789724829,
+    "% of footprint in never": 32.87736599331955
    },
    {
     "theme": "representativeness \u2014 rare-attainable classes (NOT used)",
     "top-value footprint km2": 733560,
     "% of unprotected land": 67.80387934022562,
-    "% of footprint in core": 3.0019357653089047,
-    "% of footprint in scenario tiers": 7.675445771307051,
-    "% of footprint in opportunity": 86.80489666830252,
-    "% of footprint in never": 2.51772179508152
+    "% of footprint in core": 3.9211516440372978,
+    "% of footprint in scenario tiers": 10.155270189214242,
+    "% of footprint in opportunity": 82.84734718359779,
+    "% of footprint in never": 3.0762309831506625
    }
   ],
   "crosstab": {
    "core (F \u2265 0.70)": {
-    "0 of 5 themes": 0,
-    "1 of 5 themes": 2937,
-    "2 of 5 themes": 19374,
-    "3 of 5 themes": 6451,
-    "4 of 5 themes": 432,
-    "5 of 5 themes": 0
+    "0 of 6 themes": 0,
+    "1 of 6 themes": 3748,
+    "2 of 6 themes": 16022,
+    "3 of 6 themes": 15447,
+    "4 of 6 themes": 2662,
+    "5 of 6 themes": 0,
+    "6 of 6 themes": 0
    },
    "scenario tier": {
-    "0 of 5 themes": 767,
-    "1 of 5 themes": 22869,
-    "2 of 5 themes": 40010,
-    "3 of 5 themes": 6239,
-    "4 of 5 themes": 281,
-    "5 of 5 themes": 0
+    "0 of 6 themes": 6,
+    "1 of 6 themes": 21422,
+    "2 of 6 themes": 47247,
+    "3 of 6 themes": 24373,
+    "4 of 6 themes": 1814,
+    "5 of 6 themes": 0,
+    "6 of 6 themes": 0
    },
    "opportunity": {
-    "0 of 5 themes": 180469,
-    "1 of 5 themes": 469790,
-    "2 of 5 themes": 270405,
-    "3 of 5 themes": 34307,
-    "4 of 5 themes": 291,
-    "5 of 5 themes": 0
+    "0 of 6 themes": 124262,
+    "1 of 6 themes": 376520,
+    "2 of 6 themes": 311997,
+    "3 of 6 themes": 97339,
+    "4 of 6 themes": 9131,
+    "5 of 6 themes": 2,
+    "6 of 6 themes": 0
    },
    "never": {
-    "0 of 5 themes": 22826,
-    "1 of 5 themes": 4428,
-    "2 of 5 themes": 9,
-    "3 of 5 themes": 0,
-    "4 of 5 themes": 0,
-    "5 of 5 themes": 0
+    "0 of 6 themes": 19383,
+    "1 of 6 themes": 9972,
+    "2 of 6 themes": 531,
+    "3 of 6 themes": 7,
+    "4 of 6 themes": 0,
+    "5 of 6 themes": 0,
+    "6 of 6 themes": 0
    }
   }
  },
+ "v31_cluster_survival": {
+  "prior_core_km2": 29194,
+  "v4_core_km2": 37879,
+  "clusters": [
+   {
+    "prior_cluster": "Cluster 1 (v3.1)",
+    "prior_name": "SW of Tahltan - Sacred Headwaters (Klappan) (56.8\u00b0N 129.3\u00b0W)",
+    "km2": 11490,
+    "pct_in_v4_core": 48.54656222802437,
+    "pct_in_any_v4_core_cluster": 58.738033072236725,
+    "mean_F_v4": 0.7171716690063477,
+    "pct_frequent_v4": 48.54656222802437,
+    "pct_in_v4_tier_Core-habitat-forward": 39.24281984334203,
+    "pct_in_v4_tier_Structural-connectivity-forward": 0.017406440382941687,
+    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
+    "pct_in_v4_tier_Biodiversity-forward": 0.0,
+    "pct_in_v4_tier_Carbon-forward": 0.12184508268059181,
+    "pct_in_v4_tier_2plus": 9.469103568320278,
+    "pct_opportunity_v4": 2.6022628372497825,
+    "pct_never_v4": 0.0
+   },
+   {
+    "prior_cluster": "Cluster 2 (v3.1)",
+    "prior_name": "Purcell Wilderness Conservancy Park vicinity (50.1\u00b0N 116.4\u00b0W)",
+    "km2": 12105,
+    "pct_in_v4_core": 62.17265592730277,
+    "pct_in_any_v4_core_cluster": 74.49814126394052,
+    "mean_F_v4": 0.7670609951019287,
+    "pct_frequent_v4": 62.17265592730277,
+    "pct_in_v4_tier_Core-habitat-forward": 20.586534489880215,
+    "pct_in_v4_tier_Structural-connectivity-forward": 0.033044196612969846,
+    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
+    "pct_in_v4_tier_Biodiversity-forward": 0.07434944237918216,
+    "pct_in_v4_tier_Carbon-forward": 0.09913258983890955,
+    "pct_in_v4_tier_2plus": 13.382899628252789,
+    "pct_opportunity_v4": 3.6513837257331683,
+    "pct_never_v4": 0.0
+   },
+   {
+    "prior_cluster": "Cluster 3 (v3.1)",
+    "prior_name": "N of Granby Park (49.9\u00b0N 118.7\u00b0W)",
+    "km2": 2507,
+    "pct_in_v4_core": 33.54607100119665,
+    "pct_in_any_v4_core_cluster": 36.816912644595135,
+    "mean_F_v4": 0.6632739305496216,
+    "pct_frequent_v4": 33.54607100119665,
+    "pct_in_v4_tier_Core-habitat-forward": 35.899481451934584,
+    "pct_in_v4_tier_Structural-connectivity-forward": 0.0,
+    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
+    "pct_in_v4_tier_Biodiversity-forward": 0.03988831272437176,
+    "pct_in_v4_tier_Carbon-forward": 0.07977662544874352,
+    "pct_in_v4_tier_2plus": 27.403270841643398,
+    "pct_opportunity_v4": 3.031511767052254,
+    "pct_never_v4": 0.0
+   },
+   {
+    "prior_cluster": "Cluster 4 (v3.1)",
+    "prior_name": "NW of Frank Church River Of No Return Wilderness (45.2\u00b0N 115.6\u00b0W)",
+    "km2": 5229,
+    "pct_in_v4_core": 63.396442914515205,
+    "pct_in_any_v4_core_cluster": 70.7209791547141,
+    "mean_F_v4": 0.7823549509048462,
+    "pct_frequent_v4": 63.396442914515205,
+    "pct_in_v4_tier_Core-habitat-forward": 24.0390131956397,
+    "pct_in_v4_tier_Structural-connectivity-forward": 0.13386880856760375,
+    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
+    "pct_in_v4_tier_Biodiversity-forward": 0.0,
+    "pct_in_v4_tier_Carbon-forward": 0.0,
+    "pct_in_v4_tier_2plus": 11.436221074775291,
+    "pct_opportunity_v4": 0.9944540065021993,
+    "pct_never_v4": 0.0
+   }
+  ]
+ },
  "e17": {
-  "base_lat": 52.92643737792969,
+  "base_lat": 54.7639274597168,
   "n_efg_south": 9,
   "n_efg": 20,
   "median_efg_lat": 52.630807876586914,
-  "basis": "v3.1",
+  "basis": "v4",
   "shifts": [
    {
     "block_out": "core_habitat",
-    "mean_lat": 53.58205795288086,
-    "delta_lat": 0.6556205749511719,
-    "jaccard_vs_s0": 0.6020623919719421,
-    "basis": "v3.1"
-   },
-   {
-    "block_out": "carbon",
-    "mean_lat": 52.017616271972656,
-    "delta_lat": -0.9088211059570312,
-    "jaccard_vs_s0": 0.8665306222200498,
-    "basis": "v3.1"
+    "mean_lat": 56.697166442871094,
+    "delta_lat": 1.9332389831542969,
+    "jaccard_vs_s0": 0.6606322051513979,
+    "basis": "v4"
    },
    {
     "block_out": "biodiversity",
-    "mean_lat": 55.18709945678711,
-    "delta_lat": 2.260662078857422,
-    "jaccard_vs_s0": 0.7572533626612306,
-    "basis": "v3.1"
+    "mean_lat": 56.955326080322266,
+    "delta_lat": 2.1913986206054688,
+    "jaccard_vs_s0": 0.8019937003786851,
+    "basis": "v4"
    },
    {
-    "block_out": "connectivity",
-    "mean_lat": 51.16481399536133,
-    "delta_lat": -1.7616233825683594,
-    "jaccard_vs_s0": 0.7668350032040234,
-    "basis": "v3.1"
+    "block_out": "carbon",
+    "mean_lat": 54.30947494506836,
+    "delta_lat": -0.4544525146484375,
+    "jaccard_vs_s0": 0.9006223854708704,
+    "basis": "v4"
+   },
+   {
+    "block_out": "structural_connectivity",
+    "mean_lat": 54.644256591796875,
+    "delta_lat": -0.11967086791992188,
+    "jaccard_vs_s0": 0.7063181411974978,
+    "basis": "v4"
+   },
+   {
+    "block_out": "climate_corridors",
+    "mean_lat": 51.8524284362793,
+    "delta_lat": -2.9114990234375,
+    "jaccard_vs_s0": 0.7620413201213534,
+    "basis": "v4"
    },
    {
     "block_out": "efg",
-    "mean_lat": 53.0699577331543,
-    "delta_lat": 0.14352035522460938,
-    "jaccard_vs_s0": 0.9588756857685866,
-    "basis": "v3.1"
+    "mean_lat": 54.838165283203125,
+    "delta_lat": 0.07423782348632812,
+    "jaccard_vs_s0": 0.9815581639112883,
+    "basis": "v4"
    }
   ],
   "v1_shifts": {
    "core_habitat": -0.170684814453125,
-   "carbon": -1.1840934753417969,
-   "biodiversity": 1.1756820678710938,
    "connectivity": -0.9567031860351562,
+   "biodiversity": 1.1756820678710938,
+   "carbon": -1.1840934753417969,
    "efg": 2.1075477600097656
   },
   "efg_out_curated": {
-   "s0_585": 0.14352035522460938,
-   "min": 0.01932907104492898,
-   "max": 0.21686935424804688,
-   "n": 12
+   "s0_585": 0.07423782348632812,
+   "min": 0.030902862548828125,
+   "max": 0.3176422119140625,
+   "n": 14
   }
  },
  "forms": [
   "s0_ssp585_theta5",
   "s1_ssp585_theta5",
   "s2_ssp585_theta5",
+  "s2c_ssp585_theta5",
   "s3_ssp585_theta5",
   "s4_ssp585_theta3",
   "s5_ssp585_theta5",
   "s0_ssp245_theta5",
   "s1_ssp245_theta5",
   "s2_ssp245_theta5",
+  "s2c_ssp245_theta5",
   "s3_ssp245_theta5",
   "s4_ssp245_theta3",
   "s5_ssp245_theta5"
@@ -577,6 +712,7 @@
   "s0",
   "s1",
   "s2",
+  "s2c",
   "s3",
   "s4",
   "s5"

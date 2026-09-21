@@ -903,16 +903,37 @@ pre-checks per realization (existing minimum, near-zero counts, cells changed by
 dust count, the re-audit cards (floored refugia: class, leverage, θ-tail; I² transboundary: class, leverage, R2 target withheld by the
 semantic gate), the seven scenarios' weights per climate cell, the manifest v4 sha.
 
-**R11.1 (placeholder) The v4 ensemble (12 → 13 → 15 → 18) — pending.** To record: F on the guarded band over 14 cells; the v4 core
-(km², composition: densest refugia / soil-carbon tail / spike / multi-claim) against the pre-stated expectation (smaller than 29,194
-km², less refugia-dominated); tier ownership by scenario (five owners + 2+); **pinch-point pinning at S0** (`T1_pinning.csv`: spike
-share frequent, expected 100% at balanced weights; ~13k km² own land for structural connectivity); corridors-forward own land (expected
-little or nothing); E1 bias, E3 shares (guarded basis), E4 f(g) on the reference cell, E7 captures / tails, E11 Δ mutual-in-band
-share (expected to fall somewhat), D per cell.
+**R11.1 The v4 ensemble — the core and the scenario tiers (Ethan's run of 12 → 12b → 12c → 13 → 15 → 15b → 19, 2026-09-18/21;
+guarded band, 14 design formulations; M4.38). Measured against the v3.1 package (archived, 12 formulations).**
+(a) **The core (F ≥ 0.70 on the guarded band) GREW: 29,194 → 37,879 km² (+8,685 km², +30%; 3.5% of allocatable land)** — the
+pre-stated expectation "smaller than v3.1's" is NOT met. Overlap 17,643 km² (Jaccard 0.357); 11,551 km² of the v3.1 core left,
+20,236 km² of new core arrived. By refugia future: SSP585 31,358 → 40,048 km², SSP245 41,083 → 44,335; the both-futures intersection
+19,296 → 30,097 km². (b) **Composition (share of core cells inside each driver mask): densest refugia 82.3% → 41.8%** (the
+"less refugia-dominated" expectation IS met), structural-connectivity spike 1.0% → 4.9%, soil-carbon θ-tail 2.7% → 3.3%,
+rare-attainable EFG footprint 75.4% → 75.9%, rarest-EFG 0.1% → 0.2%. (c) **Pinch-point pinning: 100% of the top-0.2% current spike is
+frequent in EVERY formulation at both futures** (`T1_pinning.csv`; max f 1.0 everywhere) against 22.9% under the registered v3.1 S0 —
+the expectation "100% at balanced weights" is met and then some: the convex shape with no target pins the spike under every value
+position, including corridors-, biodiversity- and carbon-forward. (d) **Scenario tiers (frequent minus core, climate pooled),
+v3.1 → v4:** core-habitat-forward 37,092 → 34,043 km²; connectivity-forward 11,006 → structural-connectivity-forward 43,619 +
+climate-corridors-forward 1,738; biodiversity-forward 914 → 3,332; carbon-forward 27,798 → 25,253; balanced (appendix) 12,118 →
+13,703; naturalness push 7,682 → 6,430; union of the named scenarios 70,166 → 94,862 km² (6.5% → 8.8% of allocatable land).
+**Own land by owner (highest f where two or more qualify excluded):** core-habitat 31,308 → 27,580; connectivity 8,429 → structural
+37,330 / corridors 12; biodiversity 271 → 58; carbon 23,805 → 17,934; two-or-more 6,353 → 11,948. Readings against the pre-stated
+expectations: carbon- and core-habitat-forward tiers shrink modestly (−9% / −8%; met); corridors-forward owns nothing (12 km²; met —
+breadth is substitutable, reported as the finding it is); structural connectivity's own land 37,330 km² against the ~13k km²
+expected from the E20 A@S0 arm (exceeded: at S2's 0.40 share the tier is 3.4× the balanced-arm estimate). Opportunity tier
+955,262 → 919,251 km²; never 27,263 → 29,893. E1 / E3 / E4 / E11 on v4 → R11.1 (cont.) once read off 13's record.
 
 **R11.2 (placeholder) The necessity test and latitude attribution on v4 (18b → 18c; 15) — pending.** E19 forced share (expected
 ~0), six leave-one-block-out shifts at S0 (E17-T3), E17-T1/T2.
 
-**R11.3 (placeholder) Package v2 on v4 (19 → 20 → 21) — pending.** Core clusters (regional, N→S, named "Cluster N (Region)"), the
-four v3.1 clusters' survival (`v31_cluster_survival.csv`), tiers by five owners, T-D7 with the mean-vs-median flags, T-D4 once the
-ecoregion attribute table lands.
+**R11.3 Package v2 on v4 — the prior registration's core clusters under v4 (19, `spec/v4/v31_cluster_survival.csv`;
+pre-stated: "if the core loses the four regional clusters' identities entirely, that is reported, not repaired").** None is lost
+and none survives whole. Share of each v3.1 regional core cluster's land in the v4 core / in any v4 core cluster / in the
+core-habitat-forward tier / in the two-or-more tier: **Cluster 1 (Sacred Headwaters, 11,490 km²) 48.5 / 58.7 / 39.2 / 9.5%; Cluster 2
+(Purcells–Columbia, 12,105 km²) 62.2 / 74.5 / 20.6 / 13.4%; Cluster 3 (north of Granby, 2,507 km²) 33.5 / 36.8 / 35.9 / 27.4%;
+Cluster 4 (Frank Church, 5,229 km²) 63.4 / 70.7 / 24.0 / 11.4%**; 0% of any of them is never selected; 1–4% sits in the opportunity
+tier; the rest of each cluster moved from "core" to "core-habitat-forward" — i.e. the refugia country the v3.1 core was made of is
+still irreplaceable when core habitat leads, and no longer under every value position. The v4 core's four regional clusters
+(north → south): 1,215 / 8,287 / 14,417 / 6,391 km² (mean F 0.74 / 0.80 / 0.82 / 0.82). Region names, T-D7 and T-D4 → R11.3 (cont.)
+after 20 / 21.

@@ -506,4 +506,46 @@ multi-claim 100% for the core and every pick (92% for the connectivity tier). 13
 curated director outputs (objectives tables, the value-convergence Act 1 map with/without clusters, Cluster 1 star + locator, the
 consequences table with three reference columns) — 14's first run predates the values-led Act 1 (M18.7) and is re-run for the record.
 
-*Last updated 2026-09-15 (R8.1–R8.6 measured; report-back written).*
+## R9. Manifest v4 on Alberta (AB spec v0.6; 09c → 10 → 11 → 11b/11c → 12 → 13 → 14) — PENDING-RUN (Ethan)
+
+**R9.0 (zero-solve, 2026-09-21) Pre-run verification.** (a) 09c cells 1–4 headless with outputs redirected: velocity floor INERT on
+Alberta (minimum velocity 0.297 km/yr on SSP585, 0.130 on SSP245, floor 0.009; 0 cells capped; the v4 refugia layers equal the v3.1
+Alberta layers cell for cell); I² transboundary equals the v3.1 layer squared except 5,225 cells zeroed by the parent's Y2Y-scale dust
+rule (2.1e-5 of the squared mass; disclosed); max/mean 14.7 → 127.6. Re-audit: refugia diffuse-linear (leverage 0.309 / 0.341);
+I² transboundary concentrated-satiating (leverage 0.791, θ-area 2.65%, R2 target 0.267; withheld by the semantic gate). S0@585
+weights v3.1 → v4: transboundary 0.306 → 0.326, corridors 1.598 → 2.572, macrorefugia 1.038 → 0.836, biomass 0.172 → 0.138, m_soc
+0.219 → 0.176, mammals 2.281 → 1.836, birds 1.386 → 1.115. (b) **The v3.1 regression of the patched 11 → 11c → 12 → 13 → 14 (`Y2Y_VERSION=v3.1`, every output redirected to the scratchpad) reproduces the
+2026-09-15 record:** 11's bands at 5% and at the applied band, E1 / E3 / E11 / D / the tiers / C1 (Spearman 0.284) / the T1 captures / the E11
+matrix / the band widths / the cluster register identical; 11c's gate and forced ledger identical; 12's frequent / always / owner / tier-area /
+by-future / E11 / biodiversity-capture / convergence numbers, picks, T-D1 (39 shared columns), T-D7, T-D2, T-D3, E19 partition and T-D6 identical
+on every shared column; E17 shifts identical as a set (the loop now follows the block order of the record, so the rows are ordered
+core habitat, connectivity, carbon, biodiversity, EFG); 13 renders 43 figures (41 + the two new v4-ready checks), 14 its eight outputs. New
+columns / files only: `region`, `subregions`, `region_label` on T-D1 and picks (Alberta labels = the region word: Cluster 1 "Central Alberta
+foothills", the Upper Smoky pick "Kakwa / Grande Cache"), `T-D7_mean_vs_median_check.csv` (8 of 54 pairs flagged, all carbon: cluster means
+0.3–0.6× their medians — the concentrated tail, kept by the v1.14 ruling), `T1_pinning.csv` (v3.1 baseline: 0.0% of the 115-cell top-0.2%
+current spike frequent in every formulation — the number the v4 I² shape is expected to move), `E4_reference_core_erosion.csv` (the reference
+cell's 2% / 5% probes: frequent 2 / 0 km², union 56,105 / 57,161, D = 1.000 at both). C1b skipped under the v3.1 environment because the
+parent's package on disk is now v4 (as designed).
+
+**R9.1 (placeholder) Manifest v4 pre-solve record (09c, Ethan's run):** the pre-checks and the two proofs as frozen, the re-audit cards,
+the 7 × 2 weight table, the manifest v4 sha, the stack hashes.
+
+**R9.2 (placeholder) The v4 ensemble (10):** 14/14 formulations — anchors, twins (LP ≤ MILP), guarded MGA at 5% and 2% (certificates,
+duplicates, time-limited), the reference cell's unguarded probes at 2 / 5 / 10%; z* per formulation vs v3.1 and the absolute band
+widths (M4.31); solve time.
+
+**R9.3 (placeholder) Analysis on v4 (11):** the D-AB13 decision on the guarded 5% frequent tier (flat < 100 km² → 2%); F bands at 5%
+and at the applied band (guarded); the E4 core-erosion table on the reference cell; E1 / E3 / E11 on the 14 design formulations (guarded
+members); the pinch-point pinning table; C1 at v4 (guarded vs guarded) + C1b; C4, tenure, clusters; where the v3.1 core patch went.
+
+**R9.4 (placeholder) The necessity test on v4 (11b/11c):** the forced ledger at the applied band (guarded; the unguarded ledger on the
+reference cell), the forced share of the core vs the 50% gate, T2 × 14, T3 if triggered; the six E17-T3 shifts.
+
+**R9.5 (placeholder) Package v2 on v4 (12/13/14):** core / scenario tiers by five owners / opportunity / never vs the v3.1 package
+(archived to `_superseded_v3.1/`); the Act 0 value layers on six themes (convergence 0–6); picks with region names; T-D7 + the
+mean-vs-median flags; the E19 partition; the AOI and tenure re-reads.
+
+**R9.6 (placeholder) The prior registration's picks under v4** (`spec/v4/v31_cluster_survival.csv`): the v3.1 core cluster (E of White
+Goat, 23 km²) and the four scenario picks scored against the v4 tiers — pre-stated: reported, not repaired.
+
+*Last updated 2026-09-21 (R9 placeholders; R9.0 pre-run verification).*

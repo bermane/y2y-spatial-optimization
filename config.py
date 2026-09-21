@@ -128,23 +128,38 @@ def y2y_paths(version=None):
                            stack=stack_dir_for(v), stack_manifest=stack_dir_for(v) / "manifest.json")
 
 
+# ---- the Alberta mirror's STACK directory (AB spec v0.6, manifest v4; AB methods_log M19.2) ------------------------
+# The Alberta stack is the parent stack masked to Alberta on the SAME grid (M2.2). Manifest v4 re-shapes two layers
+# (floored 1/v refugia, transboundary current squared), so under v4 the mirror reads its own self-contained copy,
+# input_data/aligned_stack_ab_v4/ (built by analyses/alberta_prioritization/09c_ab_manifest_v4_freeze from the parent's
+# v4 stack: unchanged layers byte-identical to aligned_stack_ab/, the two re-shaped layers masked + AB-dusted, its own
+# manifest.json). AB_HANDOFF_DIR (= aligned_stack_ab/) stays the record for v1 / v3.1 and for notebooks 01-09b.
+def ab_stack_dir_for(version):
+    return INPUT_DIR / ("aligned_stack_ab_v4" if version == "v4" else "aligned_stack_ab")
+AB_STACK_DIR = ab_stack_dir_for(Y2Y_VERSION)
+
+
 def ab_paths(version=None):
     """Version-scoped locations for the Alberta mirror (analyses/alberta_prioritization) -- the same one switch as the
     flagship (Y2Y_VERSION; AB spec v0.5 D-AB11): runs (level directory appended by the notebooks), manifest (+ freeze
-    hash), records dir, the analysis (AB-4) products dir, and the expected EFG subdir under AB_HANDOFF_DIR.
+    hash), records dir, the analysis (AB-4) products dir, the expected EFG subdir, and (v0.6) the STACK the version
+    solves on (`stack`, `stack_manifest`: aligned_stack_ab_v4/ under v4, aligned_stack_ab/ before).
     v1 = the as-frozen 2026-09-03 record (spec/manifest.csv, runs/ab_l/, analysis/ab4/, records at spec/ root);
     v3.1 = the curated block with window-derived targets (spec/manifest_v3.1.csv, runs_v3.1/ab_l/, analysis/ab4_v3.1/,
-    records at spec/v3.1/). Supersede, never delete."""
+    records at spec/v3.1/); v4 = the re-registered design (spec/manifest_v4.csv, runs_v4/ab_l/, analysis/ab4_v4/,
+    records at spec/v4/, stack aligned_stack_ab_v4/). Supersede, never delete."""
     from types import SimpleNamespace
     v = version or Y2Y_VERSION
     a = PROJECT_DIR / "analyses" / "alberta_prioritization"
     if v == "v1":
         return SimpleNamespace(version="v1", runs=a / "runs" / "ab_l", manifest=a / "spec" / "manifest.csv",
                                freeze=a / "spec" / "manifest_freeze.sha256", records=a / "spec", analysis=a / "analysis" / "ab4",
-                               figures=a / "figures", efg_subdir="iucn_efg")
+                               figures=a / "figures", efg_subdir="iucn_efg",
+                               stack=ab_stack_dir_for("v1"), stack_manifest=ab_stack_dir_for("v1") / "manifest.json")
     return SimpleNamespace(version=v, runs=a / f"runs_{v}" / "ab_l", manifest=a / "spec" / f"manifest_{v}.csv",
                            freeze=a / "spec" / f"manifest_{v}.sha256", records=a / "spec" / v, analysis=a / "analysis" / f"ab4_{v}",
-                           figures=a / "figures" / v, efg_subdir=efg_subdir_for(v))
+                           figures=a / "figures" / v, efg_subdir=efg_subdir_for(v),
+                           stack=ab_stack_dir_for(v), stack_manifest=ab_stack_dir_for(v) / "manifest.json")
 
 # Prioritizr results from 03 (R) land here; 04 (Python) reads them back.
 #   RESULTS_DIR    : root for all optimization outputs

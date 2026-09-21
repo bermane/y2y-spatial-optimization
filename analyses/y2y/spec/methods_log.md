@@ -1114,7 +1114,9 @@ exists under v4 (19 writes `f_unguarded_reference.tif` and labels every "unguard
 on its own; unguarded MGA per `unguarded_probes` on the reference cell; refugia path per row from the manifest; block folder from
 `efg_block_version`), 18 (guarded MGA k = 50, g = 5% for all 14 with floors on the manifest's five blocks; MAA seed from
 `e12_seed`), 18b (leave-EFG-out anchors × 14; leave-one-block-out at S0 = SIX arms: five blocks + EFG; T3 gated as before). Every
-new behaviour is keyed on the presence of the new columns, so `VERSION <- "v3.1"` reproduces the prior notebooks exactly.
+new behaviour is keyed on the presence of the new columns, so `VERSION <- "v3.1"` reproduces the prior notebooks exactly. **Run order under
+v4: 11c → 12 → 18 → 18b → 13 → 15 → 18c → 19 → 20 → 21** — 13 and 15 read the guarded members, so they follow the sweep (the first
+hand-off wrongly put them after 12; corrected 2026-09-17 evening when 13 stopped on the missing guard files, as it should).
 **Not re-run:** k-best pools (E5 discharged), s1x / s3x, E18 / E20 / PF-4 (v3.1 evidence, the motivation for v4); E12 / E9 / E10
 (notebook 16) after the workshop (Ethan 2026-09-17), 16 / 17 unswitched until then. Notebooks pinned to an earlier version
 (18d–18j to v3.1; 22 / 23 to v1) keep their asserts and run only with that `Y2Y_VERSION` in the environment.
@@ -1146,3 +1148,89 @@ byte-identical (T1 captures / tails, E11 matrices, E19 ledger + gate, e17 geogra
 expectation keys; `T1_pinning.csv` and `E4_reference_core_erosion.csv` are new records); 19 / 20 / 21 run clean and every package
 table is identical on its shared columns (T-D1 and picks gain the region columns; `T-D7_mean_vs_median_check.csv` is new; one T-D6
 theme label reworded). The ported R notebooks 12 / 18 / 18b dry-plan under v3.1 exactly as before (ingest, four blocks, 12 cells).
+
+**M4.38 addendum (Ethan, 2026-09-17 evening): notebooks RENUMBERED so numeric order = run order.** The guarded sweep is now
+`12b_guarded_sweep` (was 18), the necessity-test solves `12c_e19_solves` (was 18b), the necessity-test analysis `15b_e19_analysis`
+(was 18c). Run order under manifest v4: **11c → 12 → 12b → 12c → 13 → 15 → 15b → 19 → 20 → 21** (12b + 12c again iff the E19 gate opens).
+Earlier log entries keep the old numbers as written; the files' headers carry the renumbering note. 13 and 15 assert that the guarded
+members exist and name 12b when they do not.
+
+**M4.39 addendum (Ethan, 2026-09-21): the Act 1 wide-map inset REGIONS are fixed, not re-sized on the current cluster numbers.**
+`director_plot.STYLE["inset_windows"]` pins insets A and B to the v3.1 windows (A = the Sacred Headwaters / Stikine window, B = the
+Purcells / Kootenays window; grid pixels, identical across manifest versions; re-fitted to the inset aspect by `_fit_window`), so the
+two maps read against the v3.1 deck window for window while the clusters inside them are the v4 ones (v4 numbers 2 and 3 sit in A and B;
+v4 cluster 1 is the small Yukon cluster). Set the knob to None to size the windows on `STYLE["inset_clusters"]` again. The locator
+windows under the star plots stay per cluster.
+**M4.39 addendum (Ethan, 2026-09-21): inset cluster outlines thinner** — `STYLE["cluster_lw_inset_scale"]` 2.5 → 1.5 (the frame width 0.9 unchanged); the v4 clusters are larger and more speckled, so the heavier line hid the F surface inside them.
+**M4.39 addendum (Ethan, 2026-09-21): the Act 2 map's inset REGIONS are fixed too** — `STYLE["scenario_inset_windows"]` pins A / B / C to the
+v3.1 windows (A = Sacred Headwaters / Stikine, B = Purcells / Kootenays, C = the Yukon north of Fishing Branch): under v4 the pick numbers the
+insets used to follow (5, 6, 11) had landed B and C on the same Purcells land. The alternative northern window on the v4 structural-connectivity
+tier around Ddhaw Ghro (64°N, pick 7) is recorded in the style comment; None sizes the windows on `STYLE["scenario_insets"]` again.
+**M4.39 addendum (Ethan, 2026-09-21): window C of the Act 2 map spans BOTH northern tiers** — the carbon-forward land east of Fishing Branch and the
+structural-connectivity tier around Ddhaw Ghro (the union of v4 picks 13 and 7 with the 45 km pad: 436 × 654 km), replacing the v3.1 Fishing-Branch-only
+window; `STYLE["scenario_inset_area_skip"]` drops one park label (Nahanni) that the window's clipped corner would print over Nááts'įhch'oh's.
+**M4.39 addendum (Ethan, 2026-09-21): the Act 1 F ramp carries words at its two ends** — `STYLE["ramp_end_labels"] = ("Rarely selected", "Consistently selected")`
+("Substitutable / Irreplaceable" was the first choice and was dropped the same day: "irreplaceable" beside "irrecoverable carbon" invites confusion),
+italic, on a row between the tick numbers and the caption. Not "less / more important": F is the share of near-optimal plans that select a cell, so
+its ends are what the ensemble can do without (many alternatives) and what it cannot (few or none) -- the value-vs-irreplaceability spine of the
+package, not a ranking of worth. Alternatives kept in mind: "rarely selected / consistently selected", "many alternatives / few alternatives".
+**M4.39 addendum (Ethan, 2026-09-21): star-plot descriptions drop mean F** — each star is titled with the cluster label and its area only (`star_rows`); F stays on the maps and in T-D1.
+**M4.39 addendum (Ethan, 2026-09-21): star plots, axis words, and a colour-vision check.** (a) Star titles = "Cluster N / (Region) / km²"
+(mean F dropped); the grid's top margin 0.82 → 0.68 and the title wrap 34 → 36 characters so a long region word stays on one line.
+(b) The core-habitat axis is shown as **"climate refugia"** on the star plots and the consequences tables (`director_plot.AXIS_DISPLAY`,
+passed to `plot_star_grid(labels=)`); the block-axis name "core habitat" stays in the data and T-D1 columns. (c) **Colour-vision check**
+(Machado et al. 2009 severity-1 simulations of protanopia / deuteranopia / tritanopia; CIE76 ΔE in Lab, < 20 read as hard to tell
+apart): the Act 1 cluster outlines red / magenta / blue / BROWN failed — brown vs red ΔE 16 (protan) and 9 (deutan) — so cluster 4 is
+now dark orange `#FF7F00` (dark purple `#6A3D9A` scored best against the peers, ≥ 20, but disappeared into the viridis ramp — ΔE 14 to the
+nearest ramp colour, 6 under deficiencies — so the choice balances both: orange is ≥ 18 from the other outlines under every deficiency and
+60 from the ramp; the white halo and the cluster number carry the rest). The Act 2
+tier fills (Dark2) failed harder: core-habitat green vs carbon magenta ΔE 6 under deuteranopia, carbon vs PA grey 7, corridors green vs
+biodiversity orange 12, structural purple vs carbon 15 (protan), and more. Replaced by Tol green `#228833` (core-habitat), Tol blue
+`#0077BB` (structural connectivity), Okabe-Ito sky `#56B4E9` (climate corridors), Okabe-Ito orange `#E69F00` (biodiversity), Tol
+magenta `#EE3377` (carbon): the minimum pairwise ΔE across all fills plus the two-or-more navy, the core yellow and the PA grey is 16
+(orange vs yellow under deuteranopia; the biodiversity tier is 58 km²), against 6 before. The colour-blind check is a one-off
+computation, not a notebook cell.
+**M4.39 addendum (Ethan / Laura, 2026-09-21): consequences tables — tail row off, per-row red → blue fills.** (a) The soil-carbon-tail
+concentration row under carbon (package spec v1.14's "of which in the soil-carbon tail") is OFF (`STYLE["conseq_tail_row"] = False`; the
+statistic stays in T-D1 as `pct_msoc_tail`). (b) The fill ramp is now **RdBu** (red = lowest, blue = highest; `STYLE["conseq_cmap"]`) —
+RdYlGn dropped because red–green is the pair colour-blind readers lose. (c) Fills are scaled **per ROW from its lowest value to its
+highest** (`STYLE["conseq_mode"] = "row"`, Laura's request), replacing the 2026-09-14 rule that hinged each row on 1.0× — the 1.0× hinge
+is kept as `conseq_mode = "hinge"`. The scaling scope is unchanged (`conseq_scale_rows = "all"`: clusters and the two reference columns
+together). (d) A **flat-row guard** (`STYLE["conseq_flat_ratio"] = 1.10`): a row whose max/min ratio is below 1.10 — every value prints the
+same figure — is left neutral instead of stretching sub-precision differences into a full ramp (first seen on the naturalness row, all
+1.0×, which had rendered red-to-blue). Both notes are written under the table. (e) Star plots and consequences tables share one axis
+order, `director_core.STAR_AXES` (climate refugia, structural connectivity, climate corridors, biodiversity, carbon, representativeness,
+naturalness) — verified, not changed.
+**M4.39 addendum (Ethan, 2026-09-21): inset A of the Act 1 maps moved east.** `STYLE["inset_windows"]["A"]` = columns 174.6–647.4 (was 24.6–497.4;
+rows 990–1514 unchanged): measured on the PU mask, Y2Y land was 55% of the old window (the rest Alaska and the coast range west of the
+boundary) and is 85% of the new one; Stewart and the Alaska border stay at its west edge, Dease Lake / Dene Kʼéh Kusān / Dune Za Keyih come
+fully inside. The star-plot locators (own windows on the star centres) and the Act 2 map's windows are untouched.
+**M4.39 addendum (Ethan, 2026-09-21): "the optimization behind the map" — frames for a method timelapse.** A presentation asset
+(`director_plot.method_frames`; 21 renders the presentation budget into `director_outputs/06_method_frames/`, 20 a small budget into
+`figures/method_frames/` for the record) on the Act 1 wide layout (whole Y2Y + insets A/B). Sequence: each value theme's top-30% mask
+(the six PROACT themes, `value_top30_*.tif`) → the reference cell's single optimal plan (its anchor) → its near-optimal GUARDED members one
+by one (all 50; the guarded band is the estimand) → its f → for each of the other 13 voting cells a fixed-seed sample of 10 members
+(`STYLE["frames_seed"]`, manifest order) → its f → F → the core (F ≥ 0.70) with the clusters outlined. Binary plans render as a
+two-swatch key (in / not in, `frames_plan_color`; values in `frames_value_color`), frequencies on the F ramp (yellow = ≥ 0.70, as on the
+Act 1 maps). Frames are exactly 1920 × 1080 (`frames_width_px`, the dpi derived; no tight bbox — an even size H.264 accepts) so they are all the same size; the AK code is no longer forced on window A (a sliver since the window moved, it collided with Stewart); `frames.csv` carries the hold per frame
+(members at `frames_fps` = 4 per second, surfaces held `frames_hold_s` = 2.5 s) and `concat.txt` is ready for ffmpeg's concat demuxer
+(not installed here; Ethan assembles). Sampling changes only which plans are SHOWN — every f and F is the registered surface from 19.
+Engineering note: one wide layout draws in ~125 s (basemap, hillshade windows, label placement), so the frames reuse one kept figure
+(`_wide_map(keep=True)` → `_wide_frame_save` swaps the surface images, the ramp and the caption); the Act 1 maps themselves are unchanged.
+**M4.39 addendum (Ethan, 2026-09-21): the timelapse frames start with a DESIGN PASS.** `method_frames(design=True)` renders one
+near-optimal plan (plan 1 of the guarded band) for the balanced scenario and each theme-forward scenario at SSP5-8.5 — six frames,
+shown inline in 21 for feedback (`director_outputs/06_method_frames_design/`); the full ~200-frame set stays one commented line away
+in 21 and is not rendered until the design is settled.
+**M4.39 addendum (Ethan, 2026-09-21): timelapse plan colours = the Act 2 scenario colours.** A theme-forward scenario's plans render in
+its Act 2 tier colour (`STYLE["scenario_colors"]`: core-habitat green, structural-connectivity blue, climate-corridors sky, biodiversity
+orange, carbon magenta); the balanced scenario (and the naturalness push, which has no Act 2 colour) renders in a neutral dark
+(`frames_plan_color` = #2b2b2b — no theme, my choice, one knob). The value frames keep their own purple.
+**M4.39 addendum (Ethan, 2026-09-21): no title line on the timelapse frames, as on the Act 1 panels** (`STYLE["frames_caption"] = False`);
+the key label under inset A carries the identity instead — "<scenario> · <SSP> · plan k of n" on plan frames, "<scenario> · <SSP> · f =
+frequency in n near-optimal plans" on frequency frames — in the slot the Act 1 maps use for "F = frequency in 30×30 plans".
+**M4.39 addendum (Ethan, 2026-09-21): the balanced scenario's plans render in the Act 2 core yellow** (`frames_plan_color` = #ffd93b, the
+tier colour of the core on the scenario map and the ≥ 0.70 colour on the F ramp), replacing the neutral dark: the balanced plans are what
+the core is made of.
+**M4.39 addendum (Ethan, 2026-09-21): the timelapse runs the scenarios in the Act 2 legend order** (`STYLE["scenario_legend_order"]`:
+balanced / core first, then core-habitat, biodiversity, structural connectivity, climate corridors, carbon; the naturalness push, which has
+no Act 2 entry, last), reference climate before the other — both the design pass and the full sequence.

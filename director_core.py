@@ -262,7 +262,7 @@ def load_guarded(G, MAN, allow_partial=False, diameters=True):
               + (f" | D {L.D_plain[fid]:.3f} -> {L.D_guard[fid]:.3f}" if diameters and fid in L.D_plain else (f" | D_guard {L.D_guard[fid]:.3f}" if diameters else "")))
     L.plain_forms = [f for f in L.forms if f in L.f_plain]         # v4: the reference cell only; v3.1 and before: every formulation
     if missing:
-        msg = f"guarded sweep missing for {len(missing)} formulation(s): {missing} -- run 18_guarded_sweep first"
+        msg = f"guarded sweep missing for {len(missing)} formulation(s): {missing} -- run 12b_guarded_sweep first"
         if not allow_partial:
             raise FileNotFoundError(msg)
         print("ALLOW_PARTIAL:", msg)
@@ -842,13 +842,13 @@ def region_of(CX, mask2d, secondary_min=REGION_SECONDARY_MIN):
 # ---- E17 one-pager inputs ----------------------------------------------------------------------
 def e17_shifts(G, version=None):
     """Leave-one-theme-out latitude shifts vs the S0 anchor. Reads the ACTIVE version's runs (`runs_<version>/e17_t3`,
-    solved by 18b on the curated block) and falls back to the v1 record (`runs/e17_t3`, notebook 16) when the arms are
+    solved by 12c on the curated block) and falls back to the v1 record (`runs/e17_t3`, notebook 16) when the arms are
     absent; `basis` says which. Pass version="v1" for the 40-class comparison explicitly."""
     lat, _ = latlon(G)
     root = config.y2y_paths(version).runs if version else RUNS
     basis = version or VP.version
     if not (root / "e17_t3" / "efg_out" / "run" / "portfolio.tif").exists():
-        root, basis = RUNS_V1, "v1 (40-class block; run 18b's E17-T3 cell for the curated block)"
+        root, basis = RUNS_V1, "v1 (40-class block; run 12c's E17-T3 cell for the curated block)"
     s0 = ec.read_selections(root / "s0_ssp585_theta5" / "anchor.tif", G.pu)[0]
     base = float(lat[s0 & G.disc].mean())
     rows = []
@@ -863,10 +863,10 @@ def e17_shifts(G, version=None):
 
 
 # ---- star grid + deck --------------------------------------------------------------------------
-STAR_GRID = dict(panel_w=5.8, panel_h=5.2, wspace=1.05, hspace=0.6, top=0.82, bottom=0.10)   # shared by the locator maps (same geometry)
+STAR_GRID = dict(panel_w=5.8, panel_h=5.2, wspace=1.05, hspace=0.6, top=0.68, bottom=0.10)   # top 0.82 -> 0.68 (2026-09-21): three-line titles "Cluster N / (Region) / km2" sit above the outward axis words   # shared by the locator maps (same geometry)
 
 
-def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11, fs_title=13, fs_tick=9, fs_suptitle=15, lw=2.0, footnote=True, tight=True, label_pad=8, dpi=200):
+def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11, fs_title=13, fs_tick=9, fs_suptitle=15, lw=2.0, footnote=True, tight=True, label_pad=8, dpi=200, labels=None):
     """profiles: list of dict(title=, values={axis: v}, color=). One shared radial scale."""
     import matplotlib.pyplot as plt
     import textwrap
@@ -888,7 +888,7 @@ def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11
         # naturalness (1 - gHM) drawn as a plain sixth axis (Ethan 2026-09-04): it is in the formulation; that it
         # cannot move the answer (leverage 0.042) is a paper finding, not a director-meeting caption
         ax.set_xticks(ang)
-        ax.set_xticklabels([a.replace(" ", "\n") for a in STAR_AXES], fontsize=fs_axis)
+        ax.set_xticklabels([(labels or {}).get(a, a).replace(" ", "\n") for a in STAR_AXES], fontsize=fs_axis)   # labels= : shown words per axis (the data keys stay)
         for t, a in zip(ax.get_xticklabels(), ang):                  # labels sit OUTSIDE the ring: anchor by their angle
             c, sn = math.cos(a), math.sin(a)
             t.set_ha("left" if c > 0.1 else "right" if c < -0.1 else "center")
@@ -896,7 +896,7 @@ def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11
         ax.set_ylim(0, rmax)
         ax.set_yticks([0.25, 0.5, 0.75, 1.0]); ax.set_yticklabels(["", "0.5", "", "1"], fontsize=fs_tick)
         ax.tick_params(axis="x", pad=label_pad)
-        ax.set_title("\n".join(textwrap.fill(t, 34) for t in pr["title"].split("\n")), fontsize=fs_title, fontweight=600, pad=18)
+        ax.set_title("\n".join(textwrap.fill(t, 36) for t in pr["title"].split("\n")), fontsize=fs_title, fontweight=600, pad=18)
     for ax in axes[n:]:
         ax.axis("off")
     if title:

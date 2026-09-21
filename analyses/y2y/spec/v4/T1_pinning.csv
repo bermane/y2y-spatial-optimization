@@ -1,0 +1,15 @@
+formulation,spike_cells,spike_in_anchor_pct,spike_frequent_pct,spike_mean_f,spike_max_f,members_basis
+s0_ssp585_theta5,2164,100.0,100.0,1.0,1.0,guard
+s1_ssp585_theta5,2164,100.0,100.0,0.9999819397926331,1.0,guard
+s2_ssp585_theta5,2164,100.0,100.0,1.0,1.0,guard
+s2c_ssp585_theta5,2164,100.0,100.0,1.0,1.0,guard
+s3_ssp585_theta5,2164,100.0,100.0,1.0,1.0,guard
+s4_ssp585_theta3,2164,100.0,100.0,1.0,1.0,guard
+s5_ssp585_theta5,2164,100.0,100.0,1.0,1.0,guard
+s0_ssp245_theta5,2164,100.0,100.0,1.0,1.0,guard
+s1_ssp245_theta5,2164,100.0,100.0,1.0,1.0,guard
+s2_ssp245_theta5,2164,100.0,100.0,1.0,1.0,guard
+s2c_ssp245_theta5,2164,100.0,100.0,1.0,1.0,guard
+s3_ssp245_theta5,2164,100.0,100.0,1.0,1.0,guard
+s4_ssp245_theta3,2164,100.0,100.0,1.0,1.0,guard
+s5_ssp245_theta5,2164,100.0,100.0,1.0,1.0,guard

@@ -1,0 +1,36 @@
+{
+ "rule": "loglinear",
+ "window_km": 250,
+ "sensitivity_km": [
+  100,
+  500
+ ],
+ "anchors": {
+  "full_km2": 1000.0,
+  "floor_km2": 250000.0,
+  "floor_t": 0.1
+ },
+ "formula": "t from the class footprint within the study extent buffered by window_km (zonal count on the GET archive maps, 1 km nearest warp): 1 for <= full_km2, floor_t for >= floor_km2, log-linear between",
+ "targets": {
+  "F1.1.web.mix_v2.0": 0.5013,
+  "F2.1.web.alt_v4.0": 0.4912,
+  "T6.1.web.map_v1.0": 0.3588,
+  "F1.2.web.map_v1.0": 0.2451,
+  "T2.2.web.mix_v1.0": 0.1476,
+  "T3.4.web.mix_v1.0": 0.1094,
+  "T5.4.web.mix_v1.0": 0.1046,
+  "F1.6.web.mix_v1.0": 0.1009,
+  "T4.4.web.orig_v1.0": 0.1,
+  "SF1.2.web.orig_v1.0": 0.1,
+  "T6.2.web.alt_v2.0": 0.1,
+  "T6.3.web.map_v1.0": 0.1,
+  "S1.1_SF1.1.web.merged_v3": 0.1,
+  "T5.1.web.mix_v1.0": 0.1,
+  "F1.3.web.map_v1.0": 0.1,
+  "TF1.2.web.orig_v2.0": 0.1,
+  "TF1.6_TF1.7.web.merged_v3": 0.1,
+  "T6.4.web.orig_v1.0": 0.1,
+  "F2.4.web.mix_v1.0": 0.1,
+  "T2.1.web.mix_v1.0": 0.1
+ }
+}

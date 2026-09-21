@@ -515,4 +515,95 @@ Y2Y-wide assets are unchanged). 14's 02a/02b are the values maps; the F maps sta
 Alberta: with a ~30 km² core, F reads as an almost blank map; the convergence count shows where the values actually stack up on
 allocatable land, and the core clusters are drawn on top of it.
 
-*Last updated 2026-09-15 (M18).*
+## M19. Re-pin to the parent's locked final spec — manifest v4 (AB spec v0.6, 2026-09-21; parent study plan v0.20 / M2.12, M4.38, M4.39; package spec v2.0)
+
+**M19.1 The design inherited (D-AB14).** Trigger: Ethan, 2026-09-21 — "the y2y-wide analysis has a new v4 spec ... this is now the
+locked final spec for y2y wide"; the Alberta mirror re-registers on it. Inherited unchanged: FIVE discretionary blocks at 20% each
+(`config.BLOCKS_FIVE`: core habitat = macrorefugia 1/v WITH the velocity floor; structural connectivity = transboundary current
+SQUARED, t = 1, NO target — the R2 semantic gate registered in the parent's protocol; climate corridors = Carroll centrality,
+identity; carbon = m_soc θ-target + biomass at the Alberta mass split; biodiversity = birds + mammals equal, D-AB9), the R1 / R2
+amendments (shape per LAYER from its construction; the semantic gate precedes the θ / t_min test), seven scenarios (S2c
+climate-corridors-forward is new; doubling rule forward 0.40 / others 0.15; S5 = S0 + gHM ×10) × two refugia futures = 14 voting
+cells, and every constant (k = 50, g = 5%, per-block floors 0.95 — now five, opt_gap 1e-4, NumericFocus 2, `mga_maxham_v1`, verdict
+rule v2, the 20-min T2 cap). The weights are RE-DERIVED on the Alberta v4 stack under constant intended influence
+(`spec/scenarios_ab_v4.json`, `lc.scenario_weights(..., blocks=BLOCKS_FIVE, handoff_dir=<AB v4 stack>)`; the 245 cells swap the floored
+245 realization in; realized == intended asserted). **Not imported: the parent's S4 target.** S4 keeps Alberta's pre-registered
+ladder target (m_soc t = 0.772, θ 2× — the first rung above the MEASURED level-A co-capture floor 0.744, M5.7) under the doubled
+carbon block; the parent's θ 3× (t 0.552) would sit below Alberta's banked share (0.714) and bind nothing — exactly the E10 case
+the ladder was pre-registered to avoid. Formulation ids keep Alberta's regime label (`s4_<climate>_theta2`; C1 maps theta2 ↔ theta3).
+The D-AB12 window targets (13 features, unchanged) and the block folder (`iucn_efg_v3`, sha asserted equal to v3.1's) carry. One
+switch: `config.Y2Y_VERSION = "v4"` (the flagship default since 2026-09-17) → `config.ab_paths()` = `spec/manifest_v4.csv`,
+`runs_v4/ab_l/A/`, `analysis/ab4_v4/`, `spec/v4/`, `figures/v4/`, **and (new) `stack` = `input_data/aligned_stack_ab_v4/`**
+(`config.ab_stack_dir_for`, `AB_STACK_DIR`); `AB_HANDOFF_DIR` (= `aligned_stack_ab/`) stays the v1 / v3.1 record and the source for 01–09b.
+
+**M19.2 The Alberta v4 stack (`09c_ab_manifest_v4_freeze`, cells 1–2).** The M2.2 engine design applied to the parent's v4 stack:
+every layer of `aligned_stack_ab_v4/` is the parent's v4 layer masked to the Alberta PU on the SAME grid (D-AB1) with the AB dust
+rule re-run against AB totals (M2.3; 01's `mask_dust`), unchanged layers copied byte-identical from `aligned_stack_ab/` (sha256
+asserted), the curated block copied, its own `manifest.json` (`config.write_manifest(analysis="ab_y2y", handoff_dir=<stack>)`; grid
+asserted equal to the parent's v4 grid; PU mask asserted unchanged). The two re-shaped layers are PROVEN against the v3.1 Alberta
+layers rather than trusted: (i) floored refugia — the velocity pre-checks are re-read on the AB PU (existing minimum, cells at ≤ 1×
+/ 2× / 5× / 10× the floor = one cell width / 110 yr = 0.00909 km/yr, both realizations, `spec/v4/velocity_precheck.csv`); the masked
+parent layer is asserted equal to `1/max(v, floor)` on the AB PU AND to `min(v3.1 layer, 1/floor)` cell for cell (the floor is a
+per-cell cap) up to the dust rule; smoke-measured 2026-09-21: **the floor is INERT on Alberta** (minimum velocity 0.297 / 0.130 km/yr
+on the 585 / 245 realizations vs the floor 0.009; 0 cells capped) — the v4 refugia layers equal the v3.1 Alberta layers exactly.
+(ii) Structural connectivity I² — the masked parent layer is asserted equal to the v3.1 Alberta layer squared wherever neither dust
+rule fired; the parent's rule ran against the Y2Y total of a squared layer (which concentrates mass, so 1e-9 × total is large
+against tiny squared values) and zeroed **5,225 AB cells the AB rule would keep (2.1e-5 of the squared mass)** — kept as the
+parent's values (the mirror = the parent stack masked), counted and disclosed in `stack_ab_v4_layer_sha256.json`
+(`transboundary_sq_one_side_dust_cells / _mass_share`); max/mean on the AB PU 14.7 (linear) → 127.6 (squared).
+
+**M19.3 The re-audit under the frozen constants (09c cell 3; mirror of the parent's 11c cell 4).** R1–R4 (`config.AUDIT`, the 30%
+audit convention M2.6) on the Alberta v4 stack for floored refugia (both realizations) and I² transboundary, beside the v3.1 Alberta
+classification; cards → `audit/feature_cards_ab_v4/`, table → `spec/v4/audit_cards_v4.csv`. Smoke-measured: refugia diffuse-linear
+(leverage 0.309 / 0.341; unchanged); I² transboundary concentrated-satiating (leverage 0.791, θ-area 2.65%, R2 target 0.267 —
+the parent's Y2Y number was 0.198) — and the **R2 SEMANTIC GATE withholds the target** (registered lever: weight, t = 1): pinch
+points are place-semantic, the parent's PF-2 showed the target un-pins them. Recorded beside the card, not applied.
+
+**M19.4 Manifest v4 on Alberta (09c cells 4–5) and the band policy (D-AB15).** `spec/manifest_v4.csv` = 14 design rows built from
+the v3.1 rows' Alberta columns (config, extent, lock rule, budget level A / cells / pct, `applied_band_g` = 0.02 = the D-AB13
+fallback, dust / estimator / verdict / seed policy, provenance: git sha + the five pipeline modules asserted clean vs HEAD) plus
+the parent's v4 columns (`block_structure`, `value_shapes`, `macrorefugia_path` per row into the AB v4 stack, `reference_cell`,
+`unguarded_probes` [0.02, 0.05, 0.10] on `s0_ssp585_theta5`, `e12_seed` for schema parity — Alberta runs no MAA, `manifest_version`
+4, `efg_block_version` v3, `supersedes` v3.1 sha, `trigger`), `mirror_spec_version` v0.6, `role` design; the s2c rows take their
+Alberta columns from the s2 row of the same climate; write-once freeze with sha. **The bands under v4:** the parent generates the
+unguarded MGA on the reference cell only and takes the GUARDED band as the estimand (M4.38); Alberta mirrors both and keeps its
+applied-band rule zero-solve: 10 solves **guarded MGA at 5% AND at 2% for EVERY formulation** (~1–2 min per sweep at Alberta scale;
+D-AB13's flatness test reads the guarded 5% tier, its fallback is on disk), and the unguarded band on the reference cell at its
+probes (E4 f(g)). Every v4 behaviour in 10 / 11b is keyed on a manifest COLUMN (`block_structure` → the five floors and the six
+E17-T3 arms; `macrorefugia_path` → the per-row refugia layer, the ingested layer asserted to match the manifest's; `reference_cell` +
+`unguarded_probes` → the plain-band policy; `efg_block_version` → the block folder), so `VERSION <- "v3.1"` reproduces the prior
+notebooks exactly; both R notebooks assert `config.Y2Y_VERSION == VERSION` before refreshing the version's stack manifest.
+Consequences in 11 / 11c / 12 stated so the record is honest: F, E1 (hierarchical − naive anchors), E3, E11's D_s, the D-AB13
+test, C1 (the parent's `F_surface.tif` is guarded under v4), E19-T1 and the package surfaces are guarded-members quantities
+(`members_basis` recorded); the plain-vs-guarded tier Jaccard and the E4 erosion table exist on the reference cell only; 12 writes
+`f_unguarded_reference.tif` in place of an ensemble `F_unguarded.tif` and labels every "unguarded" column; the 5%-band "ever in a
+band" sentence uses the guarded 5% union under v4 (`ever_in_5pct_band_basis`). `formulation_meta.json` carries the absolute band
+widths per solved gap (M4.31), `applied_g`, `reference_cell`, `unguarded_probes` and the refugia path.
+
+**M19.5 The package on v4 (12 / 13 / 14; mirror of the parent's M4.39).** Version-scoped through `director_core` (`BLOCK_AXES_FIVE`
+→ seven star axes; `VALUE_THEMES` six → convergence 0–6; `ACT2_SCENARIOS` s1 / s2 / s2c / s3 / s4 with the two-or-more class at
+`MULTI_OWNER` = 99; `N_DESIGN` 14; every "12 / five / four" literal in 12 / 13 derived from the version); the blocks from the
+manifest's `block_structure` (asserted equal to `config.BLOCKS`); the T-D0 objectives rows in five-block form under v4 (structural
+connectivity "no security target — pinch points are places", climate corridors with its own forward, 20% shares); cluster names
+"Cluster N (Region)" from the communities region lookup (`dc.coexistence_layer` / `region_of`; the tessellation covers Alberta's
+census divisions; naming only, the landmark placeholder stays the secondary descriptor; **Alberta labels = the region word only** — the
+lookup's Alberta sub-region field carries the principal-places description rather than a short name, so the parent's "Sub-region, Region"
+form would put a hundred-character string in a star title; the description is kept in `subregions`, and the words are Ethan's to vet); the T-D7 mean-vs-median check
+(`T-D7_mean_vs_median_check.csv`; refugia native on the floored layer); the area-matched refugia driver mask takes exactly k cells
+(argsort; a floor tie cannot inflate it); E17 shifts read six arms; a package built on another version is archived to
+`_superseded_<v>/` (`_v1_artifact_block/` for v1) and **the prior registration's deck picks (the v3.1 core cluster and scenario picks)
+are scored against the v4 tiers** (`spec/v4/v31_cluster_survival.csv`, R9.6 — reported, not repaired); no Act 3 clusters (the parent's
+ruling). 13's summary map takes its owner classes from `ACT2_SCENARIOS` (s2c in Dark2 green); the Act 0 grid, colours and the
+convergence ramp follow `dp.CONV_COLORS`; the T-D1 / T-D3 renders build their axis and capture columns from `STAR_AXES` / the blocks.
+Not mirrored (unchanged rulings): E12 / E18 / E20 / PF-4 (parent evidence), the E17 one-pager, hexes.
+
+**M19.6 Verification (2026-09-21, zero solves).** 09c cells 1–4 smoke-run headless with every output redirected to the scratchpad
+(the stack into a gitignored scratch folder, deleted after): pre-checks, the two proofs, the re-audit and the 7 × 2 weight table ran
+clean (M19.2–M19.3 numbers); cell 5 (the freeze) is Ethan's — it asserts the pipeline modules clean vs HEAD, so `config.py` is
+committed first. The R notebooks parse (`Rscript parse`) and dry-plan under both column sets by construction. The patched Python
+chain 11 → 11c → 12 → 13 → 14 was regression-run under `Y2Y_VERSION=v3.1` against the v3.1 record with every output redirected to
+the scratchpad: every shared number identical (R9.0); the only behavioural deltas under the old manifest are additive — the E4 table is
+written for whichever probes the reference cell has (2% / 5% under v3.1), the E17 rows follow the block order of the manifest / scenario
+record, and the new columns / files above. No runner: numeric order = run order, Ethan runs in VS Code.
+
+*Last updated 2026-09-21 (M19).*
