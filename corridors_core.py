@@ -33,6 +33,7 @@ import hashlib
 import itertools
 import pathlib
 import subprocess
+import time
 import pandas as pd
 
 import networkx as nx
@@ -203,6 +204,14 @@ def resolve(key, overrides=None, require_cutoff=True):
         raise FileNotFoundError(
             f"{cost} not found -- run corridors_prep first:\n"
             f"    import corridors_prep as cp; g = cp.grid({key!r}); cp.warp(g); cp.check(g)")
+    # raster node source (wolverine, W2): the class raster must already be warped onto the SAME grid
+    nc = cfg.get("nodes", {})
+    if nc.get("source", "vector") == "raster":
+        cls_path = gc["dir"] / nc["raster"]["out_name"]
+        if not cls_path.exists():
+            raise FileNotFoundError(
+                f"{cls_path} not found -- warp the node raster onto the routing grid first:\n"
+                f"    cp.warp_classes(g, {key!r}); cp.check_classes(g, {key!r})   (notebook 01)")
     return cfg, cost
 
 
@@ -212,6 +221,10 @@ def resolve(key, overrides=None, require_cutoff=True):
 # hash). new_run() copies them into the run dir and pins their sha256 in run_config.json, so each
 # run dir stays self-contained; load() then reads ONLY the run-dir copies.
 _H7_FILES = ("node_parts.csv", "node_parts.gpkg", "multipart_review.csv")
+# Raster-node analyses (wolverine) carry an optional human NAMING file beside the H7-format
+# node_parts files: node_names.csv (display_name per node_id). Copied + hash-pinned like the H7
+# files when present; absent in the north.
+_NODE_FILES = ("node_names.csv",)
 
 
 def _review_signed(path):
@@ -268,7 +281,7 @@ def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True, req
                 f"step-0a rules got it wrong, then fill in the `# reviewed_by:` line. The run does "
                 f"not proceed to CWD until the file is signed.")
         read_review(review)                      # vocabulary check before anything is written
-    for f in _H7_FILES:
+    for f in _H7_FILES + _NODE_FILES:
         src = audit_dir / f
         if src.exists():
             h7[f] = {"path": str(_jsonable(src)), "sha256": _sha256(src)}
@@ -300,8 +313,9 @@ def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True, req
                                      "sha256": _sha256(cfg["resistance"]["source"])},
             "audit_template": str((config.HANDOFF_DIR / AUDIT_TEMPLATE).relative_to(config.PROJECT_DIR)),
             "pa_vector": str(config.PA_VECTOR.relative_to(config.PROJECT_DIR)),
-            "proposed_pa": cfg["nodes"]["proposed"],
+            "proposed_pa": cfg["nodes"].get("proposed") or (cfg["nodes"].get("protected") or {}).get("proposed"),
             **h7,                       # H7 artifacts, hash-pinned (D16)
+            **_extra_inputs(cfg, cost),  # raster node source + variant meta (wolverine), when present
         },
         "overrides": overrides or {},
         "cfg": _jsonable(cfg),
@@ -317,6 +331,23 @@ def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True, req
 def _gdal_version():
     p = subprocess.run(["gdalinfo", "--version"], capture_output=True, text=True)
     return p.stdout.strip() if p.returncode == 0 else None
+
+
+def _extra_inputs(cfg, cost):
+    """Provenance rows that exist only for raster-node / variant-surface runs (wolverine)."""
+    out = {}
+    nc = cfg.get("nodes", {})
+    if nc.get("source", "vector") == "raster":
+        src = pathlib.Path(nc["raster"]["source"])
+        warped = pathlib.Path(cfg["grid"]["dir"]) / nc["raster"]["out_name"]
+        out["nodes_raster"] = {"source": {"path": str(_jsonable(src)), "sha256": _sha256(src)},
+                               "warped": {"path": str(_jsonable(warped)), "sha256": _sha256(warped)},
+                               "classes_core": nc["classes_core"], "classes_marginal": nc["classes_marginal"]}
+    meta = pathlib.Path(str(cost) + ".meta.json")
+    if meta.exists():
+        out["resistance_variant"] = {"path": str(_jsonable(meta)), "sha256": _sha256(meta),
+                                     "meta": json.loads(meta.read_text())}
+    return out
 
 
 def _jsonable(o):
@@ -481,6 +512,298 @@ def _grid_nodes(cfg, cost_path):
                node_union=node_union, outline=outline)
 
 
+# ================= raster nodes (wolverine refugia, W2/W9) =================
+def _pa_polys(min_km2):
+    pas = gpd.read_file(config.PA_VECTOR).dissolve(by="PA_Name").reset_index()
+    pas["km2"] = pas.geometry.area / 1e6
+    return pas[pas.km2 >= min_km2].reset_index(drop=True)
+
+
+def _bearing8(dx, dy):
+    import math
+    ang = (math.degrees(math.atan2(dx, dy)) + 360) % 360
+    return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][int((ang + 22.5) // 45) % 8]
+
+
+def _raster_nodes(cfg, cost_path, names_path=None, verbose=True):
+    """Nodes = 8-connected components of the CORE refugia classes on the routing grid, >= the
+    area floor (W2). Returns the SAME namespace shape as _grid_nodes (names_raw / kinds_raw /
+    node_union / template / cost / pu ...) so every downstream stage runs unchanged, plus:
+      node_id      int16 grid, 1..N numbered NORTH -> SOUTH (0 = not a node)
+      refugia      uint8 class grid (the warped raster; nodata -> 0)
+      marginal     bool grid of the marginal classes (map context only, W3)
+      node_table   one row per node (area, centroid, lat/lon, auto-name, PA overlap, seam share)
+      context_pa   bool grid of existing PAs >= context_pa_min_km2 (presentation only; NOT nodes)
+      single_component_nodes / nodes_disjoint = True (D16 part split and dedupe are no-ops)
+    ONE boolean array per node: the mask doubles as the seed part and the routing unit (see
+    _apply_parts), which is what keeps 66 nodes x 47 M cells inside a 24 GB machine.
+    The routing grid is the WHOLE warped window (the refugia span it; no bbox crop).
+    Auto-naming (W9): the PA with the largest overlap (>= pa_overlap_min of the node), else the
+    nearest PA + 8-point bearing; `names_path` (node_names.csv) overrides display names after a
+    fingerprint check (GW3) so a stale naming file can never label the wrong patch.
+    """
+    nc = cfg["nodes"]; rcfg = nc["raster"]
+    gdir = config.PROJECT_DIR / pathlib.Path(cfg["grid"]["dir"])
+    full = rioxarray.open_rasterio(cost_path, masked=True).squeeze()
+    cls_da = rioxarray.open_rasterio(gdir / rcfg["out_name"]).squeeze()
+    assert cls_da.shape == full.shape and cls_da.rio.transform() == full.rio.transform(), (
+        "GW1 FAILED: the refugia class warp is not on the cost surface's grid -- re-run "
+        "cp.warp_classes + cp.check_classes")
+    template = full
+    crs = template.rio.crs; transform = template.rio.transform(); shape = template.shape
+    rx, ry = template.rio.resolution(); cell_km2 = abs(rx * ry) / 1e6; cell_km = abs(rx) / 1000.0
+    cost = template.values.astype("float32")
+    pu = np.isfinite(cost)
+    ref = np.nan_to_num(cls_da.values, nan=0).astype("uint8")
+    ref[ref == int(rcfg.get("nodata", 255))] = 0
+    del cls_da
+
+    core = np.isin(ref, nc["classes_core"]) & pu
+    marginal = np.isin(ref, nc["classes_marginal"]) & pu
+    conn = int(nc.get("connectivity", 8))
+    struct = np.ones((3, 3), int) if conn == 8 else ndimage.generate_binary_structure(2, 1)
+    lab, n = ndimage.label(core, structure=struct)
+    sizes = np.bincount(lab.ravel())[1:]
+    min_cells = max(1, int(round(nc["node_min_km2"] / cell_km2)))
+    if verbose:
+        print(f"{cfg['region_label']}: routing grid {shape[1]}x{shape[0]} @ {cell_km*1000:.0f} m "
+              f"= {int(pu.sum()):,} routable cells ({int(pu.sum())*cell_km2:,.0f} km²) -- whole window")
+        print(f"  core refugia {int(core.sum())*cell_km2:,.0f} km² in {n:,} {conn}-connected patches; "
+              f"marginal {int(marginal.sum())*cell_km2:,.0f} km²")
+        tot = sizes.sum()
+        for thr in nc.get("ladder_km2", [nc["node_min_km2"]]):
+            k = int((sizes * cell_km2 >= thr).sum()); share = sizes[sizes * cell_km2 >= thr].sum() / max(tot, 1)
+            print(f"    >= {thr:>5} km²: {k:>4} patches holding {100*share:5.1f}% of core area"
+                  + ("   <- node floor" if thr == nc["node_min_km2"] else ""))
+    keep_ids = np.flatnonzero(sizes >= min_cells) + 1
+    if not len(keep_ids):
+        raise ValueError(f"no core refugia patch reaches node_min_km2 = {nc['node_min_km2']} km²")
+    cms = ndimage.center_of_mass(core, lab, keep_ids)                   # (row, col) per kept patch
+    rows_c = np.array([c[0] for c in cms]); cols_c = np.array([c[1] for c in cms])
+    order = np.argsort(rows_c)                                            # north first (row 0 = top)
+    keep_ids, rows_c, cols_c = keep_ids[order], rows_c[order], cols_c[order]
+    N = len(keep_ids)
+    lut = np.zeros(n + 1, "int16"); lut[keep_ids] = np.arange(1, N + 1, dtype="int16")
+    node_id = lut[lab]
+    del lab
+    node_union = node_id > 0
+
+    # ---- auto-names (W9) --------------------------------------------------------------
+    nm = nc.get("naming", {})
+    pas = _pa_polys(nm.get("pa_min_km2", 1.0)).to_crs(crs)
+    pa_id = rasterize([(g, i + 1) for i, g in enumerate(pas.geometry)], out_shape=shape,
+                      transform=transform, fill=0, dtype="int32")
+    to_ll = pyproj.Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+    from shapely.geometry import Point
+    north_cls = [c for c in nc["classes_core"] if c >= 10]
+    masks, table = [], []
+    for k in range(1, N + 1):
+        m = node_id == k                                                  # the ONE array per node
+        cells = int(m.sum())
+        ids = pa_id[m]; ids = ids[ids > 0]
+        ov_name, ov_frac = "", 0.0
+        if ids.size:
+            bc = np.bincount(ids); j = int(bc.argmax()); ov_name, ov_frac = str(pas.loc[j - 1, "PA_Name"]), bc[j] / cells
+        x = transform.c + (cols_c[k - 1] + 0.5) * transform.a
+        y = transform.f + (rows_c[k - 1] + 0.5) * transform.e
+        lon, lat = to_ll.transform(x, y)
+        d = pas.geometry.distance(Point(x, y)); jn = int(d.idxmin())
+        near_name, near_km = str(pas.loc[jn, "PA_Name"]), float(d[jn]) / 1e3
+        cen = pas.loc[jn, "geometry"].centroid
+        bearing = _bearing8(x - cen.x, y - cen.y)
+        if ov_frac >= nm.get("pa_overlap_min", 0.10):
+            auto = ov_name
+        else:
+            auto = f"{near_name} ({bearing})"
+        share_n = float(np.isin(ref[m], north_cls).mean()) if north_cls else float("nan")
+        masks.append(m)
+        table.append(dict(node_id=k, label_auto=auto, display_name="", area_km2=round(cells * cell_km2, 1),
+                          n_cells=cells, x=round(float(x), 1), y=round(float(y), 1),
+                          lat=round(float(lat), 4), lon=round(float(lon), 4),
+                          pa_overlap_name=ov_name, pa_overlap_frac=round(float(ov_frac), 3),
+                          nearest_pa=near_name, nearest_pa_km=round(near_km, 1), bearing=bearing,
+                          share_north_model=round(share_n, 3)))
+    del pa_id
+    df = pd.DataFrame(table)
+
+    # ---- human naming overrides (GW3 fingerprint) --------------------------------------
+    if names_path is not None and pathlib.Path(names_path).exists():
+        nf = pd.read_csv(names_path, encoding="utf-8-sig").fillna({"display_name": ""})
+        for r in nf.itertuples():
+            k = int(r.node_id)
+            if not (1 <= k <= N):
+                raise ValueError(f"GW3 FAILED: node_names.csv row node_id={k} does not exist ({N} nodes)")
+            row = df.loc[k - 1]
+            if int(r.n_cells) != int(row.n_cells) or abs(float(r.lat) - row.lat) > 1e-3 or abs(float(r.lon) - row.lon) > 1e-3:
+                raise ValueError(f"GW3 FAILED: node_names.csv row node_id={k} does not match the current node set "
+                                 f"(cells {r.n_cells} vs {row.n_cells}, lat/lon {r.lat},{r.lon} vs {row.lat},{row.lon}) "
+                                 f"-- re-run cc.node_patches and re-vet the names")
+            if str(r.display_name).strip():
+                df.loc[k - 1, "display_name"] = str(r.display_name).strip()
+        print(f"  node_names.csv applied: {int((df.display_name != '').sum())} display names overridden")
+    df["name"] = np.where(df.display_name != "", df.display_name, df.label_auto)
+    kind, klabel = nc.get("kind", "refugium"), nc.get("kind_label", "Refugium")
+    df["name_label"] = [f"{klabel} · R{k:02d} {nmz}" for k, nmz in zip(df.node_id, df.name)]
+    names_raw = [(lbl, m) for lbl, m in zip(df.name_label, masks)]
+    kinds_raw = [kind] * N
+
+    ctx = None
+    if nc.get("context_pa_min_km2"):
+        big = pas[pas.km2 >= nc["context_pa_min_km2"]]
+        ctx = rasterize([(g, 1) for g in big.geometry], out_shape=shape, transform=transform,
+                        fill=0, dtype="uint8").astype(bool) & pu
+    # W11: protected land (existing PAs + proposed IPCAs/PAs, taken as given) -- a STATUS layer
+    protected_pa = protected_ipca = None
+    pc = nc.get("protected")
+    if pc:
+        allp = pas[pas.km2 >= float(pc.get("pa_min_km2", 0.0))]
+        protected_pa = rasterize([(g, 1) for g in allp.geometry], out_shape=shape, transform=transform,
+                                 fill=0, dtype="uint8").astype(bool) & pu
+        if pc.get("include_proposed") and pc.get("proposed"):
+            ip = gpd.read_file(config.PROJECT_DIR / pathlib.Path(pc["proposed"])).to_crs(crs)
+            protected_ipca = rasterize([(g, 1) for g in ip.geometry], out_shape=shape, transform=transform,
+                                       fill=0, dtype="uint8").astype(bool) & pu
+        else:
+            protected_ipca = np.zeros(shape, bool)
+        if verbose:
+            print(f"  protected land (status layer, W11): existing PAs {int(protected_pa.sum())*cell_km2:,.0f} km², "
+                  f"proposed {int(protected_ipca.sum())*cell_km2:,.0f} km² | "
+                  f"{100*float((protected_pa | protected_ipca)[node_union].mean()):.1f}% of node land is protected")
+    if verbose:
+        print(f"nodes: {N} core refugia patches >= {nc['node_min_km2']} km² "
+              f"({int(node_union.sum())*cell_km2:,.0f} km² of node land, numbered north -> south) | "
+              f"largest {df.area_km2.max():,.0f} km², smallest {df.area_km2.min():,.0f} km²")
+    outline = gpd.read_file(config.CORRIDOR_REF).to_crs(crs)
+    return _NS(cfg=cfg, template=template, cost=cost, crs=crs, transform=transform, shape=shape,
+               pu=pu, cell_km2=cell_km2, cell_km=cell_km,
+               names_raw=names_raw, kinds_raw=kinds_raw, n_dedupe_merges=0, desig={},
+               node_union=node_union, outline=outline,
+               node_id=node_id, refugia=ref, marginal=marginal, node_table=df, context_pa=ctx,
+               protected_pa=protected_pa, protected_ipca=protected_ipca,
+               protected=(None if protected_pa is None else (protected_pa | protected_ipca)),
+               single_component_nodes=True, nodes_disjoint=True)
+
+
+def node_patches(key="wolverine", force=False):
+    """Step-0a analogue for raster nodes (W7): vectorize the patches once, write the H7-FORMAT
+    node_parts.csv / node_parts.gpkg (every figure reads node_parts.gpkg), the naming file
+    node_names.csv (display_name blank = auto-name; Ethan may fill it) and refugia_summary.json
+    into the git-tracked audit_objects dir. No review file: there is nothing to sign (single
+    components). Refuses to overwrite a node_names.csv that already carries filled display
+    names unless force=True. Returns the loader namespace (for cc.node_map)."""
+    cfg, cost_path = resolve(key, require_cutoff=False)
+    audit_dir = pathlib.Path(cfg["audit_objects_dir"]); audit_dir.mkdir(parents=True, exist_ok=True)
+    names_path = audit_dir / cfg["nodes"].get("naming", {}).get("names_file", "node_names.csv")
+    if names_path.exists() and not force:
+        old = pd.read_csv(names_path, encoding="utf-8-sig").fillna({"display_name": ""})
+        if (old["display_name"].astype(str).str.strip() != "").any():
+            raise FileExistsError(
+                f"{names_path} already carries filled display names. Re-running node_patches would "
+                f"discard them -- pass force=True only if that is intended.")
+    A = _raster_nodes(cfg, cost_path, names_path=None)
+    df = A.node_table
+    kind = cfg["nodes"].get("kind", "refugium")
+
+    parts = pd.DataFrame(dict(name_label=df.name_label, kind=kind, part_id=1, area_km2=df.area_km2, is_seed=True))
+    parts.to_csv(audit_dir / "node_parts.csv", index=False, encoding="utf-8-sig")
+    geoms = defaultdict(list)
+    for shp, v in shapes(A.node_id.astype("int32"), mask=A.node_union, transform=A.transform):
+        geoms[int(v)].append(_shape(shp))
+    polys = [dict(name_label=r.name_label, part_id=1, is_seed=True, area_km2=r.area_km2,
+                  node_id=int(r.node_id), display_name=r.name,
+                  geometry=gpd.GeoSeries(geoms[int(r.node_id)], crs=A.crs).union_all())
+             for r in df.itertuples()]
+    gpd.GeoDataFrame(polys, crs=A.crs).to_file(audit_dir / "node_parts.gpkg", driver="GPKG")
+    cols = ["node_id", "name_label", "label_auto", "display_name", "area_km2", "n_cells", "lat", "lon",
+            "pa_overlap_name", "pa_overlap_frac", "nearest_pa", "nearest_pa_km", "bearing", "share_north_model"]
+    df[cols].to_csv(names_path, index=False, encoding="utf-8-sig")
+
+    ref = A.refugia; pu = A.pu
+    ys = A.template.y.values
+    to_ll = pyproj.Transformer.from_crs(A.crs, "EPSG:4326", always_xy=True)
+    xmid = float(A.template.x.values[len(A.template.x) // 2])
+    lat_rows = np.array([to_ll.transform(xmid, float(y))[1] for y in ys])
+    seam = float(cfg["nodes"]["raster"].get("seam_lat", 0) or 0)
+    north = (lat_rows >= seam)[:, None] & pu
+    vals = cfg["nodes"]["raster"]["expect_classes"]
+    summ = dict(
+        n_patches_total=int(len(np.bincount(A.node_id.ravel()))),
+        n_nodes=int(len(df)), node_min_km2=cfg["nodes"]["node_min_km2"],
+        core_km2=round(float(np.isin(ref, cfg["nodes"]["classes_core"])[pu].sum() * A.cell_km2)),
+        marginal_km2=round(float(A.marginal.sum() * A.cell_km2)),
+        node_land_km2=round(float(A.node_union.sum() * A.cell_km2)),
+        class_km2={str(v): round(float(((ref == v) & pu).sum() * A.cell_km2)) for v in vals},
+        class_km2_north_of_seam={str(v): round(float(((ref == v) & north).sum() * A.cell_km2)) for v in vals},
+        class_km2_south_of_seam={str(v): round(float(((ref == v) & pu & ~north).sum() * A.cell_km2)) for v in vals},
+        seam_lat=seam,
+        ladder={str(t): int((df.area_km2 >= t).sum()) for t in cfg["nodes"].get("ladder_km2", [])},
+    )
+    (audit_dir / "refugia_summary.json").write_text(json.dumps(summ, indent=2))
+    print(f"node_patches: wrote node_parts.csv, node_parts.gpkg, {names_path.name}, refugia_summary.json "
+          f"-> {audit_dir.relative_to(config.PROJECT_DIR)}")
+    print(f"  CHECK STOP 1: review the node map + table; optionally fill display_name in {names_path.name}; commit the four files")
+    return A
+
+
+def node_map(A, n_insets=3, win_km=350, save=None):
+    """Check-stop-1 figure: numbered nodes over core / marginal refugia with existing PAs as
+    outline context, plus `n_insets` zoom panels on the densest node clusters. Inline only."""
+    from matplotlib.patches import Rectangle
+    import matplotlib.patheffects as pe
+    xs, ys = A.template.x.values, A.template.y.values
+    df = A.node_table
+    d = 4
+    rgb = np.ones(A.shape[:2] + (3,), "float32") * 0.97
+    rgb[~A.pu] = (0.90, 0.93, 0.95)
+    rgb[A.marginal] = (0.80, 0.90, 0.70)
+    core = np.isin(A.refugia, A.cfg["nodes"]["classes_core"]) & A.pu
+    rgb[core] = (0.55, 0.78, 0.55)
+    rgb[A.node_union] = (0.14, 0.55, 0.27)
+    ext = [xs[0] - abs(xs[1]-xs[0])/2, xs[-1] + abs(xs[1]-xs[0])/2, ys[-1] - abs(ys[1]-ys[0])/2, ys[0] + abs(ys[1]-ys[0])/2]
+
+    def _draw(ax, XL=None, YL=None, num_fs=7):
+        ax.imshow(rgb[::d, ::d], extent=ext, origin="upper", interpolation="nearest")
+        if A.context_pa is not None:
+            ctx = A.context_pa[::d, ::d]
+            ax.contour(ctx.astype(float), levels=[0.5], colors="0.35", linewidths=0.4,
+                       extent=[ext[0], ext[1], ext[3], ext[2]], origin="upper")
+        A.outline.boundary.plot(ax=ax, color="0.2", linewidth=0.6, linestyle="--")
+        for r in df.itertuples():
+            if XL is None or (XL[0] <= r.x <= XL[1] and YL[0] <= r.y <= YL[1]):
+                ax.annotate(str(r.node_id), (r.x, r.y), fontsize=num_fs, fontweight="bold", ha="center", va="center",
+                            color="white", path_effects=[pe.withStroke(linewidth=2.2, foreground="#0b3d1c")])
+        ax.set_aspect("equal"); ax.set_axis_off()
+
+    fig = plt.figure(figsize=(18, 13))
+    ax = fig.add_axes([0.02, 0.03, 0.40, 0.94]); _draw(ax)
+    ax.set_title(f"{A.cfg['region_label']} — {len(df)} core refugia nodes (numbered north → south)\n"
+                 f"dark = nodes, mid green = core below the floor, pale = marginal, grey lines = PAs ≥ "
+                 f"{A.cfg['nodes'].get('context_pa_min_km2')} km²", fontsize=10)
+    # densest clusters: greedy -- the node with most neighbours within win_km/2, remove, repeat
+    pts = df[["x", "y"]].values.astype(float); remaining = np.ones(len(df), bool); wins = []
+    for _ in range(n_insets):
+        if not remaining.any(): break
+        best, cnt = None, -1
+        for i in np.flatnonzero(remaining):
+            c = int(((np.abs(pts[:, 0] - pts[i, 0]) < win_km * 500) & (np.abs(pts[:, 1] - pts[i, 1]) < win_km * 500) & remaining).sum())
+            if c > cnt: best, cnt = i, c
+        cx, cy = pts[best]; XL = (cx - win_km * 500, cx + win_km * 500); YL = (cy - win_km * 500, cy + win_km * 500)
+        remaining &= ~((pts[:, 0] > XL[0]) & (pts[:, 0] < XL[1]) & (pts[:, 1] > YL[0]) & (pts[:, 1] < YL[1]))
+        wins.append((XL, YL))
+    for k, (XL, YL) in enumerate(wins):
+        ax.add_patch(Rectangle((XL[0], YL[0]), XL[1]-XL[0], YL[1]-YL[0], fill=False, ec="#c0392b", lw=1.0))
+        ax.text(XL[0], YL[1], f" {chr(65+k)}", color="#c0392b", fontsize=9, fontweight="bold", va="bottom")
+        iax = fig.add_axes([0.46 + 0.27 * (k % 2), 0.52 - 0.49 * (k // 2), 0.25, 0.45]) if n_insets <= 4 else None
+        if iax is None: continue
+        _draw(iax, XL, YL, num_fs=9); iax.set_xlim(*XL); iax.set_ylim(*YL)
+        iax.set_title(f"{chr(65+k)} — {win_km} km window", fontsize=9)
+        for sp in iax.spines.values(): sp.set_visible(True); sp.set_edgecolor("#c0392b")
+    if save:
+        fig.savefig(save, dpi=130, bbox_inches="tight")
+    plt.show()
+    return fig
+
+
 def _name_designation(label, kind, desig, multisite):
     """Designation string for a name. IPCAs carry PA_TYPE from the source; the PA layer has no
     designation attribute, so for existing PAs the designation is DERIVED from PA_Name by matching
@@ -524,8 +847,9 @@ def _apply_parts(A, treatments):
     names, parts, part_name = [], [], []
     units, unit_kinds, unit_name, unit_parts = [], [], [], []
 
+    single = getattr(A, "single_component_nodes", False)     # raster nodes: no split (W7)
     for k, ((lbl, mask), kind) in enumerate(zip(A.names_raw, A.kinds_raw)):
-        comps, seeds = _split_parts(mask, part_min)
+        comps, seeds = ([mask], [mask]) if single else _split_parts(mask, part_min)
         multi = len(seeds) > 1
         if multi and lbl not in treatments:
             raise ValueError(
@@ -547,9 +871,12 @@ def _apply_parts(A, treatments):
                           parts=pidx, n_comps=len(comps), n_seeds=len(seed_masks)))
 
         if t in ("single", "merge_parts", "link_locked"):
-            union = np.zeros(A.shape, bool)
-            for pi in pidx:
-                union |= parts[pi][1]
+            if len(pidx) == 1:
+                union = parts[pidx[0]][1]        # one seed = the unit: alias, never copy (memory at Y2Y scale)
+            else:
+                union = np.zeros(A.shape, bool)
+                for pi in pidx:
+                    union |= parts[pi][1]
             units.append((lbl, union)); unit_kinds.append(kind)
             unit_name.append(k); unit_parts.append(pidx)
         else:                                        # link_competing / no_link: one unit per part
@@ -583,7 +910,11 @@ def load(run_dir):
     key = rec["key"]
     cost_path = config.PROJECT_DIR / rec["inputs"]["movement_cost"]["path"]
 
-    A = _grid_nodes(cfg, cost_path)
+    if cfg.get("nodes", {}).get("source", "vector") == "raster":
+        names_path = run_dir / "node_names.csv"
+        A = _raster_nodes(cfg, cost_path, names_path if names_path.exists() else None)
+    else:
+        A = _grid_nodes(cfg, cost_path)
     A.key, A.rec, A.run_id, A.run_dir = key, rec, rec["run_id"], run_dir
     A.fig_dir = run_dir / "figures"
     A.region_label = cfg["region_label"]
@@ -669,7 +1000,7 @@ def resistance_report(A, v1_path=None, save=True):
 
 
 # ================= network primitives =================
-def _cwd_all(A, res, masks, cache_dir=None, prefix="node"):
+def _cwd_all(A, res, masks, cache_dir=None, prefix="node", pu=None):
     """Least-cost accumulated distance from each seed mask over resistance `res`.
 
     Returns (cwd, mcp) where `cwd` is an indexable sequence of 2-D arrays. At 300 m one field is
@@ -685,37 +1016,67 @@ def _cwd_all(A, res, masks, cache_dir=None, prefix="node"):
         wrong node -- no exception, plausible-looking output. Gate G1 is what catches that.
     """
     mcp = MCP_Geometric(res)
-    seeds = [[tuple(x) for x in np.argwhere(m)] for m in masks]
+    # seed lists are built PER NODE inside the loop (not all up front): 66 Y2Y-wide patches would
+    # otherwise hold ~3 M Python tuples at once
+    _seeds = lambda m: [tuple(x) for x in np.argwhere(m)]
     if cache_dir is None:
         cwd = []
-        for s in seeds:
-            cum, _ = mcp.find_costs(s)
+        for m in masks:
+            cum, _ = mcp.find_costs(_seeds(m))
             cwd.append(cum.copy())
         return cwd, mcp
 
     cache_dir = pathlib.Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     paths = []
-    for k, s in enumerate(seeds):
+    for k, m in enumerate(masks):
         p = cache_dir / f"{prefix}_{k:03d}.npy"
         if not p.exists():
-            cum, _ = mcp.find_costs(s)
-            np.save(p, cum.astype("float32"))
+            t0 = time.time()
+            cum, _ = mcp.find_costs(_seeds(m))
+            # compact cache (wolverine `cwd_compact`): only the routable cells, in row-major
+            # order of `pu` -- 69 MB instead of 189 MB per field at Y2Y scale. Off-PU cells are
+            # inf by construction (cost inf), so the expansion in _CwdCache is exact.
+            np.save(p, (cum[pu] if pu is not None else cum).astype("float32"))
+            if pu is not None:
+                print(f"    {prefix} {k:03d}/{len(masks)-1}: {int(m.sum())*int(round(A.cell_km2*1e4))/1e4:,.0f} km² seed, "
+                      f"{time.time()-t0:,.0f} s")
         paths.append(p)
-    return _CwdCache(paths), mcp
+    return _CwdCache(paths, pu), mcp
 
 
 class _CwdCache:
-    """Lazy list-like view over cached CWD fields; loads one memmap at a time."""
+    """Lazy list-like view over cached CWD fields; loads one memmap at a time.
 
-    def __init__(self, paths):
+    Two on-disk formats: 2-D full-grid files (the north) are returned as memmaps; 1-D COMPACT
+    files (`pu` given; wolverine) are expanded on read into a full float32 grid with inf off-PU,
+    so every consumer written against full grids works unchanged. `compact(k)` returns the raw
+    1-D vector (row-major over pu) for the fast paths in cost_matrix / edge_bands.
+    """
+
+    def __init__(self, paths, pu=None):
         self.paths = list(paths)
+        self.pu = pu
+        if pu is not None:
+            self.shape = pu.shape
+            self.flat_pu = np.flatnonzero(pu.ravel()).astype(np.int32)
 
     def __len__(self):
         return len(self.paths)
 
     def __getitem__(self, k):
-        return np.load(self.paths[k], mmap_mode="r")
+        arr = np.load(self.paths[k], mmap_mode="r")
+        if self.pu is None or arr.ndim == 2:
+            return arr
+        out = np.full(self.shape, np.inf, "float32")
+        out[self.pu] = arr
+        return out
+
+    def compact(self, k):
+        arr = np.load(self.paths[k], mmap_mode="r")
+        if arr.ndim == 2:
+            return np.asarray(arr)[self.pu]
+        return arr
 
     @property
     def nbytes_on_disk(self):
@@ -766,11 +1127,21 @@ def cost_matrix(A, cwd):
     """
     N = len(A.nodes)
     D = np.full((N, N), np.inf)
-    for i in range(N):
-        fi = cwd[i]
-        for j in range(N):
-            if i != j:
-                D[i, j] = np.nanmin(fi[A.nodes[j][1]])
+    cidx = getattr(A, "node_cidx", None)
+    if cidx is not None and getattr(cwd, "pu", None) is not None:
+        # compact path (wolverine): gather each node's cells from the 1-D vector -- the 2-D
+        # memmap indexing below touches the WHOLE field file per (i, j) pair
+        for i in range(N):
+            fi = cwd.compact(i)
+            for j in range(N):
+                if i != j:
+                    D[i, j] = np.nanmin(np.asarray(fi[cidx[j]]))
+    else:
+        for i in range(N):
+            fi = cwd[i]
+            for j in range(N):
+                if i != j:
+                    D[i, j] = np.nanmin(fi[A.nodes[j][1]])
     np.fill_diagonal(D, 0.0)
     fin = np.isfinite(D) & np.isfinite(D.T)
     if fin.any():
@@ -795,7 +1166,40 @@ def _band_slack(cutoff_mode, cutoff, cost_ij):
     raise ValueError(f"cutoff_mode must be 'abs' or 'frac', got {cutoff_mode!r}")
 
 
-def edge_bands(A, cwd, mcp, edges, cutoff, cutoff_mode="abs", want_slack=True, nmap=None):
+class _BandStore:
+    """Per-run, per-CWD-set store of computed bands (wolverine `band_cache`), persisted under
+    run_dir/band_cache/<tag>/ so later notebooks re-attach in seconds instead of re-running one
+    full find_costs per edge. A band is stored at `allow_stored` >= the requested allowance
+    with its float64 field values; any smaller allowance is the IDENTICAL predicate
+    (field <= lcp + allow) on those values, i.e. bit-exact with a fresh computation."""
+
+    def __init__(self, root):
+        self.root = pathlib.Path(root); self.mem = {}
+
+    def _path(self, key, mode):
+        return self.root / f"{key}.{mode}.npz"
+
+    def get(self, key, mode):
+        k = (key, mode)
+        if k in self.mem:
+            return self.mem[k]
+        p = self._path(key, mode)
+        if not p.exists():
+            return None
+        z = np.load(p, allow_pickle=False)
+        rec = dict(idx=z["idx"], field=z["field"], path=z["path"], is_path=z["is_path"],
+                   lcp=float(z["lcp"]), allow=float(z["allow"]))
+        self.mem[k] = rec
+        return rec
+
+    def put(self, key, mode, rec):
+        self.mem[(key, mode)] = rec
+        self.root.mkdir(parents=True, exist_ok=True)
+        np.savez(self._path(key, mode), idx=rec["idx"], field=rec["field"], path=rec["path"],
+                 is_path=rec["is_path"], lcp=rec["lcp"], allow=rec["allow"])
+
+
+def edge_bands(A, cwd, mcp, edges, cutoff, cutoff_mode="abs", want_slack=True, nmap=None, tag=None):
     """Per-edge corridor geometry, keyed by edge_id -- NOT a single union.
 
     Retaining per-edge identity is what D7 (per-edge centrality/criticality) and D9 (a graded
@@ -809,9 +1213,18 @@ def edge_bands(A, cwd, mcp, edges, cutoff, cutoff_mode="abs", want_slack=True, n
     # are subset-local and have to be mapped back to the cached per-node fields.
     nm = (lambda k: k) if nmap is None else (lambda k: int(nmap[k]))
     bands, slack, paths, meta = {}, {}, {}, {}
-    for _, e in edges.iterrows():
+    # wolverine band store (opt-in via cfg band_cache; `tag` names the CWD set) + compact fields
+    store = None
+    if tag is not None and getattr(A, "band_memo", None) is not None:
+        store = A.band_memo.setdefault(tag, _BandStore(A.run_dir / "band_cache" / tag))
+    mult = float(A.cfg.get("band_cache_mult", 2.0)) if store is not None else 1.0
+    compact = (getattr(cwd, "pu", None) is not None and getattr(A, "node_flat", None) is not None
+               and cwd.pu.shape == tuple(A.shape))
+    n_edges, t_start = len(edges), time.time()
+    for n_done, (_, e) in enumerate(edges.iterrows(), 1):
         i, j, cost_ij = nm(int(e["i"])), nm(int(e["j"])), float(e["cost"])
         eid = e.name
+        skey = cg.edge_id(i, j)                          # store key = GLOBAL unit indices
 
         # ADJACENCY EDGES GET NO BAND (methods doc §4: "no corridor to build between areas that
         # already touch"). Under v1's RELATIVE band this fell out for free (allow = frac x 0 = 0);
@@ -826,31 +1239,85 @@ def edge_bands(A, cwd, mcp, edges, cutoff, cutoff_mode="abs", want_slack=True, n
                 slack[eid] = np.empty(0, "float32")
             meta[eid] = dict(lcp=0.0, allow=0.0, centreline_cells=0)
             continue
-        fi, fj = cwd[i], cwd[j]
-
-        # Centre-line: an explicit traceback, kept from v1. With an absolute cutoff it is no longer
-        # strictly needed for continuity, but path_cells is the resistance-independent length
-        # yardstick and G1 compares it directly.
-        # traceback() reads the LAST find_costs, so re-seed from node i immediately before it.
-        n_path = 0
-        if cost_ij > 0:
-            mcp.find_costs([tuple(x) for x in np.argwhere(A.nodes[i][1])])
-            tgt_cells = np.argwhere(A.nodes[j][1])
-            target = tuple(tgt_cells[np.argmin(np.asarray(fi)[A.nodes[j][1]])])
-            path = mcp.traceback(target)
-            paths[eid] = np.asarray(path, dtype=np.int32)
-            n_path = len(path)
-
-        field = np.asarray(fi, dtype="float64") + np.asarray(fj, dtype="float64")
-        lcp = np.nanmin(field)
         allow = _band_slack(cutoff_mode, cutoff, cost_ij)
-        keep = np.isfinite(field) & (field <= lcp + allow)
-        if n_path:
-            keep[paths[eid][:, 0], paths[eid][:, 1]] = True
-        idx = np.flatnonzero(keep.ravel())
-        bands[eid] = idx.astype(np.int32)
+
+        # ---- store HIT: the identical predicate on the stored float64 values (bit-exact) ----
+        hit = store.get(skey, cutoff_mode) if store is not None else None
+        if hit is not None and hit["allow"] >= allow - 1e-12:
+            sel = (hit["field"] <= hit["lcp"] + allow) | hit["is_path"]
+            idx = hit["idx"][sel]
+            bands[eid] = idx
+            if want_slack:
+                slack[eid] = (hit["field"][sel] - hit["lcp"]).astype("float32")
+            paths[eid] = hit["path"]
+            meta[eid] = dict(lcp=float(hit["lcp"]), allow=float(allow), centreline_cells=int(len(hit["path"])))
+            continue
+
+        allow_used = allow * mult                          # store at the larger allowance
+        t0 = time.time()
+        if compact:
+            # ---- compact fields (wolverine): the same arithmetic on the routable vector ----
+            fic, fjc = cwd.compact(i), cwd.compact(j)
+            n_path = 0; path = np.zeros((0, 2), np.int32)
+            if cost_ij > 0:
+                cj = A.node_cidx[j]
+                tgt_k = int(np.argmin(np.asarray(fic[cj])))
+                target = tuple(int(v) for v in np.unravel_index(int(A.node_flat[j][tgt_k]), A.shape))
+                seeds_i = [tuple(x) for x in np.argwhere(A.nodes[i][1])]
+                if store is not None:
+                    mcp.find_costs(seeds_i, ends=[target])          # early stop: the target is popped, its traceback fixed
+                else:
+                    mcp.find_costs(seeds_i)
+                path = np.asarray(mcp.traceback(target), dtype=np.int32)
+                n_path = len(path)
+            fc = np.asarray(fic, dtype="float64"); fc = fc + np.asarray(fjc, dtype="float64")
+            lcp = float(np.nanmin(fc))
+            keepc = np.isfinite(fc) & (fc <= lcp + allow_used)
+            is_path_c = np.zeros(fc.shape, bool)
+            if n_path:
+                pflat = (path[:, 0].astype(np.int64) * A.shape[1] + path[:, 1]).astype(np.int32)
+                pos = np.searchsorted(cwd.flat_pu, pflat)
+                assert np.array_equal(cwd.flat_pu[pos], pflat), "traceback left the routable set"
+                keepc[pos] = True; is_path_c[pos] = True
+            idx = cwd.flat_pu[keepc]
+            fvals = fc[keepc]
+            is_path = is_path_c[keepc]
+        else:
+            fi, fj = cwd[i], cwd[j]
+            # Centre-line: an explicit traceback, kept from v1. With an absolute cutoff it is no
+            # longer strictly needed for continuity, but path_cells is the resistance-independent
+            # length yardstick and G1 compares it directly.
+            # traceback() reads the LAST find_costs, so re-seed from node i immediately before it.
+            n_path = 0; path = np.zeros((0, 2), np.int32)
+            if cost_ij > 0:
+                mcp.find_costs([tuple(x) for x in np.argwhere(A.nodes[i][1])])
+                tgt_cells = np.argwhere(A.nodes[j][1])
+                target = tuple(tgt_cells[np.argmin(np.asarray(fi)[A.nodes[j][1]])])
+                path = np.asarray(mcp.traceback(target), dtype=np.int32)
+                n_path = len(path)
+            field = np.asarray(fi, dtype="float64") + np.asarray(fj, dtype="float64")
+            lcp = float(np.nanmin(field))
+            keep = np.isfinite(field) & (field <= lcp + allow_used)
+            is_path_g = np.zeros(A.shape, bool)
+            if n_path:
+                keep[path[:, 0], path[:, 1]] = True; is_path_g[path[:, 0], path[:, 1]] = True
+            idx = np.flatnonzero(keep.ravel()).astype(np.int32)
+            fvals = field.ravel()[idx]
+            is_path = is_path_g.ravel()[idx]
+
+        if store is not None:
+            store.put(skey, cutoff_mode, dict(idx=idx.astype(np.int32), field=fvals, path=path,
+                                              is_path=is_path, lcp=lcp, allow=float(allow_used)))
+            print(f"    band {n_done}/{n_edges} {eid}: {int(idx.size)} cells @ {allow_used:g}, "
+                  f"{time.time()-t0:,.0f} s (elapsed {time.time()-t_start:,.0f} s)")
+        # filter to the requested allowance (identity when mult == 1)
+        sel = (fvals <= lcp + allow) | is_path
+        idx_r = idx[sel]
+        bands[eid] = idx_r.astype(np.int32)
         if want_slack:
-            slack[eid] = (field.ravel()[idx] - lcp).astype("float32")
+            slack[eid] = (fvals[sel] - lcp).astype("float32")
+        if n_path:
+            paths[eid] = path
         meta[eid] = dict(lcp=float(lcp), allow=float(allow), centreline_cells=int(n_path))
     return bands, slack, paths, meta
 
@@ -1015,16 +1482,20 @@ def cost_distances(A, cache=True):
     their part's file with no copy.
     """
     cache_dir = None
+    compact = bool(A.cfg.get("cwd_compact", False))          # wolverine: routable cells only
+    pu = A.pu if compact else None
     if cache:
         # A.cfg comes back from run_config.json as strings; joining under PROJECT_DIR keeps
         # absolute paths absolute (pathlib: an absolute right side wins) and fixes relative ones.
         gdir = config.PROJECT_DIR / pathlib.Path(A.cfg["grid"]["dir"])
-        cache_dir = pathlib.Path(gdir) / "cwd_cache" / _resistance_sha(A)
+        sha = _resistance_sha(A)
+        cache_dir = pathlib.Path(gdir) / "cwd_cache" / (sha + ("_c" if compact else ""))
         hit = cache_dir.exists() and len(list(cache_dir.glob("part_*.npy"))) == len(A.parts)
         print(f"cost-weighted distance from {len(A.parts)} seed parts "
-              f"({'cache HIT' if hit else 'computing'}: {cache_dir.name})")
+              f"({'cache HIT' if hit else 'computing'}: {cache_dir.name}"
+              f"{', compact' if compact else ''})")
     A.cwd_parts, A.mcp = _cwd_all(A, A.resistance_arr, [m for _, m in A.parts],
-                                  cache_dir, prefix="part")
+                                  cache_dir, prefix="part", pu=pu)
 
     # ---- derive per-UNIT fields (min over the unit's parts) ---------------------------
     if cache:
@@ -1036,13 +1507,23 @@ def cost_distances(A, cache=True):
             else:
                 p = cache_dir / f"unit_{u:03d}.npy"
                 if not p.exists():
-                    fld = np.asarray(A.cwd_parts[pidx[0]], dtype="float32").copy()
+                    rd = (A.cwd_parts.compact if compact else A.cwd_parts.__getitem__)
+                    fld = np.asarray(rd(pidx[0]), dtype="float32").copy()
                     for pi in pidx[1:]:
-                        np.minimum(fld, np.asarray(A.cwd_parts[pi], dtype="float32"), out=fld)
+                        np.minimum(fld, np.asarray(rd(pi), dtype="float32"), out=fld)
                     np.save(p, fld)
                 upaths.append(p)
-        A.cwd = _CwdCache(upaths)
+        A.cwd = _CwdCache(upaths, pu)
+        A.cwd_tag = f"unit_{sha}"
         print(f"  cache {A.cwd_parts.nbytes_on_disk/1e9:.1f} GB on disk, one field resident at a time")
+        if compact:
+            # flat + compact cell indices per routing unit: the gathers cost_matrix / edge_bands use
+            A.node_flat = [np.flatnonzero(m.ravel()) for _, m in A.nodes]
+            A.node_cidx = [np.searchsorted(A.cwd.flat_pu, nf).astype(np.int32) for nf in A.node_flat]
+            for nf, ci in zip(A.node_flat, A.node_cidx):
+                assert np.array_equal(A.cwd.flat_pu[ci], nf), "node cells must lie inside the routable set"
+        if A.cfg.get("band_cache"):
+            A.band_memo = {}                                  # tag -> _BandStore (persisted per run dir)
     else:
         fields = []
         for u in range(len(A.nodes)):
@@ -1068,7 +1549,7 @@ def corridor_network(A, cutoff=None, cutoff_mode="abs", beta=None, verbose=True)
     A.edges["edge_class"] = np.where(A.edges["is_adjacency"], "adjacency", "inter")
 
     A.bands, A.slack, A.paths, A.band_meta = edge_bands(
-        A, A.cwd, A.mcp, A.edges, cutoff, cutoff_mode)
+        A, A.cwd, A.mcp, A.edges, cutoff, cutoff_mode, tag=getattr(A, "cwd_tag", None))
 
     # D16: locked intra-name edges appended -- real corridor land with its own bands + criticality,
     # reported as a separate area line (never folded into MST/augmentation area).
@@ -1206,6 +1687,96 @@ def gate_g1(key="north", v1_dir=None, frac=0.05, tol=0.999, verbose=True):
         f"inputs, so a later v1-vs-v2 difference could not be attributed to D1/D6/D7.")
     print(f"  G1 OK — the refactor is behaviour-preserving on identical inputs")
     return dict(jaccard=j, n_edges=len(edges), corridor_km2=int(corr.sum()) * cell_km2, A=A)
+
+
+def secured_status(A, frac=None, verbose=True):
+    """W11 -- protection as a STATUS on the routed network (routing untouched; D5 keeps values and
+    status out of resistance). Per separated edge:
+        centreline_protected_frac  share of the least-cost centre-line cells inside nodes + protected land
+        band_protected_frac        share of the band's NEW land inside protected land
+        band_unprotected_km2       the corridor land there is still to secure
+        secured                    centreline_protected_frac >= secured_centreline_frac (0.95): the link is
+                                   already connected within protected land -- listed, never mapped
+    Also A.corridor_unprotected = corridor & ~protected (what the maps show)."""
+    prot = getattr(A, "protected", None)
+    if prot is None:
+        print("secured_status: no protected layer on this run (nodes.protected unset)"); return A
+    frac = float(A.cfg.get("secured_centreline_frac", 0.95)) if frac is None else float(frac)
+    pa = A.protected_pa if getattr(A, "protected_pa", None) is not None else prot
+    ipca = A.protected_ipca if getattr(A, "protected_ipca", None) is not None else np.zeros(A.shape, bool)
+    inside_pa = A.node_union | pa                      # existing PAs only
+    inside_all = inside_pa | ipca                      # + proposed IPCAs (taken as given)
+    cp, cpa, cpi, bp, bpa, bpi, bu, by = {}, {}, {}, {}, {}, {}, {}, {}
+    for eid in A.edges.index:
+        e = A.edges.loc[eid]
+        if e["cost"] <= 0 or e["is_adjacency"]:
+            cp[eid] = cpa[eid] = cpi[eid] = bp[eid] = bpa[eid] = bpi[eid] = np.nan; bu[eid] = 0.0; by[eid] = ""
+            continue
+        pth = A.paths.get(eid)
+        if pth is not None and len(pth):
+            f_pa = float(inside_pa[pth[:, 0], pth[:, 1]].mean())
+            f_all = float(inside_all[pth[:, 0], pth[:, 1]].mean())
+            f_ip = float((ipca & ~inside_pa)[pth[:, 0], pth[:, 1]].mean())
+        else:
+            f_pa = f_all = f_ip = np.nan
+        idx = A.bands[eid]
+        new = ~A.node_union.ravel()[idx]
+        n_new = int(new.sum())
+        n_pa = int((pa.ravel()[idx] & new).sum())
+        n_ip = int((ipca.ravel()[idx] & ~pa.ravel()[idx] & new).sum())
+        cp[eid], cpa[eid], cpi[eid] = f_all, f_pa, f_ip
+        bp[eid] = ((n_pa + n_ip) / n_new) if n_new else np.nan
+        bpa[eid] = (n_pa / n_new) if n_new else np.nan
+        bpi[eid] = (n_ip / n_new) if n_new else np.nan
+        bu[eid] = (n_new - n_pa - n_ip) * A.cell_km2
+        # which layer satisfies the link: existing PAs alone, or only once the proposed IPCAs are real
+        by[eid] = ("pa" if np.isfinite(f_pa) and f_pa >= frac else
+                   ("ipca" if np.isfinite(f_all) and f_all >= frac else ""))
+    A.edges["centreline_protected_frac"] = pd.Series(cp)
+    A.edges["centreline_pa_frac"] = pd.Series(cpa)
+    A.edges["centreline_ipca_frac"] = pd.Series(cpi)
+    A.edges["band_protected_frac"] = pd.Series(bp)
+    A.edges["band_pa_frac"] = pd.Series(bpa)
+    A.edges["band_ipca_frac"] = pd.Series(bpi)
+    A.edges["band_unprotected_km2"] = pd.Series(bu)
+    A.edges["secured_by"] = pd.Series(by)
+    A.edges["secured"] = A.edges["secured_by"] != ""
+    A.corridor_unprotected = A.corridor & ~prot
+    A.secured_frac = frac
+    if verbose:
+        n_sep = int(((A.edges["cost"] > 0) & ~A.edges["is_adjacency"]).sum())
+        n_pa_ = int((A.edges["secured_by"] == "pa").sum()); n_ip_ = int((A.edges["secured_by"] == "ipca").sum())
+        tot, unp = int(A.corridor.sum()) * A.cell_km2, int(A.corridor_unprotected.sum()) * A.cell_km2
+        in_pa = int((A.corridor & pa).sum()) * A.cell_km2; in_ip = int((A.corridor & ipca & ~pa).sum()) * A.cell_km2
+        print(f"protection status (W11, centreline >= {frac:g} inside nodes + protected land): of {n_sep} separated links, "
+              f"{n_pa_} already connected within EXISTING PAs, {n_ip_} more only once the proposed IPCAs are realized")
+        print(f"  corridor land {tot:,.0f} km²: inside existing PAs {in_pa:,.0f}, inside proposed IPCAs (not PAs) {in_ip:,.0f}, "
+              f"UNPROTECTED {unp:,.0f} km²")
+    return A
+
+
+def gate_gw4(A, n=3):
+    """GW4 -- the band store + early-stop traceback (wolverine `band_cache`) reproduce a fresh,
+    full-field computation EXACTLY on `n` sampled baseline edges (idx, slack, centre-line)."""
+    cand = [e for e in A.edges.index
+            if A.edges.loc[e, "cost"] > 0 and not A.edges.loc[e, "is_adjacency"]
+            and A.edges.loc[e, "edge_class"] != "intra_name"]
+    if not cand:
+        print("GW4: no separated edges to test"); return True
+    pick = [cand[int(k)] for k in np.linspace(0, len(cand) - 1, min(n, len(cand))).round()]
+    B = _NS(**{k: getattr(A, k) for k in ("nodes", "shape", "pu", "cfg", "node_flat", "node_cidx")
+               if hasattr(A, k)})
+    B.band_memo = None
+    bands, slack, paths, meta = edge_bands(B, A.cwd, A.mcp, A.edges.loc[pick], A.cutoff, A.cutoff_mode, tag=None)
+    for e in pick:
+        assert np.array_equal(bands[e], A.bands[e]), f"GW4 FAILED on {e}: band cells differ"
+        assert np.array_equal(slack[e], A.slack[e]), f"GW4 FAILED on {e}: slack differs"
+        assert np.array_equal(paths.get(e, np.zeros((0, 2))), A.paths.get(e, np.zeros((0, 2)))), \
+            f"GW4 FAILED on {e}: centre-line differs (early-stop traceback)"
+        assert abs(meta[e]["lcp"] - A.band_meta[e]["lcp"]) == 0.0, f"GW4 FAILED on {e}: lcp differs"
+    print(f"GW4 OK: band store + early-stop traceback bit-exact on {len(pick)} sampled edges "
+          f"({', '.join(pick)})")
+    return True
 
 
 def calibrate_cutoff(A, target_km2=None, edges="mst", lo=0.0, hi=None, tol_km2=50, max_iter=20):
@@ -2035,9 +2606,11 @@ def gate_g0(A, expect_names=42, expect_merges=3):
     assert A.n_dedupe_merges == expect_merges, \
         f"G0 FAILED: {A.n_dedupe_merges} dedupe merges, expected {expect_merges}"
     rev = A.rec["inputs"].get("multipart_review.csv", {})
+    nmf = A.rec["inputs"].get("node_names.csv")
     print(f"G0 OK (re-baselined): {len(A.names)} names ({A.n_dedupe_merges} dedupe merges) | "
           f"{len(A.parts)} seed parts -> {len(A.nodes)} routing units | "
-          f"review sha256 {rev.get('sha256', 'MISSING')[:12]}")
+          + (f"node_names sha256 {nmf['sha256'][:12]}" if nmf else
+             f"review sha256 {rev.get('sha256', 'MISSING')[:12]}"))
     return True
 
 
@@ -2099,6 +2672,12 @@ def write_run(A):
          dst / "resistance.tif", "float32", -1)
     _gpkg(A, A.corridor, dst / "corridors.gpkg")
     written += ["corridors.tif", "resistance.tif", "corridors.gpkg"]
+    if getattr(A, "node_id", None) is not None:                 # raster nodes: the numbered patches
+        _tif(A, A.node_id, dst / "node_id.tif", "int16", 0)
+        written.append("node_id.tif")
+    if getattr(A, "corridor_unprotected", None) is not None:    # W11: the corridor land still to secure
+        _tif(A, np.where(A.corridor_unprotected, 1, 0), dst / "corridors_unprotected.tif", "uint8", 0)
+        written.append("corridors_unprotected.tif")
 
     if getattr(A, "priority", None) is not None:
         _tif(A, A.priority, dst / "linkage_priority.tif", "float32", -1)
@@ -2113,7 +2692,9 @@ def write_run(A):
                  "backup_edge_id", "backup_ratio", "irreplaceable", "insures_edge_id",
                  "n_branches", "route_irreplaceable", "band_new_km2", "band_cf_km2",
                  "centreline_cf_km", "width_new_km", "width_cf_km", "lcp_real", "lcp_cf",
-                 "squeeze_ratio_obs", "squeezed", "band_km2", "centreline_km"]
+                 "squeeze_ratio_obs", "squeezed", "band_km2", "centreline_km",
+                 "centreline_protected_frac", "centreline_pa_frac", "centreline_ipca_frac", "band_protected_frac",
+                 "band_pa_frac", "band_ipca_frac", "band_unprotected_km2", "secured_by", "secured"]
     (A.edges[[c for c in crit_cols if c in A.edges.columns]]
      .sort_values(["irreplaceable", "n_pairs_lost", "ecfb_raw"], ascending=False)
      .to_csv(dst / "criticality.csv", encoding="utf-8-sig"))
@@ -2132,6 +2713,14 @@ def write_run(A):
         n_nodes=len(A.nodes),
         n_ipca=sum(k == "ipca" for k in A.kinds),
         n_existing_pa=sum(k == "pa" for k in A.kinds),
+        n_by_kind={k: int(sum(kk == k for kk in A.kinds)) for k in sorted(set(A.kinds))},
+        calibration=A.rec.get("calibration_result"),
+        corridor_unprotected_km2=(round(int(A.corridor_unprotected.sum()) * A.cell_km2)
+                                  if getattr(A, "corridor_unprotected", None) is not None else None),
+        n_secured_links=(int(A.edges["secured"].sum()) if "secured" in A.edges.columns else None),
+        n_secured_by_pa=(int((A.edges["secured_by"] == "pa").sum()) if "secured_by" in A.edges.columns else None),
+        n_secured_by_ipca=(int((A.edges["secured_by"] == "ipca").sum()) if "secured_by" in A.edges.columns else None),
+        secured_centreline_frac=getattr(A, "secured_frac", None),
         n_edges=len(A.edges),
         n_edges_mst=int(A.edges.in_mst.sum()) - n_lk,
         n_edges_backup=int((~A.edges.in_mst).sum()),
@@ -2202,6 +2791,9 @@ def map(A):
     n = 3 if has_pri else 2
     fig, axes = plt.subplots(1, n, figsize=(7.5 * n, 12)); axes = np.atleast_1d(axes)
     pa_mask, anch = _node_masks(A)
+    ctx = getattr(A, "context_pa", None)
+    if ctx is not None:                      # raster nodes: existing PAs as context, never nodes
+        pa_mask = pa_mask | ctx
 
     ax = axes[0]
     for layer, col in [(pa_mask, PA_COLOR), (anch, ANCHOR_COLOR), (A.corridor, CORRIDOR_COLOR)]:
@@ -2209,8 +2801,9 @@ def map(A):
             ax=ax, cmap=ListedColormap([col]), add_colorbar=False)
     A.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--")
     _frame_region(A, ax)
-    ax.legend(handles=[Patch(color=PA_COLOR, label="existing PAs (nodes)"),
-                       Patch(color=ANCHOR_COLOR, label="proposed IPCAs (nodes)"),
+    _pa_lbl, _an_lbl = _node_legend(A)
+    ax.legend(handles=[Patch(color=PA_COLOR, label=f"{_pa_lbl} (nodes)" if "context" not in _pa_lbl else _pa_lbl),
+                       Patch(color=ANCHOR_COLOR, label=f"{_an_lbl}" if "(nodes)" in _an_lbl else f"{_an_lbl} (nodes)"),
                        Patch(color=CORRIDOR_COLOR, label=f"least-cost corridors — new land "
                              f"({A.corridor.sum()*A.cell_km2:,.0f} km²)"),
                        plt.Line2D([0], [0], color="0.35", ls="--", label="Y2Y corridor")],
@@ -2239,8 +2832,8 @@ def map(A):
                 ax=ax3, cmap=ListedColormap([col]), add_colorbar=False)
         A.outline.boundary.plot(ax=ax3, color="0.35", linewidth=1.0, linestyle="--")
         _frame_region(A, ax3)
-        ax3.legend(handles=[Patch(color=PA_COLOR, label="existing PAs"),
-                            Patch(color=ANCHOR_COLOR, label="proposed IPCAs")],
+        ax3.legend(handles=[Patch(color=PA_COLOR, label=_node_legend(A)[0]),
+                            Patch(color=ANCHOR_COLOR, label=_node_legend(A)[1])],
                    loc="lower left", fontsize=8, frameon=True)
         n_irr = int(A.edges.irreplaceable.sum())
         ax3.set_title(f"Linkage priority (graded, not hard lines)\n"
@@ -2257,9 +2850,27 @@ def _node_masks(A):
     pa_mask = np.zeros(A.shape, bool); anch = np.zeros(A.shape, bool)
     src = ([(n["mask"], n["kind"]) for n in A.names] if getattr(A, "names", None)
            else [(m, k) for (lbl, m), k in zip(A.nodes, A.kinds)])
+    anchor_kinds = set(_nodes_cfg(A).get("anchor_kinds", ["ipca"]))
     for m, k in src:
-        (anch if k == "ipca" else pa_mask)[m] = True
+        (anch if k in anchor_kinds else pa_mask)[m] = True
     return pa_mask, anch
+
+
+def _nodes_cfg(A):
+    cfg = getattr(A, "cfg", None) or {}
+    return cfg.get("nodes", {}) if isinstance(cfg, dict) else {}
+
+
+def _node_legend(A):
+    """(pa label, anchor label) for figure legends: the north's 'existing PAs' / 'proposed IPCAs'
+    unless the analysis config names its node kinds differently (wolverine: refugia patches)."""
+    lg = _nodes_cfg(A).get("legend", {})
+    return lg.get("pa", "existing PAs"), lg.get("anchor", "proposed IPCAs")
+
+
+def _is_anchor_label(A, label):
+    """Prefix test behind every 'is this an IPCA?' branch in the figure code (north: 'IPCA')."""
+    return str(label).startswith(tuple(_nodes_cfg(A).get("anchor_label_prefixes", ["IPCA"])))
 
 
 SHARED_COLOR = "#e6550d"   # corridor both scenarios agree on -- same orange as the corridor panels
@@ -2288,8 +2899,8 @@ def _nodes_overlay(A, ax, XL, YL, pa_mask, anch, legend=False,
     A.outline.boundary.plot(ax=ax, color="0.35", linewidth=1.0, linestyle="--")
     ax.set_xlim(*XL); ax.set_ylim(*YL)
     if legend:
-        ax.legend(handles=[Patch(color=pa_color, label="existing PAs"),
-                           Patch(color=anchor_color, label="proposed IPCAs")],
+        ax.legend(handles=[Patch(color=pa_color, label=_node_legend(A)[0]),
+                           Patch(color=anchor_color, label=_node_legend(A)[1])],
                   loc="lower left", fontsize=8, frameon=True)
     ax.set_aspect("equal"); ax.set_axis_off()
 
@@ -3021,8 +3632,39 @@ def load_results(run_dir):
     for _, row in parts.iterrows():
         m = rasterize([(row.geometry, 1)], out_shape=R.shape, transform=R.transform,
                       fill=0, dtype="uint8").astype(bool)
-        (R.anch if str(row["name_label"]).startswith("IPCA") else R.pa_mask)[m] = True
+        (R.anch if _is_anchor_label(R, row["name_label"]) else R.pa_mask)[m] = True
     R.outline = gpd.read_file(config.CORRIDOR_REF).to_crs(R.crs)
+    # raster-node analyses (wolverine): PA context, the refugia classes and the node table
+    nc = R.cfg.get("nodes", {})
+    R.context_pa, R.refugia, R.node_table, R.node_id = None, None, None, None
+    if nc.get("context_pa_min_km2"):
+        big = _pa_polys(nc["context_pa_min_km2"]).to_crs(R.crs)
+        R.context_pa = rasterize([(g, 1) for g in big.geometry], out_shape=R.shape, transform=R.transform,
+                                 fill=0, dtype="uint8").astype(bool)
+    R.protected, R.protected_ipca, R.corridor_unprotected = None, None, None
+    pc = nc.get("protected")
+    if pc:
+        allp = _pa_polys(float(pc.get("pa_min_km2", 0.0))).to_crs(R.crs)
+        R.protected = rasterize([(g, 1) for g in allp.geometry], out_shape=R.shape, transform=R.transform,
+                                fill=0, dtype="uint8").astype(bool)
+        R.protected_ipca = np.zeros(R.shape, bool)
+        if pc.get("include_proposed") and pc.get("proposed"):
+            ip = gpd.read_file(config.PROJECT_DIR / pathlib.Path(pc["proposed"])).to_crs(R.crs)
+            R.protected_ipca = rasterize([(g, 1) for g in ip.geometry], out_shape=R.shape, transform=R.transform,
+                                         fill=0, dtype="uint8").astype(bool)
+            R.protected |= R.protected_ipca
+        cu = _open("corridors_unprotected.tif")
+        R.corridor_unprotected = (np.nan_to_num(cu.values, nan=0) > 0) if cu is not None else (R.corridor & ~R.protected)
+    nr = rec["inputs"].get("nodes_raster")
+    if nr:
+        cls = rioxarray.open_rasterio(config.PROJECT_DIR / nr["warped"]["path"]).squeeze().values
+        cls = np.nan_to_num(cls, nan=0).astype("uint8")
+        R.refugia = np.where(np.isin(cls, nr["classes_core"]), 2,
+                             np.where(np.isin(cls, nr["classes_marginal"]), 1, 0)).astype("uint8")
+        R.node_id = _open("node_id.tif")
+        nm = run_dir / "node_names.csv"
+        if nm.exists():
+            R.node_table = pd.read_csv(nm, encoding="utf-8-sig").fillna({"display_name": ""})
     # the 1 km audit grid (pinned; see AUDIT_TEMPLATE) -- needed by the value-profiling views
     R.audit_template = rioxarray.open_rasterio(config.HANDOFF_DIR / AUDIT_TEMPLATE,
                                                masked=True).squeeze()
@@ -3078,7 +3720,7 @@ def priority_links_map(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35):
         pt = clip.representative_point()
         ax.annotate(_short_node_name(row["name_label"], 20), (pt.x, pt.y),
                     fontsize=8.5, ha="center", va="center", fontstyle="italic",
-                    color=("#1a6363" if str(row["name_label"]).startswith("IPCA") else "0.25"),
+                    color=("#1a6363" if _is_anchor_label(R, row["name_label"]) else "0.25"),
                     path_effects=[pe.withStroke(linewidth=2.2, foreground="white")])
 
     _draw_basemap(R, ax, XL, YL)
@@ -3287,7 +3929,7 @@ def label_named_areas(R, ax, top_n=12, overrides=None, fontsize=9, XL=None, YL=N
         if any(abs(pt.x - x) < dx_m and abs(pt.y - y) < dy_m for x, y in placed):
             continue
         placed.append((pt.x, pt.y))
-        is_ipca = str(row["name_label"]).startswith("IPCA")
+        is_ipca = _is_anchor_label(R, row["name_label"])
         ov = next((v for k, v in (overrides or {}).items() if k in str(row["name_label"])), None)
         disp, dx, dy = (ov if isinstance(ov, tuple)
                         else (ov or _short_node_name(row["name_label"], 18), 0, 0))
@@ -3613,7 +4255,7 @@ def routing_problem_cost_overlay(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=
         clip = row.geometry.intersection(frame)
         if clip.is_empty or clip.area < 25e6:
             continue
-        is_ipca = str(row["name_label"]).startswith("IPCA")
+        is_ipca = _is_anchor_label(R, row["name_label"])
         pt = clip.representative_point()
         ax.annotate(_short_node_name(row["name_label"], 20), (pt.x, pt.y),
                     fontsize=8.5, ha="center", va="center", fontstyle="italic",
@@ -3681,7 +4323,7 @@ def routing_problem_zoom(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35):
         clip = row.geometry.intersection(frame)
         if clip.is_empty or clip.area < 25e6:            # < 25 km² in frame: skip the sliver
             continue
-        is_ipca = str(row["name_label"]).startswith("IPCA")
+        is_ipca = _is_anchor_label(R, row["name_label"])
         pt = clip.representative_point()
         ax.annotate(_short_node_name(row["name_label"], 20), (pt.x, pt.y),
                     fontsize=8.5, ha="center", va="center", fontstyle="italic",

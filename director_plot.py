@@ -2,7 +2,8 @@
 so that 20 (every output, the record) and 21_director_outputs (the curated few for the presentation) draw from ONE
 codebase). `C = load()` reads the products 19 wrote (surfaces, tiers, clusters, tables) and returns a namespace whose
 drawing helpers are closed over that state; a notebook can `globals().update(vars(C))` to use the bare names
-(draw_pa, draw_hex, finish, ...) exactly as 20 always has. Cartography is pixel space (1 px = 1 km)."""
+(draw_pa, draw_hex, finish, ...) exactly as 20 always has. Cartography is pixel space: 1 px = 1 km on the Y2Y grid, and every pixel constant is a km constant x C.PX_PER_KM, so a frame on
+another grid (the northern corridors at 300 m, via load_frame) draws the same layout."""
 import json
 import textwrap
 from types import SimpleNamespace
@@ -30,6 +31,102 @@ NEVER_COLOR = "#e6e6e6"                                                # hexes w
 BAND_COLORS = ["#f2f2f2", "#1f3a63", "#5b87ad", "#ffd93b", "#e6550d"]
 BAND_BOUNDS = [-0.001, 0.05, 0.30, 0.70, 0.95, 1.001]
 BAND_NAMES = ["never (<5% of plans)", "rare (5–30%)", "conditional (30–70%)", "frequent (70–95%)", "always (≥95%)"]
+
+
+def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=None):
+    """The drawing state for ANY director_core-style grid G, with no package files -- split out of load() on 2026-09-28 so a
+    package on another grid (the northern corridors at 300 m: `corridors_director.director_frame`) draws on the same wide layout
+    from the same code. Builds the basemap, hillshade, admin lines, named PAs, the overlay in the IPCA role, the pixel WINDOW
+    every frame-level map clips to, and the closures over them (rings_px, draw_pa, draw_ipca, finish). Every pixel constant in
+    the layout is a km constant x PX_PER_KM (= 1000 / cell size), which is exactly 1 on the 1 km grid, so the Y2Y and Alberta
+    outputs are unchanged to the pixel. `towns` = {name: (lat, lon)} for the basemap (default director_core.Y2Y_TOWNS);
+    `note` = the corner note finish() writes by default."""
+    IP = overlay or dc.ipca_layer(G)
+    IP_LABEL = getattr(IP, "label", "IPCA proposals (not locked in)")
+    BM = dc.basemap_layer(G, towns=towns)
+    PAN = dc.pa_layer(G, STYLE["pa_layer_min_km2"] if pa_min_km2 is None else pa_min_km2)   # named PAs for the inset / locator labels (display only)
+    ADMIN = dc.admin_layer(G)
+    WINDOW = tuple(float(v) for v in window) if window is not None else None        # frame-level maps clip to it (None = the whole frame)
+    PX_PER_KM = 1000.0 / abs(G.transform.a)                                          # 1 on the 1 km grid, 3.33 on the 300 m corridor grid
+    if WINDOW is None:
+        HS, HS_EXTENT = dc.read_hillshade(G), None                                    # the raster IS the frame: pixel space
+    else:                                                                            # a windowed frame: the hillshade covers the WINDOW (which may run past the raster
+        HS = dc.read_hillshade_window(G, WINDOW, scale=1)                            # edge -- the northern frame), one sample per grid pixel, drawn at the window's extent;
+        HS_EXTENT = (WINDOW[0], WINDOW[1], WINDOW[3], WINDOW[2])                     # identical values to the raster read on an integer window inside the raster (Alberta)
+
+    halo = [pe.withStroke(linewidth=2.5, foreground="white")]
+    PAg = np.full(G.shape, np.nan, np.float32); PAg[G.locked2d] = 1.0
+
+    def rings_px(geom):
+        polys = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
+        out = []
+        for p in polys:
+            x, y = np.asarray(p.exterior.coords)[:, :2].T      # some proposals carry a Z coordinate
+            px, py = dc.xy_to_px(G, x, y)
+            out.append(np.c_[px, py])
+        return out
+
+    def draw_pa(ax):
+        ax.imshow(PAg, cmap=ListedColormap([PA_COLOR]), interpolation="nearest", zorder=1)
+
+    def draw_ipca(ax, lw=1.3):
+        for _, r in IP.gdf.iterrows():
+            ls = r["ls"] if "ls" in IP.gdf.columns and r["ls"] is not None else "-"     # an overlay may carry its own linestyle per polygon
+            for ring in rings_px(r.geometry):
+                ax.plot(ring[:, 0], ring[:, 1], color=IPCA_COLOR, lw=lw, ls=ls, zorder=3.5)
+
+    def finish(ax, title, handles, note=note, legend_loc="upper right", scale=True, names=None, towns=None, name_fs=None):
+        names_ = STYLE["province_names"] if names is None else names
+        if WINDOW is None:
+            dc.draw_basemap(ax, G, BM, hs=HS if STYLE["hillshade"] else None, water=STYLE["water"],
+                            names=names_, towns=STYLE["towns"] if towns is None else towns,
+                            name_fs=name_fs, fs_scale=STYLE.get("_fs_scale", 1.0), avoid_sw=scale, skip=STYLE["main_skip_codes"])   # ocean / land / hillshade / water / outline / names
+        else:                                                         # a windowed package: labels and towns filtered to the window, codes at their poles
+            dc.draw_basemap(ax, G, BM, hs=HS if STYLE["hillshade"] else None, water=STYLE["water"], names=False, hs_extent=HS_EXTENT,
+                            towns=STYLE["towns"] if towns is None else towns, fs_scale=STYLE.get("_fs_scale", 1.0), window=WINDOW, avoid_sw=scale)
+            if names_:
+                dc.label_jurisdictions_window(ax, G, BM, WINDOW, fs=(name_fs or STYLE["wide_main_name_fs"]) * STYLE.get("_fs_scale", 1.0),
+                                              avoid_sw=scale, skip=STYLE["main_skip_codes"])
+        dc.draw_admin(ax, G, ADMIN)                                   # coast, admin lines, border
+        if STYLE["lat53"]:
+            dc.graticule(ax, G, lats=(53,), lons=(), emph_lat=53)     # the 53°N line (E17 tie-in) -- off by default (Ethan 2026-09-14)
+        if WINDOW is None:
+            ax.set_xlim(0, G.shape[1]); ax.set_ylim(G.shape[0], 0)
+        else:
+            ax.set_xlim(WINDOW[0], WINDOW[1]); ax.set_ylim(WINDOW[3], WINDOW[2])
+        if scale:                                                     # scale bar + north arrow, south-west corner (ocean)
+            if WINDOW is None:
+                dc.scalebar(ax, G, loc=(0.05, 0.04), fs=STYLE["legend_fs"] - 1); dc.north_arrow(ax, G, loc=(0.075, 0.075), fs=STYLE["legend_fs"] - 1)
+            else:                                                     # the same corner of the WINDOW, in pixel units (km x PX_PER_KM)
+                px0, px1, pyt, pyb = WINDOW; km = STYLE["window_scale_km"]; L = km * PX_PER_KM     # lengths / offsets = km x px_per_km
+                x, y = px0 + 0.05 * (px1 - px0), pyb - 0.04 * (pyb - pyt)
+                ax.plot([x, x + L], [y, y], color="black", lw=2.5, solid_capstyle="butt", zorder=5)
+                ax.text(x + L / 2, y - 6 * PX_PER_KM, f"{km} km", ha="center", fontsize=STYLE["legend_fs"] - 1, zorder=5)
+                xa, y1 = px0 + 0.075 * (px1 - px0), pyb - 0.075 * (pyb - pyt); y0 = y1 - 0.06 * (pyb - pyt)
+                ax.annotate("", xy=(xa, y0), xytext=(xa, y1), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
+                ax.text(xa, y0 - 6 * PX_PER_KM, "N", ha="center", va="bottom", fontsize=STYLE["legend_fs"] - 1, fontweight=600, zorder=5)
+        dc.corner_note(ax, note)
+        ax.set_title(title, fontsize=11.5)
+        ax.set_xticks([]); ax.set_yticks([])
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        lkw = dict(fontsize=STYLE["legend_fs"], frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handler_map=cluster_handler_map(*(handles or [])))
+        if legend_loc == "none" or not handles:
+            pass
+        elif handles and legend_loc == "outside":       # beside the frame, top right (the single-panel assets)
+            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.01, 1.0), **lkw)
+        elif handles and legend_loc == "lower left":    # south-west corner above the scale bar: for maps whose NE corner is full
+            ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.0, 0.12), **lkw)
+        elif handles:                                    # north-east corner inside the frame (the paired record figures)
+            ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(1.0, 1.0), **lkw)
+
+    IPCA_HANDLE = Patch(facecolor="none", edgecolor=IPCA_COLOR, label=IP_LABEL)
+    BASE_HANDLES = [Patch(facecolor=PA_COLOR, label="Protected areas (locked in)"),
+                    Patch(facecolor="none", edgecolor=CL_COLOR, label="numbered = deck picks")]      # ("never selected" dropped, Ethan 2026-09-14)
+
+    _skip = {"overlay", "window", "note", "towns", "pa_min_km2"}
+    ns = {k: v for k, v in locals().items() if not k.startswith("_") and k not in _skip}
+    return SimpleNamespace(**ns)
 
 
 def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=None, window=None, hex_grid=True):
@@ -79,14 +176,7 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
             POOL[sid] = rd(f"f_guarded_{fids[0]}.tif")
     assert set(POOL) == set(S["pool_keys"]), "pooling keys drifted from 19"
     CL = {lyr: gpd.read_file(GEO / "clusters.gpkg", layer=lyr) for lyr in gpd.list_layers(GEO / "clusters.gpkg").name}
-    IP = overlay or dc.ipca_layer(G)
-    IP_LABEL = getattr(IP, "label", "IPCA proposals (not locked in)")
-    BM = dc.basemap_layer(G); HS = dc.read_hillshade(G); PAN = dc.pa_layer(G, STYLE["pa_layer_min_km2"])   # the northern package's basemap on this frame (display only)
     HEX = {dc.HEX_KM2: dc.hex_grid(G, dc.HEX_KM2)} if hex_grid else {}
-    ADMIN = dc.admin_layer(G)
-    WINDOW = tuple(float(v) for v in window) if window is not None else None        # frame-level maps clip to it (None = the whole frame)
-
-    halo = [pe.withStroke(linewidth=2.5, foreground="white")]
     # ramp purple -> green for F < 0.70 (viridis truncated before its own yellow): the CORE (>= 0.70) is the only
     # yellow on the map and reads as a category, not the top of the gradient; F = 0 falls under -> NEVER_COLOR
     FCMAP = ListedColormap(plt.get_cmap("viridis")(np.linspace(0, 0.70, 256))); FCMAP.set_over("#ffd93b"); FCMAP.set_under(NEVER_COLOR)
@@ -94,19 +184,14 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
     N_NOTE = ((f"balanced scenario · 2 refugia futures × 51 near-optimal plans · no value theme left more than {100 * S['floor_g']:.0f}% behind")
               if CORE_BASIS == "balanced" else
               (f"n = {S['n_formulations']} formulations × 51 near-optimal plans · no value theme left more than {100 * S['floor_g']:.0f}% behind"))
-    PAg = np.full(G.shape, np.nan, np.float32); PAg[G.locked2d] = 1.0
-
-    def rings_px(geom):
-        polys = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
-        out = []
-        for p in polys:
-            x, y = np.asarray(p.exterior.coords)[:, :2].T      # some proposals carry a Z coordinate
-            px, py = dc.xy_to_px(G, x, y)
-            out.append(np.c_[px, py])
-        return out
-
-    def draw_pa(ax):
-        ax.imshow(PAg, cmap=ListedColormap([PA_COLOR]), interpolation="nearest", zorder=1)
+    # the frame -- basemap, hillshade, admin lines, named PAs, the overlay, the window and the closures over them -- is
+    # load_frame's (shared with packages on other grids, 2026-09-28); its members are re-bound here so `globals().update(vars(C))`
+    # exposes the same names as always
+    _frame = load_frame(G, overlay=overlay, window=window, note=N_NOTE)
+    IP, IP_LABEL, BM, HS, HS_EXTENT, PAN, ADMIN, WINDOW, PX_PER_KM = (_frame.IP, _frame.IP_LABEL, _frame.BM, _frame.HS, _frame.HS_EXTENT, _frame.PAN,
+                                                                     _frame.ADMIN, _frame.WINDOW, _frame.PX_PER_KM)
+    halo, PAg, rings_px, draw_pa, draw_ipca, finish = _frame.halo, _frame.PAg, _frame.rings_px, _frame.draw_pa, _frame.draw_ipca, _frame.finish
+    IPCA_HANDLE, BASE_HANDLES = _frame.IPCA_HANDLE, _frame.BASE_HANDLES
 
     def draw_hex(ax, hm, cmap, norm, alpha=1.0):
         ok = hm[np.isfinite(hm.value)]
@@ -133,59 +218,8 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
             if int(r.cid) in numbers and numbers[int(r.cid)][1]:
                 c = r.geometry.centroid
                 cx, cy = dc.xy_to_px(G, c.x, c.y)
-                ax.annotate(numbers[int(r.cid)][0], xy=(cx, cy), xytext=(cx + 30, cy - 30), fontsize=fs, fontweight=600, clip_on=True,
+                ax.annotate(numbers[int(r.cid)][0], xy=(cx, cy), xytext=(cx + 30 * PX_PER_KM, cy - 30 * PX_PER_KM), fontsize=fs, fontweight=600, clip_on=True,
                             color=col, path_effects=halo, zorder=6, arrowprops=dict(arrowstyle="-", color=col, lw=0.6))
-
-    def draw_ipca(ax, lw=1.3):
-        for _, r in IP.gdf.iterrows():
-            ls = r["ls"] if "ls" in IP.gdf.columns and r["ls"] is not None else "-"     # an overlay may carry its own linestyle per polygon
-            for ring in rings_px(r.geometry):
-                ax.plot(ring[:, 0], ring[:, 1], color=IPCA_COLOR, lw=lw, ls=ls, zorder=3.5)
-
-    def finish(ax, title, handles, note=N_NOTE, legend_loc="upper right", scale=True, names=None, towns=None, name_fs=None):
-        names_ = STYLE["province_names"] if names is None else names
-        if WINDOW is None:
-            dc.draw_basemap(ax, G, BM, hs=HS if STYLE["hillshade"] else None, water=STYLE["water"],
-                            names=names_, towns=STYLE["towns"] if towns is None else towns,
-                            name_fs=name_fs, fs_scale=STYLE.get("_fs_scale", 1.0), avoid_sw=scale, skip=STYLE["main_skip_codes"])   # ocean / land / hillshade / water / outline / names
-        else:                                                         # a windowed package: labels and towns filtered to the window, codes at their poles
-            dc.draw_basemap(ax, G, BM, hs=HS if STYLE["hillshade"] else None, water=STYLE["water"], names=False,
-                            towns=STYLE["towns"] if towns is None else towns, fs_scale=STYLE.get("_fs_scale", 1.0), window=WINDOW, avoid_sw=scale)
-            if names_:
-                dc.label_jurisdictions_window(ax, G, BM, WINDOW, fs=(name_fs or STYLE["wide_main_name_fs"]) * STYLE.get("_fs_scale", 1.0),
-                                              avoid_sw=scale, skip=STYLE["main_skip_codes"])
-        dc.draw_admin(ax, G, ADMIN)                                   # coast, admin lines, border
-        if STYLE["lat53"]:
-            dc.graticule(ax, G, lats=(53,), lons=(), emph_lat=53)     # the 53°N line (E17 tie-in) -- off by default (Ethan 2026-09-14)
-        if WINDOW is None:
-            ax.set_xlim(0, G.shape[1]); ax.set_ylim(G.shape[0], 0)
-        else:
-            ax.set_xlim(WINDOW[0], WINDOW[1]); ax.set_ylim(WINDOW[3], WINDOW[2])
-        if scale:                                                     # scale bar + north arrow, south-west corner (ocean)
-            if WINDOW is None:
-                dc.scalebar(ax, G, loc=(0.05, 0.04), fs=STYLE["legend_fs"] - 1); dc.north_arrow(ax, G, loc=(0.075, 0.075), fs=STYLE["legend_fs"] - 1)
-            else:                                                     # the same corner of the WINDOW, in pixel units (1 px = 1 km)
-                px0, px1, pyt, pyb = WINDOW; km = STYLE["window_scale_km"]
-                x, y = px0 + 0.05 * (px1 - px0), pyb - 0.04 * (pyb - pyt)
-                ax.plot([x, x + km], [y, y], color="black", lw=2.5, solid_capstyle="butt", zorder=5)
-                ax.text(x + km / 2, y - 6, f"{km} km", ha="center", fontsize=STYLE["legend_fs"] - 1, zorder=5)
-                xa, y1 = px0 + 0.075 * (px1 - px0), pyb - 0.075 * (pyb - pyt); y0 = y1 - 0.06 * (pyb - pyt)
-                ax.annotate("", xy=(xa, y0), xytext=(xa, y1), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
-                ax.text(xa, y0 - 6, "N", ha="center", va="bottom", fontsize=STYLE["legend_fs"] - 1, fontweight=600, zorder=5)
-        dc.corner_note(ax, note)
-        ax.set_title(title, fontsize=11.5)
-        ax.set_xticks([]); ax.set_yticks([])
-        for sp in ax.spines.values():
-            sp.set_visible(False)
-        lkw = dict(fontsize=STYLE["legend_fs"], frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handler_map=cluster_handler_map(*(handles or [])))
-        if legend_loc == "none" or not handles:
-            pass
-        elif handles and legend_loc == "outside":       # beside the frame, top right (the single-panel assets)
-            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.01, 1.0), **lkw)
-        elif handles and legend_loc == "lower left":    # south-west corner above the scale bar: for maps whose NE corner is full
-            ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.0, 0.12), **lkw)
-        elif handles:                                    # north-east corner inside the frame (the paired record figures)
-            ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(1.0, 1.0), **lkw)
 
     def picks_for(act, key=None):
         """{member cid: (number, is_anchor)} for every component of every pick; the number is drawn once, at the anchor."""
@@ -197,10 +231,6 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
             for c in str(r.cids).split(";"):
                 out[int(c)] = (str(r.number), int(c) == int(r.cid))
         return out
-
-    IPCA_HANDLE = Patch(facecolor="none", edgecolor=IPCA_COLOR, label=IP_LABEL)
-    BASE_HANDLES = [Patch(facecolor=PA_COLOR, label="Protected areas (locked in)"),
-                    Patch(facecolor="none", edgecolor=CL_COLOR, label="numbered = deck picks")]      # ("never selected" dropped, Ethan 2026-09-14)
 
     def star_rows(rows, color):
         """One star per pick; a cluster with its own colour in STYLE["cluster_colors"] keeps it here (map ↔ stars ↔ numbers)."""
@@ -430,6 +460,7 @@ STYLE = dict(
     lat53=False,               # the 53°N graticule line on maps
     titles=True,               # figure / table titles (21 sets False: the slide carries the title)
     export_dpi=200, panel_export_scale=2,   # PNG resolution (21 sets 300: 13.33 in wide -> 4,000 px, a 4K slide); locator panels at 2x their nominal px
+    export_pdf=False,          # also write a .pdf twin beside each wide-layout PNG (the northern package sets True: its §3a export rule)
     map_layout="wide",         # Act 1 maps: "wide" = slide-shaped with two zoom insets (clusters 1 and 2) | "tall" = the map alone
     inset_clusters=(1, 2), inset_pad_km=45, inset_min_km=320, inset_pa_names=5, inset_fs=11.5, inset_number_fs=18, inset_abbrev=True, inset_abbrev_fs=15,
     wide_main_names="abbrev", wide_main_name_fs=15, wide_main_towns=(),      # the Y2Y-wide panel of the wide layout: postal codes only, big
@@ -865,7 +896,7 @@ from matplotlib.legend_handler import HandlerBase
 class _ClusterSwatches(HandlerBase):
     """Legend handler: the cluster colours as small outlined squares side by side (STYLE["cluster_colors"], N -> S)."""
     def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
-        cols = [STYLE["cluster_colors"][k] for k in sorted(STYLE["cluster_colors"])]
+        cols = getattr(orig_handle, "_swatch_colors", None) or [STYLE["cluster_colors"][k] for k in sorted(STYLE["cluster_colors"])]   # explicit colours (the northern route options, 2026-09-28) or the palette N -> S
         n_show = getattr(orig_handle, "_n_swatches", None)                        # only the clusters actually numbered on the map (Ethan 2026-09-23: no spare fifth box)
         cols = cols[:n_show] if n_show else cols
         n = len(cols); gap = 0.10 * width / n; w = (width - gap * (n - 1)) / n; h = height     # same box as the patch entries
@@ -873,10 +904,11 @@ class _ClusterSwatches(HandlerBase):
                 for i, c in enumerate(cols)]                       # (-xdescent, -ydescent) = where matplotlib's own patch handler draws
 
 
-def cluster_handle(label="Core clusters", n=None):
-    """A legend entry drawn by _ClusterSwatches (one swatch per numbered cluster when `n` is given, else every palette colour);
-    pass `handler_map=cluster_handler_map(*handles)` to the legend call."""
-    h = Patch(facecolor="none", edgecolor="none", label=label); h._cluster_swatches = True; h._n_swatches = n
+def cluster_handle(label="Core clusters", n=None, colors=None):
+    """A legend entry drawn by _ClusterSwatches (one swatch per numbered cluster when `n` is given, else every palette colour;
+    `colors` = an explicit list in swatch order instead of the palette); pass `handler_map=cluster_handler_map(*handles)` to
+    the legend call."""
+    h = Patch(facecolor="none", edgecolor="none", label=label); h._cluster_swatches = True; h._n_swatches = n; h._swatch_colors = list(colors) if colors else None
     return h
 
 
@@ -1034,8 +1066,9 @@ def _fit_window(C, win_px, aspect_hw):
 def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None, skip_towns=(), img=None, cmap=None, norm=None, skip_areas=()):
     px0, px1, pyt, pyb = win
     ax.imshow(_f_1km(C) if img is None else img, cmap=cmap or C.FCMAP, norm=norm or C.FNORM, interpolation="nearest", zorder=0.5)
-    dc.draw_basemap(ax, C.G, C.BM, hs=None, water=STYLE["water"], names=False, towns=[t for t in dc.Y2Y_TOWNS if t not in skip_towns] if towns else (), window=win, fs_scale=STYLE["inset_fs"] / 8.0)
-    hs = dc.read_hillshade_window(C.G, win, scale=3) if STYLE["hillshade"] else None
+    ppk = C.PX_PER_KM                                                                 # km -> px on this grid (1 on the 1 km grid)
+    dc.draw_basemap(ax, C.G, C.BM, hs=None, water=STYLE["water"], names=False, towns=[t for t in C.BM.towns if t not in skip_towns] if towns else (), window=win, fs_scale=STYLE["inset_fs"] / 8.0)
+    hs = dc.read_hillshade_window(C.G, win, scale=max(1, int(round(3 / ppk)))) if STYLE["hillshade"] else None   # ~100 m sampling of the 300 m hillshade
     if hs is not None:
         rgba = np.zeros(hs.shape + (4,), np.float32); rgba[..., 3] = dc.BASEMAP["hillshade_alpha"] * (1.0 - hs.astype(np.float32) / 255.0)
         ax.imshow(rgba, extent=[px0, px1, pyb, pyt], interpolation="bilinear", zorder=0.6)
@@ -1051,10 +1084,10 @@ def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None
     ax.set_xticks([]); ax.set_yticks([])
     for sp in ax.spines.values():
         sp.set_visible(True); sp.set_edgecolor("#333333"); sp.set_linewidth(0.9)
-    # 50 km scale bar, south-west corner (1 px = 1 km)
+    # 50 km scale bar, south-west corner (km x px_per_km)
     x, y = px0 + 0.05 * (px1 - px0), pyb - 0.05 * (pyb - pyt)
-    ax.plot([x, x + 50], [y, y], color="black", lw=2.5, solid_capstyle="butt", zorder=7)
-    ax.text(x + 25, y - 6, "50 km", ha="center", va="bottom", fontsize=STYLE["inset_fs"], zorder=7)
+    ax.plot([x, x + 50 * ppk], [y, y], color="black", lw=2.5, solid_capstyle="butt", zorder=7)
+    ax.text(x + 25 * ppk, y - 6 * ppk, "50 km", ha="center", va="bottom", fontsize=STYLE["inset_fs"], zorder=7)
     ax.set_title(title, fontsize=STYLE["map_title_fs"] + 2, color=TABLE["ink"], fontweight=600, pad=6, loc="left")
 
 
@@ -1096,7 +1129,7 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             axes_all.append(iax); ims.append(iax.images[0])                             # the inset's surface image is its first
             px0, px1, pyt, pyb = win                                                   # the window on the frame, tagged
             ax.add_patch(Rectangle((px0, pyt), px1 - px0, pyb - pyt, fill=False, edgecolor="#333333", lw=1.0, zorder=7))
-            ax.text(px0 + 8, pyt + 8, tag, fontsize=8, fontweight=600, color="white", ha="left", va="top", zorder=8,
+            ax.text(px0 + 8 * C.PX_PER_KM, pyt + 8 * C.PX_PER_KM, tag, fontsize=8, fontweight=600, color="white", ha="left", va="top", zorder=8,
                     bbox=dict(boxstyle="square,pad=0.15", facecolor="#333333", edgecolor="none"))
         cax_rect = [0.27 + 0.015, 0.12, 0.335 - 0.03, 0.04]                                     # inset A's full width; bar + ticks + caption centred in the strip below it
         cax = fig.add_axes(cax_rect)
@@ -1124,7 +1157,12 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             if path is not None:
                 fig.savefig(path, dpi=_frames_dpi(W), bbox_inches=crop)
             return W
+        if STYLE.get("export_pdf"):                                                       # a vector twin beside the PNG (the northern package's §3a export rule)
+            fig.savefig(pathlib.Path(path).with_suffix(".pdf"), bbox_inches="tight")
         fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches="tight"); plt.show()
+
+
+wide_map = _wide_map     # the public name: corridors_director draws the northern package's curated maps through it (2026-09-28)
 
 
 def _frames_dpi(W):
@@ -1560,7 +1598,7 @@ def scenario_map(C, path, title=None):
                         skip_areas=STYLE.get("scenario_inset_area_skip", {}).get(tag, ()))
             px0, px1, pyt, pyb = win
             ax.add_patch(Rectangle((px0, pyt), px1 - px0, pyb - pyt, fill=False, edgecolor="#333333", lw=1.0, zorder=7))
-            ax.text(px0 + 8, pyt + 8, tag, fontsize=8, fontweight=600, color="white", ha="left", va="top", zorder=8,
+            ax.text(px0 + 8 * C.PX_PER_KM, pyt + 8 * C.PX_PER_KM, tag, fontsize=8, fontweight=600, color="white", ha="left", va="top", zorder=8,
                     bbox=dict(boxstyle="square,pad=0.15", facecolor="#333333", edgecolor="none"))
         fig.legend(handles=handles, loc="center", bbox_to_anchor=((x0 + x1) / 2, 0.115), ncol=2, fontsize=STYLE["scenario_legend_fs"],
                    frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.2, handleheight=1.2, borderpad=0.7, labelspacing=0.55, columnspacing=1.6)

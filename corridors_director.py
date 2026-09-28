@@ -136,16 +136,19 @@ def attr_words(row):
     return "Depends on " + ", ".join(names[:2]) + (" …" if len(names) > 2 else "")
 
 
-def _province_raster(R):
+def _province_raster(R, countries=("Canada",)):
     """Natural Earth admin-1 polygons (public domain) rasterized on the routing grid: one id per
-    province/territory. Display + 'who's at the table' only -- never enters routing."""
+    province/territory. Display + 'who's at the table' only -- never enters routing.
+    `countries=None` keeps every country in the window (wolverine: Canada + USA)."""
     p = config.INPUT_DIR / "basemap" / "ne_10m_admin_1_states_provinces.shp"
     if not p.exists():
         print("  note: admin-1 polygons absent -- jurisdiction tint/columns skipped")
         return None, []
     xs, ys = R.template.x.values, R.template.y.values
     g = gpd.read_file(p).to_crs(R.crs)
-    g = g[g["admin"] == "Canada"].cx[xs.min():xs.max(), ys.min():ys.max()]
+    if countries:
+        g = g[g["admin"].isin(list(countries))]
+    g = g.cx[xs.min():xs.max(), ys.min():ys.max()]
     names = list(g["name_en"] if "name_en" in g.columns else g["name"])
     ras = rasterize([(geom, i + 1) for i, geom in enumerate(g.geometry)], out_shape=R.shape,
                     transform=R.transform, fill=0, dtype="int16")
@@ -170,18 +173,33 @@ def _edge_jurisdictions(P):
 # the same complex (3-4). Act 2 shows the three southern example links (5-7).
 EXAMPLE_PICKS = [
     # Every option = one LINK's full corridor band (its owned land, exactly as M1 draws it) --
-    # Ethan 2026-09-11, after seeing that the Dene<->Nahanni and Liard<->Nahanni bands overlap:
-    # 1 = Nahanni to Dene Kʼéh Kusān, 2 = Nahanni to the Liard River Corridor (two ways south);
-    # 3-4 = the two links from T'akú Tlatsini to the Mount Edziza / Stikine complex.
+    # Ethan 2026-09-11, after seeing that the Dene<->Nahanni and Liard<->Nahanni bands overlap.
+    # NUMBERING (Ethan 2026-09-28; the deck's 07 · 03 map shows 1-4, inset A = 1-2, inset B = 3-4):
+    #   1 = Nahanni to Dene Kʼéh Kusān, 2 = Nahanni to the Liard River Corridor (two ways south);
+    #   3 = Gwillim Lake <-> Pine Le Moray (the only viable connection; was option 5);
+    #   4 = Gwillim Lake <-> Monkman -- a NARROWING corridor inside inset B (new; the pick is this one
+    #       line: Carp Lake <-> Pine Le Moray, 0.23x its natural width, is the alternative, also inside B);
+    #   5-6 = the two links from T'akú Tlatsini to the Mount Edziza / Stikine complex (were 3-4);
+    #   7 = Wilps Gwininitxw <-> Swan Lake; 8 = Carp Lake <-> Pine Le Moray (no M3 marker, Ethan).
     dict(slot="N2", act=1, pair=("Dene K", "Nahanni National"), options="links",
          option_pairs=[("Dene K", "Nahanni National"), ("Liard River Corridor", "Nahanni National")],
          side=["sw", "ne"]),
+    dict(slot="S1", act=2, pair=("Gwillim", "Pine Le Moray"), side="nw"),
+    dict(slot="S1b", act=2, pair=("Gwillim", "Monkman"), side="ne"),
     dict(slot="N3", act=1, pair=("T’akú", "Mount Edziza"), options="links",
          option_pairs=[("T’akú", "Mount Edziza"), ("T’akú", "Stikine")], side=["sw", "ne"]),
-    dict(slot="S1", act=2, pair=("Gwillim", "Pine Le Moray")),
     dict(slot="S2", act=2, pair=("Wilps Gwininitxw", "Swan Lake")),
     dict(slot="S3", act=2, pair=("Carp Lake", "Pine Le Moray"), mark=False),   # no M3 marker (Ethan)
 ]
+OPTIONS_MAP_NUMS = (1, 2, 3, 4)    # the options on the deck's 07 · 03 map; colours = director_plot STYLE["cluster_colors"] in OPTION_COLOR_ORDER
+OPTION_COLOR_ORDER = {1: 1, 2: 3, 3: 2, 4: 4}   # option -> palette key: 1 red, 2 blue, 3 magenta, 4 dark orange -- so the two adjacent options in
+                                                 # each inset (1 & 2 overlap; 3 & 4 meet at Gwillim Lake) are never red next to magenta (Ethan 2026-09-28)
+
+
+def option_color(num):
+    """The y2y cluster-palette colour an option draws in (OPTION_COLOR_ORDER; the palette itself is director_plot's)."""
+    import director_plot as dp
+    return dp.STYLE["cluster_colors"].get(OPTION_COLOR_ORDER.get(num, num), OPTIONS_COLOR)
 
 
 def _find_edge(e, pair):
@@ -193,9 +211,9 @@ def _find_edge(e, pair):
 
 
 def select_examples(P, n=None, south_of_frac=0.40):
-    """Ethan's pinned examples (EXAMPLE_PICKS). Numbering: every OPTION on M2 gets its own
-    number (branches of N2 = 1, 2; the two links of N3 = 3, 4), then the Act-2 links continue
-    (5, 6, 7). A link example carries `num` (a string such as "1–2" for a multi-option
+    """Ethan's pinned examples (EXAMPLE_PICKS), numbered in list order: every OPTION of a
+    multi-option example gets its own number (N2 = 1, 2), a single link one number (3, 4, ...;
+    see the EXAMPLE_PICKS comment). A link example carries `num` (a string such as "1–2" for a multi-option
     example) for its profile page, T1 row and deck slide. Remaining both-senses links go to
     the appendix."""
     R, e = P.R, P.edges
@@ -604,24 +622,9 @@ def export_gis(P, out=None):
     out = pathlib.Path(out) if out else P.out / "gis"; out.mkdir(parents=True, exist_ok=True)
     tr = R.template.rio.transform()
     # 1. corridor pressure: owner partition -> one multipolygon per link, class attached
-    rows = []
-    for eid, k in P.order.items():
-        m = (P.owner == k) & R.corridor
-        if not m.any():
-            continue
-        polys = [_shape(g) for g, v in rfeatures.shapes(m.astype("uint8"), mask=m, transform=tr) if v == 1]
-        e = R.edges.loc[eid]; c = P.cls.get(eid, "securing")
-        if c == "adjacency":
-            continue
-        rows.append(dict(edge_id=eid, label_i=e["label_i"], label_j=e["label_j"], pressure=c,
-                         pressure_label=ms.CLASS[c][3], hex=ms.CLASS[c][0], cost=float(e["cost"]),
-                         in_mst=bool(e["in_mst"]), irreplaceable=bool(e.get("irreplaceable", False)),
-                         route_irreplaceable=bool(e.get("route_irreplaceable", False)),
-                         squeezed=bool(e.get("squeezed", False)) if pd.notna(e.get("squeezed", np.nan)) else False,
-                         squeeze_ratio=float(e.get("squeeze_ratio_obs", np.nan)),
-                         n_branches=int(e.get("n_branches", 0) or 0), band_km2=round(float(m.sum()) * R.cell_km2, 1),
-                         geometry=gpd.GeoSeries(polys, crs=R.crs).union_all()))
-    gpd.GeoDataFrame(rows, crs=R.crs).to_file(out / "corridor_pressure.gpkg", driver="GPKG")
+    pressure = _pressure_polygons(P)
+    rows = pressure.to_dict("records")
+    pressure.to_file(out / "corridor_pressure.gpkg", driver="GPKG")
     # 2. areas
     names = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs).dissolve(by="name_label").reset_index()
     names["kind"] = np.where(names.name_label.str.startswith("IPCA"), "Proposed IPCA", "Existing Protected Area")
@@ -663,6 +666,35 @@ def export_gis(P, out=None):
     print(f"GIS export -> {out}: corridor_pressure.gpkg ({len(rows)} links), areas.gpkg ({len(names)}), "
           f"options.gpkg ({len(orows)}), style.json")
     return out
+
+
+def _pressure_polygons(P):
+    """Owner partition -> one multipolygon per link with the pressure class attached (shared by
+    the northern and the wolverine GIS exports)."""
+    import corridors_mapstyle as ms
+    from rasterio import features as rfeatures
+    from shapely.geometry import shape as _shape
+    R = P.R
+    tr = R.template.rio.transform()
+    rows = []
+    for eid, k in P.order.items():
+        m = (P.owner == k) & R.corridor
+        if not m.any():
+            continue
+        c = P.cls.get(eid, "securing")
+        if c == "adjacency":
+            continue
+        polys = [_shape(g) for g, v in rfeatures.shapes(m.astype("uint8"), mask=m, transform=tr) if v == 1]
+        e = R.edges.loc[eid]
+        rows.append(dict(edge_id=eid, label_i=e["label_i"], label_j=e["label_j"], pressure=c,
+                         pressure_label=ms.CLASS[c][3], hex=ms.CLASS[c][0], cost=float(e["cost"]),
+                         in_mst=bool(e["in_mst"]), irreplaceable=bool(e.get("irreplaceable", False)),
+                         route_irreplaceable=bool(e.get("route_irreplaceable", False)),
+                         squeezed=bool(e.get("squeezed", False)) if pd.notna(e.get("squeezed", np.nan)) else False,
+                         squeeze_ratio=float(e.get("squeeze_ratio_obs", np.nan)),
+                         n_branches=int(e.get("n_branches", 0) or 0), band_km2=round(float(m.sum()) * R.cell_km2, 1),
+                         geometry=gpd.GeoSeries(polys, crs=R.crs).union_all()))
+    return gpd.GeoDataFrame(rows, crs=R.crs)
 
 
 # ================= cartographic contract figures (spec 06 §3a; corridors_mapstyle) =================
@@ -760,7 +792,7 @@ def figure_m0b(P, template="slide", run_tag=None, spec=M0B_SPEC, corridors=False
 INSET_RECTS = {"A": [0.745, 0.50, 0.25, 0.25],       # figure-fraction [left, bottom, width, height]
                "B": [0.025, 0.115, 0.30, 0.25]}       # A east of the region's edge, B in the SW corner
 INSET_SPEC = {"A": dict(nums=(1, 2), title="A · options 1–2: Nahanni's ways south", pad_km=25),
-              "B": dict(nums=(5,), title="B · option 5: Gwillim Lake ↔ Pine Le Moray", pad_km=25)}
+              "B": dict(nums=(3,), title="B · option 3: Gwillim Lake ↔ Pine Le Moray", pad_km=25)}   # the same window as before 2026-09-28 (then numbered option 5)
 
 
 def inset_frames(P, fig_w=12, fig_h=17):
@@ -900,6 +932,14 @@ def map_cost(P, pad=0.07, area_names=14, corridors=False, halo_cells=6, insets=T
     return P
 
 
+# Crop-map settings for M2 / M3 (restored 2026-09-28: commit 45b949d deleted these three
+# constants while adding the §3a contract figures, but map_m2 / map_m3 still use them).
+NORTH_TOWNS = MAJOR_TOWNS + ["Mayo", "Ross River", "Faro", "Dease Lake"]
+SOUTH_TOWNS = MAJOR_TOWNS + ["Chetwynd", "Tumbler Ridge", "Dease Lake", "Fort St. James"]
+# M2's southern edge = the top of this group of named areas (see map_m2's docstring)
+M2_SOUTH_LIMIT = ["Mount Edziza", "Spatsizi", "Dene K", "Dune Za Keyih", "Northern Rocky"]
+
+
 def map_m2(P, area_names=14, tint=False):
     """M2 -- Act 1, the north at M1's MAP SCALE (crop: everything north of the Edziza /
     Spatsizi / Dene Kʼéh Kusān group). Every link in its M1 colour; the Act-1 examples' OPTIONS
@@ -943,7 +983,7 @@ def map_m2(P, area_names=14, tint=False):
     _director_base(P, ax, XL, YL, tint=tint, area_names=area_names, towns=NORTH_TOWNS)
     nums = [n for _, n, _ in marks]
     handles.append(Patch(color=OPTIONS_COLOR,
-                         label=(f"Options {min(nums)}–{max(nums)} — alternative links, corridor land as on M1 "
+                         label=(f"Options {', '.join(map(str, nums))} — alternative links, corridor land as on M1 "
                                 "(equal weight)") if nums else "Route options"))
     handles += _node_handles() + [
         plt.Line2D([0], [0], color="0.35", lw=1.0, ls="--", label="Y2Y corridor")]
@@ -1545,3 +1585,278 @@ def build_deck(P, path=None):
         shown = path
     print(f"  deck: {len(slides)} slides -> {shown}")
     return path
+
+
+# ================= 07_director_outputs: the curated maps on the y2y Act 1 WIDE layout ===============================
+# Ethan 2026-09-28: "formatted exactly like the Act 1 maps from the y2y analysis -- main panel and two insets on the right",
+# insets to be sized on the clusters the package builds next. Layout, typography, basemap, insets, ramp + legend placement =
+# `director_plot.wide_map` (the y2y asset: ONE codebase, so the two packages cannot drift); the colours and words for the
+# corridor classes and the cost swatches = `corridors_mapstyle` (the §3a tokens: ONE source). The record's portrait maps
+# (map_cost / map_m1, notebook 06_tables_and_figures) are untouched. Spec 06 v1.2.17; methods_log M5.21.
+
+WIDE_STYLE = dict(
+    map_layout="wide", inset_clusters=(1, 2),      # two insets, A and B: windows from inset_windows() (interim) or the numbered clusters
+    inset_windows=None,                            # set per figure by _wide()
+    inset_codes={}, inset_town_skip={}, main_skip_codes=(),          # the y2y skips (WA / CA, Jasper / Banff) do not apply on this frame
+    wide_main_towns=(), wide_main_names="abbrev",                    # the frame panel: postal codes only, no towns (as on the y2y Act 1 panel)
+    pa_layer_min_km2=300, inset_pa_names=5, window_scale_km=100,     # the y2y values; the scale bar on the (windowed) frame
+    hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=True,   # 21's export settings + the §3a PDF twin
+)
+IPCA_WIDE_LABEL = "Proposed IPCAs"                     # the §3a jurisdictions row (v1.2.15); no parenthetical (Ethan 2026-09-28: it widened the legend past inset B)
+COST_CLASSES = (1, 10, 100, 1000)
+COST_TICK_WORDS = {1: "intact\nland", 10: "roads\nand cuts", 100: "converted\nland", 1000: "water, ice,\nsettlement"}   # ms.COST_LABELS re-wrapped to <= 11 chars a line: four ticks share a ~4 in bar at 14 pt
+
+
+def _display_name(label):
+    """A node label for the inset name lists: drop the 'IPCA · ' prefix, apply the display overrides (AREA_OVERRIDES)."""
+    s = str(label).split(" · ", 1)[-1]
+    for frag, ov in AREA_OVERRIDES.items():
+        if frag in s:
+            return ov[0] if isinstance(ov, tuple) else ov
+    return s.split(" [", 1)[0]
+
+
+def director_frame(P, pad_km=40):
+    """The northern run as a director_plot frame (cached on P): G on the 300 m routing grid (pu = the routable cells, locked2d =
+    the 32 PA nodes as the layout's grey layer), the 10 draft IPCAs as the overlay in the IPCA role (outline + names in the
+    insets), the §3a sector frame (Y2Y ∩ the routing window + pad_km) as the pixel WINDOW, and the northern town table on top
+    of the y2y one. If the package holds clusters in the y2y schema (`tables/picks.csv` + `geotiffs/clusters.gpkg` -- the next
+    step) they are attached as PICKS / CL so the insets can size on them."""
+    if getattr(P, "_frame", None) is not None:
+        return P._frame
+    import director_core as dc
+    import director_plot as dp
+    import corridors_mapstyle as ms
+    R = P.R
+    cost = R.resistance.values
+    pu = np.isfinite(cost) & (cost > 0)
+    locked2d = R.pa_mask
+    crs = pyproj.CRS.from_wkt(R.crs.to_wkt())
+    G = SimpleNamespace(pu=pu, locked2d=locked2d, locked=locked2d[pu], disc=pu & ~locked2d, n_pu=int(pu.sum()),
+                        n_disc=int((pu & ~locked2d).sum()), shape=R.shape, transform=R.transform, crs=crs, profile=None,
+                        cell_km2=R.cell_km2)
+    G.rows, G.cols = np.where(pu)
+    parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(crs)
+    ip = parts[parts["name_label"].astype(str).str.startswith("IPCA")].dissolve(by="name_label").reset_index()
+    ip["name"] = [_display_name(s) for s in ip["name_label"]]
+    overlay = SimpleNamespace(gdf=ip, mask2d=R.anch, label=IPCA_WIDE_LABEL)
+    (x0, x1), (y0, y1) = ms.sector_frame(R, pad_km)
+    px0, pyb = dc.xy_to_px(G, x0, y0); px1, pyt = dc.xy_to_px(G, x1, y1)
+    F = dp.load_frame(G, overlay=overlay, window=(px0, px1, pyt, pyb), towns={**dc.Y2Y_TOWNS, **cc._TOWNS})
+    picks, clusters = P.out / "tables" / "picks.csv", P.out / "geotiffs" / "clusters.gpkg"
+    if picks.exists() and clusters.exists():
+        F.PICKS = pd.read_csv(picks, dtype={"number": str, "cids": str})
+        F.CL = {lyr: gpd.read_file(clusters, layer=lyr) for lyr in gpd.list_layers(clusters).name}
+    else:
+        F.PICKS, F.CL = None, {}
+    P._frame = F
+    return F
+
+
+INSET_SAME_SCALE = True    # Ethan 2026-09-28: "inset box B should be same scale as A" -- every inset window takes the largest width and height
+
+
+def _same_scale(wins):
+    """Every window at the same width and height (the largest of each, about each window's own centre), so the insets share one
+    map scale; director_plot then fits them to the panel aspect identically."""
+    if len(wins) < 2:
+        return wins
+    W = max(x1 - x0 for x0, x1, _, _ in wins.values()); H = max(yb - yt for _, _, yt, yb in wins.values())
+    return {tag: ((x0 + x1) / 2 - W / 2, (x0 + x1) / 2 + W / 2, (yt + yb) / 2 - H / 2, (yt + yb) / 2 + H / 2) for tag, (x0, x1, yt, yb) in wins.items()}
+
+
+def inset_windows(P, mode="interim", same_scale=INSET_SAME_SCALE):
+    """Pixel windows for the two insets (director_plot re-fits each to the inset aspect, never shrinking). "interim" = the
+    record's frames A (options 1–2, Nahanni's ways south) and B (option 5, Gwillim Lake ↔ Pine Le Moray): the option land +
+    the INSET_SPEC pad. "clusters" = clusters 1 and 2 of the package's picks (the y2y rule: member polygons' bounds +
+    STYLE["inset_pad_km"], floored at STYLE["inset_min_km"]) -- requires the cluster products of the next step. With
+    `same_scale` both windows take the larger width and height, so A and B draw at one map scale."""
+    F = director_frame(P)
+    import director_core as dc
+    if mode == "clusters":
+        assert F.PICKS is not None and "act1" in F.CL, ("no clusters in the package yet (tables/picks.csv + geotiffs/clusters.gpkg, "
+                                                        "the next step): use insets='interim'")
+        import director_plot as dp
+        out = {}
+        for tag, num in zip("AB", dp.STYLE["inset_clusters"]):
+            pick = F.PICKS[(F.PICKS.act == "Act 1") & (F.PICKS.number.astype(str) == str(num))].iloc[0]
+            cids = [int(c) for c in str(pick.cids).split(";")]
+            g = F.CL["act1"]; minx, miny, maxx, maxy = g[g.cid.isin(cids)].geometry.total_bounds
+            pad = dp.STYLE["inset_pad_km"] * 1000; floor = dp.STYLE["inset_min_km"] * 1000
+            w = max(maxx - minx + 2 * pad, floor); h = max(maxy - miny + 2 * pad, floor)
+            cx, cy = (minx + maxx) / 2, (miny + maxy) / 2
+            px0, pyb = dc.xy_to_px(F.G, cx - w / 2, cy - h / 2); px1, pyt = dc.xy_to_px(F.G, cx + w / 2, cy + h / 2)
+            out[tag] = (float(px0), float(px1), float(pyt), float(pyb))
+        return _same_scale(out) if same_scale else out
+    assert mode == "interim", f"insets = 'interim' | 'clusters', got {mode!r}"
+    R = P.R
+    opts = {num: m for num, _, m, _ in _option_masks(P) if isinstance(num, int)}
+    xs, ys = R.template.x.values, R.template.y.values
+    out = {}
+    for tag, spec in INSET_SPEC.items():
+        m = np.zeros(R.shape, bool)
+        for n in spec["nums"]:
+            if n in opts:
+                m |= opts[n]
+        rr, cc_ = np.nonzero(m)
+        if not len(rr):
+            continue
+        p = spec["pad_km"] * 1e3
+        x0, x1 = xs[cc_.min()] - p, xs[cc_.max()] + p
+        y0, y1 = ys[rr].min() - p, ys[rr].max() + p
+        px0, pyb = dc.xy_to_px(F.G, x0, y0); px1, pyt = dc.xy_to_px(F.G, x1, y1)
+        out[tag] = (float(px0), float(px1), float(pyt), float(pyb))
+    return _same_scale(out) if same_scale else out
+
+
+def cost_surface(P):
+    """The movement-cost classes as a four-swatch surface for the wide layout's ramp slot (corridors_mapstyle.COST -- the magma
+    samples M0b uses), NaN off the routable area. Returns (surface, class shares in % of the routable area)."""
+    import corridors_mapstyle as ms
+    from matplotlib.colors import BoundaryNorm
+    cost = P.R.resistance.values
+    img = np.full(cost.shape, np.nan, np.float32)
+    for i, c in enumerate(COST_CLASSES):
+        img[cost == c] = i
+    fin = cost[np.isfinite(cost) & (cost > 0)]
+    shares = {c: 100 * float((fin == c).sum()) / fin.size for c in COST_CLASSES}
+    n = len(COST_CLASSES)
+    S_ = dict(img=img, cmap=ListedColormap([ms.COST[c][0] for c in COST_CLASSES]), norm=BoundaryNorm(np.arange(-0.5, n + 0.5, 1), n),
+              extend="neither", ticks=list(range(n)), ticklabels=[f"{c}\n{COST_TICK_WORDS[c]}" for c in COST_CLASSES],
+              label="cost of moving through the land (the four movement-cost classes)", end_words=None)
+    return S_, shares
+
+
+def classes_surface(P):
+    """The routing classes as a categorical surface: the §3a pressure levels in CLASS_ORDER with the corridors_mapstyle tokens
+    and words, so the ramp slot becomes the "Corridor Pressure" key; H8 open -> squeezed folded into securing, as on every
+    record map. Returns (surface, links per class)."""
+    import corridors_mapstyle as ms
+    from matplotlib.colors import BoundaryNorm
+    R = P.R
+    order = [c for c in ms.CLASS_ORDER if not (c == "squeezed" and P.h8_open)]
+    img = np.full(R.shape, np.nan, np.float32); counts = {}
+    for i, c in enumerate(order):
+        ids = list(P.cls.index[P.cls == c])
+        if c == "securing" and P.h8_open:
+            ids += list(P.cls.index[P.cls == "squeezed"])
+        img[np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor] = i
+        counts[c] = len(ids)
+
+    def _tick(c):
+        head, _, tail = ms.CLASS[c][3].partition(" (")
+        return "\n".join([head] + textwrap.wrap(f"({tail}", 12)) if tail else head        # <= 12 chars a line: four ticks share a ~4 in bar at 14 pt
+    n = len(order)
+    S_ = dict(img=img, cmap=ListedColormap([ms.CLASS[c][0] for c in order]), norm=BoundaryNorm(np.arange(-0.5, n + 0.5, 1), n),
+              extend="neither", ticks=list(range(n)), ticklabels=[_tick(c) for c in order],
+              label=f"{ms.CLASS_HEADING.lower()} — how much the network's connection depends on this land", end_words=None)
+    return S_, counts
+
+
+def _wide_overlay(F):
+    """The overlay callback for the wide layout: the draft IPCAs as filled nodes (the §3a IPCA fill, opaque like the layout's PA
+    grey so the two node kinds read alike) with their outlines. Called on the frame and on every inset."""
+    import director_plot as dp
+    import corridors_mapstyle as ms
+    a = ms.AREA["ipca"]
+    fill = np.full(F.G.shape, np.nan, np.float32); fill[F.IP.mask2d] = 1.0
+
+    def draw(ax):
+        ax.imshow(fill, cmap=ListedColormap([a["fill"]]), interpolation="nearest", zorder=1.1)
+        lw = 0.9 * dp.STYLE.get("_lw_scale", 1.0)
+        for _, r in F.IP.gdf.iterrows():
+            for ring in F.rings_px(r.geometry):
+                ax.plot(ring[:, 0], ring[:, 1], color=a["edge"], lw=lw, zorder=3.5)
+    handles = [Patch(facecolor=dp.PA_COLOR, label=PA_LABEL), Patch(facecolor=a["fill"], edgecolor=a["edge"], label=IPCA_WIDE_LABEL)]
+    return draw, handles
+
+
+def _wide(P, path, surface, insets):
+    import director_plot as dp
+    F = director_frame(P)
+    assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(cd.WIDE_STYLE) first (07's setup cell)"
+    dp.STYLE["inset_windows"] = inset_windows(P, insets)
+    draw, handles = _wide_overlay(F)
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=surface)
+    return path
+
+
+def figure_cost_wide(P, path, insets="interim"):
+    """07 · 01 -- the movement-cost surface on the y2y Act 1 wide layout (frame + insets A, B): the four cost swatches in the
+    ramp slot, PAs grey, IPCAs filled + outlined, postal codes on the frame, names + towns in the insets; PNG at 300 dpi + PDF.
+    Prints the class shares (the record map's subtitle line) for the slide."""
+    S_, shares = cost_surface(P)
+    print("movement cost, share of the routable area: " + " · ".join(f"{c}: {shares[c]:.1f}%" for c in COST_CLASSES))
+    return _wide(P, path, S_, insets)
+
+
+def _option_marks(P, F, nums=OPTIONS_MAP_NUMS):
+    """The numbered options for the wide layout: (num, mask, (px, py), side) -- each option = one link's full corridor band (or
+    a route branch), numbered at the median cell of its largest piece (as M2), in pixel coordinates."""
+    import director_core as dc
+    sides = {}
+    for ex in P.examples:
+        sd = ex.get("side", "nw"); sd = sd if isinstance(sd, list) else [sd] * len(ex["option_nums"])
+        sides.update(dict(zip(ex["option_nums"], sd)))
+    out = []
+    for num, _, m, _ in _option_masks(P):
+        if num not in nums or num not in sides:
+            continue
+        xy = _median_cell(P.R, m)
+        if xy is None:
+            continue
+        px, py = dc.xy_to_px(F.G, *xy)
+        out.append((num, m, (float(px), float(py)), sides[num]))
+    return out
+
+
+def _number_marker_px(ax, xy, num, color, side="nw", fs=None):
+    """M2's numbered marker in pixel space: a white disc with a coloured rim and a short leader, offset in POINTS (so it
+    reads the same on the frame and in the insets; the size follows STYLE["_fs_scale"] like the y2y cluster numbers). An
+    annotation whose anchor lies outside the axes is not drawn (matplotlib's default clip), so an inset shows only its own."""
+    import director_plot as dp
+    fs = (fs or dp.STYLE["cluster_number_fs"]) * dp.STYLE.get("_fs_scale", 1.0); off = 1.7 * fs
+    dx = off if side in ("ne", "se") else -off
+    dy = off if side in ("ne", "nw") else -off
+    ax.annotate(str(num), xy, xytext=(dx, dy), textcoords="offset points", fontsize=fs, fontweight=600, ha="center", va="center", zorder=8,
+                bbox=dict(boxstyle="circle,pad=0.3", fc="white", ec=color, lw=1.8), arrowprops=dict(arrowstyle="-", color=color, lw=1.2, shrinkB=0))
+
+
+def figure_options_wide(P, path, insets="interim", nums=OPTIONS_MAP_NUMS):
+    """07 · 03 -- the route options on the wide layout (Ethan 2026-09-28: "the options, 1–4; 1 and 2 in panel A, 3 and 4 in
+    panel B"): the pressure classes as on 02, each option's corridor band on top in ITS NUMBER'S COLOUR from the y2y cluster
+    palette (director_plot STYLE["cluster_colors"] in OPTION_COLOR_ORDER: 1 red, 2 blue, 3 magenta, 4 dark orange), numbered at the band's median
+    cell with a marker rimmed in the same colour; the legend entry is the y2y cluster swatch handle, reading "Route options".
+    Options under the PA / IPCA fills, as on M2. Inset A holds 1–2, inset B holds 3–4 (INSET_SPEC)."""
+    import director_plot as dp
+    F = director_frame(P)
+    S_, _ = classes_surface(P)
+    marks = _option_marks(P, F, nums)
+    colors = {n: option_color(n) for n, _, _, _ in marks}
+    layers = [(np.where(m, 1.0, np.nan).astype(np.float32), colors[n]) for n, m, _, _ in marks]
+    ipca_draw, handles = _wide_overlay(F)
+    shown = [n for n, _, _, _ in marks]
+
+    def draw(ax):
+        ipca_draw(ax)
+        for img, col in layers:
+            ax.imshow(img, cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)     # under the PA (1) / IPCA (1.1) fills
+        for num, _, xy, side in marks:
+            _number_marker_px(ax, xy, num, colors[num], side)
+    handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in shown])]     # swatches in option order (1-4)
+    print("route options: " + " · ".join(f"{n} {colors[n]} at px {tuple(round(v) for v in xy)} ({side})" for n, _, xy, side in marks))
+    assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(cd.WIDE_STYLE) first (07's setup cell)"
+    dp.STYLE["inset_windows"] = inset_windows(P, insets)
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S_)
+    return path
+
+
+def figure_choices_wide(P, path, insets="interim"):
+    """07 · 02 -- "where the land still offers choices" on the wide layout: the routing classes (corridor pressure) in the ramp
+    slot as the key, everything else as on 01."""
+    S_, counts = classes_surface(P)
+    print("links per class: " + " · ".join(f"{c} {n}" for c, n in counts.items())
+          + (" | H8 OPEN -- squeezed folded into securing" if P.h8_open else ""))
+    return _wide(P, path, S_, insets)

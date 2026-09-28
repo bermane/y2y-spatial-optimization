@@ -231,7 +231,7 @@ rule; quantitative outcomes live there, methods decisions here);
   RAW_SPEC); in passing, RAW_SPEC's stale macrorefugia unit label (still describing
   vmax − v) corrected to the 1/v orientation (also logged y2y M2.10).
 - **M5.11 Director package (2026-09-03, PRESENTATION ONLY — spec 06 v1.2):**
-  `corridors_director.py` + `06_director_package.ipynb` over a loaded run; zero new solves.
+  `corridors_director.py` + `06_director_package.ipynb` (→ `06_tables_and_figures`, 2026-09-28) over a loaded run; zero new solves.
   Renames (director legend strings), selects (top-k by rule), renders (flat swaths, CVD
   palette — squeezed in purple), assembles (profiles, T1/T2, draft .pptx). Two items that are
   METHODS-ADJACENT and therefore logged here: (i) axis-C attribution for T1 is computed over
@@ -338,6 +338,80 @@ rule; quantitative outcomes live there, methods decisions here);
   / T2 chips / star plots / deck (06). "groups present (of 40)" becomes "(of 20)" everywhere.
   Every other axis is untouched. The stored 40-class values remain in git history / the run
   dir until overwritten; results_log R9.4 records the re-measured EFG axis.
+- **M5.21 Output notebooks re-mapped to the y2y trail; the curated maps on the y2y Act 1 wide layout
+  (2026-09-28, PRESENTATION ONLY — spec 06 v1.2.17):** `06_director_package` → `06_tables_and_figures`
+  (the record, every output; unchanged otherwise) + `07_director_outputs` (the curated few, the mirror
+  of `analyses/y2y/21`). 07's maps — 01 the movement-cost surface, 02 "where the land still offers
+  choices" — are drawn by `director_plot.wide_map`, the y2y Act 1 asset (slide 13.33 × 7.5 in, frame
+  panel + two insets at right, key under A, legend under B, hillshade + Natural Earth basemap, Cronos
+  Pro; PNG 300 dpi + PDF), through a frame built by `corridors_director.director_frame`: G on the
+  300 m routing grid (pu = routable cells, locked2d = the 32 PA nodes), the 10 draft IPCAs as the
+  overlay (filled in the §3a IPCA tone + outlined, names in the insets), the §3a sector frame + 40 km
+  as the window, the northern town table. Surfaces are categorical: the four cost classes in
+  `ms.COST`'s magma swatches; the routing classes in `ms.CLASS`'s pressure levels (H8 folding as on
+  M1) — the ramp slot is the key. Colours / words = `corridors_mapstyle` (one source); layout / type
+  = `director_plot` (one codebase with the y2y package: `load_frame` split out of `load()`, the
+  1 px = 1 km constants replaced by km × px-per-km, identity on the 1 km grid — the y2y `load()`
+  namespace verified name-for-name; Alberta shares the path; y2y methods_log M4.41). The §3a slide
+  template, Noto Sans, hand-drawn legend and `ms.inset` do not apply to 07; §3a keeps governing 06's
+  record figures. Insets: `INSETS = "clusters"` sizes A / B on the package's numbered clusters in the
+  y2y schema (`tables/picks.csv` + `geotiffs/clusters.gpkg`, the next build step); `"interim"`
+  (current) = the v1.2.13 frames A (options 1–2, Nahanni's ways south) and B (option 5, Gwillim Lake ↔
+  Pine Le Moray) as pixel windows, re-fitted to the panel aspect. Zero-render smoke on `v2_run002`
+  passed (frame 5,767 × 2,809 px; window (−67, 2942, −66, 5900) px; A 152 × 214 km, B 114 × 83 km
+  before the fit; cost shares 88.2 / 5.4 / 0.3 / 6.1 %; class cells 353,248). Nothing analytical
+  changed. Ethan renders 07 (numeric order 06 → 07).
+  *Addendum (2026-09-28, first render):* the IPCA legend string is the §3a jurisdictions row "Proposed IPCAs" (the
+  parenthetical had pushed the legend box past inset B); the ramp tick words are hand-wrapped to ≤ 11–12 characters a line
+  (four ticks share a ~4 in bar at 14 pt); and the frame's hillshade is read over the WINDOW rather than the raster
+  (`director_plot.load_frame` → `read_hillshade_window(scale=1)` + `draw_basemap(hs_extent=)`): the sector window runs
+  20 km past the raster edge, so the raster-shaped shading footprint had drawn as a grey box inside the frame (measured on
+  the PNG: shaded land 235/235/233 inside, unshaded 247/247/245 in the margin). Y2Y (no window) unchanged; Alberta's
+  integer window inside its raster reads identical values.
+  *Addendum (2026-09-28, Ethan: "inset box B should be same scale as A"):* `corridors_director.inset_windows` gives every
+  inset window the largest width and the largest height among them, about each window's own centre
+  (`INSET_SAME_SCALE = True`, `_same_scale`), before director_plot's aspect fit, so A and B draw at ONE map scale — interim:
+  A 152 × 214 km and B 114 × 83 km both become 193 × 214 km after the fit (B was 114 × 126). The same rule applies in
+  cluster mode, which now returns explicit windows (member polygons' bounds + `STYLE["inset_pad_km"]`, floored at
+  `STYLE["inset_min_km"]`, then equalized) instead of leaving the sizing to director_plot.
+  *Addendum (2026-09-28, Ethan):* **07 · 03 = the route options 1–4** (`figure_options_wide`): the record's M2 on the wide
+  layout — the pressure classes as on 02, each option's corridor band on top in ONE colour (`OPTIONS_COLOR`, equal weight)
+  with a ~1.2 km dark rim per option, numbered 1–4 at the band's median cell (M2's white-disc marker, offset in points so
+  it reads alike on the frame and in the insets), PA / IPCA fills over the options as on M2. **Inset B = options 3–4**
+  (T’akú Tlatsini → Mount Edziza / Stikine) instead of option 5 — `INSET_SPEC` changed, so 06's `map_cost` insets and
+  07's interim windows (01–03) all carry A = options 1–2, B = options 3–4; option 5 (Gwillim Lake ↔ Pine Le Moray)
+  keeps its M3 marker and its star / table rows.
+  *Addendum (2026-09-28, later — SUPERSEDES the inset-B change above; Ethan mistyped):* inset B stays the Gwillim Lake ↔
+  Pine Le Moray window it always was. The deck's EXAMPLE NUMBERING changes instead (`EXAMPLE_PICKS`, list order = numbers):
+  1–2 Nahanni's two ways south (inset A); **3 = Gwillim Lake ↔ Pine Le Moray** (was 5); **4 = Gwillim Lake ↔ Monkman**, a
+  NEW pick — a narrowing (squeezed) corridor lying 100% inside inset B (515 km²; Carp Lake ↔ Pine Le Moray, 0.23× its
+  natural width and 99% inside B, is the alternative, one line to switch); 5–6 = T’akú Tlatsini → Mount Edziza / Stikine
+  (were 3–4); 7 = Wilps Gwininitxw ↔ Swan Lake; 8 = Carp Lake ↔ Pine Le Moray (unmarked). The numbering runs through the
+  record (M2 draws 1, 2, 5, 6; M3 marks 3, 4, 7; `star_options` / `table_options` rows follow). On 07 · 03 each option's band
+  is filled in ITS NUMBER'S colour from the y2y cluster palette (`director_plot.STYLE["cluster_colors"]`: 1 red, 2 magenta,
+  3 blue, 4 dark orange; the single options blue of M2 stays on the record), the marker rim in the same colour, and the
+  legend entry is the y2y cluster swatch handle reading "Route options" (Ethan: the same icon as the y2y analysis).
+  *Addendum (2026-09-28, Ethan: "red and pink aren't adjacent"; "corridor pressure colours ... viridis steps?"):* the options
+  take the y2y palette in a PERMUTED order, `OPTION_COLOR_ORDER` = 1 red, 2 blue, 3 magenta, 4 dark orange, so the two
+  adjacent options in each inset (1 & 2 overlap; 3 & 4 meet at Gwillim Lake) are red / blue (ΔE 97 / 72 under deutan /
+  protan) and magenta / orange (97 / 105) rather than red / magenta (45 / 46); the legend swatches follow option order
+  (`director_plot.cluster_handle(colors=)`, y2y M4.41 addendum). **Corridor-pressure palette → viridis steps**
+  (`corridors_mapstyle.CLASS_PALETTES["viridis"]`, `CLASS_PALETTE = "viridis"`, `set_class_palette` to switch back to the
+  Okabe set): viridis at 0 / 0.70 / 0.80 / 1.0 = #440154 / #44bf70 / #7ad151 / #fde725 for Minimum / Some / A lot / Maximum —
+  dark purple → green → light green → yellow, the y2y ramp's own reading (purple low, yellow the top). Chosen by a grid
+  search over step positions (0.05 grid, all 4-subsets) maximising the worst CIE76 ΔE between each class and every other
+  class, the four option colours, the IPCA fill (#5F9EA0) and the PA grey (#8f8f8f) under normal vision, deuteranopia and
+  protanopia: 21.3 (green vs the PA grey, deutan). The Okabe set scored 7.3 (its orange vs the option orange) and the evenly
+  spaced viridis sets 4.6–14.3 (their blue step vs the magenta option under deutan). The §3a.1.1 palette table is superseded
+  for the class fills on every `ms.CLASS` consumer (07's maps, `figure_m0b(corridors=True)`, `export_gis`, the QA); the
+  record's own M1–M3 keep `corridors_director.CLASS`.
+  *Addendum (2026-09-28, later — Ethan rejected the viridis steps on sight):* **corridor-pressure palette → cividis steps**
+  (`CLASS_PALETTE = "cividis"`; viridis and the Okabe set stay registered): cividis at 0 / 0.70 / 0.85 / 1.0 = #00224e /
+  #aea371 / #d6c35d / #fee838 for Minimum / Some / A lot / Maximum — navy → olive → mustard → yellow (yellow = the top, as on
+  the y2y ramp; `"cividis_r"` = the same steps reversed, one line to switch). The search now also scores the basemap land
+  and water tones so no step goes pale: worst ΔE 22.7 (mustard vs the option orange, deutan), classes ≥ 28 apart. Of the
+  28 colormaps searched, only afmhot (black + cream), plasma (magenta / orange, the option hues) and gist_earth (black +
+  navy) scored higher; cividis is the muted, CVD-designed one.
 - **M5.20 Cartographic contract + basemap data (2026-09-11, PRESENTATION ONLY — spec 06 §3a,
   v1.2.14):** `corridors_mapstyle.py` is the single style source (palette, type, templates,
   layers in the §3a.1.6 order, legend builder, locator, 100 km bar + north, PDF/PNG export,

@@ -105,3 +105,4 @@ analyses/*/director_package/**
 #    multipart_review.csv (corridors_core._H7_FILES expects all three git-tracked)
 !analyses/alberta_prioritization/data/ab_extent_v1.gpkg
 !analyses/northern_connectivity/audit/audit_objects/node_parts.gpkg
+!analyses/wolverine_refugia_connectivity/audit/audit_objects/node_parts.gpkg

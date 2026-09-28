@@ -346,7 +346,7 @@ solved; 11b has write-once freeze guards. **LAYOUT (2026-09-10): `analyses/y2y/`
 Gate 4, 16/17 E-round, 12c/18c E19, 19/20 package, 22/23 E18); `evidence/` = ONLY superseded notebooks (13b → manifest role column; 14 →
 the package); `archive/` = rescinded. Rule: a notebook whose artifacts a later step consumes stays in the trail. See `analyses/y2y/README.md`.** **NOTEBOOK NAMES (2026-09-14): 19_tiers_and_clusters (was director_surfaces), 20_figures (EVERY output, the record), 21_director_outputs (the
 curated few for the presentation; `director_package/director_outputs/`), E18 → 22_e18_connectivity_weight / 23_e18_analysis. Shared plotting state/helpers =
-`director_plot.py` (`C = dp.load()`; notebooks `globals().update(vars(C))`).** **ASSET RULE (Ethan 2026-09-14): a presentation asset is ONE function in
+`director_plot.py` (`C = dp.load()`; notebooks `globals().update(vars(C))`). **2026-09-28: `dp.load_frame(G, overlay=, window=, towns=)` = the drawing state over ANY grid (split out of `load()`; every pixel constant is km × `C.PX_PER_KM`, identity at 1 km) — the northern 07 draws through it; `STYLE["export_pdf"]`; public `dp.wide_map` (M4.41).** **ASSET RULE (Ethan 2026-09-14): a presentation asset is ONE function in
 `director_plot` (`values_table`, `core_map`, `core_stars`, `core_consequences`, `scenario_stars`, `scenario_consequences`, ...) with its knobs in
 `dp.STYLE`; 20 and 21 both call it — never copy drawing code into a notebook, or the record and the presentation drift. The objectives table renders in `STYLE["values_table"]` = "poster" (the Carbon-Poster spec, Ethan's pick 2026-09-14 over the Threat-Digest "digest" and the original "plain", both kept as `values_table_digest` / `values_table_plain`; Cronos Pro needs the DejaVu fallback in the family list for thin spaces). **SUPERSEDED the same day by the TABLE SPEC** (Ethan's "Y2Y Table Spec", `director_plot.spec_table_png` + `TABLE` tokens + `STYLE["table_base_px"]`): `STYLE["values_table"]="spec"`; consequences tables TRANSPOSED (measures × clusters + reference columns; fills per ROW lowest→highest in RdBu with a flat-row guard, tail row off — Ethan/Laura 2026-09-21, `STYLE["conseq_mode"]`). **Act 1 maps = two 1 km files** (`core_map_F`, `core_map_clusters`; the hex pair `core_map_hex250` superseded). **METHOD TIMELAPSE (Ethan 2026-09-21): `dp.method_frames` = numbered 1920×1080 frames on the Act 1 wide layout (values → reference anchor → its 50 guarded members → f → 10 sampled members + f per other cell → F → core; `frames.csv` holds, `concat.txt` for ffmpeg, which is NOT installed — Ethan assembles); 21 → a DESIGN PASS first (`design=True`: plan 1 of the balanced + five theme-forward cells at SSP5-8.5, inline for Ethan's feedback → `director_outputs/06_method_frames_design/`; the full ~200-frame call is a commented line in 21), 20 → `figures/method_frames/` (small budget); the layout is drawn once (`_wide_map(keep=True)`, ~2 min) and frames swap the surface.** **BASEMAP (2026-09-14):** the northern package's cartography on the Y2Y frame — `director_core.basemap_layer/draw_basemap/read_hillshade` (NE land/water, GLO-90 hillshade `input_data/basemap/hillshade_y2y_300m.tif` at 18%, province names on open land, `STYLE["towns"]`), legend beside the frame, scale bar + north arrow SW; display only. **WIDE LAYOUT (same day):** `STYLE["map_layout"]="wide"` = 13.33×7.5 in slide with two zoom insets — REGIONS FIXED to the v3.1 windows via `STYLE["inset_windows"]` (Ethan 2026-09-21: A = Sacred Headwaters / Stikine — moved 150 px east the same day so 85% of it is Y2Y land, not Alaska; B = Purcells / Kootenays; None = size on `STYLE["inset_clusters"]`) (PA/IPCA names, towns, 50 km bar); `values_table_simple` = the bare-bones objectives table (`01b_values_table_simple.png`).; **Act 2 in 21 = ONE map** (`scenario_map`, tiers split by owning scenario + three windows — REGIONS FIXED to the v3.1 windows via `STYLE["scenario_inset_windows"]` (Ethan 2026-09-21; C = the Yukon window spanning the carbon tier east of Fishing Branch AND the structural-connectivity tier around Ddhaw Ghro) — + area/share legend; also 20's `summary_tiers_1km.png`).** **ACT NUMBERING (Ethan 2026-09-14, overrides package spec v1.6):
 Act 0 = the values (maps + convergence, a prologue); Act 1 = the core; Act 2 = the scenario tiers; Act 3 = the opportunity landscape; hinge
@@ -479,6 +479,49 @@ lookup in Alberta (numbered CDs), fails in the north (one 297,000 km² Yukon uni
 south; deliverable = a curated unit→region lookup beside `director_core.placeholder_name`. REPORT-BACK for the spec chat =
 `analyses/communities/spec/bear_coexistence_reportback.md` (decisions D-C1–D-C5; next build 02_proximity / 03_region_names
 waits on them). NA RULE (Ethan 2026-09-16): `n_groups` NA stays NA — the file has no zeros (78 NA / 30 counted); never recode to 0.**
+
+## ANALYSIS 5 — `analyses/wolverine_refugia_connectivity/`: wolverine refugia corridors (built 2026-09-28)
+
+Least-cost corridors connecting **wolverine climate refugia across the whole Y2Y** with the northern
+connectivity methodology and engine (D1–D19 as configured for `north`; `config.CORRIDORS["wolverine"]`).
+**Spec = `spec/wolverine_refugia_connectivity_spec.md` v1.0 (decisions W1–W10, Ethan 2026-09-28) + the
+package spec `spec/06_wolverine_director_package_spec.md`; BINDING living logs `spec/methods_log.md` +
+`spec/results_log.md` (same-session rule).** Scope = RESULTS FIRST: maps + results only; sensitivities
+(as-published / glacier comparison runs, the ensemble), D17 squeeze and every audit are PARKED (spec §7).
+- **Input** `input_data/wolverine_refugia/baseline_wolverine_climate_refugia.tif` (EPSG:4326 ~250 m; values
+  2|12 core, 1|11 marginal, 0|10 none; the +10 = a MODEL SEAM at ~53.97 °N — one layer, disclosed; classes 0 and 10 are
+  simply not refugia, never labelled; citation deferred). NOT a prioritizr feature — never enters DATASETS / aligned_stack.
+- **Nodes (W2/W9)** = 8-connected core patches ≥ 500 km² on the Y2Y-wide 300 m grid (67 on the engine grid; 82% of 318,822 km²
+  core), numbered north → south, auto-named from PAs (`node_names.csv` overrides, sha-pinned; GW3). PAs are
+  CONTEXT only, never nodes. `cc.node_patches` = the step-0a analogue (no H7; `require_review=False`).
+- **Resistance (W1)** = the published surface with the source's three GENERIC-FAUNA TERRAIN RULES WITHHELD
+  EQUALLY (Pither et al. 2023 S1 Table, retrieved 2026-09-28: cost 1000 = built-up, lights, mining, oil & gas,
+  dams, rail, multi-lane highways, **elevation > 2,300 m, slope > 30°, glaciers**, lakes ≥ 10 ha, rivers
+  > 28 m³/s, ocean; per-pixel MAX over 23 layers) → variant "O'Brien 2025, generic terrain rules withheld",
+  passed as `overrides` (D4 doctrine). By proxy (W1a, disclosed): DEM elevation/slope + RGI 7.0 glaciers
+  withheld; HydroLAKES / HydroRIVERS / ocean / gHM-90 ≥ τ (calibrated) retained. Measured: 28.4% of core
+  refugia is cost 1000 vs 13.8% Y2Y-wide; elevation + slope = 71% of it under core. Needs RGI 7.0 +
+  HydroSHEDS dropped into `input_data/` (`data/acquire.py`).
+- **Band cutoff (W5)** INHERITED from north/v2_run002 (13.6229; never re-calibrated). β/tiers/branches verbatim.
+- **Protected land (W11, Ethan 2026-09-28)** = all existing PAs + the 32 proposed IPCAs/PAs, a STATUS layer (never
+  resistance, never nodes): `cc.secured_status` flags links whose least-cost line is ≥ 0.95 inside nodes + protected
+  land as already connected — `secured_by` = pa (existing PAs alone) / ipca (only once the IPCAs are realized) —
+  listed (T4), never examples; `corridors_unprotected.tif` = the land still to secure. Package knob
+  `wd.STYLE["protected_mode"]`: "overlay" (default: full bands, PA grey /// and IPCA teal \\ hatches, satisfied
+  links muted + outlined by layer) or "unprotected_only".
+- **Engine at Y2Y scale (M5, all default-off; the north byte-reproducible, cache `148af4ab9b8b898a` still
+  HITS):** compact CWD cache (`cwd_compact`, 69 MB/node), one mask per node, compact `cost_matrix`, per-run
+  BAND STORE (`band_cache`, `run_dir/band_cache/<tag>/`, bit-exact filter at 2× allowance; re-attach in
+  seconds) + early-stop tracebacks (`find_costs(ends=[target])`) — toy-verified + GW4 in 02.
+- **Package** = `wolverine_director.py` on the §3a contract (`corridors_mapstyle` gained TALL, refugia/node
+  tokens, windowed Y2Y hillshade, `place_labels`, `locator(window)`): W0 refugia+nodes, W0b cost, W0c what was
+  withheld, W1 corridor pressure, W2–W4 act crops (auto examples per act, N→S), T0–T2, GIS, QA. 04 = record,
+  05 = curated (`director_outputs/`). Knobs in `wd.STYLE`; label hand-placements `wd.FULL_SPEC`/`ACT_SPEC`.
+- **RUN = ETHAN, numeric order:** 01 (warps G2/GW1 → `node_patches` → **CHECK STOP 1** → acquisition →
+  terrain layers → τ → `derive_variant` GW2 → **CHECK STOP 2** → timing probe) → 02 (run on the VARIANT only;
+  G0, CWD ~2–3 h, inherited cutoff, network G3, GW4, G15, priority, write_run) → 03 (near-opt G10, branches G9,
+  finish) → 04 → 05. ~4–6 h of compute. Never headless-solve; zero-solve smokes tolerated (01 section A was
+  smoke-run at build time).
 
 ## Structure — two notebooks + shared config
 
@@ -708,7 +751,7 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 > direct-edge exclusion).
 > **2026-09-03: D17 'squeezed' class CONFIRMED as a counterfactual band ratio (H8 closed; NB04 step 2b
 > `cc.counterfactual_squeeze`, ~1 h extra CWD, G13) and the 06 DIRECTOR PACKAGE BUILT** for the October
-> workshop (`corridors_director.py` + `06_director_package.ipynb`; spec `analyses/northern_connectivity/spec/
+> workshop (`corridors_director.py` + `06_director_package.ipynb`, renamed `06_tables_and_figures` 2026-09-28; spec `analyses/northern_connectivity/spec/
 > 06_corridors_north_director_package_spec.md` v1.2 — two acts: north = room to choose, southern edge =
 > options closing; IPCAs taken as given; H8 gate enforced in code; settlement-lands layer PENDING for M2/T1).
 > Ethan runs NB04 (Run All) → 06. The 05 spec was regenerated by chat on 2026-09-03 and lost §8/§9 —
@@ -740,6 +783,14 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 > font / line weight / extent / export setting may live; figures = `corridors_director.figure_*` with hand-placed
 > label specs; run the §3a.3 QA before showing any figure; PDF + PNG. M0b built first; M1/M3/M2 pending
 > Ethan's sign-off. Basemap data (hillshade, NE water, Noto Sans) = cartography only.**
+> **2026-09-28: OUTPUT NOTEBOOKS RE-MAPPED TO THE Y2Y TRAIL (spec 06 v1.2.17, M5.21).** `06_director_package` → **`06_tables_and_figures`**
+> (the record, every output) + **`07_director_outputs`** (the curated few = the mirror of y2y 21): 01 movement cost, 02 "where the land still
+> offers choices", both on the **y2y Act 1 WIDE layout** via `director_plot.wide_map` (frame + insets A/B at right, key under A, legend under B,
+> 300 dpi PNG + PDF) through `corridors_director.director_frame` (300 m grid, PA nodes grey, IPCAs filled + outlined in the §3a tone, sector
+> window + 40 km, northern towns); surfaces categorical from the mapstyle tokens (`ms.COST` swatches, `ms.CLASS` pressure levels in the ramp
+> slot). `INSETS = "clusters"` (the package's clusters in the y2y schema `tables/picks.csv` + `geotiffs/clusters.gpkg` — THE NEXT STEP) |
+> `"interim"` (frames A/B, current). §3a template / Noto / `ms.inset` do not apply to 07; §3a still governs 06's record figures. Shared engine:
+> `director_plot.load_frame` + `C.PX_PER_KM` (y2y/Alberta unchanged, identity at 1 km; y2y M4.41). Ethan renders 07 (zero-render smoke passed).
 
 Standalone corridor analysis, NOT prioritizr: it **routes** between anchor areas, which the
 prioritizr connectivity penalty could not do (that aggregates permeable land; it cannot answer "how

@@ -507,7 +507,9 @@ climate-free by construction (D14).
 
 - **Step 0b** (added 2026-09-09/11): after the re-attach, `cc.corridor_profile` + `cc.gate_g15` + `cc.gate_g5` regenerate the audit, `centrality_compare.csv`, the D21 adjacency products (G17) and G5 on the loaded run without re-running notebook 02.
 
-### `06_director_package.ipynb` — the October-workshop package (added 2026-09-03)
+### `06_tables_and_figures.ipynb` (was `06_director_package` until 2026-09-28) — the October-workshop package (added 2026-09-03)
+
+The curated presentation set is `07_director_outputs.ipynb` (spec 06 v1.2.17, 2026-09-28: the y2y Act 1 wide layout).
 
 Read-only over the run via `cc.load_results` + `corridors_director.py` (root module; zero new
 solves): `cd.package` (disjoint D7/D12/D17 classes, axis-C attribution over PROPOSAL drops,

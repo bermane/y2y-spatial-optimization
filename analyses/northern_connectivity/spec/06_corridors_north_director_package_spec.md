@@ -1,8 +1,41 @@
 # Northern corridors — Director Package Spec
 
-**Status:** v1.2.14 (2026-09-11) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_director_package.ipynb`; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
+**Status:** v1.2.17 (2026-09-28) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_tables_and_figures.ipynb`, the record — renamed from `06_director_package` on 2026-09-28 — plus `07_director_outputs.ipynb`, the curated set on the y2y Act 1 wide layout; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
 
 ## Changelog
+- v1.2.17 (2026-09-28, Ethan) — **OUTPUT NOTEBOOKS RE-MAPPED TO THE Y2Y TRAIL + THE CURATED MAPS ON THE
+  Y2Y ACT 1 WIDE LAYOUT.** `06_director_package` → **`06_tables_and_figures`** (the record: every map,
+  star plot, table and GIS export; unchanged otherwise) and a new **`07_director_outputs`** (the curated
+  few, mirroring `analyses/y2y/21_director_outputs`). 07 opens with the movement-cost map (01) and
+  "where the land still offers choices" (02), both formatted EXACTLY like the y2y Act 1 maps —
+  `director_plot.wide_map`: 13.33 × 7.5 in slide, the frame panel at left, two zoom insets A / B
+  stacked at right, the key (ramp slot) under A, the legend under B, hillshade + Natural Earth
+  basemap, postal codes on the frame, PA / IPCA names + towns in the insets, Cronos Pro type, PNG at
+  300 dpi + a PDF twin. ONE codebase with the y2y package (`director_plot.load_frame` = the drawing
+  state split out of `load()`; every pixel constant is now a km constant × px-per-km, identity on the
+  1 km grid, so the y2y and Alberta outputs are unchanged). The §3a slide template, Noto Sans,
+  hand-drawn legend and `ms.inset` do NOT apply to 07's maps; §3a stays binding for 06's record
+  figures (M0b). Colours and words stay §3a's: `ms.CLASS` (the four pressure levels, drawn as a
+  categorical surface so the ramp slot is a four-swatch key), `ms.COST` (the magma swatches),
+  `ms.AREA["ipca"]` (IPCAs filled + outlined as network nodes; PAs in the layout's grey). **Insets =
+  the clusters the package builds next** (`director_package/tables/picks.csv` + `geotiffs/clusters.gpkg`
+  in the y2y schema → `INSETS = "clusters"`, sized on picks 1 and 2 by the y2y rule); until then
+  `"interim"` = the v1.2.13 frames A (options 1–2) and B (option 5), re-fitted to the panel aspect.
+  Cost map without corridors (v1.2.16 stands). Build: `corridors_director.director_frame /
+  inset_windows / cost_surface / classes_surface / figure_cost_wide / figure_choices_wide /
+  WIDE_STYLE`; methods_log M5.21. Same day: 07 · 03 = the route options 1–4 (`figure_options_wide`, M2 on the
+  wide layout); both insets at one map scale (`INSET_SAME_SCALE`). Inset B STAYS the Gwillim Lake ↔ Pine Le Moray
+  window (a first reading moved it to T’akú Tlatsini's links; withdrawn the same day). Instead the EXAMPLE NUMBERING
+  changes: 3 = Gwillim Lake ↔ Pine Le Moray (was 5), 4 = Gwillim Lake ↔ Monkman (NEW, a narrowing corridor inside B),
+  5–6 = T’akú Tlatsini's links (were 3–4), 7 = Wilps Gwininitxw ↔ Swan Lake, 8 = Carp Lake ↔ Pine Le Moray (unmarked);
+  07 · 03 colours each option by number in the y2y cluster palette with the y2y cluster swatch as its legend entry
+  ("Route options"). §2's example list and numbering are superseded accordingly (methods_log M5.21). Later the same day:
+  option colours in a permuted order (1 red, 2 blue, 3 magenta, 4 orange — no red beside magenta) and the **corridor-pressure
+  fills → four viridis steps** (#440154 / #44bf70 / #7ad151 / #fde725 for Minimum → Maximum; `corridors_mapstyle.CLASS_PALETTES`,
+  the Okabe set kept as "okabe"), every class ≥ ΔE 21 from the option colours, the IPCA fill and the PA grey under normal
+  and both simulated visions — §3a.1.1's class rows are superseded on every `ms.CLASS` consumer. Then, viridis rejected on
+  sight, **cividis steps** (#00224e / #aea371 / #d6c35d / #fee838, navy → olive → mustard → yellow; ΔE ≥ 22.7 vs every
+  neighbouring colour incl. the basemap; `"cividis_r"` registered).
 - v1.2.16 (2026-09-14, Ethan) — M0b carries **no corridor-pressure layer** (cost surface +
   jurisdictions only; legend groups Cost Surface / Jurisdictions); the cost swatches switch from
   greyscale to four **magma** samples (#FCF0B2 / #F9795D / #942C80 / #1A1042 for
@@ -59,7 +92,7 @@
 - v1.2.10 (2026-09-11, Ethan) — the neighbour universe is shown BESIDE the main output, not only
   in an appendix: **M1b** = M1 (left) | the same basemap with every D21 neighbour link as a line
   between area centres and each area's neighbour count (right); lines never bands; one legend.
-  `map_adjacency`, cell after M1 in `06_director_package`; needs notebook 04 step 0b's products.
+  `map_adjacency`, cell after M1 in `06_tables_and_figures` (was `06_director_package`); needs notebook 04 step 0b's products.
 - v1.2.9 (2026-09-11) — from 05 D21: `n_neighbours` available per name (appendix; optionally
   one phrase in the Act 1 narrative — "X could connect to N neighbouring areas"); `adjacency_map`
   in the appendix beside the tier/attribution maps, links as thin lines, never bands. No change
@@ -353,6 +386,11 @@ gap; a label that still collides is dropped, not shrunk. Halo on every label ove
   and the id only. The main-map label set does not repeat inside an inset; the inset has its
   own hand-placed list (≤ 6).
 - Same three-second rule: each inset exists to make one thing obvious, named in the spec.
+- **07 exception (v1.2.17, 2026-09-28):** the curated maps in `07_director_outputs` use the y2y Act 1
+  wide layout's insets instead (`director_plot`: two panels stacked at the right of the slide, windows
+  sized on the package's numbered clusters — interim: frames A / B of v1.2.13 — re-fitted to the panel
+  aspect, tag letters on the frame, a 50 km bar, up to five PA names + three IPCA names, towns). This
+  rule keeps governing 06's record figures.
 
 #### 3a.1.6 Layer order (bottom → top), identical on every map and inset
 
@@ -503,7 +541,7 @@ Prompt to Claude Code (verbatim is fine):
   tie-break, S1–S3 both-senses by `n_pairs_lost` then backup ratio, S4 min squeeze ratio),
   `link_profiles` (framing-1 profiles of every link → percentile chips), `map_m1..m4`,
   `profile_pages`, `table_t1`, `table_t2`, `build_deck` (via `director_core.build_deck`).
-- **`06_director_package.ipynb`**: read-only; outputs → `<run>/director_package/{figures,tables}`
+- **`06_director_package.ipynb`** (→ `06_tables_and_figures.ipynb`, 2026-09-28): read-only; outputs → `<run>/director_package/{figures,tables}`
   + `north_director_deck.pptx` + `deck_outline.md`.
 - Smoke-run on `v2_run002` (H8 open at the time): classes both 4 / edge 3 / squeezed 5 (analytic,
   withheld) / securing 33; examples N1, N2 = Liard River Corridor ↔ Nahanni (2 routes, spans
@@ -511,3 +549,11 @@ Prompt to Claude Code (verbatim is fine):
   Le Moray, S2 Tthetäwndëk ↔ Nj ‘Iinlii” Jjik, S3 Wilps Gwininitxw ↔ Swan Lake Kispiox; 4th
   both-senses (Wədzih Yiné' ↔ Chase) → appendix; N1 pair: 33,041 km² with → 37,412 km² without
   Dene Kʼéh Kusān (+4,371 km² of corridor need). Final figures land when Ethan runs 04 → 06.
+- **2026-09-28 (v1.2.17):** `06_director_package.ipynb` → `06_tables_and_figures.ipynb` (the record) +
+  `07_director_outputs.ipynb` (curated: 01 movement cost, 02 where the land still offers choices, on
+  the y2y wide layout via `director_plot.wide_map`; insets interim A / B until the clusters land; outputs
+  → `<run>/director_package/director_outputs/`). Zero-render smoke on `v2_run002`: frame 5,767 × 2,809 px
+  at 300 m (3.33 px/km), sector window + 40 km = (−67, 2942, −66, 5900) px (20 km past the raster's edge
+  where Y2Y meets the routing window — blank there, basemap continues), 10 IPCAs in the overlay, interim
+  windows A 152 × 214 km / B 114 × 83 km before the aspect fit, cost shares 88.2 / 5.4 / 0.3 / 6.1 %,
+  class cells 353,248 (31 / 7 / 3 / 4 links). Ethan renders 07.

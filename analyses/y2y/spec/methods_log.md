@@ -1326,3 +1326,23 @@ the next run of 19. **Timelapse order:** the balanced scenario's cells run low e
 **M4.40 addendum (Ethan, 2026-09-23): consequences tables — no fill on the reference columns, the Area row filled.** `STYLE["conseq_scale_rows"]
 = "clusters"` scales and fills each row over the cluster columns only (Banff / Dene Kʼéh Kusān stay plain); `conseq_fill_area` puts the
 Area row on the same red → blue ramp (log area, smallest → largest).
+**M4.41 director_plot made grid-agnostic for the northern package (2026-09-28, PRESENTATION ONLY; no y2y output changes).**
+`director_plot.load_frame(G, overlay=, window=, note=, towns=, pa_min_km2=)` now builds the drawing state (basemap, hillshade, admin
+lines, named PAs, the overlay in the IPCA role, the pixel window, the closures rings_px / draw_pa / draw_ipca / finish, the base handles)
+over ANY director_core-style grid; `load()` calls it and re-binds every member under its old name (verified zero-render: the 77-name
+namespace is complete, `finish`'s default note unchanged, the insets' town list identical). Every pixel constant in the wide layout is now
+a km constant × `C.PX_PER_KM` (= 1000 / cell size): the windowed scale bar and north arrow, the insets' 50 km bar, the inset tag offset
+(Act 1 and Act 2 maps), the cluster-number offset, the inset hillshade sampling (3× at 1 km → 1× at 300 m), and in director_core the
+scalebar / north-arrow text offsets and `label_areas_px`'s declutter distances and margins. On the 1 km grid the factor is exactly 1, so
+the Y2Y and Alberta outputs are unchanged by construction (arithmetic identity; not re-rendered in this session). `basemap_layer(towns=)`
+takes another package's town table; the insets draw the frame's own towns (`C.BM.towns`, = `Y2Y_TOWNS` here). New `STYLE["export_pdf"]`
+(default False) writes a .pdf twin beside a wide-layout PNG. Public name `wide_map`. Consumer: `analyses/northern_connectivity/
+07_director_outputs` via `corridors_director.director_frame` (northern methods_log M5.21, spec 06 v1.2.17).
+**M4.41 addendum (2026-09-28): a windowed frame's hillshade covers the window.** `load_frame` reads `read_hillshade_window(G, WINDOW, scale=1)`
+(one sample per grid pixel) and `finish` draws it with `draw_basemap(hs_extent=(x0, x1, y_bottom, y_top))` when a WINDOW is set; without one
+the raster-space read is unchanged (Y2Y). On an integer window inside the raster (Alberta) the values are the same as before; the change
+matters only where a window runs past the raster edge (the northern sector frame + 40 km), which had drawn the raster's shading footprint
+as a grey box inside the frame.
+**M4.41 addendum (2026-09-28): `cluster_handle(colors=)`.** The cluster swatch legend entry may carry an explicit colour list in swatch
+order (`_ClusterSwatches` reads it before the palette); without it the entry draws `STYLE["cluster_colors"]` N → S exactly as before. Used by
+the northern package's route-options map, whose options take the palette in a permuted order.

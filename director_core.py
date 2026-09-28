@@ -525,7 +525,7 @@ def scalebar(ax, G, km=250, loc=(0.70, 0.94), fs=8):     # loc = (x from left, y
     px_per_km = 1000 / abs(G.transform.a)
     x0, y0 = loc[0] * W, (1 - loc[1]) * H
     ax.plot([x0, x0 + km * px_per_km], [y0, y0], color="black", lw=2.5, solid_capstyle="butt", zorder=5)
-    ax.text(x0 + km * px_per_km / 2, y0 - 12, f"{km} km", ha="center", fontsize=fs, zorder=5)
+    ax.text(x0 + km * px_per_km / 2, y0 - 12 * px_per_km, f"{km} km", ha="center", fontsize=fs, zorder=5)   # offsets are km x px_per_km (= px on the 1 km grid)
 
 
 def corner_note(ax, text, loc="lower right"):
@@ -1116,7 +1116,7 @@ def _poly_rings_px(G, geom):
     return out
 
 
-def basemap_layer(G, pad_m=150e3, river_rank=6, min_share=0.015, keepout_km=50, edge_margin=0.035):
+def basemap_layer(G, pad_m=150e3, river_rank=6, min_share=0.015, keepout_km=50, edge_margin=0.035, towns=None):
     """Land polygons, lakes, rivers, the Y2Y outline, province label points and towns for the frame (map coordinates;
     drawn in pixel coordinates by draw_basemap). Province names sit at the pole of inaccessibility of the province's
     open land OUTSIDE the region (region buffered `keepout_km`) when that is at least a quarter of its area in frame."""
@@ -1135,7 +1135,7 @@ def basemap_layer(G, pad_m=150e3, river_rank=6, min_share=0.015, keepout_km=50, 
     rivers = rivers[(rivers.scalerank <= river_rank) & rivers.intersects(bbox)].copy(); rivers["geometry"] = rivers.geometry.intersection(bbox)
     region = gpd.read_file(config.CORRIDOR_REF).to_crs(G.crs).geometry.union_all()
     T = Transformer.from_crs("EPSG:4326", G.crs, always_xy=True)
-    town_pts = {n: T.transform(lon, lat) for n, (lat, lon) in Y2Y_TOWNS.items()}
+    town_pts = {n: T.transform(lon, lat) for n, (lat, lon) in (Y2Y_TOWNS if towns is None else towns).items()}   # `towns` = another package's table (the northern corridors, 2026-09-28)
     keep_out = unary_union([region.buffer(keepout_km * 1000)] + [Point(*xy).buffer(45_000) for xy in town_pts.values()])
     frame_area = (x1 - x0) * (y1 - y0)
     labels = []
@@ -1176,7 +1176,7 @@ def read_hillshade(G, path=HILLSHADE_PATH):
 
 
 def draw_basemap(ax, G, B, hs=None, water=True, names=True, towns=(), z_hs=0.6, alpha=None, fs_scale=1.0, window=None, name_fs=None,
-                 min_radius_km=(45, 18), avoid_sw=True, skip=()):
+                 min_radius_km=(45, 18), avoid_sw=True, skip=(), hs_extent=None):
     """names: True = full names in tracked caps (open land >= 45 km wide), 'abbrev' = postal codes (>= 18 km), False = none."""
     """Ocean ground, land fill, lakes + rivers, the region outline, province names, towns -- pixel coordinates."""
     from matplotlib.collections import PolyCollection
@@ -1185,7 +1185,7 @@ def draw_basemap(ax, G, B, hs=None, water=True, names=True, towns=(), z_hs=0.6, 
     ax.add_collection(PolyCollection([r for g in B.land.geometry for r in _poly_rings_px(G, g)], facecolors=BASEMAP["land"], edgecolors="none", zorder=0.1))
     if hs is not None:                                           # darkening-only multiply: alpha = 0.18 x (1 - shade)
         rgba = np.zeros(hs.shape + (4,), np.float32); rgba[..., 3] = (alpha or BASEMAP["hillshade_alpha"]) * (1.0 - hs.astype(np.float32) / 255.0)
-        ax.imshow(rgba, interpolation="bilinear", zorder=z_hs)
+        ax.imshow(rgba, interpolation="bilinear", zorder=z_hs, extent=hs_extent)     # hs_extent: a window-shaped hillshade (left, right, bottom, top in px); None = the raster
     if water:
         ax.add_collection(PolyCollection([r for g in B.lakes.geometry for r in _poly_rings_px(G, g)], facecolors=BASEMAP["water"], edgecolors="none", zorder=0.7))
         for _, r in B.rivers.iterrows():
@@ -1225,12 +1225,16 @@ def draw_basemap(ax, G, B, hs=None, water=True, names=True, towns=(), z_hs=0.6, 
                     path_effects=[_pe.withStroke(linewidth=2.0, foreground="white")])
 
 
-def north_arrow(ax, G, loc=(0.06, 0.055), length_px=70, fs=9):
-    """A plain north arrow (grid north) at an axes fraction (x from left, y from bottom)."""
+def north_arrow(ax, G, loc=(0.06, 0.055), length_px=None, fs=9):
+    """A plain north arrow (grid north) at an axes fraction (x from left, y from bottom). `length_px` defaults to 70 km in this
+    grid's pixels (70 px on the 1 km grid; the text offset scales the same way, so a 300 m frame draws the same arrow)."""
     H, W = G.shape
+    px_per_km = 1000 / abs(G.transform.a)
+    if length_px is None:
+        length_px = 70 * px_per_km
     x, y1 = loc[0] * W, (1 - loc[1]) * H; y0 = y1 - length_px
     ax.annotate("", xy=(x, y0), xytext=(x, y1), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
-    ax.text(x, y0 - 6, "N", ha="center", va="bottom", fontsize=fs, fontweight=600, zorder=5)
+    ax.text(x, y0 - 6 * px_per_km, "N", ha="center", va="bottom", fontsize=fs, fontweight=600, zorder=5)
 
 
 def read_hillshade_window(G, window, scale=3, path=HILLSHADE_PATH):
@@ -1254,7 +1258,7 @@ def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, 
     px0, px1, py0, py1 = window
     x0 = G.transform.c + px0 * G.transform.a; x1 = G.transform.c + px1 * G.transform.a
     yt = G.transform.f + py0 * G.transform.e; yb = G.transform.f + py1 * G.transform.e
-    win = shp_box(x0, yb, x1, yt)
+    win = shp_box(x0, yb, x1, yt); ppk = 1000 / abs(G.transform.a)                 # declutter distances / margins are km x px_per_km (= px on the 1 km grid)
     g = gdf[gdf.intersects(win)].copy()
     if not len(g):
         return taken or []
@@ -1265,7 +1269,7 @@ def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, 
     span = px1 - px0
     for _, r in g.iterrows():
         pt = r.geometry.representative_point(); px, py = xy_to_px(G, pt.x, pt.y)
-        if any(abs(px - tx) < 16 * fs and abs(py - ty) < 3.3 * fs for tx, ty in taken):
+        if any(abs(px - tx) < 16 * fs * ppk and abs(py - ty) < 3.3 * fs * ppk for tx, ty in taken):
             continue
         ax_w_in = ax.get_position(original=True).width * ax.figure.get_figwidth()                      # the axes box width in inches (before aspect)
         px_per_in = span / max(ax_w_in, 1e-6)                                                             # data px per inch
@@ -1273,7 +1277,7 @@ def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, 
         name = "\n".join(_tw.wrap(str(r[name_col]).split(" [")[0].split(" (")[0], chars))
         half = 0.5 * max(len(l) for l in name.split("\n")) * 0.5 * fs / 72 * px_per_in                  # ~half label width (data px)
         hh = 0.5 * len(name.split("\n")) * 1.2 * fs / 72 * px_per_in                                    # ~half label height
-        px = float(np.clip(px, px0 + half + 3, px1 - half - 3)); py = float(np.clip(py, py0 + hh + 3, py1 - hh - 3))   # inside the window
+        px = float(np.clip(px, px0 + half + 3 * ppk, px1 - half - 3 * ppk)); py = float(np.clip(py, py0 + hh + 3 * ppk, py1 - hh - 3 * ppk))   # inside the window
         ax.text(px, py, name, fontsize=fs, fontstyle="italic", color=color, ha="center", va="center", zorder=5.5, clip_on=True, linespacing=1.1,
                 path_effects=[_pe.withStroke(linewidth=2.0, foreground="white", alpha=0.9)])
         taken.append((px, py))

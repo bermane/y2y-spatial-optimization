@@ -1,0 +1,68 @@
+﻿node_id,name_label,label_auto,display_name,area_km2,n_cells,lat,lon,pa_overlap_name,pa_overlap_frac,nearest_pa,nearest_pa_km,bearing,share_north_model
+1,Refugium · R01 Nááts’Ihch’Oh National Park Reserve Of Canada (N),Nááts’Ihch’Oh National Park Reserve Of Canada (N),,1671.8,18575,63.6498,-128.9375,,0.0,Nááts’Ihch’Oh National Park Reserve Of Canada,70.5,N,1.0
+2,Refugium · R02 Nááts’Ihch’Oh National Park Reserve Of Canada (N),Nááts’Ihch’Oh National Park Reserve Of Canada (N),,1083.4,12038,63.1616,-129.1212,Nááts’Ihch’Oh National Park Reserve Of Canada,0.041,Nááts’Ihch’Oh National Park Reserve Of Canada,18.0,N,1.0
+3,Refugium · R03 Nááts’Ihch’Oh National Park Reserve Of Canada (NE),Nááts’Ihch’Oh National Park Reserve Of Canada (NE),,1243.9,13821,63.3178,-127.434,,0.0,Nááts’Ihch’Oh National Park Reserve Of Canada,43.7,NE,1.0
+4,Refugium · R04 Nááts’Ihch’Oh National Park Reserve Of Canada,Nááts’Ihch’Oh National Park Reserve Of Canada,,651.7,7241,62.8923,-128.7412,Nááts’Ihch’Oh National Park Reserve Of Canada,0.22,Nááts’Ihch’Oh National Park Reserve Of Canada,12.4,N,1.0
+5,Refugium · R05 Nááts’Ihch’Oh National Park Reserve Of Canada,Nááts’Ihch’Oh National Park Reserve Of Canada,,628.2,6980,62.5208,-128.2766,Nááts’Ihch’Oh National Park Reserve Of Canada,0.874,Nááts’Ihch’Oh National Park Reserve Of Canada,0.0,S,1.0
+6,Refugium · R06 Nááts’Ihch’Oh National Park Reserve Of Canada,Nááts’Ihch’Oh National Park Reserve Of Canada,,648.4,7205,62.1826,-129.1152,Nááts’Ihch’Oh National Park Reserve Of Canada,0.279,Nááts’Ihch’Oh National Park Reserve Of Canada,0.0,SW,1.0
+7,Refugium · R07 Nahanni National Park Reserve Of Canada,Nahanni National Park Reserve Of Canada,,6418.7,71319,62.5324,-126.9039,Nahanni National Park Reserve Of Canada,0.277,Nahanni National Park Reserve Of Canada,15.5,N,1.0
+8,Refugium · R08 Nahanni National Park Reserve Of Canada (NW),Nahanni National Park Reserve Of Canada (NW),,682.1,7579,61.8642,-128.9953,,0.0,Nahanni National Park Reserve Of Canada,25.6,NW,1.0
+9,Refugium · R09 Nahanni National Park Reserve Of Canada,Nahanni National Park Reserve Of Canada,,2030.8,22564,62.033,-127.8587,Nahanni National Park Reserve Of Canada,0.847,Nahanni National Park Reserve Of Canada,0.0,NW,1.0
+10,Refugium · R10 Nahanni National Park Reserve Of Canada (NW),Nahanni National Park Reserve Of Canada (NW),,882.9,9810,61.7716,-128.1023,,0.0,Nahanni National Park Reserve Of Canada,14.9,NW,1.0
+11,Refugium · R11 Nahanni National Park Reserve Of Canada,Nahanni National Park Reserve Of Canada,,600.0,6667,61.6672,-126.9601,Nahanni National Park Reserve Of Canada,1.0,Nahanni National Park Reserve Of Canada,0.0,NW,1.0
+12,Refugium · R12 Nahanni National Park Reserve Of Canada (W),Nahanni National Park Reserve Of Canada (W),,1007.9,11199,61.3753,-127.6419,,0.0,Nahanni National Park Reserve Of Canada,30.9,W,1.0
+13,Refugium · R13 Stikine River Park (NW),Stikine River Park (NW),,743.1,8257,58.4044,-131.4502,,0.0,Stikine River Park,49.7,NW,1.0
+14,Refugium · R14 Denetiah Corridor Protected Area (W),Denetiah Corridor Protected Area (W),,694.8,7720,58.5148,-128.3389,,0.0,Denetiah Corridor Protected Area,34.0,W,1.0
+15,Refugium · R15 Pitman River Protected Area (E),Pitman River Protected Area (E),,695.6,7729,58.1449,-127.4476,Pitman River Protected Area,0.0,Pitman River Protected Area,11.2,E,1.0
+16,Refugium · R16 Mount Edziza Park,Mount Edziza Park,,1565.4,17393,57.4316,-130.6547,Mount Edziza Park,0.66,Mount Edziza Park,0.0,S,1.0
+17,Refugium · R17 Spatsizi Plateau Wilderness Park,Spatsizi Plateau Wilderness Park,,584.0,6489,57.7642,-128.5972,Spatsizi Plateau Wilderness Park,1.0,Spatsizi Plateau Wilderness Park,0.0,N,1.0
+18,Refugium · R18 Pitman River Protected Area (S),Pitman River Protected Area (S),,862.7,9586,57.8688,-127.6956,Pitman River Protected Area,0.001,Pitman River Protected Area,13.7,S,1.0
+19,Refugium · R19 Northern Rocky Mountains Park,Northern Rocky Mountains Park,,7898.4,87760,58.2824,-125.2133,Northern Rocky Mountains Park,0.307,Dune Za Keyih Park [A.k.a. Frog Gataga Park],18.3,E,1.0
+20,Refugium · R20 Todagin South Slope Park (S),Todagin South Slope Park (S),,1018.4,11316,57.4369,-129.7725,,0.0,Todagin South Slope Park,20.4,S,1.0
+21,Refugium · R21 Dune Za Keyih Park [A.k.a. Frog Gataga Park],Dune Za Keyih Park [A.k.a. Frog Gataga Park],,846.2,9402,58.1069,-125.9888,Dune Za Keyih Park [A.k.a. Frog Gataga Park],0.274,Dune Za Keyih Park [A.k.a. Frog Gataga Park],5.1,S,1.0
+22,Refugium · R22 Chukachida Protected Area (NE),Chukachida Protected Area (NE),,1201.2,13347,57.9454,-126.8568,,0.0,Chukachida Protected Area,22.2,NE,1.0
+23,Refugium · R23 Spatsizi Plateau Wilderness Park,Spatsizi Plateau Wilderness Park,,994.0,11044,57.5283,-128.911,Spatsizi Plateau Wilderness Park,0.607,Gladys Lake Ecological Reserve,0.0,SW,1.0
+24,Refugium · R24 Spatsizi Plateau Wilderness Park,Spatsizi Plateau Wilderness Park,,528.0,5867,57.5095,-128.3455,Spatsizi Plateau Wilderness Park,1.0,Spatsizi Plateau Wilderness Park,0.0,SE,1.0
+25,Refugium · R25 Spatsizi Plateau Wilderness Park,Spatsizi Plateau Wilderness Park,,600.4,6671,57.4563,-127.9315,Spatsizi Plateau Wilderness Park,1.0,Spatsizi Plateau Wilderness Park,0.0,SE,1.0
+26,Refugium · R26 Ningunsaw Park (E),Ningunsaw Park (E),,1148.0,12756,57.0761,-129.4751,,0.0,Ningunsaw Park,39.3,E,1.0
+27,Refugium · R27 Spatsizi Plateau Wilderness Park,Spatsizi Plateau Wilderness Park,,725.3,8059,57.2218,-127.4936,Spatsizi Plateau Wilderness Park,0.244,Spatsizi Plateau Wilderness Park,0.0,SE,1.0
+28,Refugium · R28 Tatlatui Park (NE),Tatlatui Park (NE),,523.8,5820,57.2842,-127.0081,,0.0,Tatlatui Park,15.0,NE,1.0
+29,Refugium · R29 Finlay Russel Park (SW),Finlay Russel Park (SW),,1612.8,17920,57.1457,-126.3628,Finlay Russel Park,0.004,Finlay Russel Park,22.1,SW,1.0
+30,Refugium · R30 Finlay Russel Park,Finlay Russel Park,,689.9,7666,57.1609,-125.7329,Finlay Russel Park,0.269,Finlay Russel Park,3.4,S,1.0
+31,Refugium · R31 Tatlatui Park,Tatlatui Park,,1865.6,20729,56.8602,-127.4346,Tatlatui Park,0.317,Tatlatui Park,0.0,SW,1.0
+32,Refugium · R32 Redfern Keily Park,Redfern Keily Park,,3459.6,38440,57.3775,-124.2878,Redfern Keily Park,0.144,Redfern Keily Park,9.6,W,1.0
+33,Refugium · R33 Damdochax Protected Area (NE),Damdochax Protected Area (NE),,645.9,7177,56.481,-127.76,Damdochax Protected Area,0.0,Damdochax Protected Area,8.5,NE,1.0
+34,Refugium · R34 Swan Lake Kispiox River Park (NE),Swan Lake Kispiox River Park (NE),,908.7,10097,56.1382,-128.3324,Swan Lake Kispiox River Park,0.031,Swan Lake Kispiox River Park,11.7,NE,1.0
+35,Refugium · R35 Sustut Park (E),Sustut Park (E),,2759.4,30660,56.4959,-125.9277,,0.0,Sustut Park,27.6,E,1.0
+36,Refugium · R36 Sustut Park (SW),Sustut Park (SW),,1117.6,12418,56.0187,-127.2349,,0.0,Sustut Park,30.6,SW,1.0
+37,Refugium · R37 Babine River Corridor Park (N),Babine River Corridor Park (N),,857.0,9522,55.9226,-127.5456,,0.0,Babine River Corridor Park,25.0,N,1.0
+38,Refugium · R38 Graham Laurier Park (SW),Graham Laurier Park (SW),,500.8,5565,56.2959,-123.5831,Graham Laurier Park,0.054,Graham Laurier Park,12.4,SW,1.0
+39,Refugium · R39 Klin Se Za Park (W),Klin Se Za Park (W),,1406.1,15623,55.7558,-122.7201,Klin Se Za Park,0.019,Klin Se Za Park,8.3,W,1.0
+40,Refugium · R40 Heather Dina Lakes Park (NE),Heather Dina Lakes Park (NE),,1829.2,20324,55.6176,-123.1305,Patsuk Creek Ecological Reserve,0.0,Heather Dina Lakes Park,9.9,NE,1.0
+41,Refugium · R41 Bowron Lake Park (NW),Bowron Lake Park (NW),,1553.9,17266,53.217,-121.5411,Bowron Lake Park,0.002,Bowron Lake Park,7.3,NW,0.003
+42,Refugium · R42 Jasper National Park Of Canada,Jasper National Park Of Canada,,78453.7,871708,52.4184,-118.2163,Jasper National Park Of Canada,0.12,Jasper National Park Of Canada,0.0,SW,0.2
+43,Refugium · R43 Wells Gray Park,Wells Gray Park,,32327.4,359193,52.0033,-119.5901,Wells Gray Park,0.132,Wells Gray Park,0.0,SE,0.0
+44,Refugium · R44 Pukeashun Park (S),Pukeashun Park (S),,654.4,7271,51.1718,-119.2525,Pukeashun Park,0.027,Pukeashun Park,0.0,S,0.0
+45,Refugium · R45 Kingfisher Creek Ecological Reserve (NE),Kingfisher Creek Ecological Reserve (NE),,638.6,7096,50.8028,-118.7696,Kingfisher Creek Ecological Reserve,0.023,Kingfisher Creek Ecological Reserve,0.0,NE,0.0
+46,Refugium · R46 Kootenay National Park Of Canada,Kootenay National Park Of Canada,,517.2,5747,50.9846,-116.3715,Kootenay National Park Of Canada,0.181,Columbia Wetlands Wildlife Management Area,4.1,SE,0.0
+47,Refugium · R47 Goat Range Park,Goat Range Park,,4289.7,47663,50.1412,-117.3418,Goat Range Park,0.176,Goat Range Park,0.0,SW,0.0
+48,Refugium · R48 Elbow Sheep Wildland,Elbow Sheep Wildland,,1480.3,16448,50.2839,-114.7894,Elbow Sheep Wildland,0.247,Don Getty Wildland,2.0,S,0.0
+49,Refugium · R49 Valhalla Park,Valhalla Park,,2255.7,25063,49.7867,-117.7747,Valhalla Park,0.185,Valhalla Park,2.3,SW,0.0
+50,Refugium · R50 Top Of The World Park (NE),Top Of The World Park (NE),,1296.7,14408,49.8676,-115.377,Top Of The World Park,0.068,Top Of The World Park,0.0,NE,0.0
+51,Refugium · R51 Gilnockie Park (N),Gilnockie Park (N),,560.9,6232,49.2081,-115.7665,Gilnockie Park,0.015,Gilnockie Park,11.5,N,0.0
+52,Refugium · R52 Snowy Top (E),Snowy Top (E),,4101.3,45570,49.0052,-116.9052,West Arm Park,0.052,Snowy Top,4.0,E,0.0
+53,Refugium · R53 Hoskins Lake (E),Hoskins Lake (E),,538.8,5987,48.9103,-115.4641,,0.0,Hoskins Lake,12.0,E,0.0
+54,Refugium · R54 Scotchman No. 2 (N),Scotchman No. 2 (N),,804.5,8939,48.3612,-116.1115,Hunt Girl Creek,0.007,Scotchman No. 2,15.5,N,0.0
+55,Refugium · R55 Glacier,Glacier,,10770.9,119677,48.4679,-113.8012,Glacier,0.194,Glacier,0.0,S,0.0
+56,Refugium · R56 Cabinet Mountains Wilderness,Cabinet Mountains Wilderness,,628.2,6980,48.1652,-115.6604,Cabinet Mountains Wilderness,0.579,Cabinet Mountains Wilderness,0.0,S,0.0
+57,Refugium · R57 Bob Marshall Wilderness,Bob Marshall Wilderness,,2785.9,30955,47.6171,-113.4954,Bob Marshall Wilderness,0.436,Bob Marshall Wilderness,0.0,W,0.0
+58,Refugium · R58 Mission Mountains Tribal Wilderness,Mission Mountains Tribal Wilderness,,1532.1,17023,47.3312,-113.8509,Mission Mountains Tribal Wilderness,0.398,Mission Mountains Tribal Wilderness,0.0,S,0.0
+59,Refugium · R59 Selway Bitterroot Wilderness,Selway Bitterroot Wilderness,,15305.5,170061,46.3918,-114.8508,Selway Bitterroot Wilderness,0.249,Selway Bitterroot Wilderness,0.0,N,0.0
+60,Refugium · R60 Sapphire Divide (N),Sapphire Divide (N),,617.9,6866,46.1868,-113.7925,Sapphire Divide,0.008,Sapphire Divide,9.2,N,0.0
+61,Refugium · R61 Gospel Hump Wilderness,Gospel Hump Wilderness,,982.0,10911,45.6103,-115.7238,Gospel Hump Wilderness,0.564,Gospel Hump Wilderness,0.0,NE,0.0
+62,Refugium · R62 Eagle Cap Wilderness,Eagle Cap Wilderness,,1544.0,17156,45.1908,-117.3674,Eagle Cap Wilderness,0.725,Eagle Cap Wilderness,0.0,S,0.0
+63,Refugium · R63 Frank Church River Of No Return Wilderness,Frank Church River Of No Return Wilderness,,13887.0,154300,44.4891,-115.2237,Frank Church River Of No Return Wilderness,0.187,Frank Church River Of No Return Wilderness,0.0,SW,0.0
+64,Refugium · R64 Yellowstone National Park,Yellowstone National Park,,20659.3,229548,44.4786,-110.4247,Yellowstone National Park,0.312,Yellowstone National Park,0.0,SE,0.009
+65,Refugium · R65 Gros Ventre Wilderness,Gros Ventre Wilderness,,1079.5,11995,43.3967,-110.4034,Gros Ventre Wilderness,0.695,Gros Ventre Wilderness,0.0,S,0.0
+66,Refugium · R66 Bridger Wilderness,Bridger Wilderness,,2377.3,26415,43.0255,-109.4971,Bridger Wilderness,0.554,Fitzpatrick Wilderness,0.0,S,0.0
+67,Refugium · R67 Swift Creek (SE),Swift Creek (SE),,3137.9,34866,42.6965,-110.6631,Swift Creek,0.005,Swift Creek,8.9,SE,0.0

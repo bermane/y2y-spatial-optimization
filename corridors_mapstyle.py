@@ -27,20 +27,52 @@ BASEMAP_DIR = config.INPUT_DIR / "basemap"
 
 # ================= §1.1 palette =================
 # Analysis hues -- the only saturated colours on any map
-CLASS = {                       # key: (fill, outline or None, hatch or None, director string)
-    # legend heading "Corridor Pressure", four levels (Ethan, 2026-09-11)
-    # Minimum: periwinkle -- the contract's light blue-grey (#AFC3CF) was dE 3-8 from the IPCA
-    # fill on white (#A7CACB); periwinkle clears dE 20 from every other element under both CVD
-    # simulations. Maximum: hard red (Ethan), dE 30 from vermilion under deuteranopia + hatch.
-    "securing": ("#A6A6D9", None, None, "Minimum (options)"),
-    "squeezed": ("#E69F00", None, None, "Some (narrowing)"),
-    "edge":     ("#D55E00", None, None, "A lot (last affordable)"),
-    "both":     ("#E41A1C", None, None, "Maximum (only viable connection)"),   # plain red, no outline / hatch (Ethan)
+CLASS_PALETTES = {              # fill per class; switch with set_class_palette (every consumer reads `CLASS`)
+    # "okabe" (2026-09-11 -- 2026-09-28): the contract's Okabe-Ito set. Minimum: periwinkle -- the contract's light blue-grey
+    # (#AFC3CF) was dE 3-8 from the IPCA fill on white (#A7CACB); periwinkle clears dE 20 from every other element under both
+    # CVD simulations. Maximum: hard red (Ethan), dE 30 from vermilion under deuteranopia.
+    "okabe":   {"securing": "#A6A6D9", "squeezed": "#E69F00", "edge": "#D55E00", "both": "#E41A1C"},
+    # "viridis" (Ethan 2026-09-28, the deck's 07 maps draw the route options in the y2y cluster colours -- red, blue, magenta,
+    # orange -- and the Okabe orange sat dE 7 from the option orange): four viridis steps at CMAP_STEPS["viridis"], dark purple ->
+    # green -> light green -> yellow for Minimum -> Maximum (the y2y ramp's own reading: purple low, yellow the top). Chosen by
+    # a grid search over step positions: every class >= dE 21.3 (CIE76) from every other class, every option colour, the IPCA
+    # fill and the PA grey under normal vision, deuteranopia and protanopia (the worst pair: green vs the PA grey, deutan).
+    "viridis": {"securing": "#440154", "squeezed": "#44bf70", "edge": "#7ad151", "both": "#fde725"},
+    # "cividis" (Ethan 2026-09-28, later: the viridis steps rejected on sight -- the dark-purple mass and two greens): four
+    # cividis steps at CMAP_STEPS["cividis"], navy -> olive -> mustard -> yellow for Minimum -> Maximum (yellow = the top, as
+    # on the y2y ramp; cividis is built for colour-vision deficiency and its mid-tones are muted, so the saturated route
+    # options sit on top of it). Same grid search: every class >= dE 22.7 from every option colour, the IPCA fill, the PA
+    # grey and the basemap land / water under normal vision, deuteranopia and protanopia (worst: mustard vs the option
+    # orange, deutan); the classes >= 28 apart from each other. "cividis_r" = the same steps the other way (Minimum yellow).
+    "cividis":   {"securing": "#00224e", "squeezed": "#aea371", "edge": "#d6c35d", "both": "#fee838"},
+    "cividis_r": {"securing": "#fee838", "squeezed": "#d6c35d", "edge": "#aea371", "both": "#00224e"},
 }
+CMAP_STEPS = {"viridis": (0.0, 0.70, 0.80, 1.0), "cividis": (0.0, 0.70, 0.85, 1.0)}   # matplotlib colormap positions behind the sampled palettes, Minimum -> Maximum
+CLASS_PALETTE = "cividis"
+CLASS_WORDS = {"securing": "Minimum (options)", "squeezed": "Some (narrowing)", "edge": "A lot (last affordable)",
+               "both": "Maximum (only viable connection)"}         # legend heading "Corridor Pressure", four levels (Ethan, 2026-09-11)
+CLASS = {c: (CLASS_PALETTES[CLASS_PALETTE][c], None, None, CLASS_WORDS[c]) for c in CLASS_WORDS}   # key: (fill, outline or None, hatch or None, director string); plain fills, no outline / hatch (Ethan)
 CLASS_HEADING = "Corridor Pressure"
 CLASS_ORDER = ["securing", "squeezed", "edge", "both"]          # draw + legend order
+
+
+def set_class_palette(name):
+    """Switch the corridor-pressure fills in place (every figure, export and QA reads `CLASS`)."""
+    global CLASS_PALETTE
+    CLASS_PALETTE = name
+    for c in CLASS_WORDS:
+        CLASS[c] = (CLASS_PALETTES[name][c], None, None, CLASS_WORDS[c])
 AREA = {"ipca": dict(fill="#5F9EA0", alpha=0.55, edge="#3E6F70", lw=0.5, label="Proposed IPCAs"),
-        "pa":   dict(fill="#9A9A9A", alpha=0.55, edge="#6E6E6E", lw=0.5, label="Existing Protected Areas")}
+        "pa":   dict(fill="#9A9A9A", alpha=0.55, edge="#6E6E6E", lw=0.5, label="Existing Protected Areas"),
+        # wolverine package (2026-09-28): refugia fills + outline-only PA context. Measured with
+        # cvd_separability: every pale marginal tint fails against a FILLED PA grey (dE 9-18), so
+        # PAs are context outlines there; core #238B45 @0.85 / marginal #C5E1A5 @0.70 clear dE 20
+        # against the four class hues and the water blue under both simulations.
+        "refugia_core":     dict(fill="#238B45", alpha=0.85, edge=None, lw=0, label="Wolverine climate refugia: core"),
+        "refugia_marginal": dict(fill="#C5E1A5", alpha=0.70, edge=None, lw=0, label="Wolverine climate refugia: marginal"),
+        "pa_outline":       dict(fill=None, alpha=0.0, edge="#6E6E6E", lw=0.5, label="Existing protected areas (context)"),
+        "ipca_outline":     dict(fill=None, alpha=0.0, edge="#3E6F70", lw=0.7, label="Proposed IPCAs / PAs (taken as given; context)")}
+NODE = dict(edge="#1A1A1A", lw=0.6, chip_fs=6.5, chip_fc="white", chip_ec="#1A1A1A")   # numbered node outlines + chips
 BASE = dict(land="#F7F7F5", water="#CFE0EA", ocean="#E4EEF3", coast=("#9CB3C0", 0.3),
             admin=("#7A7A7A", 0.6, (4, 2)), sector=("#333333", 1.0), y2y=("#333333", 0.8, (6, 3)),
             hillshade_alpha=0.18, inset_box=("#333333", 0.8), leader=("#333333", 0.6))
@@ -64,7 +96,8 @@ def set_cost_palette(name):
     COST_PALETTE = name
     COST = {c: (COST_PALETTES[name][c], COST_LABELS[c]) for c in (1, 10, 100, 1000)}
 # layer z-order (§1.6)
-Z = dict(ocean=0, land=1, cost=1.5, hillshade=2, water=3, pa=4, ipca=5, securing=6, squeezed=7, edge=8,
+Z = dict(ocean=0, land=1, cost=1.5, hillshade=2, water=3, refugia_marginal=3.5, refugia_core=3.7, pa=4,
+         pa_outline=4.1, ipca_outline=4.15, node=4.2, ipca=5, securing=6, squeezed=7, edge=8,
          both=9, boundary=10, inset_box=11, label_jur=12, label_area=13, label_town=14, label_note=15)
 
 # ================= §1.2 type =================
@@ -111,14 +144,24 @@ SLIDE = dict(size=(13.33, 7.5), map=[0.02, 0.085, 0.50, 0.83],
 REPORT = dict(size=(8.5, 11.0), map=[0.04, 0.24, 0.92, 0.70],
               locator=[0.05, 0.03, 0.22, 0.19], legend=[0.30, 0.03, 0.45, 0.19],
               scale=[0.78, 0.03, 0.18, 0.19], title_xy=(0.04, 0.965), caption_xy=(0.04, 0.005))
+# TALL (wolverine, 2026-09-28): a portrait page whose map panel takes the full height, for the
+# 0.39-aspect Y2Y frame (~343 km/in); furniture column on the right = legend (top), a two-column
+# node key (`ns.key`, middle), scale + north (bottom). No locator (the frame IS the region).
+TALL = dict(size=(8.5, 11.0), map=[0.02, 0.03, 0.48, 0.90],
+            legend=[0.53, 0.56, 0.45, 0.37], key=[0.53, 0.14, 0.45, 0.41],
+            scale=[0.53, 0.03, 0.30, 0.09], title_xy=(0.02, 0.955), caption_xy=(0.02, 0.006))
+TEMPLATES = {"slide": SLIDE, "report": REPORT, "tall": TALL}
 
 
 def new_figure(title, template="slide", locator=True):
-    """Slide (16:9) or report (portrait) page: map panel + furniture column/row. Returns
-    (fig, ns) with ns.map / ns.locator / ns.legend / ns.scale axes, all decorations off.
-    `locator=False` drops the locator and gives its space to the legend (Ethan, M0b)."""
-    T = dict(SLIDE if template == "slide" else REPORT)
-    if not locator:
+    """Slide (16:9), report (portrait) or tall (portrait, full-height map) page: map panel +
+    furniture. Returns (fig, ns) with ns.map / ns.locator / ns.legend / ns.scale (and ns.key on
+    tall) axes, all decorations off. `locator=False` drops the locator and gives its space to
+    the legend (Ethan, M0b)."""
+    T = dict(TEMPLATES[template])
+    if locator and "locator" not in T:
+        locator = False
+    if not locator and "locator" in T:
         L, S_ = T["legend"], T["locator"]
         T["legend"] = [L[0], L[1], max(L[2], S_[2]), (S_[1] + S_[3]) - L[1]]
     fig = plt.figure(figsize=T["size"])
@@ -128,7 +171,8 @@ def new_figure(title, template="slide", locator=True):
     for sp in ax.spines.values():
         sp.set_visible(False)
     furniture = {}
-    for key in (("locator", "legend", "scale") if locator else ("legend", "scale")):
+    keys = [k for k in ("locator", "legend", "key", "scale") if k in T and (k != "locator" or locator)]
+    for key in keys:
         a = fig.add_axes(T[key]); a.axis("off"); furniture[key] = a
     size, w, st, col, _ = TYPE["title"]
     fig.text(*T["title_xy"], title, fontsize=size, fontweight=w, color=col, ha="left", va="bottom")
@@ -206,28 +250,56 @@ def draw_land(ax, R, XL, YL):
     land.dissolve(by="admin").boundary.plot(ax=ax, color=col, linewidth=lw, zorder=Z["boundary"] - 0.5)
 
 
-def draw_cost(ax, R):
+def _da_step(R, arr, step):
+    """A DataArray on the template grid, optionally decimated by `step` (full-frame pages: at
+    300 dpi one output pixel is ~1 km, so step 3 on the 300 m grid loses nothing)."""
+    if step <= 1:
+        return R.template.copy(data=arr)
+    sub = R.template.isel(y=slice(None, None, step), x=slice(None, None, step))
+    return sub.copy(data=arr[::step, ::step])
+
+
+def draw_cost(ax, R, step=1):
     """Context figure only: four flat greyscale swatches; water is drawn separately (blue)."""
     cost = R.resistance.values
     idx = np.where(cost > 0, np.round(np.log10(np.where(cost > 0, cost, 1))), np.nan).astype("float32")
-    da = R.template.copy(data=idx)
+    da = _da_step(R, idx, step)
     da.plot.imshow(ax=ax, cmap=ListedColormap([COST[c][0] for c in (1, 10, 100, 1000)]),
                    vmin=-0.5, vmax=3.5, add_colorbar=False, zorder=Z["cost"])
     ax.set_title(""); ax.set_xlabel(""); ax.set_ylabel("")
 
 
-def draw_hillshade(ax, R):
-    """Greyscale hillshade as a darkening-only overlay (multiply at 18%): alpha = 0.18 x shade."""
-    p = BASEMAP_DIR / "hillshade_300m.tif"
+def draw_hillshade(ax, R, path=None, XL=None, YL=None, max_px=2400):
+    """Greyscale hillshade as a darkening-only overlay (multiply at 18%): alpha = 0.18 x shade.
+    `path` defaults to the northern sector file; the Y2Y-wide file is read WINDOWED to (XL, YL)
+    and decimated to <= max_px on its long side (the full file is 52.5 M px)."""
+    p = pathlib.Path(path) if path else BASEMAP_DIR / "hillshade_300m.tif"
     if not p.exists():
         return False
-    import rioxarray
-    hs = rioxarray.open_rasterio(p, masked=True).squeeze()
-    v = np.nan_to_num(hs.values.astype("float32"), nan=255.0) / 255.0
+    if XL is None or YL is None:
+        import rioxarray
+        hs = rioxarray.open_rasterio(p, masked=True).squeeze()
+        v = np.nan_to_num(hs.values.astype("float32"), nan=255.0) / 255.0
+        ext = [float(hs.x.min()), float(hs.x.max()), float(hs.y.min()), float(hs.y.max())]
+    else:
+        import rasterio
+        from rasterio.windows import from_bounds
+        from rasterio.enums import Resampling
+        with rasterio.open(p) as src:
+            b = src.bounds
+            x0, x1 = max(XL[0], b.left), min(XL[1], b.right); y0, y1 = max(YL[0], b.bottom), min(YL[1], b.top)
+            if x1 <= x0 or y1 <= y0:
+                return False
+            win = from_bounds(x0, y0, x1, y1, src.transform)
+            h, w = int(round(win.height)), int(round(win.width))
+            f = max(1.0, max(h, w) / float(max_px))
+            arr = src.read(1, window=win, out_shape=(max(1, int(h / f)), max(1, int(w / f))),
+                           resampling=Resampling.average, masked=True)
+            v = np.nan_to_num(np.ma.filled(arr.astype("float32"), 255.0), nan=255.0) / 255.0
+            ext = [x0, x1, y0, y1]
     rgba = np.zeros(v.shape + (4,), "float32")
     rgba[..., 3] = BASE["hillshade_alpha"] * (1.0 - v)
-    ax.imshow(rgba, extent=[float(hs.x.min()), float(hs.x.max()), float(hs.y.min()), float(hs.y.max())],
-              origin="upper", interpolation="bilinear", zorder=Z["hillshade"])
+    ax.imshow(rgba, extent=ext, origin="upper", interpolation="bilinear", zorder=Z["hillshade"])
     return True
 
 
@@ -246,19 +318,92 @@ def draw_water(ax, R, XL, YL, river_rank=9, z=None):
         rv.plot(ax=ax, color=BASE["water"], linewidth=lw.values, zorder=z)
 
 
-def draw_areas(ax, R, names=None):
-    """Existing PAs and proposed IPCAs from the node polygons, 55% fills with outlines."""
+def draw_areas(ax, R, names=None, kind_of=None):
+    """Existing PAs and proposed IPCAs from the node polygons, 55% fills with outlines.
+    `kind_of(name_label) -> AREA key` overrides the IPCA-prefix rule (default = the north)."""
     if names is None:
         names = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs).dissolve(by="name_label").reset_index()
-    is_ipca = names.name_label.str.startswith("IPCA")
-    for kind, sel in (("pa", ~is_ipca), ("ipca", is_ipca)):
+    if kind_of is None:
+        is_ipca = names.name_label.str.startswith("IPCA")
+        kinds = np.where(is_ipca, "ipca", "pa")
+    else:
+        kinds = np.array([kind_of(n) for n in names.name_label])
+    for kind in sorted(set(kinds.tolist()), key=lambda k: Z.get(k, 4)):
+        sel = kinds == kind
         st = AREA[kind]
-        names[sel].plot(ax=ax, color=st["fill"], alpha=st["alpha"], edgecolor="none", zorder=Z[kind])
-        names[sel].boundary.plot(ax=ax, color=st["edge"], linewidth=st["lw"], zorder=Z[kind] + 0.1)
+        if st["fill"]:
+            names[sel].plot(ax=ax, color=st["fill"], alpha=st["alpha"], edgecolor="none", zorder=Z[kind])
+        if st["edge"]:
+            names[sel].boundary.plot(ax=ax, color=st["edge"], linewidth=st["lw"], zorder=Z[kind] + 0.1)
     return names
 
 
-def draw_classes(ax, R, owner, order, cls, h8_open=False):
+def draw_outlines(ax, gdf, kind="pa_outline"):
+    """Outline-only context layer (existing PAs on the wolverine maps: context, never nodes)."""
+    st = AREA[kind]
+    if len(gdf):
+        gdf.boundary.plot(ax=ax, color=st["edge"], linewidth=st["lw"], zorder=Z[kind])
+
+
+def draw_refugia(ax, R, refugia, step=1, marginal=True):
+    """Two flat fills from a 0/1/2 (none / marginal / core) class grid on the routing grid."""
+    for val, kind in ((1, "refugia_marginal"), (2, "refugia_core")):
+        if val == 1 and not marginal:
+            continue
+        st = AREA[kind]
+        m = np.where(refugia == val, 1.0, np.nan).astype("float32")
+        _da_step(R, m, step).plot.imshow(ax=ax, cmap=ListedColormap([st["fill"]]), alpha=st["alpha"],
+                                         add_colorbar=False, zorder=Z[kind])
+    ax.set_title(""); ax.set_xlabel(""); ax.set_ylabel("")
+
+
+def draw_nodes(ax, nodes_gdf, numbers=True, ns=None, chip_fs=None):
+    """Node outlines (NODE tokens) and, optionally, a number chip at each node's representative
+    point (registered in ns.texts when `ns` is given, so the QA sees them)."""
+    if not len(nodes_gdf):
+        return
+    nodes_gdf.boundary.plot(ax=ax, color=NODE["edge"], linewidth=NODE["lw"], zorder=Z["node"])
+    if numbers and "node_id" in nodes_gdf.columns:
+        for r in nodes_gdf.itertuples():
+            g = r.geometry
+            big = max(g.geoms, key=lambda q: q.area) if hasattr(g, "geoms") else g
+            pt = big.representative_point()
+            number_chip(ax, ns, int(r.node_id), (pt.x, pt.y), NODE["chip_ec"], fs=chip_fs)
+
+
+def number_chip(ax, ns, num, xy, colour, fs=None, role="annotation"):
+    """The contract-styled number marker: a small white chip with a coloured edge."""
+    size = fs or NODE["chip_fs"]
+    t = ax.annotate(str(num), xy, fontsize=size, fontweight=600, ha="center", va="center", color="#1A1A1A",
+                    zorder=Z["label_note"],
+                    bbox=dict(boxstyle="circle,pad=0.22", fc=NODE["chip_fc"], ec=colour, lw=0.8))
+    if ns is not None:
+        ns.texts.append(t)
+    return t
+
+
+def place_labels(ax, ns, items, min_gap_pt=3.0, max_labels=None):
+    """Greedy priority placement: `items` = [(text, xy, role, dx_pt, dy_pt), ...] in priority
+    order; a label whose rendered box comes within min_gap_pt of an earlier one (or of any
+    label already in ns.texts) is DROPPED, never shrunk (§3a.1.2). Returns the placed texts."""
+    fig = ax.figure; fig.canvas.draw()
+    r = fig.canvas.get_renderer(); pad = min_gap_pt * fig.dpi / 72 / 2
+    boxes = [t.get_window_extent(r) for t in ns.texts if t.get_visible()]
+    placed = []
+    for text, xy, role, dx, dy in items:
+        if max_labels is not None and len(placed) >= max_labels:
+            break
+        t = label(ax, ns, text, xy, role, dx_pt=dx, dy_pt=dy)
+        fig.canvas.draw(); b = t.get_window_extent(r)
+        clash = any(b.x0 - pad < o.x1 and o.x0 - pad < b.x1 and b.y0 - pad < o.y1 and o.y0 - pad < b.y1 for o in boxes)
+        if clash:
+            t.remove(); ns.texts.remove(t)
+            continue
+        boxes.append(b); placed.append(t)
+    return placed
+
+
+def draw_classes(ax, R, owner, order, cls, h8_open=False, step=1):
     """Flat class swaths from the owner partition; only-viable gets black outline + hatch."""
     from rasterio import features as rfeatures
     counts = {}
@@ -273,7 +418,7 @@ def draw_classes(ax, R, owner, order, cls, h8_open=False):
         counts[c] = len(ids)
         if not m.any():
             continue
-        R.template.copy(data=np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(
+        _da_step(R, np.where(m, 1.0, np.nan).astype("float32"), step).plot.imshow(
             ax=ax, cmap=ListedColormap([fill]), add_colorbar=False, zorder=Z[c])
         if hatch or edge:
             polys = [_shape(g) for g, v in rfeatures.shapes(m.astype("uint8"), mask=m,
@@ -377,14 +522,23 @@ def line_handles():
             (Line2D([0], [0], color=acol, lw=alw, ls=(0, adash)), "Provincial / territorial / international boundary")]
 
 
-def locator(ax, R):
-    """Sector within the Y2Y region: region outline, sector filled in the securing colour."""
-    y2y = R.outline.to_crs(R.crs); sec = gpd.GeoSeries([sector_polygon(R)], crs=R.crs)
+def locator(ax, R, window=None):
+    """Sector within the Y2Y region: region outline, sector filled in the securing colour.
+    `window=(XL, YL)` (wolverine act crops): the region in white with the window rectangle."""
+    y2y = R.outline.to_crs(R.crs)
     y2y.plot(ax=ax, facecolor="white", edgecolor=BASE["sector"][0], linewidth=0.7)
-    sec.plot(ax=ax, facecolor=CLASS["securing"][0], edgecolor=BASE["sector"][0], linewidth=0.7)
+    if window is None:
+        sec = gpd.GeoSeries([sector_polygon(R)], crs=R.crs)
+        sec.plot(ax=ax, facecolor=CLASS["securing"][0], edgecolor=BASE["sector"][0], linewidth=0.7)
+        cap = "sector within the Y2Y region"
+    else:
+        XL, YL = window; col, lw = BASE["inset_box"]
+        ax.add_patch(Rectangle((XL[0], YL[0]), XL[1] - XL[0], YL[1] - YL[0], facecolor=CLASS["securing"][0],
+                               alpha=0.5, edgecolor=col, linewidth=lw))
+        cap = "window within the Y2Y region"
     b = y2y.total_bounds; p = 0.06 * max(b[2] - b[0], b[3] - b[1])
     ax.set_xlim(b[0] - p, b[2] + p); ax.set_ylim(b[1] - p, b[3] + p); ax.set_aspect("equal")
-    ax.text(0.5, -0.02, "sector within the Y2Y region", transform=ax.transAxes, ha="center", va="top",
+    ax.text(0.5, -0.02, cap, transform=ax.transAxes, ha="center", va="top",
             fontsize=TYPE["caption"][0], color=TYPE["caption"][3])
 
 
@@ -513,8 +667,9 @@ def label_overlaps(fig, texts, min_gap_pt=3.0):
     return bad
 
 
-def qa(fig, ns, paths, message, expected_message):
-    """§3 checklist. Prints each item; returns the dict."""
+def qa(fig, ns, paths, message, expected_message, hexes=None):
+    """§3 checklist. Prints each item; returns the dict. `hexes` extends item 4 to the figure's
+    other analysis colours (wolverine: the rendered refugia blends + water)."""
     fig.canvas.draw()
     texts = ns.texts
     fam, missing = glyph_coverage([t.get_text() for t in texts])
@@ -526,7 +681,7 @@ def qa(fig, ns, paths, message, expected_message):
     for t in texts:                      # annotation anchors outside the frame are not drawn at all
         if t.axes is ns.map and hasattr(t, "xy") and not (xl[0] <= t.xy[0] <= xl[1] and yl[0] <= t.xy[1] <= yl[1]):
             clipped.append(f"{t.get_text()} (anchor off-frame, not drawn)")
-    cls = cvd_separability([CLASS[c][0] for c in CLASS_ORDER])
+    cls = cvd_separability([CLASS[c][0] for c in CLASS_ORDER] + list(hexes or []))
     res = {
         "1 nothing clipped at the frame": (len(clipped) == 0, clipped),
         "2 zero label overlaps / halos / diacritics": (len(over) == 0 and not missing, dict(overlaps=over, missing_glyphs=missing, font=fam, no_halo=halo_missing)),

@@ -905,6 +905,179 @@ CORRIDORS = {
         # adaptation-philosophy choice that must be a VISIBLE scenario axis, never a blend weight.
         "variants": {},
     },
+
+    # ============================ WOLVERINE REFUGIA (2026-09-28) ============================
+    # analyses/wolverine_refugia_connectivity/ -- the SAME engine and decisions as "north"
+    # (D1-D17 as configured above) applied Y2Y-WIDE to connect wolverine climate refugia. What
+    # differs is spelled out per key; everything not mentioned is inherited verbatim. Spec + the
+    # binding living logs: analyses/wolverine_refugia_connectivity/spec/. Decisions W1-W10 there.
+    #   W2  NODES COME FROM A RASTER (nodes.source = "raster"): 8-connected components of the
+    #       CORE refugia classes on the 300 m routing grid, >= node_min_km2. No PA/IPCA vectors.
+    #       Existing PAs are drawn as CONTEXT only (context_pa_min_km2) and are never nodes.
+    #   W1  RESISTANCE = the published surface with the source's three expert-assigned
+    #       GENERIC-FAUNA TERRAIN RULES WITHHELD (Pither et al. 2023 S1 Table: elevation > 2300 m,
+    #       slope > 30 deg, glaciers all cost 1000 for "terrestrial non-volant fauna" generally;
+    #       for an alpine specialist those rules invert the habitat). Applied as the named variant
+    #       `variants["terrain_withheld"]` -- the run passes it as `overrides`, so the published
+    #       surface stays this config's baseline `resistance` and the variant is a VISIBLE named
+    #       scenario, never a blend (D4 doctrine). corridors_prep.derive_variant builds it.
+    #   W5  cwd_cutoff_abs is INHERITED from north/v2_run002 (same 300 m grid, same cost units
+    #       => the same ~4 km detour allowance), never re-calibrated: there is no v1 target here.
+    #   W7  D16/H7 do not apply (raster patches are single components by construction); the
+    #       step-0a analogue is cc.node_patches (no review file). W8: D21 adjacency skipped.
+    #   W10 Two human CHECK STOPS in notebook 01 (the node transformation, then the variant
+    #       surface) before any CWD runs. Sensitivities / audits are PARKED (spec section 7).
+    "wolverine": {
+        "results_subdir": "corridors_wolverine",
+        "region_label": "Y2Y — wolverine climate refugia",
+
+        # ---- routing grid: 300 m, the WHOLE study area (no lat cut) ---------------------
+        # Own grid namespace so the northern warp + cwd_cache are never overwritten. The full
+        # window is ~4,285 x 11,040 = 47.3 M cells (17.2 M routable); routing_buffer_km is inert
+        # here (the refugia span the whole window, so the loader never crops) but kept for the
+        # loader's generic path.
+        "grid": {
+            "res_m": 300,
+            "region_filter": None,
+            "routing_buffer_km": 100,
+            "dir": INPUT_DIR / "corridors_300m_y2y",
+        },
+
+        # ---- resistance: the published surface (baseline; the variant below is what runs) --
+        "resistance": {
+            "source": INPUT_DIR / "transboundary_connectivity" / "Movement_Cost_Layer.tif",
+            "out_name": "movement_cost.tif",
+            "resampling": "near",
+            "expect_classes": [1, 10, 100, 1000],
+            "citation": ("O'Brien et al., transboundary movement cost surface "
+                         "(extension of Pither et al. 2023)"),
+        },
+
+        # ---- nodes: core wolverine refugia patches from a raster (W2/W4/W9) -----------------
+        # The raster is a NODE SOURCE, not a prioritizr feature: it must never enter DATASETS /
+        # aligned_stack / manifest.json (categorical, unoriented, stitched from two models with a
+        # +10 seam at ~53.97 N -- see the spec). Values: 2|12 core, 1|11 marginal, 0|10 none.
+        "nodes": {
+            "source": "raster",
+            "raster": {
+                "source": INPUT_DIR / "wolverine_refugia" / "baseline_wolverine_climate_refugia.tif",
+                "out_name": "refugia_class.tif",        # warped Byte copy on the routing grid
+                "resampling": "near", "nodata": 255,
+                "expect_classes": [0, 1, 2, 10, 11, 12],
+                "seam_lat": 53.97,                        # the +10 model boundary (diagnostic only)
+                "citation": "Y2Y wolverine climate refugia (baseline period; source model citation pending)",
+            },
+            "classes_core": [2, 12], "classes_marginal": [1, 11],
+            "node_min_km2": 500,                          # ladder 250/500/1000 -> 130/66/37 nodes; 500 = 82% of core area
+            "connectivity": 8, "closing": None,           # no morphological closing (W2)
+            "kind": "refugium", "kind_label": "Refugium", # labels "Refugium · R12 <name>" keep the Kind · Name shape
+            "anchor_kinds": ["refugium"],                 # _node_masks: draw these kinds as the anchor layer
+            "anchor_label_prefixes": ["Refugium"],        # load_results / figure prefix test (north: "IPCA")
+            "legend": {"anchor": "core refugia patches (nodes)",
+                       "pa": "existing protected areas (context, not nodes)"},
+            "context_pa_min_km2": 200,                    # presentation-only PA backdrop; NOT node land
+            # W11 (Ethan 2026-09-28): PROTECTED LAND = every existing PA + every proposed IPCA/PA, taken
+            # as given. It never enters resistance (D5: protection is a status, not a movement cost)
+            # and never makes a node; it decides WHAT IS MAPPED: corridor land inside it is already
+            # secured and is not drawn, and a link whose least-cost centreline lies >= secured_
+            # centreline_frac inside (nodes + protected land) is "already connected within protected
+            # land" -- listed, never mapped, never an example. Pre-registered at 0.95 ('near 1', the
+            # repo's convention).
+            "protected": {"pa_min_km2": 0.0, "include_proposed": True,
+                          "proposed": str(PROPOSED_PA_VECTOR)},
+            "naming": {"pa_overlap_min": 0.10, "pa_min_km2": 1.0, "names_file": "node_names.csv"},
+            "dedupe_overlap_frac": None,                  # components are disjoint by construction
+            "ladder_km2": [250, 500, 1000],               # printed by node_patches for the results log
+        },
+
+        # ---- D16 keys: required by resolve(), inert for single-component raster nodes -------
+        "part_min_km2": 500,
+        "multisite_designations": [],
+        "multipart_link_km": 10,
+        "audit_objects_dir": PROJECT_DIR / "analyses" / "wolverine_refugia_connectivity"
+                             / "audit" / "audit_objects",
+
+        # ---- band cutoff (D6) INHERITED from the north (W5) --------------------------------
+        "cwd_cutoff_abs": 13.622951589524746,
+        "calibration": {"inherited_from": "north/v2_run002", "target_km2": None, "edges": "mst"},
+        "secured_centreline_frac": 0.95,                  # W11: link 'already connected within protected land'
+
+        # ---- network / products: verbatim from "north" (W6) --------------------------------
+        "beta": 2.5,
+        "priority_tiers": {"robust_core": 90, "frequent": 70, "occasional": 0},
+        "near_opt_tiers": {"robust_core": 10, "frequent": 30, "occasional": 100},
+        "branch_mult": 0.5,
+        "branch_min_km2": 10,
+        "carroll_ref": "routable_area",
+        "squeeze_ratio": 0.5,
+        "squeeze_cf_min_cost": 10,
+        "centrality": "current_flow",
+        "adjacency": {"metric": "cwd", "connectivity": 8, "distance_cap_km": None,
+                      "drop_through_core": False},
+        "skip_adjacency": True,                           # W8: D21 diagnostic skipped (O(pairs x units x grid))
+        "ensemble": {                                     # parked (spec section 7); kept so G12 arithmetic is on record
+            "cutoff_mult": [0.5, 1.0, 2.0],
+            "leave_one_out": True,
+            "beta_sweep": [1.5, 2.5, 4.0],
+            "robust_core_freq": 0.9,
+        },
+
+        # ---- Y2Y-scale efficiency flags (absent in "north" => the north is untouched) -------
+        # cwd_compact: cache cum[pu] (routable cells only, 69 MB/node) instead of full grids
+        # (189 MB/node); band_cache: per-run band STORE (idx + float64 field values at
+        # band_cache_mult x the requested allowance, persisted under run_dir/band_cache/) so a
+        # smaller allowance is a bit-exact filter and every later notebook's re-attach is seconds;
+        # misses re-seed the traceback with an early-stop find_costs(ends=[target]).
+        "cwd_compact": True,
+        "band_cache": True,
+        "band_cache_mult": 2.0,
+
+        # ---- named variants (W1) ------------------------------------------------------------
+        # THE surface the campaign runs on. resolve() merges the override, the cost path follows
+        # `out_name`, _resistance_sha gives it its own cwd_cache dir, run_config.json records the
+        # variant meta. `withhold` = layers whose cost-1000 assignment is withheld (a cell that was
+        # 1000 on those rules alone falls to `withheld_take`); `reassign` = {layer: cost} hook
+        # (empty: all three rules withheld EQUALLY, Ethan 2026-09-28); `retained_1000` = proxies
+        # for the source's OTHER cost-1000 layers, which keep a coincident cell at 1000
+        # (recompute-the-maximum semantics). The repo holds the published surface, not the
+        # source's 23 layers -- disclosed in the spec.
+        "headline_variant": "terrain_withheld",
+        "variants": {
+            "terrain_withheld": {
+                "resistance": {
+                    "out_name": "movement_cost_terrain_withheld.tif",
+                    "citation": ("O'Brien et al. 2025 movement cost, generic terrain rules withheld "
+                                 "(elevation > 2300 m, slope > 30°, glaciers; Pither et al. 2023 S1 Table)"),
+                    "variant": {
+                        "label": "O'Brien 2025, generic terrain rules withheld",
+                        "withhold": ["elevation_gt_2300_m", "slope_gt_30_deg", "glacier"],
+                        "reassign": {},
+                        "withheld_take": 1,
+                        "terrain": {
+                            "dem": INPUT_DIR / "basemap" / "dem_y2y_300m.tif",   # GMTED2010 7.5" (source grain) if dropped into input_data/dem_gmted/
+                            "dem_gmted": INPUT_DIR / "dem_gmted",
+                            "elev_gt_m": 2300, "slope_gt_deg": 30,
+                            "glacier_dir": INPUT_DIR / "glaciers",              # RGI 7.0 regions 01 + 02 (any *.shp / *.gpkg inside)
+                        },
+                        "retained_1000": {
+                            "lakes_dir": INPUT_DIR / "hydrosheds",              # HydroLAKES_polys_v10*.shp
+                            "lake_min_km2": 0.10,                               # >= 10 ha
+                            "rivers_dir": INPUT_DIR / "hydrosheds",             # HydroRIVERS_v10_na*.shp
+                            "river_min_cms": 28.0,                              # DIS_AV_CMS > 28
+                            "human_ghm90_dir": INPUT_DIR / "human_modification", # Theobald gHM v3 90 m tiles (max in the 300 m cell)
+                            "human_tau": None,                                  # calibrated in notebook 01 (written to the variant meta)
+                        },
+                        "source_rule": ("Pither et al. 2023 (PLOS ONE 18:e0281980, S1 Table): per-pixel MAXIMUM over "
+                                        "23 layers; 1000 = built-up, lights, mining, oil & gas, dams, rails, multi-lane "
+                                        "highways, elevation > 2300 m, slope > 30 deg (GMTED2010), glaciers (CanVec), "
+                                        "lakes >= 10 ha (HydroLAKES), rivers > 28 m3/s (HydroRIVERS), ocean; "
+                                        "100 = croplands, two-lane highways; 10 = pasture, minor roads, forestry cut "
+                                        "1985-2015, sea ice; 1 = everything else."),
+                    },
+                },
+            },
+        },
+    },
 }
 
 # ---- Raster discovery ----------------------------------------------------
