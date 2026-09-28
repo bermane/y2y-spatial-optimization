@@ -1,0 +1,678 @@
+{
+ "created_utc": "2026-09-22T01:44:53.718208+00:00",
+ "version": "v4",
+ "manifest": "manifest_v4.csv",
+ "efg_block": "iucn_efg_v3",
+ "n_efg": 13,
+ "efg_target_rule": "loglinear_window250km_alberta_extent",
+ "level": "A",
+ "n_formulations": 14,
+ "threshold": 0.7,
+ "cluster_min_km2_provisional": 10,
+ "simplify_m": 500,
+ "applied_band_g": 0.05,
+ "applied_band_rule": "D-AB13: guarded 5% unless the 5% guarded frequent tier < 100 km2, then 2% (D-AB10)",
+ "freq5_guarded_km2": 1264,
+ "flat_km2": 100,
+ "band_width_abs": {
+  "s0_ssp585_theta5": {
+   "z_star": 4.0198513384,
+   "width_abs_g05": 0.20099256692,
+   "width_abs_g02": 0.080397026768,
+   "z_star_v1": 4.4609139906,
+   "z_change_pct_vs_v1": -9.887270929890237,
+   "z_star_v3.1": 4.061180793,
+   "z_change_pct_vs_v3.1": -1.0176708870296403
+  },
+  "s1_ssp585_theta5": {
+   "z_star": 3.9169796343,
+   "width_abs_g05": 0.195848981715,
+   "width_abs_g02": 0.078339592686,
+   "z_star_v1": 4.331262564,
+   "z_change_pct_vs_v1": -9.564946100090554,
+   "z_star_v3.1": 3.902176934,
+   "z_change_pct_vs_v3.1": 0.3793446722270076
+  },
+  "s2_ssp585_theta5": {
+   "z_star": 3.8832313005,
+   "width_abs_g05": 0.194161565025,
+   "width_abs_g02": 0.07766462601,
+   "z_star_v1": 4.4501732846,
+   "z_change_pct_vs_v1": -12.739773214268423,
+   "z_star_v3.1": 4.053100888,
+   "z_change_pct_vs_v3.1": -4.191101879623394
+  },
+  "s2c_ssp585_theta5": {
+   "z_star": 4.0567624829,
+   "width_abs_g05": 0.20283812414500002,
+   "width_abs_g02": 0.081135249658,
+   "z_star_v1": NaN,
+   "z_change_pct_vs_v1": NaN,
+   "z_star_v3.1": NaN,
+   "z_change_pct_vs_v3.1": NaN
+  },
+  "s3_ssp585_theta5": {
+   "z_star": 4.1886863714,
+   "width_abs_g05": 0.20943431857000003,
+   "width_abs_g02": 0.083773727428,
+   "z_star_v1": 4.6297728366,
+   "z_change_pct_vs_v1": -9.527172947084022,
+   "z_star_v3.1": 4.2445677683,
+   "z_change_pct_vs_v3.1": -1.3165391613568358
+  },
+  "s4_ssp585_theta2": {
+   "z_star": 3.9031226782,
+   "width_abs_g05": 0.19515613391,
+   "width_abs_g02": 0.078062453564,
+   "z_star_v1": 4.2883271824,
+   "z_change_pct_vs_v1": -8.982628605880226,
+   "z_star_v3.1": 3.8840867959,
+   "z_change_pct_vs_v3.1": 0.49009930262356477
+  },
+  "s5_ssp585_theta5": {
+   "z_star": 8.6806078494,
+   "width_abs_g05": 0.43403039246999997,
+   "width_abs_g02": 0.173612156988,
+   "z_star_v1": 9.1990575474,
+   "z_change_pct_vs_v1": -5.63590014877703,
+   "z_star_v3.1": 8.7193895778,
+   "z_change_pct_vs_v3.1": -0.44477572717636404
+  },
+  "s0_ssp245_theta5": {
+   "z_star": 4.0087347978,
+   "width_abs_g05": 0.20043673989,
+   "width_abs_g02": 0.080174695956,
+   "z_star_v1": 4.4521587335,
+   "z_change_pct_vs_v1": -9.959751263212688,
+   "z_star_v3.1": 4.0470346311,
+   "z_change_pct_vs_v3.1": -0.9463678172081748
+  },
+  "s1_ssp245_theta5": {
+   "z_star": 3.8904903982,
+   "width_abs_g05": 0.19452451991,
+   "width_abs_g02": 0.077809807964,
+   "z_star_v1": 4.3011192854,
+   "z_change_pct_vs_v1": -9.547023924536715,
+   "z_star_v3.1": 3.8659810818,
+   "z_change_pct_vs_v3.1": 0.6339740387086455
+  },
+  "s2_ssp245_theta5": {
+   "z_star": 3.872224132,
+   "width_abs_g05": 0.1936112066,
+   "width_abs_g02": 0.07744448264,
+   "z_star_v1": 4.4454234815,
+   "z_change_pct_vs_v1": -12.894144998455529,
+   "z_star_v3.1": 4.0450914679,
+   "z_change_pct_vs_v3.1": -4.2735087023815455
+  },
+  "s2c_ssp245_theta5": {
+   "z_star": 4.0512141477,
+   "width_abs_g05": 0.20256070738499998,
+   "width_abs_g02": 0.081024282954,
+   "z_star_v1": NaN,
+   "z_change_pct_vs_v1": NaN,
+   "z_star_v3.1": NaN,
+   "z_change_pct_vs_v3.1": NaN
+  },
+  "s3_ssp245_theta5": {
+   "z_star": 4.1834902217,
+   "width_abs_g05": 0.209174511085,
+   "width_abs_g02": 0.08366980443399999,
+   "z_star_v1": 4.6271942138,
+   "z_change_pct_vs_v1": -9.589050547666913,
+   "z_star_v3.1": 4.239384148,
+   "z_change_pct_vs_v3.1": -1.3184444803467348
+  },
+  "s4_ssp245_theta2": {
+   "z_star": 3.8913165473,
+   "width_abs_g05": 0.19456582736500003,
+   "width_abs_g02": 0.077826330946,
+   "z_star_v1": 4.2779326448,
+   "z_change_pct_vs_v1": -9.037451722619972,
+   "z_star_v3.1": 3.8688783029,
+   "z_change_pct_vs_v3.1": 0.579967697179344
+  },
+  "s5_ssp245_theta5": {
+   "z_star": 8.6698686033,
+   "width_abs_g05": 0.43349343016499997,
+   "width_abs_g02": 0.173397372066,
+   "z_star_v1": 9.1893242665,
+   "z_change_pct_vs_v1": -5.652816770148096,
+   "z_star_v3.1": 8.7068779042,
+   "z_change_pct_vs_v3.1": -0.42505822761277906
+  }
+ },
+ "bands_5pct": [
+  {
+   "band": "never [0.00, 0.05)",
+   "guarded km2": 0,
+   "guarded %disc": 0.0,
+   "unguarded (s0_ssp585_theta5 only) km2": 0,
+   "unguarded (s0_ssp585_theta5 only) %disc": 0.0
+  },
+  {
+   "band": "rare [0.05, 0.30)",
+   "guarded km2": 50014,
+   "guarded %disc": 87.4967197914662,
+   "unguarded (s0_ssp585_theta5 only) km2": 57161,
+   "unguarded (s0_ssp585_theta5 only) %disc": 100.0
+  },
+  {
+   "band": "conditional [0.30, 0.70)",
+   "guarded km2": 5883,
+   "guarded %disc": 10.29198229562114,
+   "unguarded (s0_ssp585_theta5 only) km2": 0,
+   "unguarded (s0_ssp585_theta5 only) %disc": 0.0
+  },
+  {
+   "band": "frequent [0.70, 0.95)",
+   "guarded km2": 897,
+   "guarded %disc": 1.5692517625653855,
+   "unguarded (s0_ssp585_theta5 only) km2": 0,
+   "unguarded (s0_ssp585_theta5 only) %disc": 0.0
+  },
+  {
+   "band": "always [0.95, 1.00]",
+   "guarded km2": 367,
+   "guarded %disc": 0.6420461503472648,
+   "unguarded (s0_ssp585_theta5 only) km2": 0,
+   "unguarded (s0_ssp585_theta5 only) %disc": 0.0
+  }
+ ],
+ "bands_applied": [
+  {
+   "band": "never [0.00, 0.05)",
+   "guarded km2": 0,
+   "guarded %disc": 0.0,
+   "unguarded (s0_ssp585_theta5 only) km2": 0,
+   "unguarded (s0_ssp585_theta5 only) %disc": 0.0
+  },
+  {
+   "band": "rare [0.05, 0.30)",
+   "guarded km2": 50014,
+   "guarded %disc": 87.4967197914662,
+   "unguarded (s0_ssp585_theta5 only) km2": 57161,
+   "unguarded (s0_ssp585_theta5 only) %disc": 100.0
+  },
+  {
+   "band": "conditional [0.30, 0.70)",
+   "guarded km2": 5883,
+   "guarded %disc": 10.29198229562114,
+   "unguarded (s0_ssp585_theta5 only) km2": 0,
+   "unguarded (s0_ssp585_theta5 only) %disc": 0.0
+  },
+  {
+   "band": "frequent [0.70, 0.95)",
+   "guarded km2": 897,
+   "guarded %disc": 1.5692517625653855,
+   "unguarded (s0_ssp585_theta5 only) km2": 0,
+   "unguarded (s0_ssp585_theta5 only) %disc": 0.0
+  },
+  {
+   "band": "always [0.95, 1.00]",
+   "guarded km2": 367,
+   "guarded %disc": 0.6420461503472648,
+   "unguarded (s0_ssp585_theta5 only) km2": 0,
+   "unguarded (s0_ssp585_theta5 only) %disc": 0.0
+  }
+ ],
+ "E1": {
+  "mean_abs": 0.18072353303432465,
+  "max_abs": 0.924369752407074
+ },
+ "E3": {
+  "within": 0.9911125302314758,
+  "between": 0.008747498504817486,
+  "scenario": 0.008468094281852245,
+  "climate": 4.159804302616976e-05,
+  "members_basis": "guard",
+  "n_factorial": 14
+ },
+ "crossed_contrast": "crossed diagnostics not re-solved under this VERSION -- the v1 record (R7.1) stands as evidence (parent v0.17)",
+ "D_5": {
+  "s0_ssp585_theta5": 0.9259148836135864,
+  "s1_ssp585_theta5": 0.9446593523025513,
+  "s2_ssp585_theta5": 0.7865714430809021,
+  "s2c_ssp585_theta5": 0.998909056186676,
+  "s3_ssp585_theta5": 0.9692552089691162,
+  "s4_ssp585_theta2": 0.9461469650268555,
+  "s5_ssp585_theta5": 0.9606267809867859,
+  "s0_ssp245_theta5": 0.9266091585159302,
+  "s1_ssp245_theta5": 0.935733437538147,
+  "s2_ssp245_theta5": 0.7903401851654053,
+  "s2c_ssp245_theta5": 0.9992066025733948,
+  "s3_ssp245_theta5": 0.9710403680801392,
+  "s4_ssp245_theta2": 0.9477834105491638,
+  "s5_ssp245_theta5": 0.9598333835601807
+ },
+ "D_applied": {
+  "s0_ssp585_theta5": 0.9259148836135864,
+  "s1_ssp585_theta5": 0.9446593523025513,
+  "s2_ssp585_theta5": 0.7865714430809021,
+  "s2c_ssp585_theta5": 0.998909056186676,
+  "s3_ssp585_theta5": 0.9692552089691162,
+  "s4_ssp585_theta2": 0.9461469650268555,
+  "s5_ssp585_theta5": 0.9606267809867859,
+  "s0_ssp245_theta5": 0.9266091585159302,
+  "s1_ssp245_theta5": 0.935733437538147,
+  "s2_ssp245_theta5": 0.7903401851654053,
+  "s2c_ssp245_theta5": 0.9992066025733948,
+  "s3_ssp245_theta5": 0.9710403680801392,
+  "s4_ssp245_theta2": 0.9477834105491638,
+  "s5_ssp245_theta5": 0.9598333835601807
+ },
+ "E11": {
+  "pairs_in_band": 182,
+  "pairs": 182,
+  "diag_max": 1.2549375937668698e-11,
+  "J_min": 0.39037506894649754,
+  "J_mean": 0.5908357816373186,
+  "J_max": 0.865149833518313
+ },
+ "C1": {
+  "spearman_5pct": 0.7862737086891016,
+  "tier_overlap_5pct": 0.9533227848101266,
+  "tier_jaccard_5pct": 0.6639118457300276,
+  "members_basis": "guard",
+  "anchors": [
+   {
+    "formulation": "s0_ssp585_theta5",
+    "parent": "s0_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 9351,
+    "overlap_coeff": 0.7787,
+    "jaccard": 0.5992
+   },
+   {
+    "formulation": "s1_ssp585_theta5",
+    "parent": "s1_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 13685,
+    "overlap_coeff": 0.8884,
+    "jaccard": 0.6049
+   },
+   {
+    "formulation": "s2_ssp585_theta5",
+    "parent": "s2_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 8336,
+    "overlap_coeff": 0.9171,
+    "jaccard": 0.7096
+   },
+   {
+    "formulation": "s2c_ssp585_theta5",
+    "parent": "s2c_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 3738,
+    "overlap_coeff": 0.9334,
+    "jaccard": 0.3377
+   },
+   {
+    "formulation": "s3_ssp585_theta5",
+    "parent": "s3_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 10778,
+    "overlap_coeff": 0.7703,
+    "jaccard": 0.5932
+   },
+   {
+    "formulation": "s4_ssp585_theta2",
+    "parent": "s4_ssp585_theta3",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 7287,
+    "overlap_coeff": 0.8009,
+    "jaccard": 0.506
+   },
+   {
+    "formulation": "s5_ssp585_theta5",
+    "parent": "s5_ssp585_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 8122,
+    "overlap_coeff": 0.8644,
+    "jaccard": 0.6278
+   },
+   {
+    "formulation": "s0_ssp245_theta5",
+    "parent": "s0_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 7355,
+    "overlap_coeff": 0.8798,
+    "jaccard": 0.59
+   },
+   {
+    "formulation": "s1_ssp245_theta5",
+    "parent": "s1_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 9101,
+    "overlap_coeff": 0.7949,
+    "jaccard": 0.6054
+   },
+   {
+    "formulation": "s2_ssp245_theta5",
+    "parent": "s2_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 7418,
+    "overlap_coeff": 0.9577,
+    "jaccard": 0.6833
+   },
+   {
+    "formulation": "s2c_ssp245_theta5",
+    "parent": "s2c_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 3056,
+    "overlap_coeff": 0.9539,
+    "jaccard": 0.2851
+   },
+   {
+    "formulation": "s3_ssp245_theta5",
+    "parent": "s3_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 8740,
+    "overlap_coeff": 0.797,
+    "jaccard": 0.5875
+   },
+   {
+    "formulation": "s4_ssp245_theta2",
+    "parent": "s4_ssp245_theta3",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 5790,
+    "overlap_coeff": 0.9041,
+    "jaccard": 0.4921
+   },
+   {
+    "formulation": "s5_ssp245_theta5",
+    "parent": "s5_ssp245_theta5",
+    "ab_additions": 10083,
+    "y2y_clip_selected": 6679,
+    "overlap_coeff": 0.9289,
+    "jaccard": 0.5876
+   }
+  ],
+  "parent_version": "v4",
+  "guarded": {
+   "spearman": 0.7862737086891016,
+   "overlap": 0.9533227848101266,
+   "jaccard": 0.6639118457300276,
+   "ab_core_km2": 1264,
+   "y2y_clip_core_km2": 1756
+  }
+ },
+ "members_basis": "guard",
+ "reference_cell": "s0_ssp585_theta5",
+ "plain_bands_basis": "reference cell only (s0_ssp585_theta5)",
+ "E4_reference_core_erosion": [
+  {
+   "g": 0.02,
+   "n_plans": 51,
+   "frequent_km2": 145,
+   "always_km2": 62,
+   "union_km2": 55274,
+   "conditional_km2": 5235,
+   "D": 0.9869086742401123
+  },
+  {
+   "g": 0.05,
+   "n_plans": 51,
+   "frequent_km2": 0,
+   "always_km2": 0,
+   "union_km2": 57161,
+   "conditional_km2": 0,
+   "D": 1.0
+  },
+  {
+   "g": 0.1,
+   "n_plans": 51,
+   "frequent_km2": 0,
+   "always_km2": 0,
+   "union_km2": 57161,
+   "conditional_km2": 0,
+   "D": 1.0
+  }
+ ],
+ "blocks": {
+  "core_habitat": [
+   "climate_type_macrorefugia"
+  ],
+  "structural_connectivity": [
+   "transboundary_connectivity"
+  ],
+  "climate_corridors": [
+   "climate_corridors"
+  ],
+  "carbon": [
+   "irrecoverable_carbon_m_soc",
+   "irrecoverable_carbon_biomass"
+  ],
+  "biodiversity": [
+   "aoh_richness_birds",
+   "aoh_richness_mammals"
+  ]
+ },
+ "tiers_applied": [
+  {
+   "tier": "core (F >= 0.70, all formulations)",
+   "km2": 1264,
+   "pct_disc": 2.2112979129126504
+  },
+  {
+   "tier": "s1: Core-habitat-forward (frequent minus core)",
+   "km2": 0,
+   "pct_disc": 0.0
+  },
+  {
+   "tier": "s2: Structural-connectivity-forward (frequent minus core)",
+   "km2": 1169,
+   "pct_disc": 2.0451006805339307
+  },
+  {
+   "tier": "s2c: Climate-corridors-forward (frequent minus core)",
+   "km2": 0,
+   "pct_disc": 0.0
+  },
+  {
+   "tier": "s3: Biodiversity-forward (frequent minus core)",
+   "km2": 0,
+   "pct_disc": 0.0
+  },
+  {
+   "tier": "s4: Carbon-forward (frequent minus core)",
+   "km2": 6,
+   "pct_disc": 0.010496667308129669
+  },
+  {
+   "tier": "any value-forward scenario (union)",
+   "km2": 1169,
+   "pct_disc": 2.0451006805339307
+  },
+  {
+   "tier": "opportunity (in >= 1 plan of >= 1 formulation, not above)",
+   "km2": 54728,
+   "pct_disc": 95.74360140655342
+  },
+  {
+   "tier": "never (no 5%-band plan selects it)",
+   "km2": 0,
+   "pct_disc": 0.0
+  }
+ ],
+ "pooling": [
+  {
+   "scenario": "s0",
+   "levels": 2,
+   "jaccard": 0.9993136582017845,
+   "decision": "POOLED",
+   "freq_km2_585": 1457,
+   "freq_km2_245": 1456
+  },
+  {
+   "scenario": "s1",
+   "levels": 2,
+   "jaccard": 0.8648905803996194,
+   "decision": "POOLED",
+   "freq_km2_585": 1028,
+   "freq_km2_245": 932
+  },
+  {
+   "scenario": "s2",
+   "levels": 2,
+   "jaccard": 0.9814441306978621,
+   "decision": "POOLED",
+   "freq_km2_585": 2479,
+   "freq_km2_245": 2433
+  },
+  {
+   "scenario": "s2c",
+   "levels": 2,
+   "jaccard": 0.9655172413793104,
+   "decision": "POOLED",
+   "freq_km2_585": 435,
+   "freq_km2_245": 420
+  },
+  {
+   "scenario": "s3",
+   "levels": 2,
+   "jaccard": 0.99706457925636,
+   "decision": "POOLED",
+   "freq_km2_585": 1022,
+   "freq_km2_245": 1019
+  },
+  {
+   "scenario": "s4",
+   "levels": 2,
+   "jaccard": 0.98,
+   "decision": "POOLED",
+   "freq_km2_585": 1199,
+   "freq_km2_245": 1177
+  },
+  {
+   "scenario": "s5",
+   "levels": 2,
+   "jaccard": 0.9889830508474576,
+   "decision": "POOLED",
+   "freq_km2_585": 1167,
+   "freq_km2_245": 1180
+  }
+ ],
+ "guard_vs_plain_tier_jaccard_applied": 0.0,
+ "guard_vs_plain_basis": "s0_ssp585_theta5 only",
+ "C4": [
+  {
+   "aoi": "AOI-2 Nature First (novel)",
+   "km2": 436,
+   "share_of_disc_pct": 0.7627578243907559,
+   "mean_F2_inside": 0.3235551416873932,
+   "mean_F2_disc": 0.17639614641666412,
+   "core_inside_km2": 0,
+   "core_inside_pct": 0.0,
+   "ratio_vs_null": 0.0,
+   "mean_f2_s0": 0.3250584602355957,
+   "mean_f2_s1": 0.3545601963996887,
+   "mean_f2_s2": 0.39532744884490967,
+   "mean_f2_s2c": 0.2634691596031189,
+   "mean_f2_s3": 0.3013356626033783,
+   "mean_f2_s4": 0.3169635236263275,
+   "mean_f2_s5": 0.30817145109176636
+  },
+  {
+   "aoi": "Upper Smoky SRP planning area (unlocked)",
+   "km2": 10028,
+   "share_of_disc_pct": 17.543429960987385,
+   "mean_F2_inside": 0.14225393533706665,
+   "mean_F2_disc": 0.17639614641666412,
+   "core_inside_km2": 0,
+   "core_inside_pct": 0.0,
+   "ratio_vs_null": 0.0,
+   "mean_f2_s0": 0.13936175405979156,
+   "mean_f2_s1": 0.137799471616745,
+   "mean_f2_s2": 0.1286955326795578,
+   "mean_f2_s2c": 0.1527937650680542,
+   "mean_f2_s3": 0.14385701715946198,
+   "mean_f2_s4": 0.15133510529994965,
+   "mean_f2_s5": 0.14193493127822876
+  }
+ ],
+ "tenure_split": [
+  {
+   "tier": "core (F >= 0.70, all formulations)",
+   "km2": 1264,
+   "crown_green": 1156,
+   "crown_white_ind": 16,
+   "private_presumed": 3,
+   "private_ranchland": 73,
+   "unclassified": 16
+  },
+  {
+   "tier": "s1: Core-habitat-forward (frequent minus core)",
+   "km2": 0,
+   "crown_green": 0,
+   "crown_white_ind": 0,
+   "private_presumed": 0,
+   "private_ranchland": 0,
+   "unclassified": 0
+  },
+  {
+   "tier": "s2: Structural-connectivity-forward (frequent minus core)",
+   "km2": 1169,
+   "crown_green": 1056,
+   "crown_white_ind": 46,
+   "private_presumed": 1,
+   "private_ranchland": 59,
+   "unclassified": 7
+  },
+  {
+   "tier": "s2c: Climate-corridors-forward (frequent minus core)",
+   "km2": 0,
+   "crown_green": 0,
+   "crown_white_ind": 0,
+   "private_presumed": 0,
+   "private_ranchland": 0,
+   "unclassified": 0
+  },
+  {
+   "tier": "s3: Biodiversity-forward (frequent minus core)",
+   "km2": 0,
+   "crown_green": 0,
+   "crown_white_ind": 0,
+   "private_presumed": 0,
+   "private_ranchland": 0,
+   "unclassified": 0
+  },
+  {
+   "tier": "s4: Carbon-forward (frequent minus core)",
+   "km2": 6,
+   "crown_green": 6,
+   "crown_white_ind": 0,
+   "private_presumed": 0,
+   "private_ranchland": 0,
+   "unclassified": 0
+  },
+  {
+   "tier": "any value-forward scenario (union)",
+   "km2": 1169,
+   "crown_green": 1056,
+   "crown_white_ind": 46,
+   "private_presumed": 1,
+   "private_ranchland": 59,
+   "unclassified": 7
+  },
+  {
+   "tier": "opportunity (in >= 1 plan of >= 1 formulation, not above)",
+   "km2": 54728,
+   "crown_green": 45504,
+   "crown_white_ind": 1930,
+   "private_presumed": 1939,
+   "private_ranchland": 5261,
+   "unclassified": 94
+  },
+  {
+   "tier": "never (no 5%-band plan selects it)",
+   "km2": 0,
+   "crown_green": 0,
+   "crown_white_ind": 0,
+   "private_presumed": 0,
+   "private_ranchland": 0,
+   "unclassified": 0
+  }
+ ],
+ "n_clusters_kept": 53
+}

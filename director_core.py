@@ -51,7 +51,12 @@ HEX_KM2 = 250              # decision (c) default
 HEX_KM2_ALT = 800          # board-level legibility variant, rendered for comparison
 POOL_JACCARD_MIN = 0.80    # decision (g): pool the two climate levels unless their frequent tiers diverge
 TOPK_ACT1 = 6              # deck shows top-k by area (tie-break mean guarded F); the register ships in full
-PICK_LINK_KM = 75          # deck picks: the top-k complexes are grouped into REGIONAL clusters by single linkage at this
+CONSEQ_REFERENCE_AREAS = [("Banff National Park", "pa", "Banff National Park Of Canada"),      # the consequences tables' reference columns (Ethan 2026-09-23):
+                          ("Dene Kʼéh Kusān", "ipca", "Dene Kʼéh Kusān")]                     # real example areas (label, layer, name in that layer) instead of the two aggregates
+MAX_CORE_CLUSTERS = 4      # deck shows at most this many regional core clusters: clusters 1..k in the NORTH -> SOUTH numbering (Ethan 2026-09-23, "remove
+                           # cluster 5" -- the balanced core's fifth, Greater Yellowstone 3,075 km2; NOT the smallest by area, which is Yukon 2,232 km2 and stays)
+PICK_LINK_KM = 50          # deck picks: the top-k complexes are grouped into REGIONAL clusters by single linkage at this (75 -> 50 km, Ethan 2026-09-23
+                           # "a bit tighter spatially": Central Idaho's extent 748 -> 428 km, -2,600 km2 of scattered land; Yukon / Stikine / Kootenays unchanged)
 SPECK_LINK_KM = 10         # core components below MIN_KM2 within this distance of a regional cluster join it (Ethan 2026-09-15: 10 km)
                            # edge-to-edge distance and numbered north -> south (Ethan 2026-09-14: "3, 4 and 6 become one")
 COMPLEX_LINK_KM = 25       # presentational grouping: kept components within this edge-to-edge distance (single
@@ -88,8 +93,14 @@ N_EFG = len(lc.efg_paths())          # 20 under the curated block (v3); 40 under
 SCENARIO_LABEL = {"s0": "Balanced", "s1": "Core-habitat-forward", "s2": "Connectivity-forward", "s2c": "Climate-corridors-forward",
                   "s3": "Biodiversity-forward", "s4": "Carbon-forward", "s5": "Intactness push (S0 + gHM x10)",
                   "s1x": "Core-habitat x carbon regime", "s3x": "Biodiversity x carbon regime"}
+# display words per forward theme (Ethan 2026-09-23: "climate refugia", "mammal + bird richness", "biomass + soil carbon"); the block
+# names in the data ("core habitat", "biodiversity", "carbon") are unchanged -- these are what the Act 2 legend and scenario labels say
+SCENARIO_WORD = ({"s1": "climate refugia", "s2": "structural connectivity", "s2c": "climate corridors", "s3": "mammal + bird richness", "s4": "biomass + soil carbon"}
+                 if VP.version == "v4" else {"s1": "core habitat", "s2": "connectivity", "s3": "biodiversity", "s4": "carbon"})
 if VP.version == "v4":               # manifest v4: s2 = structural connectivity alone; s2c = the climate-corridors forward (new)
-    SCENARIO_LABEL["s2"] = "Structural-connectivity-forward"; SCENARIO_LABEL["s5"] = "Naturalness push (S0 + gHM x10)"
+    for _sid, _w in SCENARIO_WORD.items():
+        SCENARIO_LABEL[_sid] = f"{_w[0].upper()}{_w[1:]} forward"        # "Climate refugia forward", "Mammal + bird richness forward", ...
+    SCENARIO_LABEL["s5"] = "Naturalness push (S0 + gHM x10)"
 ACT2_SCENARIOS = ["s1", "s2", "s2c", "s3", "s4"] if VP.version == "v4" else ["s1", "s2", "s3", "s4"]   # the named forward scenarios (Act 2)
 N_DESIGN = 14 if VP.version == "v4" else 12   # voting cells: 7 x 2 under v4, 6 x 2 before
 # Director package votes = the 12 ELICITED positions (6 scenarios x 2 climate futures). The two crossed
@@ -670,14 +681,20 @@ def absorb_complexes(G, lab, gp, cx, link_km=PICK_LINK_KM, reg=None, speck_km=SP
     return gp.sort_values("lat", ascending=False).reset_index(drop=True)
 
 
+# the consequences ratios are on RAW values, never the optimizer's value shape (Ethan 2026-09-23): under manifest v4 the flagship stack
+# holds structural connectivity SQUARED (I^2, the registered convex shape), so that layer is read from the base stack (raw current, amperes).
+# Refugia stays on the v4 layer: the floored residence time IS the native orientation the package spec (v1.14) asks for.
+RATIO_SOURCE = {"transboundary_connectivity": config.HANDOFF_DIR} if VP.version == "v4" else {}
+
+
 class ValueRatios:
     """Consequences tables (Ethan 2026-09-14): mean raw value inside a cluster / mean raw value over ALLOCATABLE
     (discretionary) land, per star axis -- "2.3x" = 2.3 times the average unprotected cell. Blocks combine their
     members' ratios with the BLOCK_AXES weights; representativeness = ecosystem classes present per cell;
-    naturalness = 1 - gHM."""
+    naturalness = 1 - gHM. Raw layers (RATIO_SOURCE): structural connectivity in amperes, not the I^2 the optimizer saw."""
     def __init__(self, G, P):
         self.G = G
-        self.raw = {f: np.nan_to_num(lc._read(config.Y2Y_STACK_DIR / f"{f}.tif")[G.pu], nan=0.0) for d in BLOCK_AXES.values() for f in d}
+        self.raw = {f: np.nan_to_num(lc._read(RATIO_SOURCE.get(f, config.Y2Y_STACK_DIR) / f"{f}.tif")[G.pu], nan=0.0) for d in BLOCK_AXES.values() for f in d}
         self.raw["__efg_count"] = P.efg_count.astype(np.float32)
         self.base = {k: float(v[G.disc].mean()) for k, v in self.raw.items()}
     def of(self, mask1d):
@@ -821,6 +838,9 @@ def coexistence_layer(G):
     return SimpleNamespace(gdf=g, zones=zones, source=COEX_LOOKUP.name)
 
 
+REGION_LEAD_MIN = 0.50       # a single region word needs at least this share of the cluster; below it the two largest regions are joined
+
+
 def region_of(CX, mask2d, secondary_min=REGION_SECONDARY_MIN):
     """(region, subregions, label) for a cluster mask: the unit holding the largest share of the cluster's cells names the
     region; every unit holding >= secondary_min adds its sub-region (share order, de-duplicated). label = 'Sub-region(s), Region'
@@ -834,7 +854,15 @@ def region_of(CX, mask2d, secondary_min=REGION_SECONDARY_MIN):
     lead = CX.gdf.loc[int(ids[order[0]]) - 1]
     subs = [str(CX.gdf.loc[int(i) - 1, "subregion"]) for i, s in zip(ids[order], share[order]) if s >= secondary_min]
     subs = [x for x in dict.fromkeys(subs) if x and x != "nan"]
-    region = str(lead["region"])
+    # the region word: units aggregate by their region; when no region holds REGION_LEAD_MIN of the cluster, the two largest are
+    # joined ("Kootenays / Columbia Mountains" for the 436 km Purcell-Selkirk-Cariboo cluster, 46% / 32%; Ethan 2026-09-23)
+    by_region = {}
+    for i, sh in zip(ids, share):
+        by_region[str(CX.gdf.loc[int(i) - 1, "region"])] = by_region.get(str(CX.gdf.loc[int(i) - 1, "region"]), 0.0) + float(sh)
+    ranked = sorted(by_region.items(), key=lambda kv: -kv[1])
+    region = ranked[0][0]
+    if ranked[0][1] < REGION_LEAD_MIN and len(ranked) > 1 and ranked[1][1] >= secondary_min:
+        region = f"{ranked[0][0]} / {ranked[1][0]}"
     label = ", ".join([*(x for x in subs if x != region), region]) if subs else region
     return region, "; ".join(subs), label
 

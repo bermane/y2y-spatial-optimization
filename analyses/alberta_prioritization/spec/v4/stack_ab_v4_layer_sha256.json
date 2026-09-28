@@ -1,0 +1,79 @@
+{
+ "created_utc": "2026-09-21T23:27:29.686681+00:00",
+ "source_ab": "input_data/aligned_stack_ab",
+ "source_parent_v4": "input_data/aligned_stack_v4",
+ "stack": "input_data/aligned_stack_ab_v4",
+ "n_ab_pu": 85133,
+ "dust_share_min": 1e-09,
+ "dust": {
+  "climate_type_macrorefugia": {
+   "cells": 0,
+   "mass_share": 0.0,
+   "ab_total": 53101.98828125
+  },
+  "climate_realizations/macrorefugia_245_2071_2100": {
+   "cells": 0,
+   "mass_share": 0.0,
+   "ab_total": 85465.859375
+  },
+  "transboundary_connectivity": {
+   "cells": 0,
+   "mass_share": 0.0,
+   "ab_total": 463870.5
+  }
+ },
+ "velocity_floor": {
+  "span_yr": 110.0,
+  "v_floor_km_per_yr": 0.00909090909090909
+ },
+ "transboundary_sq_one_side_dust_cells": 5225,
+ "transboundary_sq_one_side_dust_mass_share": 2.0664079108990298e-05,
+ "changed": {
+  "climate_type_macrorefugia": {
+   "v4": "73ae969dd3064a41a1e6a110e4050c39262477a6ac419a2bd157cfd51fc2909c",
+   "v31": "73ae969dd3064a41a1e6a110e4050c39262477a6ac419a2bd157cfd51fc2909c"
+  },
+  "transboundary_connectivity": {
+   "v4": "c005941ce8c956c09643eecedbad18f57054ca3b4ee1cb0950aa05f63e4095d6",
+   "v31": "5b2abbebddd734d733eaa625c0e7690cb1bbbbd7de83a3cf5e76c99acbbd7033"
+  }
+ },
+ "unchanged": {
+  "aoh_richness_birds": "6e9f8e8a8894af775297ba2f18b5b4a777047837ed2a086c7bf090010f39526b",
+  "aoh_richness_mammals": "b85a1511e118deb16539c165bef93be270c3c7042f03424900879bae0ec31849",
+  "climate_corridors": "ecd96fe7f2659c81c0d8cd85ec18b6bade2dd0b4e6fa835823172eb50d2b1e56",
+  "cost_uniform": "aca44be277499eba5cf36053a158e484a1ca4d81aa703d7e8af393c291ee913b",
+  "human_modification": "25412ff8ff9946d453faf85ccd681fad9a4b2f0cc93f419432a4da8fea6d3933",
+  "irrecoverable_carbon_biomass": "33cf20e0b2adb115e7ad4d755490136930b138e998759c04cb87c92fddf470c8",
+  "irrecoverable_carbon_m_soc": "b34186921d77bfc98b664d5bbf2ee896010c21bc4b049135358ef540cc5fb1a2",
+  "irrecoverable_carbon_sl_soc": "185f51b710d92d87046229fe5e089cd7b162716cd97b27c256c91ef53dae9d20",
+  "mask_protected_areas": "d0a8901481839ef6244f0eb1870e9adaf88f8658b1a4f99c3f99470c8f801b61"
+ },
+ "realizations": {
+  "macrorefugia_245_2071_2100": {
+   "v4": "bb11ad50dc3107e3b7efac1d3857bf1197ac644756f935d578408a7cf476f3c2",
+   "v31": "bb11ad50dc3107e3b7efac1d3857bf1197ac644756f935d578408a7cf476f3c2"
+  },
+  "macrorefugia_585_2071_2100": "73ae969dd3064a41a1e6a110e4050c39262477a6ac419a2bd157cfd51fc2909c"
+ },
+ "efg": {
+  "F1.3.web.map_v1.0": "941628ba01ffb13551cba2313cbd0fc7ffacef1b80341c4f8196d3f394a3f76a",
+  "F2.4.web.mix_v1.0": "f70d4978820d8aee7d2fc28e40d3e04f6870bf6139ff9404de7c88fccaecd1ae",
+  "S1.1_SF1.1.web.merged_v3": "231cf018ed9bff5f35b0c93619537c32de9631a5233fee58b97bb913e99c46e8",
+  "SF1.2.web.orig_v1.0": "dd6e87141363776ec725ec0f5374c6d5834e3dc1b652ceea96d0c9a3e1aff151",
+  "T2.1.web.mix_v1.0": "9d46054a5cfd725bd314a2a96e9394d1bcaaf5f7621f427809e3070877b1fb1c",
+  "T2.2.web.mix_v1.0": "f97a8f67c54235f02e409620b567d18ac51f9a83c2de5fbf9e2883ba322cf130",
+  "T4.4.web.orig_v1.0": "8e1029201e989df66098c37f795b65848a3acb36b7206b55173984f65e21ee80",
+  "T5.1.web.mix_v1.0": "2884db5c8cf7dee8259120359555709732ce9faf4e12ab2a521ed712c288351f",
+  "T6.1.web.map_v1.0": "8669f2b5b48cc3e71e008de45b7dde1184a3c3b2e93ce42758bd77758877760f",
+  "T6.2.web.alt_v2.0": "f8be998a2a58822a18e2c416dd266db7d137272375a1bb23eba06e7d11bd5e01",
+  "T6.3.web.map_v1.0": "6f56e431233fee946a1874f8319b0a422f93039793abcd07010002fdf28e9bcb",
+  "T6.4.web.orig_v1.0": "4710b196c015bef9dd015b30903d3c04adc5d882a79578e143b94a784c005240",
+  "TF1.6_TF1.7.web.merged_v3": "ada908375f6309cb35794d8d1754b8e740812f85c149ca577b88ffe3c50fa0e7"
+ },
+ "parent_v4_source": {
+  "climate_type_macrorefugia": "52236670953cc20fda223e5741cc51f5092872ff99e5e026fa8b5e164b70b0f5",
+  "transboundary_connectivity": "803e8d9e7c1305aeb7b7a1d6fec1d9b31c5642b9dd32b0c5a4c6eb90aa6c3b22",
+  "macrorefugia_245_2071_2100": "f007bf2d9b8777c4a3f123d552fd6318df16418e684291cc4bc19f3cc8277c99"
+ }
+}

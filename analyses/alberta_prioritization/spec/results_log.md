@@ -527,25 +527,86 @@ current spike frequent in every formulation — the number the v4 I² shape is e
 cell's 2% / 5% probes: frequent 2 / 0 km², union 56,105 / 57,161, D = 1.000 at both). C1b skipped under the v3.1 environment because the
 parent's package on disk is now v4 (as designed).
 
-**R9.1 (placeholder) Manifest v4 pre-solve record (09c, Ethan's run):** the pre-checks and the two proofs as frozen, the re-audit cards,
-the 7 × 2 weight table, the manifest v4 sha, the stack hashes.
+**R9.1 Manifest v4 pre-solve record (09c, Ethan's run 2026-09-21; M19.2–M19.4).** The Alberta v4 stack (`aligned_stack_ab_v4/`, 85,133 PU cells
+unchanged): the velocity floor (one cell width / 110 yr = 0.00909 km/yr) is INERT on Alberta — minimum velocity 0.297 km/yr (SSP585) /
+0.130 (SSP245), 0 cells capped, so the v4 refugia layers equal the v3.1 Alberta layers cell for cell; the squared transboundary current
+equals the v3.1 layer squared except 5,225 cells zeroed by the parent's Y2Y-scale dust rule (2.1e-5 of the squared mass; disclosed);
+AB dust 0 cells on every layer; max/mean 14.7 → 127.6. Re-audit (30% convention): refugia diffuse-linear (leverage 0.309 / 0.341, no
+θ-tail); I² transboundary concentrated-satiating (leverage 0.791, θ-area 2.65%, R2 target 0.267 — withheld by the semantic gate, registered
+lever = weight, t = 1). Weights per cell in `scenarios_ab_v4.json` (S0@585: refugia 0.836, transboundary 0.326, corridors 2.572, m_soc
+0.176, biomass 0.138, mammals 1.836, birds 1.115; the doubled block ×~2.2 under each forward; S4 t 0.772 at θ 2×, D-AB14). Manifest v4
+frozen `0c2a075747…` (14 design rows, 50 columns; EFG block sha = v3.1's; the 13 D-AB12 targets unchanged; reference cell `s0_ssp585_theta5`
+with probes 2 / 5 / 10%).
 
-**R9.2 (placeholder) The v4 ensemble (10):** 14/14 formulations — anchors, twins (LP ≤ MILP), guarded MGA at 5% and 2% (certificates,
-duplicates, time-limited), the reference cell's unguarded probes at 2 / 5 / 10%; z* per formulation vs v3.1 and the absolute band
-widths (M4.31); solve time.
+**R9.2 The v4 ensemble (10, Ethan's run 2026-09-21/22; `runs_v4/ab_l/A/`).** 14/14 formulations: anchors 0.5–1.0 s (rel. drift vs the
+compiled model ≤ 1.2e-5); Gurobi LP twins ≤ MILP 14/14; **guarded MGA at 5%: 14 × 50 members, 700/700 in band, 0 duplicates, 0 time-limited
+(1.3–1.7 min per sweep); guarded at 2%: 700/700 in band (1.3–2.0 min per sweep); the reference cell's unguarded probes at 2 / 5 / 10%:
+50 / 50 / 50 in band (two duplicates at 10%)** — ≈ 46 min of solver time in all. z\* vs v3.1 on the same formulation: S0 −1.0%, S1 +0.4 /
++0.6%, S2 −4.2 / −4.3% (structural connectivity alone now scores what the compound block scored), S3 −1.3%, S4 +0.5 / +0.6%, S5 −0.4%
+(`analysis/ab4_v4/tables/band_width_abs.csv`; the 2% band = 0.078–0.174 absolute).
 
-**R9.3 (placeholder) Analysis on v4 (11):** the D-AB13 decision on the guarded 5% frequent tier (flat < 100 km² → 2%); F bands at 5%
-and at the applied band (guarded); the E4 core-erosion table on the reference cell; E1 / E3 / E11 on the 14 design formulations (guarded
-members); the pinch-point pinning table; C1 at v4 (guarded vs guarded) + C1b; C4, tenure, clusters; where the v3.1 core patch went.
+**R9.3 Analysis on v4 (11, 2026-09-22; `analysis/ab4_v4/`, `spec/v4/gate_ab4_summary.json`; guarded members = the estimand, D-AB15).**
+**D-AB13 did NOT fire: the 5% guarded frequent tier is 1,264 km² (≥ 100) → applied band = 5% guarded, the parent's mirror** (v3.1: 27 km²
+→ 2%). Bands at 5% (guarded): never 0 / rare 50,014 / conditional 5,883 / frequent 897 / always 367 km² → **core (F ≥ 0.70) 1,264 km²
+= 2.2% of allocatable land (v3.1: 31 km²)**. D at 5%: 0.787–0.999 (S2 0.79 / 0.79, S2c 0.999 / 0.999; every formulation D = 1.000 on
+v3.1) — the guarded band is no longer a complete-turnover plateau where structural connectivity leads. E1 mean |F − F_naive| 0.181 / max
+0.924. E3 within 99.1% / scenario 0.85% / climate 0.00% (14 factorial cells). **E11: 182/182 ordered pairs mutually in-band**; anchor Jaccard
+0.390–0.865 (mean 0.591). **E4 on the reference cell (unguarded): 2% → frequent 145 km², always 62, D 0.987; 5% and 10% → frequent 0,
+always 0, D 1.000** — the UNGUARDED band is as flat as on v3.1; the core is the guard's doing (the per-block floors keep structural
+connectivity's spike in every member). **Pinch-point pinning (`T1_pinning.csv`): 100% of the 115-cell top-0.2% current spike is frequent
+in EVERY formulation (mean f 1.00; S2c 0.98), against 0.0% on v3.1** — the convex shape with no target pins the spike under every value
+position, as on the parent (R11.1c). Anchor captures: transboundary 0.71–0.78 (v3.1 0.56–0.59), refugia 0.57–0.59, corridors 0.48–0.49,
+m_soc 0.74–0.77 (S4 0.772), biomass 0.39–0.44, birds 0.42–0.43, mammals 0.45, EFG mean 0.55–0.56. Tiers at the applied band (ensemble
+core, 11's record): core 1,264; structural-connectivity-forward (frequent minus core) 1,169 km²; carbon-forward 6; climate-refugia-,
+corridors- and biodiversity-forward 0; union 1,169; opportunity 54,728; never 0. Pooling: every scenario POOLED (climate Jaccard 0.865–0.999;
+v3.1 had S1 / S3 / S4 separate). **C1 at v4 (guarded vs guarded): Spearman 0.786 (v3.1 0.284), tier overlap 0.953, Jaccard 0.664 (AB core
+1,264 km² vs the parent's Alberta-clip core 1,756)**; per formulation the 10,083 additions fall 77–96% inside the parent anchor's Alberta
+selection. C4: 0 km² of core inside the Nature-First zone (mean F 0.324 vs 0.176 allocatable) or the SRP area (0.142). Tenure: core 1,156 /
+1,264 km² crown Green, 73 ranchland; the structural tier 1,056 / 1,169 crown, 59 ranchland. Clusters kept 53.
 
-**R9.4 (placeholder) The necessity test on v4 (11b/11c):** the forced ledger at the applied band (guarded; the unguarded ledger on the
-reference cell), the forced share of the core vs the 50% gate, T2 × 14, T3 if triggered; the six E17-T3 shifts.
+**R9.4 The necessity test and the block-out shifts on v4 (11b / 11c, 2026-09-22).** T1 — forced set EMPTY on the guarded 5% band (min
+capture of each class's unlocked cells < 1 in every formulation): 0 km² forced in ≥ 1 formulation, 0 in all fourteen; core 0.0% forced;
+T3 gate NOT triggered; the unguarded ledger on the reference cell only (also empty). T2 — leave-EFG-out anchors: Jaccard with the with-EFG
+anchor 0.675–0.845; **0–28 core cells dropped without the block (≤ 2.2% of the core)**, mean latitude shift −0.10°. E17-T3 (six arms at
+S0@585): climate-refugia block out +0.24° (Jaccard 0.66 vs S0), structural connectivity +0.08° (0.61), climate corridors −0.12° (0.63),
+carbon −0.08° (0.81), biodiversity −0.07° (0.73), EFG −0.15° (0.79) — no block moves the balanced plan by more than a quarter degree.
 
-**R9.5 (placeholder) Package v2 on v4 (12/13/14):** core / scenario tiers by five owners / opportunity / never vs the v3.1 package
-(archived to `_superseded_v3.1/`); the Act 0 value layers on six themes (convergence 0–6); picks with region names; T-D7 + the
-mean-vs-median flags; the E19 partition; the AOI and tenure re-reads.
+**R9.5 Package v2 on v4 as RUN (12 / 13 / 14, 2026-09-22 — the ensemble core, before the v2.1 balanced-core rebuild of R9.7; archived to
+`_superseded_v4_ensemble_core/` on the next 12 run).** Allocatable land 57,161 km². **Core 1,264 km² (2.21%); scenario tiers 1,169 km²
+(2.05%: structural connectivity 1,163 own + 6 two-or-more; refugia-, corridors-, biodiversity- and carbon-forward 0); opportunity 54,728
+(95.7%); never 0.** By refugia future: SSP585 core 1,286, SSP245 1,257, Jaccard 0.974 (v3.1 0.853). **Four regional core clusters
+(20 km linkage, N → S): 1 SE of Jasper (Central Alberta foothills) 643 km², mean F 0.82; 2 NE of Banff (Central Alberta foothills) 328,
+0.79; 3 SE of Don Getty Wildland (Alberta Rockies) 231, 0.81; 4 SE of Waterton (Crown of the Continent) 122, 0.79** — all four on the
+structural-connectivity spike: T-D7 ratios 7.6–10.5× the allocatable mean for structural connectivity (existing PAs 1.99×), climate
+refugia 0.80–1.76×, carbon 0.37–1.67×, corridors 0.81–1.07×, biodiversity 0.95–1.07×, representativeness 0.76–1.29×. Act 2 picks: eight
+(the structural tier's SE of Jasper 753 km² and SE of Don Getty 142 the large ones; refugia / biodiversity / carbon leans add 16–35 km²
+each). Act 0: convergence 0 → 8,681 / 1 → 23,181 / 2 → 15,940 / 3 → 6,904 / 4 → 2,232 / 5 → 223 / 6 → 0 km²; high-value 48,480 km², gap
+46,047 (95.0% outside the core and the tiers; v3.1 99.2%). Biodiversity capture over all 714 guarded plans 0.430–0.440. E19 partition:
+0% forced everywhere. Mean-vs-median check: 36 of 63 pairs flagged (carbon and structural connectivity — both concentrated tails; kept by
+the v1.14 ruling). Every tier 100% crown-or-ranchland allocatable as before.
 
-**R9.6 (placeholder) The prior registration's picks under v4** (`spec/v4/v31_cluster_survival.csv`): the v3.1 core cluster (E of White
-Goat, 23 km²) and the four scenario picks scored against the v4 tiers — pre-stated: reported, not repaired.
+**R9.6 The prior registration's picks under v4 (`spec/v4/v31_cluster_survival.csv`; ensemble core basis).** v3.1 core 31 km² → v4 core
+1,264 km². The v3.1 core cluster (E of White Goat, 23 km²) is **100% inside the v4 core (mean F 1.00)**; of the v3.1 scenario picks, SE of
+Whitehorse Wildland (21 km²) and E of White Goat (63 km²) are 100% / 98% inside it, S of White Goat (64 km²) 31% (58% opportunity), and the
+Upper Smoky Nature-First vicinity (39 km²) 0% (100% opportunity, mean F 0.4). Reported, not repaired: the v3.1 core's one patch is the
+seed the v4 core grew around.
 
-*Last updated 2026-09-21 (R9 placeholders; R9.0 pre-run verification).*
+**R9.7 THE BALANCED CORE on Alberta (package spec v2.1 mirror, AB v0.6.1, M20; measured zero-solve 2026-09-23 on Ethan's v4 guarded record —
+the 12 → 14 re-run reproduces them).** Balanced scenario, two climate levels averaged, f ≥ 0.70: **1,456 km² of unprotected land (2.55%)**;
+the ensemble core (1,264 km², the paper's estimand) lies **100% inside it** (Jaccard 0.868) — as on the parent, the six forward votes only
+remove land from the balanced result. Always (f ≥ 0.95) 551 km² (ensemble 367). By future: SSP585 1,457 km², SSP245 1,456, Jaccard 0.999 —
+the two futures agree on the Alberta core almost cell for cell (1 km² conditional). **Five regional clusters north → south (20 km linkage):
+1 SE of Jasper (Central Alberta foothills) 719 km², mean f 0.84; 2 NE of Banff (Central Alberta foothills) 336, 0.81; 3 SE of Don Getty
+Wildland (Alberta Rockies) 146, 0.81; 4 S of Don Getty Wildland (Alberta Rockies) 66, 0.88; 5 SE of Waterton Lakes (Crown of the Continent)
+147, 0.79** — the parent's positional four-cluster rule would drop Waterton and keep the 66 km² piece, so the Alberta package shows all five
+(`MAX_CORE_CLUSTERS_AB = None`, M20.3; Ethan's call). T-D7 on the balanced core: structural connectivity 6.9–9.9× the allocatable mean
+(existing PAs 1.99×), climate refugia 1.45–1.76×, carbon 0.37–1.67×. **Act 2 tiers against the balanced core:** structural connectivity
+forward 977 km² (own land 976; 1 km² under two or more); climate refugia, climate corridors, mammal + bird richness 0; biomass + soil carbon 1;
+union 977 km² (1.71%); opportunity 54,728 (95.7%); never 0. **Balanced-core land each lean gives up** (core cells not frequent under the
+lean): climate corridors 1,036 km² (71% of the core), climate refugia 515 (35%), mammal + bird richness 437 (30%), biomass + soil carbon
+281 (19%), structural connectivity 0 — the corridors lean is the one that lets the pinch points go. Act 0 unchanged (gap 46,047 km² = 95.0%
+of high-value land outside the core and the tiers). Act 2 picks: SE of Jasper 643 km² and SE of Don Getty 122 (the structural tier), six
+small ones (16–30 km²) from the other leans. 14 renders 01–06 on this basis (the values pair as 02c / 02d, the Act 2 map with windows on
+picks 7 and 8, six design frames); 13 renders 40 record frames.
+
+*Last updated 2026-09-23 (R9.1–R9.7; R9.7 measured zero-solve, Ethan's 12 → 14 re-run reproduces it).*

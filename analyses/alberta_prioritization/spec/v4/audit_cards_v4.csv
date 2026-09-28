@@ -1,0 +1,4 @@
+feature,orient,leverage,cap_min,cap_max,theta_area,theta_target,cls,lever,target,realization,shape,registered_lever,gate_reason,v31_cls,v31_leverage,v31_theta_area,v31_target
+climate_type_macrorefugia,reciprocal,0.309,0.169,0.478,0.0,0.0,diffuse-linear,weight,1.0,ssp585,"1/max(v, floor)",weight (diffuse-linear),"value = residence time within the horizon, linear; floor = numerics hygiene",diffuse-linear,0.309,0.0,1.0
+transboundary_connectivity,raw,0.791,0.014,0.805,0.0265,0.267,concentrated-satiating,target,0.267,-,I^2,"weight, t = 1 -- R2 SEMANTIC GATE withholds the target",pinch points are place-semantic: the claim IS the set of cells; a target secures an amount and un-pins them (parent PF-2: 100% -> 7%),diffuse-linear,0.523,0.0034,1.0
+climate_type_macrorefugia,reciprocal,0.341,0.159,0.5,0.0003,0.002,diffuse-linear,weight,1.0,ssp245,"1/max(v, floor)",weight (diffuse-linear),"value = residence time within the horizon, linear; floor = numerics hygiene",,,,

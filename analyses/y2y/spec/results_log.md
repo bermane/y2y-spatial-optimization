@@ -937,3 +937,17 @@ tier; the rest of each cluster moved from "core" to "core-habitat-forward" — i
 still irreplaceable when core habitat leads, and no longer under every value position. The v4 core's four regional clusters
 (north → south): 1,215 / 8,287 / 14,417 / 6,391 km² (mean F 0.74 / 0.80 / 0.82 / 0.82). Region names, T-D7 and T-D4 → R11.3 (cont.)
 after 20 / 21.
+**R11.3 (cont., 2026-09-23) — the balanced scenario's own core vs the registered core (v4, guarded; `alt_core("s0")`, zero-solve).**
+Frequent tier at f ≥ 0.70 over the balanced scenario's 100 pooled plans: **51,580 km²** vs the registered 14-cell core of 37,879 km²;
+the registered core lies **100.0% inside** it (Jaccard 0.734 — the balanced-only tier is a superset, 13,701 km² larger). Five regional
+clusters north → south: Yukon 2,232 km² (mean f 0.77), Stikine 11,888 (0.82), Kootenays/Columbia 18,347 (0.84), Central Idaho /
+Salmon–Bitterroot 11,252 (0.84), and a fifth at 45.5° N / 111.0° W (Greater Yellowstone) 3,075 km² (0.85) that the registered core does
+not carry as a cluster. Reading: adding the six theme-forward votes to the balanced vote only REMOVES land from the core — every cell
+the seven scenarios agree on is already frequent under the balanced scenario alone.
+
+**R11.4 — THE BALANCED CORE (package spec v2.1, measured 2026-09-23 on the v4 guarded record; supersedes the R11.3 core headline for
+the PACKAGE; the paper's ensemble numbers in R11.1 stand).** Balanced scenario, two climate levels averaged, f ≥ 0.70: **51,580 km²** of
+unprotected land (the ensemble core of 37,879 km² lies 100.0% inside it; Jaccard 0.734; the six forward votes only ever REMOVE land
+from the balanced result, they never add). Five regional clusters north → south by the registered procedure: Yukon 2,232 km² (mean
+f 0.77), Stikine 11,888 (0.82), Kootenays/Columbia 18,347 (0.84), Central Idaho / Salmon–Bitterroot 11,252 (0.84), Greater Yellowstone
+3,075 (0.85) — the fifth is new relative to the ensemble core. Act 2 tiers against the balanced core (zero-solve, measured 2026-09-23 on the v4 guarded record; identical on Ethan's run): frequent-minus-core climate refugia forward 25,899 km² / structural connectivity forward 37,333 / climate corridors forward 552 / mammal + bird richness forward 914 / biomass + soil carbon forward 22,688; by owner (highest f; 2+ its own class) 23,512 / 33,764 / 12 / 58 / 17,917 and 5,898 km² under two or more; union of the named tiers 81,161 km² (7.5% of allocatable land); opportunity 919,251 km² (85.0%); never 29,893 km² (2.8%). **Balanced-core land each lean gives up** (core cells not frequent under the lean): climate refugia 13,877 km² (27% of the core), structural connectivity 14,912 (29%), climate corridors 27,367 (53%), mammal + bird richness 19,709 (38%), biomass + soil carbon 16,818 (33%) — the corridors lean gives up the most core while owning almost nothing of its own. Climate-conditional core: 40,930 km² frequent under BOTH refugia futures, 12,369 only under SSP585, 19,367 only under SSP245 (per-level tiers 53,299 / 60,297 km²). Clusters: 2,211 components, 93 ≥ 100 km² (46,674 km²); adequacy pins 0 of 170 register rows. Sensitivity: 0.60 → 71,440 km² tier (114 kept), 0.70 → 51,580 (93). T-D1 and the v3.1 survival table → Ethan's run.

@@ -1234,3 +1234,95 @@ the core is made of.
 **M4.39 addendum (Ethan, 2026-09-21): the timelapse runs the scenarios in the Act 2 legend order** (`STYLE["scenario_legend_order"]`:
 balanced / core first, then core-habitat, biodiversity, structural connectivity, climate corridors, carbon; the naturalness push, which has
 no Act 2 entry, last), reference climate before the other — both the design pass and the full sequence.
+**M4.39 addendum (Ethan, 2026-09-23): Act 1 maps on the BALANCED SCENARIO ONLY — a comparison view.** `director_plot.alt_core(C, "s0")`
+builds a core from one scenario's pooled guarded plans (both futures, 100 plans) by the registered Act 1 procedure (f ≥ 0.70, closing
+r = 1, 8-connectivity, ≥ 100 km², complexes at 25 km, top-6 grouped into regional clusters at 75 km + specks absorbed, numbered north →
+south) and the two Act 1 assets take it as `basis=` (`02c`/`02d` in 21; the record copies in 20). The registered core is unchanged
+(F over all 14 design cells); the ramp label says whose plans the surface counts. A fifth cluster outline colour (near-black) was added
+because this surface yields five regional clusters.
+**M4.39 addendum correction (Ethan, 2026-09-23): the balanced-only comparison ships as ONE map** — the first Act 1 map (f surface + IPCA
+proposals, `02c_act1_core_F_balanced_only.png` in 21, its record copy in 20) with the balanced scenario's pooled f in place of F. The
+clusters map on that surface is not an output (`alt_core(clusters=False)`; the cluster machinery stays available behind `clusters=True`).
+
+### M4.40 — THE DIRECTOR-FACING CORE = THE BALANCED SCENARIO'S GUARDED TIER (package spec v2.1 / study plan v0.20.1, Ethan 2026-09-23; built the same day)
+**Decision.** The Act 1 core is the guarded frequent tier of the balanced formulation (S0) alone: `f_balanced_core.tif` = S0's guarded
+f averaged over its two climate levels (SSP245, SSP585 — one vote each; the climate axis is uncertainty, not a value lean), threshold
+≥ 0.70 (unchanged). The cross-scenario ensemble F (one vote per design formulation, 14 under manifest v4) is UNCHANGED as the paper's
+Claim-A estimand and is written, tabled and mapped beside the core as the appendix (`F_guarded.tif`, "appendix: ensemble core" row in
+T-D2, `appendix_act1_ensemble_F_1km.png` in 20, `02c_appendix_act1_ensemble_F.png` in 21). Rationale (spec): one coherent value
+position's irreplaceable land — the organisation's stated balanced position — that a director can own without a caveat about
+hypothetical leans; the ensemble core is strict by construction and moves with the scenario set. The analysis now LEADS with the
+balanced scenario, which feeds the value-forward scenarios of Act 2.
+**What changed (19 → 20 → 21, zero-solve; the solves, 12–15b, and the paper analyses 13/15 are untouched).** 19: writes
+`f_balanced_core.tif` + `f_balanced_ssp585/245.tif` (the SSP-only variants, spec "reported as before"); asserts the pooled S0 f equals
+the core surface; T-D2 bands table = balanced core (applied) / ensemble F (paper) / unguarded reference / balanced per level;
+`summary.json` gains `core_basis = "balanced"`, `core_definition`, `frequent_km2.ensemble`, `always_km2.ensemble`,
+`ensemble_core_inside_balanced_pct`, `by_level_ensemble` (the ensemble per-level record); Act 2 tiers = each forward's pooled
+frequent tier MINUS the balanced core (owner raster, "2+" class, opportunity, never — same rules on the new core); NEW T-D2 rows
+"balanced-core land the lean gives up" per forward scenario (core cells not frequent under that lean); clusters, complexes, regional
+picks, T-D1 (now `driving = "balanced scenario (both futures)"`, `mean_guarded_F` on the core surface + `mean_ensemble_F` beside it),
+T-D5b (balanced and ensemble core rows), tier achievement, the hinge cross-tab, the value gap and the v3.1 cluster survival all run on
+the balanced core; cluster register keys `ensemble`/`ensemble_<lv>` → `core`/`core_<lv>`; a package built on the ensemble core is
+archived to `_superseded_v4_ensemble_core/` (the basis is part of the package identity). `director_plot.load` draws every Act 1 asset
+from the package's declared basis (`C.CORE_BASIS`; `C.Fg` = the core surface, `C.Fens` = ensemble F); the ramp reads "f = frequency in
+the balanced scenario's 30×30 plans"; the corner note and Act 1 titles say "the balanced position's core: land in at least 70% of its
+near-optimal plans"; `alt_core("ensemble")` is the appendix basis. 20: the by-future pairs and the two-way climate map use the balanced
+per-level surfaces; deck bullets reworded; the appendix ensemble map added. 21: the 2c slot = the ensemble-F appendix map. The
+timelapse: the core frame follows the balanced scenario's f directly; no ensemble-F frame.
+**Naming (Ethan, 2026-09-23).** Scenario display words under v4 (`director_core.SCENARIO_WORD`): climate refugia (S1), structural
+connectivity (S2), climate corridors (S2c), mammal + bird richness (S3), biomass + soil carbon (S4); scenario labels "<word> forward";
+the Act 2 legend uses the same words. Block names in the data are unchanged.
+**Not changed.** The registered estimand, F, every solve, notebooks 13/15/15b, the E-round, the E11/E1/E3 records. The Alberta mirror
+(`analyses/alberta_prioritization/12_tiers_and_clusters`) is NOT yet re-pinned to v2.1 — logged there as pending.
+**M4.40 addendum (Ethan, 2026-09-23): four core clusters in the deck; no 2c in the presentation set.** `director_core.MAX_CORE_CLUSTERS = 4`:
+19 keeps clusters 1–4 of the north → south numbering as the numbered picks (positional, not by area — by area the smallest is Yukon, which stays); the balanced core's fifth
+(Greater Yellowstone, 3,075 km²) leaves the picks and stays in the cluster register unnumbered. The ensemble-F appendix map is removed
+from 21 (director outputs); it remains in 20's record (`appendix_act1_ensemble_F_1km.png`).
+**M4.40 addendum (Ethan, 2026-09-23): the Act 1 ramp reads "frequency in the balanced scenario's 30×30 plans"** — no "f =" prefix on the
+director-facing maps (the symbol appears nowhere else in the deck); the ensemble appendix keeps the paper's "F =".
+**M4.40 addendum (Ethan, 2026-09-23): tighter regional grouping — `PICK_LINK_KM` 75 → 50 km** (complex linkage 25 km and the 10 km speck
+absorption unchanged; the component procedure is pre-registered and untouched). Measured on the balanced core (zero-solve): Yukon,
+Stikine and Kootenays are contiguous and do not move (2,232 / 11,888 / 17,815 km²; extents 131 / 474 / 615 km); Central Idaho tightens
+from 11,252 km² over a 748 km span to 8,638 km² over 428 km. Tighter settings tried and not adopted: 15 / 40 km splits Central Idaho into
+two ~4,000 km² pieces (335 and 229 km) and pushes Greater Yellowstone out of the top five; 15 / 30 / 5 km trims Kootenays to 15,681 km².
+**M4.40 addendum (Ethan, 2026-09-23): consequences tables reference NAMED example areas** — Banff National Park (existing PA, whole footprint)
+and Dene Kʼéh Kusān (proposed IPCA, whole footprint on the PU) replace the two aggregates (all existing protected areas; the proposed IPCAs'
+unprotected part) as the reference columns; `director_core.CONSEQ_REFERENCE_AREAS` lists them, 19 writes their rows to T-D7 as act
+"reference" (`pct_protected` beside) and keeps the aggregates as "reference_aggregate"; `STYLE["conseq_reference"]` = "named" / "aggregate".
+Same denominator (mean over allocatable land); the mean-vs-median check covers the named areas too.
+**M4.40 addendum (Ethan, 2026-09-23): consequences ratios on RAW values.** `director_core.ValueRatios` read every layer from the v4 stack,
+where structural connectivity is the SQUARED current (the registered I² shape) — so its "×" ratios were ratios of mean I², not of mean
+current. Fixed: `RATIO_SOURCE` reads that layer from the base stack (`aligned_stack/transboundary_connectivity.tif`, raw current in
+amperes; verified = the v4 layer's square root up to the dust rule). Refugia stays on the v4 floored residence-time layer (package spec
+v1.14: native-floored); every other layer is byte-identical between the stacks. Star axes are percentiles and were unaffected (squaring
+is monotone). T-D7 is re-measured by Ethan's run of 19.
+**M4.40 addendum (Ethan, 2026-09-23): the Act 2 map's yellow tier is labelled "Balanced"** (not "Core") when the package's core basis is
+the balanced scenario — the legend then reads Balanced → climate refugia → mammal + bird richness → structural connectivity → climate
+corridors → biomass + soil carbon → two or more.
+**M4.40 addendum (Ethan, 2026-09-23): the method timelapse shows the balanced scenario only** (`STYLE["frames_scenarios"] = "balanced"`):
+design pass = one balanced near-optimal plan; full set (21 renders it, Ethan 2026-09-23) = the values → the balanced anchor → its 50 plans
+at SSP5-8.5 → that cell's frequency → its 50 plans at SSP2-4.5 → that cell's frequency → the core (both futures averaged): all 100 balanced
+plans, ~110 frames. The theme-forward cells are left out ("all" restores them).
+**M4.40 addendum (Ethan, 2026-09-23): the timelapse is assembled in place.** `director_plot.assemble_timelapse` turns the frames + `concat.txt`
+into `method_timelapse.mp4` (H.264, 30 fps, 1920 × 1080) with the ffmpeg binary bundled by `imageio-ffmpeg` (added to `requirements.txt`;
+no system ffmpeg on this Mac); `method_frames` calls it after writing the frames (`STYLE["frames_assemble"]`).
+**M4.40 addendum (Ethan, 2026-09-23): the timelapse = the 100 balanced plans only** (`STYLE["frames_plans_only"] = True`): no value maps,
+anchor, frequency or core frames — 50 near-optimal plans at SSP5-8.5 then 50 at SSP2-4.5, four per second (25 s).
+**M4.40 addendum (Ethan, 2026-09-23): the timelapse frames outline the proposed IPCAs in orange**, with their names in the insets and the
+legend entry, exactly as the first Act 1 map does.
+**M4.40 addendum (Ethan, 2026-09-23): the timelapse is capped at 20 MB** (`STYLE["frames_video_max_mb"]`): the first encode is CRF 18 /
+preset slow (28.0 MB for the 100-plan clip); over the cap, a two-pass encode at the bitrate that fits (5,888 kb/s → 18.6 MB, 1920 × 1080,
+30 fps). Same frames, same resolution; the quality loss is spread evenly rather than by frame.
+**M4.40 addendum (Ethan, 2026-09-23): the timelapse frames share the Act 1 maps' extent exactly.** The Act 1 PNGs are saved with a tight
+crop; the frames had kept the full 13.33 × 7.5 in canvas (aspect 1.778 vs 1.818, the map smaller and higher in the video). The frames now
+crop to the same tight box (+ matplotlib's 0.1 in pad, computed once on the kept figure with the caption hidden; the two figures' boxes are
+identical), width fixed at 1920 px; ffmpeg rounds to even dimensions.
+**M4.40 addendum (Ethan, 2026-09-23): cluster region words join when no region leads.** `director_core.region_of` aggregates the
+communities units by region word; if the largest region holds under 50% of the cluster (`REGION_LEAD_MIN`) and the second at least 15%,
+the label joins them — cluster 3 (17,815 km², 49.2–53.1°N, 436 km) was "Kootenays" on 46% of its land (East + Central Kootenay) with
+Columbia-Shuswap + Thompson-Nicola ("Columbia Mountains") 32% and Robson Valley 10%: it becomes "Kootenays / Columbia Mountains" on
+the next run of 19. **Timelapse order:** the balanced scenario's cells run low emissions first (SSP2-4.5, then SSP5-8.5;
+`STYLE["frames_climate_order"]`).
+**M4.40 addendum (Ethan, 2026-09-23): consequences tables — no fill on the reference columns, the Area row filled.** `STYLE["conseq_scale_rows"]
+= "clusters"` scales and fills each row over the cluster columns only (Banff / Dene Kʼéh Kusān stay plain); `conseq_fill_area` puts the
+Area row on the same red → blue ramp (log area, smallest → largest).

@@ -1,0 +1,6 @@
+prior_pick,prior_name,km2,pct_in_v4_core,pct_in_any_v4_core_cluster,mean_F_v4,pct_frequent_v4,pct_in_v4_tier_Core-habitat-forward,pct_in_v4_tier_Structural-connectivity-forward,pct_in_v4_tier_Climate-corridors-forward,pct_in_v4_tier_Biodiversity-forward,pct_in_v4_tier_Carbon-forward,pct_in_v4_tier_2plus,pct_opportunity_v4,pct_never_v4
+"Cluster 1 (v3.1, Act 1)",E of White Goat (52.3°N 116.4°W),23,100.0,100.0,0.9982948303222656,100.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+"Cluster 2 (v3.1, Act 2)",Upper Smoky Nature-First zone vicinity (54.0°N 119.5°W),39,0.0,0.0,0.36953243613243103,0.0,0.0,0.0,0.0,0.0,0.0,0.0,100.0,0.0
+"Cluster 3 (v3.1, Act 2)",S of White Goat (52.1°N 116.7°W),64,31.25,35.9375,0.48750436305999756,31.25,0.0,10.9375,0.0,0.0,0.0,0.0,57.8125,0.0
+"Cluster 4 (v3.1, Act 2)",SE of Whitehorse Wildland (52.9°N 117.2°W),21,100.0,100.0,0.9935307502746582,100.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+"Cluster 5 (v3.1, Act 2)",E of White Goat (52.2°N 116.5°W),63,98.41269841269842,100.0,0.9909965991973877,98.4126984126984,0.0,1.5873015873015872,0.0,0.0,0.0,0.0,0.0,0.0

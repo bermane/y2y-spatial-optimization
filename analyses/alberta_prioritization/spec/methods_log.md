@@ -606,4 +606,74 @@ the scratchpad: every shared number identical (R9.0); the only behavioural delta
 written for whichever probes the reference cell has (2% / 5% under v3.1), the E17 rows follow the block order of the manifest / scenario
 record, and the new columns / files above. No runner: numeric order = run order, Ethan runs in VS Code.
 
-*Last updated 2026-09-21 (M19).*
+## M20. The director story re-pinned: the balanced core (package spec v2.1 / study plan v0.20.1) and the presentation addenda (AB spec v0.6.1, 2026-09-23; parent M4.39 addenda + M4.40)
+
+**M20.1 Trigger and scope.** Ethan, 2026-09-23: "I made some changes to the figures/tables/directors spec story we are telling in the
+y2y-analysis. make those changes here too." The parent's changes since the v0.6 re-pin are presentation and story only — no solve, no
+estimand, no record of 10 / 11 / 11b / 11c changes; 12 / 13 / 14 are re-pinned (zero-solve) and Ethan re-runs them.
+
+**M20.2 THE CORE = THE BALANCED SCENARIO (parent M4.40; mirrored verbatim in 12).** The director-facing Act 1 core is the guarded frequent
+tier of the balanced formulation alone: `f_balanced_core.tif` = S0's guarded f averaged over its two climate levels (one vote each — the
+climate axis is uncertainty, not a value lean), threshold ≥ 0.70 unchanged. The ensemble F over the 14 design cells is UNCHANGED as the
+paper's Claim-A estimand (11's record; `F_guarded.tif`, the "ensemble F (paper)" bands column, the appendix map) — the two objects answer
+different questions. 12: writes `f_balanced_core.tif` + `f_balanced_ssp585/245.tif` (the ensemble per level still written for the
+appendix); asserts the pooled S0 f equals the core surface; T-D2 bands = balanced core (applied) / ensemble F (paper) / unguarded reference
+/ balanced per level; `summary.json` gains `core_basis = "balanced"`, `core_definition`, `frequent_km2.ensemble`, `always_km2.ensemble`,
+`ensemble_core_inside_balanced_pct`, `by_level_ensemble` (`by_level` = the balanced scenario per future: `jaccard_vs_core`,
+`pct_of_core_inside`); Act 2 tiers = each forward's pooled frequent tier MINUS the balanced core (S0's own "frequent minus core" is empty by
+construction and skipped; owner raster, two-or-more, opportunity, never on the new core); NEW T-D2 rows "balanced-core land the lean gives
+up" per forward scenario; clusters, complexes, regional picks, T-D1 (`driving = "balanced scenario (both futures)"`, `mean_guarded_F` on the
+core surface + `mean_ensemble_F` beside it, the T-D7 reference rows on the core surface), T-D5b (balanced and ensemble core rows), tier
+achievement, the hinge, the value gap, the E19 partition and the v3.1 pick survival (`pct_in_v4_ensemble_core`, `mean_f_v4_balanced`,
+`mean_F_v4_ensemble`) all run on the balanced core; cluster register keys `ensemble` / `ensemble_<lv>` → `core` / `core_<lv>`; a package
+built on the ensemble core is archived to `_superseded_v4_ensemble_core/` (the basis is part of the package identity). `director_plot.load`
+draws every Act 1 asset from the package's declared basis (`C.CORE_BASIS`, `C.Fg` = the core surface, `C.Fens` = ensemble F); the ramp
+reads "frequency in the balanced scenario's 30×30 plans"; the corner note and titles say "the balanced position's core: land in at least
+70% of its near-optimal plans". Scenario display words (`director_core.SCENARIO_WORD`): climate refugia / structural connectivity / climate
+corridors / mammal + bird richness / biomass + soil carbon — automatic through `dc.SCENARIO_LABEL`; the T-D0 refugia row says
+"Climate-refugia theme".
+
+**M20.3 M4.40 addenda mirrored.** The deck's core-cluster count: the parent's `dc.MAX_CORE_CLUSTERS` = 4 is POSITIONAL in the north →
+south numbering (Ethan's "remove cluster 5" for Greater Yellowstone). On Alberta the balanced core carries FIVE regional clusters (R9.7)
+and the positional rule would drop the southernmost — SE of Waterton, 147 km², the Crown of the Continent — while keeping a 66 km² piece
+south of Don Getty; so the Alberta knob `MAX_CORE_CLUSTERS_AB` (12) defaults to None (all five shown; the star grid and locators take a
+fifth panel, `cluster_colors` a fifth colour) with 4 one edit away — **Ethan's call, flagged**; **`PICK_LINK_KM` 30 → 20 km** — the parent went 75 → 50 (2× its
+25 km complex link, "a bit tighter spatially"), so the Alberta constant keeps the ratio rule D-AB7 wrote down (2× the 10 km complex link;
+was 3×). Disclosed: the Alberta core clusters lie 50–200 km apart, so 20 vs 30 km changes no core pick; it can split a scenario tier's
+scattered picks. No Act 3 clusters (the parent's ruling). 14 drops the 2c appendix map (record only, in 13).
+
+**M20.4 M4.39 presentation addenda mirrored (all in `director_plot` / `director_core`, reaching 13 and 14 through the shared assets).**
+Colour-vision-safe Act 2 fills (`STYLE["scenario_colors"]`: Tol green / Tol blue / Okabe-Ito sky / Okabe-Ito orange / Tol magenta) — 13's
+summary map now takes them from the style instead of Dark2; cluster outline 4 = dark orange (+ a near-black fifth); inset outlines thinner
+(`cluster_lw_inset_scale` 1.5); the F ramp's end words "Rarely selected / Consistently selected"; star titles = label + area (mean F
+dropped), the core-habitat axis shown as "climate refugia" (`AXIS_DISPLAY`); consequences tables: RdBu fills scaled per ROW from lowest to
+highest, flat-row guard 1.10, the soil-carbon-tail row off; `STAR_GRID` top margin. **The parent's FIXED inset windows do not transfer**
+(`inset_windows`, `scenario_inset_windows`, `scenario_inset_area_skip`, `scenario_inset_town_skip` are Y2Y pixel windows) — 13 and 14 set
+them to None / {} before load so the Alberta insets follow the key cluster (`inset_clusters`) and the Act 2 map's windows follow the two
+largest scenario picks (`scenario_insets`, computed at load; the parent's three fixed windows have no Alberta analogue). **The method
+timelapse** (`director_plot.method_frames`) is mirrored: 13 renders the record budget (3 reference members, 1 per other cell) into
+`figures/method_frames/`, 14 the design pass (plan 1 of the balanced and each forward scenario at SSP5-8.5) into
+`director_outputs/06_method_frames_design/`; the full ~200-frame set is one commented line in 14. One default-preserving change to the
+shared module: `method_frames(..., runs=None)` — the members are read from `runs` when given (the Alberta mirror passes
+`config.ab_paths().runs / "A"`; the flagship default `dc.RUNS` is unchanged), because the frames would otherwise silently read the
+Y2Y-wide members on the Alberta grid.
+
+**M20.5 The Alberta 14 (mirror of the parent's 21 as of 2026-09-23).** 01 / 01b objectives tables; **02a / 02b = the Act 1 core maps on the
+balanced scenario's f** (as the parent); **02c / 02d = the values-convergence pair kept** (Ethan's 2026-09-15 Alberta lead when the v3.1
+core was empty; the order on the deck is his call now that the core is 1,264 km²); 03 / 03b stars + locators; 04 consequences; **05 the
+ONE Act 2 map** (new here; windows on the two largest scenario picks); **06 the timelapse design pass** (new here); export dpi 300 as the
+parent. The pre-v2.1 file names of the values pair are removed on the first run.
+
+**M20.6 Verification (zero-solve, 2026-09-23).** 12 → 13 → 14 smoke-run headless under `Y2Y_VERSION=v4` on Ethan's v4 records with the
+package redirected to the scratchpad (see R9.7 for the balanced-core numbers this produced); Ethan re-runs 12 → 13 → 14 for the record
+(the run archives the ensemble-core package to `_superseded_v4_ensemble_core/`).
+
+*Last updated 2026-09-23 (M20).*
+
+### M20 — PENDING RE-PIN: parent package spec v2.1 / study plan v0.20.1 (2026-09-23)
+The parent redefined the director-facing core as the BALANCED scenario's guarded frequent tier (f_S0 averaged over the two climate
+levels, ≥ 0.70) with the ensemble F kept as the paper's estimand in the appendix, Act 2 tiers relative to the balanced core, and new
+scenario display words (climate refugia / mammal + bird richness / biomass + soil carbon). The mirror's `12_tiers_and_clusters` (and
+13/14) still build on the ensemble core; re-pin = the parent's 19 changes on the Alberta package (`core_basis`, `f_balanced_core.tif`,
+the give-up rows) once Ethan confirms the mirror follows (standing instruction: re-pin and log the delta whenever the parent spec
+changes). Not built yet.

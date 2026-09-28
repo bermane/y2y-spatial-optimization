@@ -49,7 +49,9 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
     def rd(name):
         with rasterio.open(GEO / name) as src:
             return src.read(1)[G.pu]
-    Fg, Ug = rd("F_guarded.tif"), rd("union_membership_guarded.tif")
+    Fens, Ug = rd("F_guarded.tif"), rd("union_membership_guarded.tif")           # ensemble F (the paper's Claim-A estimand; appendix in the deck)
+    CORE_BASIS = S.get("core_basis", "ensemble")                                   # package spec v2.1 (2026-09-23): "balanced" = the S0 pooled guarded f
+    Fg = rd("f_balanced_core.tif") if CORE_BASIS == "balanced" else Fens          # THE core surface every Act 1 asset draws (F >= 0.70 = the core)
     Fp = rd("F_unguarded.tif") if (GEO / "F_unguarded.tif").exists() else (rd("f_unguarded_reference.tif") if (GEO / "f_unguarded_reference.tif").exists() else None)   # v4: reference cell only
     with rasterio.open(GEO / "act_tiers_guarded.tif") as src:
         TIERS = src.read(1)
@@ -89,7 +91,9 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
     # yellow on the map and reads as a category, not the top of the gradient; F = 0 falls under -> NEVER_COLOR
     FCMAP = ListedColormap(plt.get_cmap("viridis")(np.linspace(0, 0.70, 256))); FCMAP.set_over("#ffd93b"); FCMAP.set_under(NEVER_COLOR)
     FNORM = Normalize(1e-9, dc.FREQ_THR)
-    N_NOTE = (f"n = {S['n_formulations']} formulations × 51 near-optimal plans · no value theme left more than {100 * S['floor_g']:.0f}% behind")
+    N_NOTE = ((f"balanced scenario · 2 refugia futures × 51 near-optimal plans · no value theme left more than {100 * S['floor_g']:.0f}% behind")
+              if CORE_BASIS == "balanced" else
+              (f"n = {S['n_formulations']} formulations × 51 near-optimal plans · no value theme left more than {100 * S['floor_g']:.0f}% behind"))
     PAg = np.full(G.shape, np.nan, np.float32); PAg[G.locked2d] = 1.0
 
     def rings_px(geom):
@@ -303,7 +307,7 @@ def values_rows(C):
      ("PROTECT — wildlife have sufficient core habitat", "Quantity of core habitat", "Protected land: today's protected areas are locked in and every plan protects 30% of Y2Y",
       "Y2Y protected areas 2025 (IUCN definitions)", f"The budget: 30% of the region, including the {pa_pct:.0f}% already protected"),
      ("", "Quality of core habitat", "Climate refugia: refugial residence time (1 / backward climate velocity), 2071–2100, two emission futures",
-      "AdaptWest 2023, CMIP6 backward climate velocity (8-GCM ensemble)", f"Core-habitat theme: {BLOCK_SHARE} of the objective in the balanced position; the two futures (SSP2-4.5, SSP5-8.5) are separate value positions"),
+      "AdaptWest 2023, CMIP6 backward climate velocity (8-GCM ensemble)", f"Climate-refugia theme: {BLOCK_SHARE} of the objective in the balanced position; the two futures (SSP2-4.5, SSP5-8.5) are separate value positions"),
      ("", "Quality of core habitat", "Naturalness: 1 − human modification", "Theobald et al., global human modification (gHM v3)",
       "In every formulation at its baseline weight; it cannot move the answer — disclosed, not a driver"),
      ("", "Biodiversity", "Mammal richness (species per km², area-of-habitat maps, all species)", "Lumbierres et al., AOH species richness (mammals)",
@@ -361,7 +365,7 @@ STYLE = dict(
     cluster_number_fs=13,      # size of the cluster numbers on maps
     cluster_lw=0.9,            # cluster outline width on the Y2Y-wide maps (insets: × cluster_lw_inset_scale)
     cluster_lw_inset_scale=1.5, cluster_halo=True, draw_unpicked=False,           # core complexes that are not deck picks: not outlined
-    cluster_colors={1: "#D7263D", 2: "#E040A0", 3: "#1E90FF", 4: "#FF7F00"},   # the core clusters N -> S: red, magenta, blue, dark orange (Ethan 2026-09-14; 4 was brown until
+    cluster_colors={1: "#D7263D", 2: "#E040A0", 3: "#1E90FF", 4: "#FF7F00", 5: "#1a1a1a"},   # the core clusters N -> S: red, magenta, blue, dark orange, + near-black for a 5th (the balanced-only comparison core has five, 2026-09-23) (Ethan 2026-09-14; 4 was brown until
                                                                               # 2026-09-21: brown vs red collapsed under protan/deutan, dE 9; dark purple was tried and vanished
                                                                               # into viridis (dE 14); orange clears dE 18 vs the others under every deficiency and 60 vs the ramp)
     core_color="#2b4f7d",      # star fill/line for core clusters
@@ -382,6 +386,11 @@ STYLE = dict(
                                                                                       # the theme-forward scenarios take their Act 2 colour from scenario_colors
     frames_climate_words={"ssp585": "SSP5-8.5 future", "ssp245": "SSP2-4.5 future"},
     frames_caption=False,      # no title line on the frames, as on the Act 1 panels (Ethan 2026-09-21); the key label under inset A names the scenario + plan instead
+    frames_scenarios="balanced",   # "balanced" = the balanced scenario only (Ethan 2026-09-23: an example output, disregard the forwards); "all" = every voting cell
+    frames_climate_order=("ssp245", "ssp585"),   # the balanced scenario's cells in this order: low emissions first, then high (Ethan 2026-09-23)
+    frames_plans_only=True,        # ONLY the near-optimal plan frames (Ethan 2026-09-23: "the 100 balanced scenario frames, nothing else") -- no value maps, anchor, f or core frames
+    frames_assemble=True, frames_video_fps=30,   # assemble method_timelapse.mp4 from the frames with the venv's bundled ffmpeg (imageio-ffmpeg; Ethan 2026-09-23)
+    frames_video_max_mb=20, frames_video_crf=18,  # size cap (Ethan 2026-09-23): CRF 18 / preset slow first; if the file is over the cap, a two-pass encode at the bitrate that fits
     inset_codes={"A": dict(skip=["WA"]), "B": dict(skip=["WA"])},                     # the wide-map insets: no WA; AK no longer forced on A (a sliver since the window moved east, 2026-09-21)
     inset_town_skip={"A": ("Iskut", "Telegraph Creek"), "B": ("Jasper", "Banff")},   # towns left off a wide-map inset (Ethan 2026-09-15)
     # Act 2 tiers by owning scenario. Dark2 failed a colour-vision check (2026-09-21: core-habitat green vs carbon magenta dE 6 under deuteranopia;
@@ -403,16 +412,19 @@ STYLE = dict(
     scenario_legend_order=(("s1", "s3", "s2", "s2c", "s4") if dc.VP.version == "v4" else ("s1", "s3", "s2", "s4")),   # core-habitat, biodiversity, (structural) connectivity, (climate corridors,) carbon (Ethan 2026-09-15)
     map_title_fs=11.5, map_suptitle_fs=12.5,
     ramp_label="F = frequency in near-optimal plans; light grey = never (F = 0), yellow = core (F ≥ 0.70)",
-    ramp_label_short="F = frequency in 30×30 plans", cbar_fs=15,          # the wide Act 1 maps
+    ramp_label_short="F = frequency in 30×30 plans", cbar_fs=15,          # the wide Act 1 maps (ensemble basis)
+    ramp_label_balanced="frequency in the balanced scenario's 30×30 plans",   # no "f =" (Ethan 2026-09-23)   # package spec v2.1: the core is the balanced scenario's tier
     ramp_end_labels=("Rarely selected", "Consistently selected"),   # words at the F ramp's two ends (Ethan 2026-09-21); None = numbers only. F is how often a cell
                                                           # recurs across near-optimal plans, so the ends are the literal reading, not "importance"; "irreplaceable" was
                                                           # rejected because it sits beside "irrecoverable carbon" on the same slides
     cluster_region_labels="region",   # "Cluster N (Region)" wherever a cluster is named (package spec v1.12 decision e): "region" = the region word, "full" = "Sub-region(s), Region", False = "Cluster N"
     values_table="spec",      # the objectives-table rendering: "spec" (the table spec, 2026-09-14) | "poster" | "digest" | "plain"
-    conseq_cmap="RdBu", conseq_tint=0.55, conseq_scale_rows="all",     # consequences: red (lowest) -> blue (highest); RdYlGn dropped 2026-09-21 (red-green is the one pair colour-blind readers lose)
+    conseq_cmap="RdBu", conseq_tint=0.55, conseq_scale_rows="clusters",   # consequences: red (lowest) -> blue (highest) over the CLUSTER columns; the reference columns stay unfilled (Ethan 2026-09-23); "all" = the 2026-09-21 rule
+    conseq_fill_area=True,                                              # the Area row takes the same low -> high ramp (Ethan 2026-09-23)
     conseq_mode="row",         # "row" = each row's lowest -> highest (Laura, 2026-09-21); "hinge" = centred on 1.0x (the 2026-09-14 rule)
     conseq_tail_row=False,     # the soil-carbon-tail concentration row under carbon (package spec v1.14): off (Ethan 2026-09-21)
     conseq_flat_ratio=1.10,    # "row" mode: a row whose max/min ratio is below this is a tie at display precision -> neutral fill, not a stretched ramp
+    conseq_reference="named",  # reference columns: "named" = dc.CONSEQ_REFERENCE_AREAS (Banff National Park, Dene Kʼéh Kusān; Ethan 2026-09-23) or "aggregate" = all PAs + the IPCAs' unprotected part
     legend_fs=13,              # map legends (bigger, outside the region)
     wide_legend_fs=16,         # the wide Act 1 maps: legend under inset B
     lat53=False,               # the 53°N graticule line on maps
@@ -464,7 +476,7 @@ def core_map_hex250(C, path, title=None, with_ipca_on_a=True):
                  C.BASE_HANDLES if panel == "b" else C.BASE_HANDLES[:2] + [C.IPCA_HANDLE], note=C.N_NOTE if panel == "b" else "")
     cax = fig.add_axes([0.30, 0.055, 0.40, 0.014])
     fig.colorbar(ScalarMappable(norm=C.FNORM, cmap=C.FCMAP), cax=cax, orientation="horizontal", extend="both", label=STYLE["ramp_label"])
-    fig.suptitle(title or (f"Act 1 — these areas recur in near-optimal plans no matter whose values prevail\n"
+    fig.suptitle(title or (f"{core_sentence(C)}\n"
                            f"core = {core_km2:,} km² of unprotected land, no value theme left more than 5% behind"), fontsize=STYLE["map_suptitle_fs"], y=0.985)
     fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches="tight"); plt.show()
 
@@ -854,14 +866,17 @@ class _ClusterSwatches(HandlerBase):
     """Legend handler: the cluster colours as small outlined squares side by side (STYLE["cluster_colors"], N -> S)."""
     def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
         cols = [STYLE["cluster_colors"][k] for k in sorted(STYLE["cluster_colors"])]
+        n_show = getattr(orig_handle, "_n_swatches", None)                        # only the clusters actually numbered on the map (Ethan 2026-09-23: no spare fifth box)
+        cols = cols[:n_show] if n_show else cols
         n = len(cols); gap = 0.10 * width / n; w = (width - gap * (n - 1)) / n; h = height     # same box as the patch entries
         return [Rectangle((-xdescent + i * (w + gap), -ydescent), w, h, facecolor="none", edgecolor=c, lw=STYLE["cluster_lw"] * 2.2, transform=trans)
                 for i, c in enumerate(cols)]                       # (-xdescent, -ydescent) = where matplotlib's own patch handler draws
 
 
-def cluster_handle(label="Core clusters"):
-    """A legend entry drawn by _ClusterSwatches; pass `handler_map=cluster_handler_map(*handles)` to the legend call."""
-    h = Patch(facecolor="none", edgecolor="none", label=label); h._cluster_swatches = True
+def cluster_handle(label="Core clusters", n=None):
+    """A legend entry drawn by _ClusterSwatches (one swatch per numbered cluster when `n` is given, else every palette colour);
+    pass `handler_map=cluster_handler_map(*handles)` to the legend call."""
+    h = Patch(facecolor="none", edgecolor="none", label=label); h._cluster_swatches = True; h._n_swatches = n
     return h
 
 
@@ -871,7 +886,8 @@ def cluster_handler_map(*handles):
 
 
 SOURCE_NOTE = f"Y2Y spatial decision tool, frequency ensemble on manifest {dc.VP.version} (in review)."
-REF_LABELS = {"Existing protected areas": "Existing\nprotected areas", "Proposed IPCAs (unprotected part)": "Proposed IPCAs\n(unprotected)"}   # reference-column header text (other names wrap)
+REF_LABELS = {"Existing protected areas": "Existing\nprotected areas", "Proposed IPCAs (unprotected part)": "Proposed IPCAs\n(unprotected)",
+              "Banff National Park": "Banff\nNational Park", "Dene Kʼéh Kusān": "Dene Kʼéh Kusān\n(proposed IPCA)"}   # reference-column header text (other names wrap)
 
 # maps and star plots share the spec's type: Cronos Pro, weights 400/600, ink titles, cap text, mut fine print
 SPEC_RC = {"font.family": TABLE_FONT, "font.weight": 400, "text.color": TABLE["cap"], "axes.titlecolor": TABLE["ink"],
@@ -881,9 +897,13 @@ SPEC_RC = {"font.family": TABLE_FONT, "font.weight": 400, "text.color": TABLE["c
 
 def consequences_table(C, rows, path, label, title):
     """The consequences table to the spec, TRANSPOSED: one row per measure (area, mean F, the six value ratios), one column
-    per cluster, then the two reference columns (existing protected areas; the proposed IPCAs' unprotected part). Ratio rows
+    per cluster, then the reference columns (named example areas -- Banff National Park, Dene Kʼéh Kusān -- or, by STYLE, the two
+    aggregates: existing protected areas; the proposed IPCAs' unprotected part). Ratio rows
     are tinted red → green across the row (STYLE['conseq_*']); clusters group by leading scenario where they differ."""
-    ref = C.TD7[C.TD7.act.eq("reference")]
+    want = "reference" if STYLE.get("conseq_reference", "named") == "named" else "reference_aggregate"   # named example areas (Ethan 2026-09-23) or the two aggregates
+    ref = C.TD7[C.TD7.act.eq(want)]
+    if not len(ref):                                                                 # a package from before the named rows: whatever is filed as reference
+        ref = C.TD7[C.TD7.act.eq("reference")]
     body = pd.concat([rows, ref], ignore_index=True)
     nclu = len(rows)
     cols = [cluster_label(r, wrap=18) for r in rows.itertuples()] + [REF_LABELS.get(str(nm), textwrap.fill(str(nm).replace(" (unprotected part)", "\n(unprotected part)"), 20)) for nm in ref.name]
@@ -911,14 +931,19 @@ def consequences_table(C, rows, path, label, title):
     # the row's lowest value to its highest, no hinge; "hinge" mode (the 2026-09-14 rule) centres it on 1.0x. The ramp is a colour-blind-safe
     # diverging pair (STYLE["conseq_cmap"], default RdBu: red = lowest, blue = highest), blended toward the mat by STYLE["conseq_tint"].
     cmap = plt.get_cmap(STYLE["conseq_cmap"]); tint = STYLE["conseq_tint"]; mat = np.array(matplotlib.colors.to_rgb(TABLE["mat"]))
-    scope = np.arange(len(body)) if STYLE["conseq_scale_rows"] == "all" else np.arange(nclu)
+    all_cols = STYLE["conseq_scale_rows"] == "all"
+    scope = np.arange(len(body)) if all_cols else np.arange(nclu)         # "clusters": scaled AND filled over the cluster columns only
     fills = [[None] * len(cols) for _ in stub]
     axis_rows = {a: stub.index(cap(a)) for a in dc.STAR_AXES}          # row index per ratio axis (the tail row, if shown, is untinted)
-    for a in dc.STAR_AXES:
-        r = axis_rows[a]
-        x = np.log(body[f"ratio_{a}"].astype(float).values); lo, hi = np.nanmin(x[scope]), np.nanmax(x[scope])
+    filled = [(axis_rows[a], np.log(body[f"ratio_{a}"].astype(float).values)) for a in dc.STAR_AXES]
+    if STYLE.get("conseq_fill_area", True):                               # the Area row on the same ramp (log area, lowest -> highest)
+        filled.insert(0, (stub.index("Area (km²)"), np.log(body.area_km2.astype(float).values)))
+    for r, x in filled:
+        lo, hi = np.nanmin(x[scope]), np.nanmax(x[scope])
         flat = (hi - lo) < np.log(STYLE.get("conseq_flat_ratio", 1.10))   # every value in the row rounds to the same figure: a tie, not a ramp
         for j, v in enumerate(x):
+            if j >= nclu and not all_cols:                             # reference columns: no fill
+                continue
             if STYLE.get("conseq_mode", "row") == "hinge":       # 1.0x (log 0) = the inflection; each side scaled to the row's own extreme
                 t = 0.5 + 0.5 * (v / hi if v > 0 and hi > 0 else (-v / lo if v < 0 and lo < 0 else 0.0))
             elif flat:                                             # row mode, tied row -> neutral (the ramp would stretch noise)
@@ -930,7 +955,7 @@ def consequences_table(C, rows, path, label, title):
                    units="Ratios: mean value inside the area ÷ mean over allocatable (unprotected) land · 1.0× = the average allocatable cell",
                    notes=[("Note", "Blocks combine their layers with the block weights (carbon 74 / 26 by mass); representativeness = ecosystem "
                                    "classes present per cell; naturalness = 1 − human modification. "
-                                   + ("Colour runs red → blue across each row from its lowest value to its highest; a row whose values all round to the same figure is left neutral." if STYLE.get("conseq_mode", "row") == "row"
+                                   + (("Colour runs red → blue across each row from its lowest value to its highest" + (" over the cluster columns" if not all_cols else "") + "; a row whose values all round to the same figure is left neutral.") if STYLE.get("conseq_mode", "row") == "row"
                                       else "Colour runs across each row with 1.0× as the hinge and each side scaled to the row's own extreme.")),
                           ("Source", SOURCE_NOTE)])
 
@@ -1084,15 +1109,28 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
         cap = fig.text(0.27, 0.955, (caption or "") if (STYLE.get("frames_caption", False) or not keep) else "", fontsize=STYLE["frames_caption_fs"],
                        color=TABLE["ink"], ha="left", va="bottom", fontweight=500) if (caption is not None or keep) else None
         if keep:                                                                 # the frames' persistent figure (no show, no close)
+            # the frames crop to the SAME box the Act 1 maps are saved with (bbox_inches="tight" + matplotlib's 0.1 in pad), computed
+            # once with the caption hidden, so a frame and the Act 1 slide share one extent exactly (Ethan 2026-09-23)
+            if cap is not None:
+                cap.set_visible(False)
+            cax.remove(); cax = fig.add_axes(cax_rect)                          # measure with the Act 1 maps' own F ramp (its end-words row sets the bottom edge)
+            _wide_ramp(cax, _f_surface(C), None, end_words=STYLE.get("ramp_end_labels"))
+            crop = fig.get_tightbbox(fig.canvas.get_renderer()).padded(0.1)
+            cax.remove(); cax = fig.add_axes(cax_rect)                          # then put this frame's own ramp back
+            _wide_ramp(cax, S_, cbar_label, end_words=S_.get("end_words"))
+            if cap is not None:
+                cap.set_visible(True)
+            W = SimpleNamespace(fig=fig, axes=axes_all, ims=ims, cax=cax, cax_rect=cax_rect, cap=cap, crop=crop)
             if path is not None:
-                fig.savefig(path, dpi=_frames_dpi(fig))
-            return SimpleNamespace(fig=fig, axes=axes_all, ims=ims, cax=cax, cax_rect=cax_rect, cap=cap)
+                fig.savefig(path, dpi=_frames_dpi(W), bbox_inches=crop)
+            return W
         fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches="tight"); plt.show()
 
 
-def _frames_dpi(fig):
-    """The dpi that makes a frame exactly STYLE["frames_width_px"] wide: the canvas truncates width x dpi to an integer, so aim half a pixel over."""
-    return (STYLE["frames_width_px"] + 0.5) / fig.get_figwidth()
+def _frames_dpi(W):
+    """The dpi that makes a frame exactly STYLE["frames_width_px"] wide over its crop box (the Act 1 maps' tight box): the canvas
+    truncates width x dpi to an integer, so aim half a pixel over."""
+    return (STYLE["frames_width_px"] + 0.5) / W.crop.width
 
 
 def _wide_ramp(cax, S_, cbar_label=None, end_words=None):
@@ -1118,7 +1156,7 @@ def _wide_frame_save(W, S_, caption, path, cbar_label=None):
         W.cax.remove(); W.cax = W.fig.add_axes(W.cax_rect)
         _wide_ramp(W.cax, S_, cbar_label, end_words=S_.get("end_words"))
         W.cap.set_text(caption if STYLE.get("frames_caption", False) else "")
-        W.fig.savefig(path, dpi=_frames_dpi(W.fig))   # an exact even width (1920) for the video encoder
+        W.fig.savefig(path, dpi=_frames_dpi(W), bbox_inches=W.crop)   # the Act 1 maps' crop; an exact width (1920) for the video encoder
 
 
 def _act1_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=False, surface=None):
@@ -1131,7 +1169,18 @@ def _act1_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
 # ---- surfaces the Act 1 layout can carry: F (the default) and the values-convergence count ------------------------------
 def _f_surface(C):
     ticks = np.arange(0, 0.71, 0.1); ticks[0] = C.FNORM.vmin                                  # the norm starts a hair above 0 (0 = never, grey); label it 0.0
-    return dict(img=_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, extend="both", ticks=ticks, ticklabels=[f"{t:.1f}" for t in np.arange(0, 0.71, 0.1)], label=STYLE["ramp_label_short"])
+    return dict(img=_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, extend="both", ticks=ticks, ticklabels=[f"{t:.1f}" for t in np.arange(0, 0.71, 0.1)], label=ramp_label(C))
+
+
+def ramp_label(C):
+    """The F/f ramp caption for the package's core basis (package spec v2.1: balanced; earlier packages: ensemble)."""
+    return STYLE["ramp_label_balanced"] if getattr(C, "CORE_BASIS", "ensemble") == "balanced" else STYLE["ramp_label_short"]
+
+
+def core_sentence(C):
+    """The one-line Act 1 claim for titles, per the core basis."""
+    return ("Act 1 — the balanced position's core: land in at least 70% of its near-optimal plans" if getattr(C, "CORE_BASIS", "ensemble") == "balanced"
+            else "Act 1 — these areas recur in near-optimal plans no matter whose values prevail")
 
 
 CONV_COLORS_ALL = ["#f2f2f2", "#dbe7f1", "#9ecae1", "#4292c6", "#08519c", "#08306b", "#041e42"]  # 0..6 themes (the Act 0 convergence map's ramp)
@@ -1155,7 +1204,7 @@ def values_map(C, path, title=None, with_clusters=False):
     S_ = conv_surface(C); high = C.SV["high_value_km2"]; core_km2 = C.S["frequent_km2"]["guarded"]
     if with_clusters:
         draw = lambda ax: C.draw_clusters(ax, "act1", C.picks_for("Act 1"), fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"])
-        handles = C.BASE_HANDLES[:1] + [cluster_handle("Core clusters")]
+        handles = C.BASE_HANDLES[:1] + [cluster_handle("Core clusters", n=len(C.numbered("Act 1")))]
         ttl = title or (f"Act 1 — where the values converge, with the core clusters (F ≥ 0.70: {core_km2:,} km²)\n"
                         f"{high:,} km² of unprotected land is top-30% for at least one theme")
     else:
@@ -1166,21 +1215,71 @@ def values_map(C, path, title=None, with_clusters=False):
     _act1_map(C, path, ttl, draw=draw, handles=handles, with_ipca_names=not with_clusters, surface=S_)
 
 
-def core_map_F(C, path, title=None):
-    """Act 1 (a): F at 1 km over unprotected land, with the declared IPCA proposals outlined (+ zoom insets in the wide layout)."""
-    core_km2 = C.S["frequent_km2"]["guarded"]
-    _act1_map(C, path, title or ("Act 1 — these areas recur in near-optimal plans no matter whose values prevail\n"
+def alt_core(C, key="s0", clusters=True):
+    """A comparison core built from ONE scenario's pooled plans (Ethan 2026-09-23: "core defined by the balanced runs only") by the
+    registered Act 1 procedure — f = the scenario's pooled guarded frequency (both climate futures), tier f >= 0.70, closing r = 1,
+    8-connectivity, >= 100 km2, complexes at 25 km, the top-k grouped into regional clusters at 75 km + specks absorbed, numbered
+    north -> south — and its cluster polygons registered on C.CL as layer "act1_<key>". Not the registered core (that is F over all
+    design cells); a presentation comparison. Returns (key, f, numbers, layer, core_km2, n_clusters, picks)."""
+    G = C.G
+    if key == "ensemble":                                                           # F over all design cells (the paper's estimand; appendix in the deck)
+        f = np.asarray(C.Fens, dtype=np.float32); label = f"all {len(C.S['forms'])} value positions (ensemble F)"
+    else:
+        f = np.asarray(C.POOL[key], dtype=np.float32); label = f"{dc.SCENARIO_LABEL.get(key, key)} scenario only"
+    core_km2 = int(((f >= dc.FREQ_THR) & G.disc).sum())
+    if not clusters:                                                                # the F map needs only the surface (21 ships that map alone)
+        return SimpleNamespace(key=key, f=f, numbers={}, layer=None, core_km2=core_km2, n_clusters=0, picks=None, label=label)
+    lab, reg = dc.clusters(G, f); reg["name"] = ""
+    reg, cx = dc.group_complexes(G, lab, reg)
+    raw = pd.DataFrame([dict(number=i + 1, act="Act 1", key=key, cid=int(c.anchor_cid), cids=";".join(map(str, c.cids)), n_components=int(c.n),
+                             name="", km2=float(c.km2), meanF=float(c.meanF), lat=float(c.lat), lon=float(c.lon))
+                        for i, (_, c) in enumerate(cx.head(dc.TOPK_ACT1).iterrows())])
+    gp = dc.group_picks(G, lab, raw)
+    gp = dc.absorb_complexes(G, lab, gp, cx, link_km=dc.PICK_LINK_KM, reg=reg, speck_km=dc.SPECK_LINK_KM)
+    numbers = {}
+    for i, r in enumerate(gp.itertuples(), 1):
+        for c in str(r.cids).split(";"):
+            if str(c).strip():
+                numbers[int(c)] = (str(i), int(c) == int(r.cid))
+    regk = reg[reg.kept | reg.cid.isin(list(numbers))]
+    v = dc.vectorize(G, lab, regk.cid.tolist()).merge(regk[["cid", "name", "km2", "meanF"]], on="cid")
+    layer = f"act1_{key}"; C.CL[layer] = v
+    return SimpleNamespace(key=key, f=f, numbers=numbers, layer=layer, core_km2=core_km2, n_clusters=len(gp), picks=gp, label=label)
+
+
+def _basis_surface(C, basis):
+    if basis.key == "ensemble":
+        return _freq_surface(C, basis.f, f"F = frequency in 30×30 plans across all {len(C.S['forms'])} value positions")
+    n_plans = 50 * int((C.MAN.scenario_id == basis.key).sum())                      # k = 50 guarded members per voting cell (both futures)
+    return _freq_surface(C, basis.f, f"frequency in the {basis.label.lower().replace(' only', '')}'s {n_plans} near-optimal plans")
+
+
+def core_map_F(C, path, title=None, basis=None):
+    """Act 1 (a): F at 1 km over unprotected land, with the declared IPCA proposals outlined (+ zoom insets in the wide layout).
+    `basis` (from alt_core) swaps F for one scenario's pooled f — the comparison view, not the registered core."""
+    core_km2 = C.S["frequent_km2"]["guarded"] if basis is None else basis.core_km2
+    if basis is not None:
+        _act1_map(C, path, title or f"{'Appendix' if basis.key == 'ensemble' else 'Act 1'} — {basis.label}: frequency over unprotected land, with the declared IPCA proposals\n"
+                                    f"frequent = {core_km2:,} km² at ≥ 0.70",
+                  draw=lambda ax: C.draw_ipca(ax), handles=C.BASE_HANDLES[:1] + [C.IPCA_HANDLE], with_ipca_names=True, surface=_basis_surface(C, basis))
+        return
+    _act1_map(C, path, title or (f"{core_sentence(C)}\n"
                                  f"core = {core_km2:,} km² (F ≥ 0.70) · no value theme left more than 5% behind"),
               draw=lambda ax: C.draw_ipca(ax), handles=C.BASE_HANDLES[:1] + [C.IPCA_HANDLE], with_ipca_names=True)
 
 
-def core_map_clusters(C, path, title=None):
-    """Act 1 (b): the same surface with the core clusters outlined and numbered north → south (+ zoom insets)."""
-    core_km2 = C.S["frequent_km2"]["guarded"]
-    _act1_map(C, path, title or ("Act 1 — the core clusters, numbered north → south\n"
-                                 f"core = {core_km2:,} km² of unprotected land at F ≥ 0.70"),
-              draw=lambda ax: C.draw_clusters(ax, "act1", C.picks_for("Act 1"), fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"]),
-              handles=C.BASE_HANDLES[:1] + [cluster_handle("Core clusters")])
+def core_map_clusters(C, path, title=None, basis=None):
+    """Act 1 (b): the same surface with the core clusters outlined and numbered north → south (+ zoom insets).
+    `basis` (from alt_core) draws that scenario's own clusters on its own f — the comparison view."""
+    core_km2 = C.S["frequent_km2"]["guarded"] if basis is None else basis.core_km2
+    layer, numbers = ("act1", C.picks_for("Act 1")) if basis is None else (basis.layer, basis.numbers)
+    ttl = title or (("Act 1 — the core clusters, numbered north → south\n" f"core = {core_km2:,} km² of unprotected land at F ≥ 0.70") if basis is None
+                    else (f"Act 1 — {basis.label}: its clusters, numbered north → south\n" f"frequent = {core_km2:,} km² of unprotected land at f ≥ 0.70"))
+    _act1_map(C, path, ttl,
+              draw=lambda ax: C.draw_clusters(ax, layer, numbers, fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"]),
+              handles=C.BASE_HANDLES[:1] + [cluster_handle("Core clusters" if basis is None else f"Clusters, {basis.label.lower()}",
+                                                          n=len(C.numbered("Act 1")) if basis is None else basis.n_clusters)],
+              surface=None if basis is None else _basis_surface(C, basis))
 
 
 # ---- "the optimization behind the map" (Ethan 2026-09-21): frames for a timelapse on the Act 1 wide layout -------------------------
@@ -1199,20 +1298,23 @@ def _freq_surface(C, f, label):
     return S_
 
 
-def method_frames(C, out_dir, reference_members=None, sample=None, design=False):
+def method_frames(C, out_dir, reference_members=None, sample=None, design=False, runs=None):
     """Numbered PNG frames for a timelapse that introduces the method ("the optimization behind the map"), on the Act 1 wide
     layout (whole Y2Y at left, insets A / B at right). Sequence: each value theme's top-30% mask -> the reference cell's single
     optimal plan (its anchor) -> its near-optimal members one by one -> its f -> for every other voting cell a fixed-seed sample of
     members -> its f -> F over all cells -> the core (F >= 0.70) with its clusters outlined; cells run in the Act 2 legend order
-    (STYLE["scenario_legend_order"]: core-habitat, biodiversity, structural connectivity, climate corridors, carbon; the naturalness push
-    last), reference climate first. `reference_members` / `sample` default
+    (STYLE["scenario_legend_order"]: climate refugia, mammal + bird richness, structural connectivity, climate corridors, biomass + soil
+    carbon; the naturalness push last), reference climate first. Under the balanced core (package spec v2.1) the core frame follows the
+    balanced scenario's f directly and there is no ensemble-F frame. `reference_members` / `sample` default
     to STYLE["frames_reference_members"] / STYLE["frames_sample_per_cell"] (50 / 10 = the presentation; 20 passes a small budget
     for the record). The basemap + insets are drawn ONCE (one wide map ~2 min) and every frame swaps the surface + caption on that
     figure (seconds), saved at STYLE["frames_width_px"] wide (1920, the dpi derived) without a tight bbox so all frames are the same pixel size. Writes frames.csv
     (file, segment, formulation, member, hold_s) and concat.txt for ffmpeg's concat demuxer; prints the assembly command (ffmpeg is
     not installed here -- Ethan assembles in his editor or with that command).
     `design=True` (Ethan 2026-09-21, the design pass before any full run): ONE member frame (plan 1) for the balanced scenario and
-    each theme-forward scenario at the reference climate, shown inline in the notebook for feedback; no csv / concat."""
+    each theme-forward scenario at the reference climate, shown inline in the notebook for feedback; no csv / concat.
+    `runs` = the directory holding <formulation_id>/{anchor.tif, mga_guard_g05.tif} (default dc.RUNS, the flagship; the Alberta
+    mirror passes config.ab_paths().runs / "A")."""
     import ensemble_core as ec
     reference_members = STYLE["frames_reference_members"] if reference_members is None else int(reference_members)
     sample = STYLE["frames_sample_per_cell"] if sample is None else int(sample)
@@ -1220,7 +1322,7 @@ def method_frames(C, out_dir, reference_members=None, sample=None, design=False)
     for old in list(out_dir.glob("*.png")) + [out_dir / "frames.csv", out_dir / "concat.txt"]:   # the folder is this function's alone
         if old.exists():
             old.unlink()
-    G, MAN, RUNS = C.G, C.MAN, dc.RUNS
+    G, MAN = C.G, C.MAN; RUNS = pathlib.Path(runs) if runs is not None else dc.RUNS   # `runs`: another package's members (the Alberta mirror passes its own runs dir)
     ref = MAN.formulation_id[MAN.reference_cell.astype(str).str.lower().eq("true")].tolist() if "reference_cell" in MAN.columns else []
     ref = ref[0] if ref else "s0_ssp585_theta5"
     sid_of = MAN.set_index("formulation_id").scenario_id
@@ -1257,35 +1359,46 @@ def method_frames(C, out_dir, reference_members=None, sample=None, design=False)
 
     plan_key = ("not in this plan", "in this plan"); value_key = ("below", "top 30% of unprotected land")
     frames = []                                                                     # (segment, formulation, member, surface, caption, hold)
-    if design:                                                                      # plan 1 of the balanced + each theme-forward cell, reference climate
+    only_balanced = STYLE.get("frames_scenarios", "balanced") == "balanced"
+    plans_only = STYLE.get("frames_plans_only", False)
+    if only_balanced:                                                               # the balanced scenario's plans only (Ethan 2026-09-23): BOTH climate cells, every member (100 plans),
+        others = [f for clim in STYLE.get("frames_climate_order", ("ssp585", "ssp245")) for f in MAN.formulation_id if sid_of[f] == "s0" and clim in f]
+        reference_members = 0                                                       # ... in STYLE["frames_climate_order"]; the reference cell takes its turn in that order, not first
+    if design:                                                                      # plan 1 of the balanced (+ each theme-forward cell when frames_scenarios = "all"), reference climate
         clim = next(k for k in words if k in ref)
-        for sid in ["s0"] + [x for x in STYLE["scenario_legend_order"] if x != "s0"]:     # the Act 2 legend order
+        for sid in ["s0"] + ([] if only_balanced else [x for x in STYLE["scenario_legend_order"] if x != "s0"]):     # the Act 2 legend order
             fid = MAN.formulation_id[(MAN.scenario_id == sid) & MAN.formulation_id.str.contains(clim)].iloc[0]
             M = members_of(fid); k = M.shape[0]
             frames.append(("member", fid, 1, _mask_surface(C, M[0], plan_color(fid), plan_key, f"{key_words(fid)} · plan 1 of {k}"),
                            f"{cell_words(fid)} · near-optimal plan 1 of {k} — within 5% of the optimum, no value theme more than 5% behind", dt))
-    for t in ([] if design else dc.VALUE_THEMES):
+    for t in ([] if (design or plans_only) else dc.VALUE_THEMES):
         frames.append(("values", "", "", _mask_surface(C, C.VAL[t], STYLE["frames_value_color"], value_key, f"{axis_label(t)}: top 30% by value"),
                        f"Where the value is · {axis_label(t)}", hold))
-    if not design:
+    if not design and not plans_only:
         frames.append(("anchor", ref, "", _mask_surface(C, anchor_of(ref), plan_color(ref), plan_key, f"{key_words(ref)} · the single optimal plan"),
                        f"{cell_words(ref)} · the single best plan (the optimum)", hold))
     M = members_of(ref) if not design else np.zeros((0, G.n_pu), bool); k = M.shape[0]
     for j in range(min(reference_members, k)):
         frames.append(("member", ref, j + 1, _mask_surface(C, M[j], plan_color(ref), plan_key, f"{key_words(ref)} · plan {j + 1} of {k}"),
                        f"{cell_words(ref)} · near-optimal plan {j + 1} of {k} — within 5% of the optimum, no value theme more than 5% behind", dt))
-    if not design:
-        frames.append(("f", ref, "", _freq_surface(C, f_of(ref), f"{key_words(ref)} · f = frequency in {k} near-optimal plans"),
+    balanced = getattr(C, "CORE_BASIS", "ensemble") == "balanced"
+    if not design and not plans_only:
+        frames.append(("f", ref, "", _freq_surface(C, f_of(ref), f"{key_words(ref)} · frequency in {k} near-optimal plans"),
                        f"{cell_words(ref)} · how often each cell appears across the {k} near-optimal plans", hold))
     for fid in ([] if design else others):
-        if sample > 0:
-            M = members_of(fid); k = M.shape[0]; idx = np.sort(rng.choice(k, size=min(sample, k), replace=False))
+        if sample > 0 or only_balanced:
+            M = members_of(fid); k = M.shape[0]
+            idx = np.arange(k) if only_balanced else np.sort(rng.choice(k, size=min(sample, k), replace=False))   # balanced-only: all of them
             for j in idx:
                 frames.append(("member", fid, int(j) + 1, _mask_surface(C, M[j], plan_color(fid), plan_key, f"{key_words(fid)} · plan {j + 1} of {k}"),
                                f"{cell_words(fid)} · near-optimal plan {j + 1} of {k}", dt))
-        frames.append(("f", fid, "", _freq_surface(C, f_of(fid), f"{key_words(fid)} · f = frequency in near-optimal plans"),
-                       f"{cell_words(fid)} · how often each cell appears across its near-optimal plans", hold))
-    if not design:
+        if not plans_only:
+            frames.append(("f", fid, "", _freq_surface(C, f_of(fid), f"{key_words(fid)} · frequency in near-optimal plans"),
+                           f"{cell_words(fid)} · how often each cell appears across its near-optimal plans", hold))
+    if not design and balanced and not plans_only:                                  # package spec v2.1: the core IS the balanced scenario's tier (both futures averaged) -> after its cells
+        frames.append(("core", "", "", _freq_surface(C, C.Fg, ramp_label(C)),
+                       f"The core: cells in at least 70% of the balanced scenario's plans — {core_km2:,} km² of unprotected land, outlined by cluster", hold))
+    if not design and not balanced and not plans_only:                              # ensemble basis (earlier packages): F over all cells, then the core
         frames.append(("F", "", "", _freq_surface(C, C.Fg, STYLE["ramp_label_short"]),
                        f"All {nF} scenario × future combinations · F = how often each cell appears across {nF} × 50 near-optimal plans", hold))
         frames.append(("core", "", "", _freq_surface(C, C.Fg, STYLE["ramp_label_short"]),
@@ -1294,7 +1407,8 @@ def method_frames(C, out_dir, reference_members=None, sample=None, design=False)
     import time
     t0 = time.time()
     seg0, fid0, _, S0, cap0, _ = frames[0]
-    W = _wide_map(C, None, "", draw=lambda ax: None, handles=C.BASE_HANDLES[:1], surface=S0, caption=cap0, keep=True)
+    W = _wide_map(C, None, "", draw=lambda ax: C.draw_ipca(ax), handles=C.BASE_HANDLES[:1] + [C.IPCA_HANDLE], with_ipca_names=True,
+                  surface=S0, caption=cap0, keep=True)                              # the IPCA proposals outlined in orange, as on the first Act 1 map (Ethan 2026-09-23)
     print(f"wide layout built once: {time.time() - t0:.0f} s; {len(frames)} frames -> {out_dir}")
     rows = []
     try:
@@ -1331,9 +1445,42 @@ def method_frames(C, out_dir, reference_members=None, sample=None, design=False)
     lines.append(f"file '{rows[-1]['file']}'")                                       # the concat demuxer needs the last file repeated
     (out_dir / "concat.txt").write_text("\n".join(lines) + "\n")
     total = df.hold_s.sum()
-    print(f"{len(df)} frames in {time.time() - t0:.0f} s; clip length {total:.0f} s at the frames.csv holds; assemble with:\n"
-          f"  cd '{out_dir}' && ffmpeg -f concat -safe 0 -i concat.txt -vf 'fps=30,format=yuv420p' -c:v libx264 -crf 18 method_timelapse.mp4")
+    print(f"{len(df)} frames in {time.time() - t0:.0f} s; clip length {total:.0f} s at the frames.csv holds")
+    if STYLE.get("frames_assemble", True):
+        assemble_timelapse(out_dir)
+    else:
+        print(f"assemble with:\n  cd '{out_dir}' && ffmpeg -f concat -safe 0 -i concat.txt -vf 'fps=30,format=yuv420p' -c:v libx264 -crf 18 method_timelapse.mp4")
     return df
+
+
+def assemble_timelapse(out_dir, name="method_timelapse.mp4"):
+    """concat.txt (frames + holds) -> an H.264 mp4 at STYLE["frames_video_fps"], using the ffmpeg binary bundled with the venv's
+    imageio-ffmpeg package (no system ffmpeg on this Mac). Returns the video path."""
+    import subprocess
+    try:
+        import imageio_ffmpeg
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception as e:                                                          # no bundled binary: leave the frames + the command
+        print(f"no ffmpeg available ({e}); frames and concat.txt are in {out_dir}"); return None
+    out_dir = pathlib.Path(out_dir); video = out_dir / name
+    base = [exe, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(out_dir / "concat.txt"),
+            "-vf", f"fps={STYLE.get('frames_video_fps', 30)},scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p",   # even dimensions for H.264
+            "-c:v", "libx264", "-preset", "slow", "-movflags", "+faststart"]
+    subprocess.run(base + ["-crf", str(STYLE.get("frames_video_crf", 18)), str(video)], check=True, cwd=str(out_dir))
+    mb = video.stat().st_size / 1e6; cap = STYLE.get("frames_video_max_mb")
+    if cap and mb > cap:                                                            # over the cap: two-pass at the bitrate that fits (quality spread evenly)
+        secs = float(pd.read_csv(out_dir / "frames.csv").hold_s.sum())
+        kbps = int(0.92 * cap * 8000 / max(secs, 1e-6))                               # 8% headroom for the container + audio-less overhead
+        log = out_dir / "ffmpeg2pass"
+        subprocess.run(base + ["-b:v", f"{kbps}k", "-pass", "1", "-passlogfile", str(log), "-an", "-f", "null", "/dev/null"], check=True, cwd=str(out_dir))
+        subprocess.run(base + ["-b:v", f"{kbps}k", "-pass", "2", "-passlogfile", str(log), str(video)], check=True, cwd=str(out_dir))
+        for f in out_dir.glob("ffmpeg2pass*"):
+            f.unlink()
+        print(f"CRF {STYLE.get('frames_video_crf', 18)} gave {mb:.1f} MB > {cap} MB cap -> two-pass at {kbps} kb/s")
+    info = subprocess.run([exe, "-i", str(video)], capture_output=True, text=True).stderr
+    dur = next((l.strip() for l in info.splitlines() if "Duration" in l), "")
+    print(f"timelapse -> {video} ({video.stat().st_size / 1e6:.1f} MB; {dur})")
+    return video
 
 
 # ---- the bare-bones objectives table for the presentation (Ethan, 2026-09-14): fundamental → sub-objective → measure, no numbers ----
@@ -1380,9 +1527,9 @@ def scenario_map(C, path, title=None):
     norm = BoundaryNorm(np.arange(-0.5, NS + 4.5, 1), NS + 4)
     nd = G.n_disc; own = S["act2_owner_km2"]; core = S["frequent_km2"]["guarded"]; opp = int(((T == 1) & G.pu).sum())
     pct = lambda km2: f"{100 * km2 / nd:.1f}%" if 100 * km2 / nd >= 0.1 else f"{100 * km2 / nd:.2f}%"
-    short = ({"s1": "Core-habitat", "s2": "Structural connectivity", "s2c": "Climate corridors", "s3": "Biodiversity", "s4": "Carbon"} if dc.VP.version == "v4"
-             else {"s1": "Core-habitat", "s2": "Connectivity", "s3": "Biodiversity", "s4": "Carbon"})       # legend words (Ethan 2026-09-15)
-    handles = [Patch(facecolor="#ffd93b", label=f"Core · {core:,} km² · {pct(core)}")]
+    short = {sid: f"{w[0].upper()}{w[1:]}" for sid, w in dc.SCENARIO_WORD.items()}   # legend words (Ethan 2026-09-15; 2026-09-23: climate refugia, mammal + bird richness, biomass + soil carbon)
+    core_word = "Balanced" if getattr(C, "CORE_BASIS", "ensemble") == "balanced" else "Core"     # the yellow tier IS the balanced scenario's core (Ethan 2026-09-23)
+    handles = [Patch(facecolor="#ffd93b", label=f"{core_word} · {core:,} km² · {pct(core)}")]
     for sid in STYLE["scenario_legend_order"]:                                                  # core first, then the PROACT order
         km2 = own[dc.SCENARIO_LABEL[sid]]
         handles.append(Patch(facecolor=SC[sid], label=f"{short[sid]} · {km2:,} km² · {pct(km2)}"))

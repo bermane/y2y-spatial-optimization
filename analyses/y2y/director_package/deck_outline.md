@@ -52,7 +52,7 @@ figure: `act0_value_convergence_hex250.png`
 
 figure: `act1_core_F_1km.png`
 
-- Of everything in Act 0, these areas recur in near-optimal plans no matter whose values prevail: 37,879 km² (F ≥ 0.70 across all 14 positions)
+- Of everything in Act 0, this is the balanced position's core — land in at least 70% of its near-optimal plans: 51,580 km² (f ≥ 0.70, both refugia futures averaged; the cross-position ensemble core, 37,879 km², is in the appendix)
 - No value theme left more than 5% behind in any plan
 - F at 1 km over unprotected land; declared IPCA proposals outlined
 
@@ -67,17 +67,17 @@ figure: `act1_core_clusters_1km.png`
 
 figure: `act1_core_ssp585_1km.png`
 
-- 7 value positions at SSP585: core 40,048 km²
-- 90% of the 14-position core lies inside it
-- The 14-position core = what survives BOTH refugia futures
+- The balanced position at SSP585: core 53,299 km²
+- 90% of the balanced core lies inside it
+- The balanced core averages the two refugia futures
 
 ## Slide 9 — Act 1 under the low-emissions refugia future
 
 figure: `act1_core_ssp245_1km.png`
 
-- 7 value positions at SSP245: core 44,335 km²
-- 89% of the 14-position core lies inside it
-- The 14-position core = what survives BOTH refugia futures
+- The balanced position at SSP245: core 60,297 km²
+- 90% of the balanced core lies inside it
+- The balanced core averages the two refugia futures
 
 ## Slide 10 — Where the core depends on the climate future
 
@@ -85,7 +85,7 @@ figure: `act1_two_way_climate.png`
 
 - One hex, two refugia futures: bivariate F
 - Yellow = core under both futures; orange = only if emissions run high; green = only if they stay low
-- The 14-position core is what survives both
+- The balanced core averages the two futures; this map shows where they disagree
 
 ## Slide 11 — Why these places — core clusters
 
@@ -102,25 +102,25 @@ figure: `td7_consequences_core.png`
 - Each cell: the cluster's mean value divided by the mean over allocatable (unprotected) land — 2.3× = 2.3 times the average cell
 - Carbon combines the two pools mass-weighted; representativeness = ecosystem classes present per cell; naturalness = 1 − human modification
 
-## Slide 13 — Act 2 — Core-habitat-forward: value vs irreplaceability
+## Slide 13 — Act 2 — Climate refugia forward: value vs irreplaceability
 
 figure: `act2_s1_hex250.png`
 
 - Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads — its frequent tier, clusters outside the core numbered
-- Frequent tier 63,602 km²; own land (outside the core and the other scenarios' tiers) 27,580 km²
+- Frequent tier 63,602 km²; own land (outside the core and the other scenarios' tiers) 23,512 km²
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 
-## Slide 14 — Act 2 — Structural-connectivity-forward: value vs irreplaceability
+## Slide 14 — Act 2 — Structural connectivity forward: value vs irreplaceability
 
 figure: `act2_s2_hex250.png`
 
 - Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads — its frequent tier, clusters outside the core numbered
-- Frequent tier 74,001 km²; own land (outside the core and the other scenarios' tiers) 37,330 km²
+- Frequent tier 74,001 km²; own land (outside the core and the other scenarios' tiers) 33,764 km²
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 
-## Slide 15 — Act 2 — Climate-corridors-forward: value vs irreplaceability
+## Slide 15 — Act 2 — Climate corridors forward: value vs irreplaceability
 
 figure: `act2_s2c_hex250.png`
 
@@ -129,7 +129,7 @@ figure: `act2_s2c_hex250.png`
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 
-## Slide 16 — Act 2 — Biodiversity-forward: value vs irreplaceability
+## Slide 16 — Act 2 — Mammal + bird richness forward: value vs irreplaceability
 
 figure: `act2_s3_hex250.png`
 
@@ -139,12 +139,12 @@ figure: `act2_s3_hex250.png`
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 - almost no land of its own; every near-optimal plan holds 28–34% of AOH richness whichever value leads — the finding IS the product: the value map (left) is where to work
 
-## Slide 17 — Act 2 — Carbon-forward: value vs irreplaceability
+## Slide 17 — Act 2 — Biomass + soil carbon forward: value vs irreplaceability
 
 figure: `act2_s4_hex250.png`
 
 - Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads — its frequent tier, clusters outside the core numbered
-- Frequent tier 57,450 km²; own land (outside the core and the other scenarios' tiers) 17,934 km²
+- Frequent tier 57,450 km²; own land (outside the core and the other scenarios' tiers) 17,917 km²
 - Orange outlines = Nations' declared IPCA proposals — overlap is independent convergence, not assignment
 - Precedent: the national 30×30 analysis (Currie et al. 2025) reports that proposed IPCAs coincide with priority areas and that Indigenous priorities supersede top-down prioritization — rights and title are not contingent on GBF compatibility
 - carbon-forward is the only scenario that also states a security target (55% of dense soil carbon); its own land comes from that target, not from the share doubling the other values get
@@ -209,7 +209,7 @@ figure: `summary_tiers_1km.png`
 
 figure: `td2_bands.png`
 
-- Core: recurs under every value position (commit)
+- Core: what the balanced position needs in every good plan (commit)
 - Scenario tiers: join the core if that value leads (choose)
 - Opportunity: defensible wherever feasibility is positive (enable)
 - Next: the ecoregion layer for T-D4 (attribute table pending)
