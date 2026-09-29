@@ -173,7 +173,7 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
   unless pinned.
 
 - **M6.4 Output notebooks mapped to the northern 2026-09-28 structure (PRESENTATION ONLY):** `04_tables_and_figures`
-  (the record, every asset) + `05_director_outputs` (the curated few) — the same first two maps as the northern 07, drawn
+  (the record, every asset) + `05_director_outputs` (the curated few; renumbered `06_director_outputs` 2026-09-28) — the same first two maps as the northern 07, drawn
   through `director_plot.wide_map` from `wolverine_director.director_frame` (G = the routing grid decimated ×2 to 600 m:
   pu = routable cells, locked2d = existing PAs; overlay = the refugia nodes with their short names; window = the Y2Y frame +
   40 km; y2y towns), surfaces from `corridors_director.cost_surface` / `classes_surface` (the §3a swatches and pressure
@@ -210,11 +210,81 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
   Ethan's first 04 run wrote; now any width (`_node_id_of_label`, regex). Maps were unaffected (they draw from node ids, not labels).
   Ethan re-runs 04 (3 min) so the run-dir tables carry the right names.
 
-## 7. QA gates (definitions; measured values in results_log R1)
+## 7. v2.5 — the two-layer product: complexes by post-processing, the network RE-ROUTED between them (run spec v3 §1a, revised by Ethan 2026-09-29)
+
+- **M7.1 Scope and provenance (REVISED 2026-09-29):** the deliverable due 2026-09-29 derives the refugia COMPLEXES from `v2_run001`
+  (tag `v2_run001`, commit 6c79be6 — the tree that produced and classified the run) and RE-RUNS THE ROUTING between them (run spec v3
+  §3 stages 3–4 and §4, pulled into §1a by Ethan the same day); the v2 patch-to-patch links are used only to derive the complexes and
+  the within-complex sliver table and are not reported. No baseline run and no glacier sensitivities (§6 = the next step; that code
+  stays on the `wolverine-v3` branch, commit 2da23c2). The contraction engine (M7.2b) was brought onto main from that branch.
+  Module `wolverine_postprocess.py` (root; patch mode + run mode) + notebooks **05_complexes** (zero routing; writes the audit
+  objects; CHECK STOP 3 = the complex map) → **06_v25_network** (the routing run `v25_run001`, ~1 h) → **07_v25_product** (coverage,
+  accounting, act check, tables, headline, GIS on the contracted run) → **08_director_outputs**. Numeric order = run order. The
+  earlier same-day build (05 post-processing on the v2 links → 06 outputs) is superseded; its complex derivation, names and sliver
+  table carry over unchanged.
+- **M7.2 Complexes (D-W3 by post-processing):** connected components of the 130 near-contiguous (D25) links of the v2 network
+  (a pair not linked there is separated by a third patch; components are robust to missing triangle-closing edges — disclosed),
+  numbered north → south by the cell-weighted centroid; `complex_id` on every patch; polygons dissolved from `node_parts.gpkg`;
+  `complex_id.tif`. Single patches are complexes. Checks: every patch in exactly one complex; complex areas = the patch total.
+  The 40 corridor links carry `complex_from` / `complex_to` (labels still carry PATCH ids; the package maps them); a link joining
+  one complex to itself is a WITHIN-complex corridor-class link (its path is longer than its barrier-free width, so D25 did not call it a
+  sliver): reported, listed with the slivers (`kind` column), never drawn or counted as a corridor — on run001 THREE of the 40 (all β-backups,
+  19–34 km: Mount Edziza ↔ Todagin South Slope in the Sustut complex, Hoskins Lake ↔ Cabinet Mountains in the Jasper complex,
+  Anaconda Pintler ↔ Sapphire Divide in the Selway-Bitterroot complex), so Layer B has 37 inter-complex links; several links on one pair
+  are kept and counted. The augmentation set is v2's — contraction
+  will move it slightly (the report says so).
+- **M7.2b Contraction engine on main (from the branch; additive, the north and v2 byte-reproducible):** `nodes.contract` in the config
+  (`CORRIDORS['wolverine']['v25']['overrides']`) makes `load()` call `_contract_complexes` on the run's pinned copies of
+  `complex_membership.csv` / `complex_names.csv` (new_run pins them with the other audit objects: `complexes.gpkg`, `slivers_v2.csv`,
+  `complexes_summary.json`): complexes = names (label 'Complex · C03 Refugia complex (Nahanni)'), the 130 patches stay the SEED
+  PARTS in their cached order (prebuilt for `_apply_parts`, treatment 'contract'), ONE routing unit per complex whose field is the
+  pointwise MIN over its patches (the D16 unit-min rule = multi-seed CWD from the complex union: a path may leave any patch of the
+  source and enter any patch of the target). `_resistance_sha` hashes the SEED structure on contracted runs (`seed_names`,
+  `seed_n_nodes`) so the CWD cache dir is v2's (`860bb26ec2dec42b_c`, verified) and the counterfactual's identity is v2's too (the cf
+  copy carries the seed attributes); unit files are named by part composition (`_unit_fname`) so a second-pass merge never reads a
+  stale file; `_locked_edges` skips units whose treatment is not `link_locked` (a contracted unit has parts but NO intra-complex links);
+  GW5 (partition + area gate); `second_pass_merges` (D25 on the inter-complex links → `merge_complexes` + a new run id; 06 asserts
+  none); `complex_layer` (Layer A: patches, area, PA share, IPCA-added share, mean of the 300 m human proxy, slivers) written by
+  `write_run` (`complexes_layer_a.csv`, `complex_id.tif`); `load_results` exposes the complexes, the complex grid, the centrelines and
+  the sliver table. Run ids `v25_runNNN` (the globs accept any `v[0-9]_run`). MST + β backups, D7, D17 width tests, D23–D25 classes,
+  D26 branches, D30 tiers, W11 all run unchanged on the contracted graph; centrality is computed once on it.
+- **M7.3 Coverage (D-W4):** per complex and per INTER-COMPLEX link's dissolved band (the contracted run's per-link band polygon, node
+  land excluded; run mode of the module, notebook 07): share inside existing PAs, incremental share added by the proposed IPCAs, share in the prioritizr core (the
+  balanced scenario's guarded tier ON ALLOCATABLE LAND: `analyses/y2y/director_package/geotiffs/f_balanced_core.tif` ≥ 0.70 AND
+  outside the flagship's locked PAs (`aligned_stack/mask_protected_areas.tif`; the locked cells sit at f = 1 by construction and
+  are the PA column here) — reproduces the package's 51,580 km² exactly, asserted; resampled nearest to 300 m) and its increment
+  beyond PAs + IPCAs, share outside all three; ONE area-expectation row =
+  the same shares over the whole routable Y2Y frame (pu, incl. the 20 km buffer), so an overlap reads against expectation.
+- **M7.4 Slivers, accounting, names:** the sliver table (from the v2 record, notebook 05) = one row per within-complex link — the 130
+  near-contiguous links + the three v2 corridor-class links with both ends in one complex — with path length and the cost-10 / 100 /
+  1000 cells along the centreline (read at the centreline vertices = the path cells; cheap); accounting (on the contracted run, 07) =
+  corridor land as DISSOLVED unions (all bands; the inter-complex links; per class) beside per-link SUMS labelled as such, and branches
+  as links-with-n reconciled with `branches.csv`; names (D-W7): every patch 'Refugium (X)' (X = the PA it overlaps ≥ 10%,
+  else the nearest PA + bearing; designation words stripped), complexes 'Refugia complex (X)' from the largest patch — written to
+  `postprocess/node_names_v25.csv` + `complex_names.csv` and into `display_name` of the tracked audit `node_names.csv` (the run-dir
+  copy stays pinned). T1–T4 are regenerated on the product (after the M6.7 parser fix).
+- **M7.5 Package (PRESENTATION):** on an attached run the node table IS the complex table; two acts by default (`V25_STYLE`, one
+  break at 51 °N) with `bow_valley_check` (corridor links within 60 km of Banff; if they straddle the southern break the rule
+  moves it to the Bow Valley, 51.2 °N, recorded in `postprocess/acts.json` and re-applied by 06); `figure_network_wide` = 06 · 02
+  (complexes filled in the refugia tone at four alpha steps by their share inside existing PAs, outlined; the 40 corridor links by
+  class in the ramp slot; the D28 pinch marked on each; inset labels '<name> [slivers]'; near-contiguous bands NOT drawn, D-W6);
+  tables A (complexes with coverage), A-slivers, B (corridors), `headline.json` (the §1a headline table, traced to postprocess/
+  files); `export_complexes_gis`. 06 · 01 keeps the cost map with the complexes as the node layer; 03–05 unchanged on the
+  corridor links.
+- **M7.5a D25a compatibility:** the engine on main now splits the near-contiguous class three ways (open / roads / barrier; the
+  northern D25a patch, committed with the tag) while `v2_run001` was classified with the single `near_contiguous` key. The package
+  reads `link_class` directly and maps any near-contiguous value onto the mapstyle's tokens (`_norm_class`), so the v2.5 product
+  needs no re-classification; the run is not re-run.
+- **M7.6 Not exercised at build time:** the contracted routing run itself (06 = a solve; first execution = Ethan's), run mode of the
+  module and the package on the contracted run (07/08 need that run), the second-pass merge path. Smoked: 05 end to end into scratch
+  folders and its audit objects through the engine's contraction loader (23 complexes, GW5, the v2 cache identity reproduced); on the
+  branch build the same loader + `_apply_parts` + GW5; the package's tables / headline / overlay on the v2-derived product.
+
+## 8. QA gates (definitions; measured values in results_log R1)
 
 G2, GW1, GW2, G4, G8, G0 + GW3, G3, GW4, G15, G10, G22, G13, G9, G21, G18, G19 — see the spec §4 (G20 vacuous: no locked links).
 
-## 8. Provenance conventions
+## 9. Provenance conventions
 
 Inherited from the north: `run_config.json` is the engine's only input after `cc.start` (git SHA, input
 hashes incl. the class raster, the variant meta and `node_names.csv`); the run dir is the only record;

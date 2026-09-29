@@ -1,0 +1,24 @@
+﻿complex_id,name_auto,display_name,n_patches,area_km2,n_cells,largest_patch,largest_patch_name,patch_ids,lat,lon,share_north_model
+1,Refugia complex (Nahanni),,20,20657.3,229525,13,Nahanni National Park Reserve Of Canada,1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20,62.5421,-127.8771,1.0
+2,Refugium (Nahanni),,1,285.6,3173,21,Nahanni National Park Reserve Of Canada,21,60.9573,-124.5376,1.0
+3,"Refugium (Boya Lake, W)",,1,292.1,3245,22,Boya Lake Park (W),22,59.3539,-129.7844,1.0
+4,"Refugium (Stikine River, NW)",,1,743.1,8257,23,Stikine River Park (NW),23,58.4044,-131.4502,1.0
+5,"Refugia complex (Stikine River, NW)",,2,856.5,9517,29,Stikine River Park (NW),29 30,58.2176,-129.1825,1.0
+6,Refugia complex (Northern Rocky Mountains),,10,14859.6,165109,38,Northern Rocky Mountains Park,24 27 38 41 53 63 67 71 73 78,57.9038,-124.8823,1.0
+7,"Refugia complex (Sustut, E)",,43,29569.6,328554,72,Sustut Park (E),25 26 28 31 32 33 34 35 36 37 39 40 42 43 44 45 46 47 48 49 50 51 52 54 55 56 57 58 59 60 61 62 64 65 66 68 69 70 72 75 76 77 79,57.1505,-127.8617,1.0
+8,Refugium (Sustut),,1,279.2,3102,74,Sustut Park,74,56.1673,-126.6781,1.0
+9,Refugium (Omineca),,1,382.2,4247,81,Omineca Park,81,55.8017,-124.3187,1.0
+10,"Refugium (Babine River, E)",,1,456.6,5073,80,Babine River Corridor Park (E),80,55.6323,-126.5073,1.0
+11,"Refugium (Mudzenchoot, E)",,1,272.8,3031,84,Mudzenchoot Park (E),84,55.0245,-124.0425,1.0
+12,Refugia complex (Jasper),,24,135778.3,1508649,89,Jasper National Park Of Canada,82 83 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 106 107,52.03,-118.5201,0.145
+13,Refugia complex (Glacier),,2,13556.8,150632,105,Glacier,105 108,48.2931,-113.7384,0.0
+14,Refugium (Mission Mountains),,1,1532.1,17023,109,Mission Mountains Tribal Wilderness,109,47.3312,-113.8509,0.0
+15,"Refugium (Onion, SE)",,1,281.3,3126,110,Onion Park (SE),110,46.8645,-110.6422,0.0
+16,"Refugium (Absaroka Beartooth, N)",,1,333.9,3710,116,Absaroka Beartooth Wilderness (N),116,46.0786,-110.3311,0.0
+17,Refugium (Wenaha Tucannon),,1,405.9,4510,112,Wenaha Tucannon Wilderness,112,45.9343,-117.9268,0.0
+18,"Refugium (Lee Metcalf, NW)",,1,289.8,3220,121,Lee Metcalf Wilderness (NW),121,45.549,-112.016,0.0
+19,"Refugium (Skull-Odell, SE)",,1,256.1,2845,120,Skull-Odell (SE),120,45.5127,-112.9772,0.0
+20,Refugia complex (Selway Bitterroot),,7,31816.1,353513,111,Selway Bitterroot Wilderness,111 113 114 115 118 122 123,45.5052,-115.0216,0.0
+21,Refugium (Eagle Cap),,1,1544.0,17156,117,Eagle Cap Wilderness,117,45.1908,-117.3674,0.0
+22,"Refugium (North Fork John Day, S)",,1,276.8,3075,119,North Fork John Day Wilderness (S),119,44.9334,-118.1948,0.005
+23,Refugia complex (Yellowstone),,7,28270.0,314113,126,Yellowstone National Park,124 125 126 127 128 129 130,44.1056,-110.4134,0.007

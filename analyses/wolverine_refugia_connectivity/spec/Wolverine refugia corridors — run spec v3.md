@@ -16,7 +16,7 @@ Nothing is tuned. The one allowance (D31, 13.6229 cost units = 4.09 km of extra 
 
 ## 1a. v2.5 — the deliverable due 2026-09-29 (do this first; v3 sections 3–6 are deferred)
 
-v2.5 post-processes `v2_run001` outputs into the two-layer product without re-running routing. No new routing, no contraction re-run, no baseline run, no glacier sensitivities; those stay in the v3 spec as next steps. Work on a clean tree; tag `v2_run001` before starting.
+v2.5 post-processes `v2_run001` outputs into the two-layer product without re-running routing. Revised 2026-09-29: routing is re-run today between the 23 complexes (section 3 stages 3–4, section 4). The v2 patch-to-patch links are used only to derive the complexes and are not reported; the product is the inter-complex network alone. No baseline run and no glacier sensitivities today; those stay as next steps. Work on a clean tree; tag `v2_run001` before starting.
 
 One new notebook (`06_v2_postprocess`) reading the v2 link table, node table, node polygons and per-link band polygons:
 

@@ -120,3 +120,33 @@ warp with the same snapping — notebook 01 re-measures on the engine's own grid
 Class counts per legend = R5.3 (0 / 4 / 15 / 21 + 130 adjacent); examples per act under the class-and-width-first rule (3, all from
 "last affordable" — the top class is empty); tables T0/T3/T2/T4/T1 + GIS written by the slimmed 04; 05's five outputs (PENDING Ethan).
 
+
+## R7. v2.5 — the two-layer product: complexes from v2_run001, the network re-routed between them [v25_run001; run spec v3 §1a revised
+2026-09-29; PENDING Ethan's run of 05 → 06 → 07 → 08]
+
+- **R7.0 Build-time read of the v2 record (2026-09-28, the module run into a scratch folder; notebook 06 reproduces it):** 130 patches +
+  130 near-contiguous links → **23 complexes** (15 single-patch; Sustut 43 patches / 29,570 km²; Jasper 24 patches / **135,778 km²**;
+  Selway-Bitterroot 7 / 31,816; Yellowstone 7 / 28,270; Nahanni 20 / 20,657; Northern Rocky Mountains 10 / 14,860; Glacier 2 / 13,557 —
+  the two-patch Glacier complex = Glacier NP + Bob Marshall); complex land = the patch total 282,996 km². The 40 corridor-class links
+  = **37 inter-complex** (27 complex pairs; 10 pairs joined by two links) **+ 3 within one complex** (β-backups 19–34 km: Mount Edziza ↔
+  Todagin, Hoskins Lake ↔ Cabinet Mountains, Anaconda Pintler ↔ Sapphire Divide — listed with the slivers). **Coverage vs expectation**
+  (routable frame: PAs 13.0% · +IPCAs 11.0% · core 3.3% · outside all three 73.0%): complexes (area-weighted) PAs **35.4%** · +IPCAs 8.1% ·
+  core 7.5% · outside **49.7%**; corridor bands PAs 20.2% · +IPCAs 9.2% · core 4.2% · outside **66.4%**; **35 of the 37 inter-complex links cross
+  land outside PAs + IPCAs.** Core = the balanced tier on allocatable land, 51,580 km² at 1 km → 51,575 on the 300 m grid. **Accounting:**
+  all bands (the v2 corridors.tif) 52,572 km²; the 40 corridor-class links dissolved **36,230 km²** (per-link sum 39,181); outside PAs +
+  IPCAs **24,995**, outside PAs + IPCAs + core **23,779**; branches {1: 36 links, 2: 4} → 44 = branches.csv. **Slivers:** 133 (130 + 3),
+  62 with a cost-100/1000 cell ON THE PATH (the within-complex pinch points), 43 touch cost 10; path length median 3.9 km, max 33.9.
+  **Acts (two, 51 °N):** north 12 complexes / 204,433 km² (30% in PAs, 41% with IPCAs, 9% core) / 18 corridor links / 4 narrowing / 2
+  last-affordable; south 11 / 78,563 km² (49% / 49% / 4%) / 19 / 9 / 2. **Bow Valley check: 0 corridor links within 60 km of Banff** —
+  the Banff–Yoho land lies inside the Jasper complex, so nothing straddles the break. Top class empty. Last affordable: Sustut ↔ Sustut E
+  (p10 0.61), Sustut E ↔ Babine River (0.23), Glacier ↔ Mission Mountains (0.05, two branches), Absaroka Beartooth ↔ Yellowstone (0.32).
+  Names: 14 patch display names repeat inside complexes (six 'Refugium (Nááts'Ihch'Oh)') — collapsed under 'Refugia complex (Nahanni)'.
+- **R7.1 The contracted network (PENDING, `v25_run001`):** inter-complex links (MST + backups), links per class, the eight-cell table, D7
+  irreplaceables as complex pairs (the four v2 corridor-level ones expected to survive, H-W2 informally), the second-pass count, W11,
+  corridor land dissolved / outside PAs + IPCAs / outside PAs + IPCAs + core. (R7.0's coverage and accounting were measured on the v2
+  patch-to-patch links and are SUPERSEDED by the contracted run's; R7.0's complexes, names and slivers stand.)
+- **R7.2 Coverage (PENDING):** complexes and corridor bands vs the expectation row (PAs / +IPCAs / core / outside).
+- **R7.3 Accounting (PENDING):** dissolved unions vs per-link sums; branches reconciled.
+- **R7.4 Headline table (PENDING; `director_package/tables/headline.json`):** complexes + share protected by act; corridor links + share
+  crossing unprotected land; corridor land outside PAs, IPCAs and core; narrowing links by act; the last-affordable links with p10;
+  the Bow Valley act check.

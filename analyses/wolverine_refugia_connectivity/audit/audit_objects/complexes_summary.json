@@ -1,0 +1,18 @@
+{
+  "from_run": "v2_run001",
+  "edges_sha256": "060e46a97c31e0c0a3b15a95f208a4854a68b2d09a2aad8400149b7eb292022a",
+  "node_names_sha256": "41ddb7e17cb0ecc8fa44eec374b0e8d1dc2a226d4127fb43bdbc0d107b1b474e",
+  "rule": "complexes = connected components of the near-contiguous (D25) links of the patch-level network (MST + beta backups); no cap, no new threshold",
+  "node_min_km2": 250,
+  "cwd_cutoff_abs": 13.622951589524746,
+  "cutoff_detour_km": 4.086885476857423,
+  "n_patches": 130,
+  "n_adjacent_links": 130,
+  "n_complexes": 23,
+  "n_single_patch": 15,
+  "largest_complex_patches": 43,
+  "largest_complex_km2": 135778.3,
+  "n_slivers": 133,
+  "n_slivers_with_feature": 62,
+  "contraction_pass": 1
+}

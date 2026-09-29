@@ -136,7 +136,7 @@ engine record maps are functions drawn ON DEMAND only — never shared, so never
 **Run sequence (Ethan, numeric order):** 01 (warps, nodes → check stop 1; variant → check stop 2; timing
 probe) → 02 (run dir on the variant, CWD, inherited cutoff, network, GW4, G15, priority, write_run) →
 03 (near-optimality with the fixed breaks → the counterfactual width, D17 — the second CWD set, ~the 02 CWD runtime, ~8 GB compact → route branches with the relative floor → `classify_links` (G18/G19) → protection status → finish) → 04 `tables_and_figures` (the record: link-class record + tables + GIS + results-log numbers, minutes; figures on demand) →
-05 `director_outputs` (the curated few on the y2y Act 1 wide layout, mirroring the northern `06` / `07` split of 2026-09-28; 05 is
+05 `v2_postprocess` (run spec v3 §1a: the two-layer product) → 06 `director_outputs` (the curated few on the y2y Act 1 wide layout, mirroring the northern `06` / `07` split of 2026-09-28; 05 is
 self-contained — it can run straight after 03).
 
 ## 7. Parked (bolt-on later; each is additive to the same run dir)

@@ -65,7 +65,7 @@ named `<fig_id>_<run_tag>`, the 8-item render QA before any figure ships) applie
 Record = `04_tables_and_figures.ipynb` → `<run>/director_package/` — **slimmed 2026-09-28 (Ethan): tables + GIS + the link-class record
 only, minutes.** W0–W4 and the engine record maps are never shared, so 04 no longer renders them (the functions stay; one commented cell
 draws a figure on demand); the §3a.3 QA checklist therefore has nothing to check by default. 05 reads the run directly and does not depend
-on 04 (the northern `06_tables_and_figures` mirror in role, not in volume). **Curated = `05_director_outputs.ipynb`** (the northern `07_director_outputs`
+on 04 (the northern `06_tables_and_figures` mirror in role, not in volume). **Curated = `08_director_outputs.ipynb`** (05 → 06 → 08 as v2.5 grew: complexes, the routing run, the product; 2026-09-29) (the northern `07_director_outputs`
 mirror, 2026-09-28): the same first two maps as the north, drawn through `director_plot.wide_map` (the y2y Act 1 wide layout:
 the Y2Y frame at left, insets A / B at right, the key under A, the legend under B; PNG 300 dpi + PDF) via
 `wd.director_frame` (a 600 m decimated frame — one 300 dpi pixel of the frame panel is ~1.5 km; existing PAs = the layout's

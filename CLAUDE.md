@@ -531,13 +531,28 @@ package spec `spec/06_wolverine_director_package_spec.md` v1.1; BINDING living l
   tokens, windowed Y2Y hillshade, `place_labels`, `locator(window)`): W0 refugia+nodes, W0b cost, W0c what was
   withheld, W1 corridor pressure, W2–W4 act crops (auto examples per act, N→S), T0–T4, GIS, QA. **04 = `tables_and_figures` (the record — SLIMMED 2026-09-28 (Ethan): link-class record + T0/T3/T2/T4/T1 CSVs + GIS + results-log
   numbers, minutes; the W0–W4 contract figures and engine record maps are on-demand functions only, never rendered by default; 05 does NOT
-  depend on 04), 05 =
-  `director_outputs` (the curated few) — the northern 06/07 split of 2026-09-28: 05 draws the SAME five outputs as the
+  depend on 04), 06 =
+  `director_outputs` (the curated few; 05 = the v2.5 post-processing since 2026-09-28) — the northern 06/07 split of 2026-09-28: 05 draws the SAME five outputs as the
   northern 07 (01 movement cost, 02 where the land still offers choices, 03 route options in the y2y cluster palette, 04 option
   stars + 04b locators, 05 consequences table) through `director_plot.wide_map` / `star_grid` / `consequences_table` from
   `wd.director_frame` (600 m frame, PAs grey, nodes as the overlay, IPCAs a fill over corridor land); route options = the
   auto examples (max 4, pinnable via `wd.EXAMPLE_PICKS`), references Banff NP + Dene Kʼéh Kusān (`wd.CONSEQ_REFERENCE`).** Knobs in `wd.STYLE`
   / `wd.WIDE_STYLE`; label hand-placements `wd.FULL_SPEC`/`ACT_SPEC`.
+- **RUN SPEC v3 (Ethan's, 2026-09-28; `spec/Wolverine refugia corridors — run spec v3.md`). §1a = v2.5, REVISED 2026-09-29: the
+  complexes are derived from v2_run001 and the ROUTING IS RE-RUN BETWEEN THE 23 COMPLEXES (spec §3 stages 3–4 + §4); the v2
+  patch-to-patch links are used only to derive the complexes + the sliver table and are NOT reported. BUILT on main (M7.1–M7.6, R7):
+  `wolverine_postprocess.py` (patch mode + run mode) + **05_complexes** (zero-solve: components of the 130 D25 links → the AUDIT
+  OBJECTS `complex_membership.csv` / `complex_names.csv` / `complexes.gpkg` / `slivers_v2.csv` / `complexes_summary.json` + D-W7
+  refugia names into `node_names.csv`; CHECK STOP 3 = the complex map; COMMIT before 06) → **06_v25_network** (`cc.start` with
+  `CORRIDORS['wolverine']['v25']['overrides']` → `nodes.contract`; run `v25_run001`; unit field = min over the cached patch fields so
+  CWD + counterfactual HIT v2's caches via the seed-structure hash; G0/GW5, clean-tree assert, second pass asserts none; ~1 h)
+  → **07_v25_product** (run mode: coverage incl. the prioritizr core ON ALLOCATABLE LAND = f_balanced_core ≥ 0.70 outside locked
+  PAs (= the package's 51,580 km², asserted) with the expectation row; accounting; Bow Valley act check; tables; `headline.json`)
+  → **08_director_outputs** (`wp.attach`, `V25_STYLE`; 02 = `figure_network_wide`: complex outlines shaded by PA share, the
+  inter-complex links by class, pinch marked, NO hatched bands; 01 = cost map with ONLY the refugia (lime `#66A61E`, thin outline;
+  `STYLE['cost_map_*']`)). Contraction engine on main = the branch's (M7.2b); the branch `wolverine-v3` (2da23c2) keeps the
+  baseline comparison + glacier surfaces (§6 = next step). Main tagged `v2_run001` (6c79be6). Build-time: 23 complexes (15
+  single-patch; Jasper 24 patches / 135,778 km²; Sustut 43 patches), 133 slivers (62 with a cost-100/1000 cell on the path).
 - **RUN = ETHAN, numeric order:** 01 (warps G2/GW1 → `node_patches` → **CHECK STOP 1** → acquisition →
   terrain layers → τ → `derive_variant` GW2 → **CHECK STOP 2** → timing probe) → 02 (run on the VARIANT only;
   G0, CWD ~2–3 h, inherited cutoff, network G3, GW4, G15, W11 status, priority, write_run) → 03 (near-opt G10,
