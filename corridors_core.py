@@ -241,7 +241,9 @@ _H7_FILES = ("node_parts.csv", "node_parts.gpkg", "multipart_review.csv")
 # Raster-node analyses (wolverine) carry an optional human NAMING file beside the H7-format
 # node_parts files: node_names.csv (display_name per node_id). Copied + hash-pinned like the H7
 # files when present; absent in the north.
-_NODE_FILES = ("node_names.csv",)
+_NODE_FILES = ("node_names.csv",
+               # v3 contraction (D-W3): the membership + names + geometry + the v2 sliver table, pinned like the H7 files
+               "complex_membership.csv", "complex_names.csv", "complexes.gpkg", "slivers_v2.csv", "complexes_summary.json")
 
 
 def _review_signed(path):
@@ -304,7 +306,7 @@ def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True, req
             h7[f] = {"path": str(_jsonable(src)), "sha256": _sha256(src)}
 
     if run_id is None:
-        used = [int(p.name[6:]) for p in root.glob("v2_run[0-9][0-9][0-9]") if p.is_dir()]
+        used = [int(p.name[6:]) for p in root.glob("v[0-9]_run[0-9][0-9][0-9]") if p.is_dir()]
         run_id = f"v2_run{max(used, default=0) + 1:03d}"
     run_dir = root / run_id
     if run_dir.exists():
@@ -385,7 +387,7 @@ def runs(key="north"):
     """Index of every run under this analysis, newest last."""
     root = config.RESULTS_DIR / config.CORRIDORS[key]["results_subdir"]
     rows = []
-    for d in sorted(root.glob("v2_run*")):
+    for d in sorted(root.glob("v[0-9]_run*")):
         rc = d / "run_config.json"
         if not rc.exists():
             continue
@@ -822,6 +824,417 @@ def node_map(A, n_insets=3, win_km=350, save=None):
 
 
 
+# ================= v3 contraction: refugia complexes (run spec v3 §3, D-W3 / D-W6 / D-W7) =================
+_COMPLEX_GENERIC = {"park", "parks", "provincial", "national", "reserve", "of", "canada", "wilderness", "area", "areas",
+                    "protected", "conservancy", "conservation", "ecological", "recreation", "state", "forest", "corridor",
+                    "wildland", "wildlife", "management", "natural", "environment", "monument", "the", "and"}
+
+
+def _label_num(label):
+    """'Refugium · R108 name' -> 108, 'Complex · C03 name' -> 3 (any number of digits)."""
+    import re as _re
+    m = _re.match(r"[RC](\d+)(?:\s|$)", str(label).split(" · ", 1)[-1])
+    return int(m.group(1)) if m else None
+
+
+def _refugium_name(base, bearing=None, multi=False):
+    """D-W7: nodes are named as refugia, never as the nearest park -- 'Refugium (Sustut)', 'Refugia complex (Nahanni)'."""
+    words = [w for w in str(base).split(" (")[0].split(" - ")[0].split() if w.lower().strip(",") not in _COMPLEX_GENERIC]
+    core = " ".join(words) or str(base)
+    if bearing:
+        core = f"{core}, {bearing}"
+    return f"{'Refugia complex' if multi else 'Refugium'} ({core})"
+
+
+def complexes_from_run(key, from_run, force=False, verbose=True):
+    """Step-0b for v3: the refugia COMPLEXES = connected components of the near-contiguous (D25) links of a finished
+    patch-level run (`from_run`, v2_run001), on the registered patch set (node_min_km2 as pinned in that run). Writes the
+    git-tracked audit objects: complex_membership.csv (node_id -> complex_id), complex_names.csv (auto-names per D-W7 +
+    a blank display_name column Ethan may fill), complexes.gpkg (dissolved patch geometry per complex), slivers_v2.csv
+    (one row per within-complex near-contiguous link: patches, path length, cost-class composition of its owned band,
+    features present) and complexes_summary.json (provenance: the source run, its edge-table sha256, the rule). Refuses
+    to overwrite a complex_names.csv with filled display names unless force=True."""
+    cfg = config.CORRIDORS[key]
+    audit_dir = pathlib.Path(cfg["audit_objects_dir"]); audit_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = config.RESULTS_DIR / cfg["results_subdir"] / from_run
+    names_out = audit_dir / "complex_names.csv"
+    if names_out.exists() and not force:
+        old = pd.read_csv(names_out, encoding="utf-8-sig").fillna({"display_name": ""})
+        if (old["display_name"].astype(str).str.strip() != "").any():
+            raise FileExistsError(f"{names_out} carries filled display names -- pass force=True only if discarding them is intended")
+    e = pd.read_csv(run_dir / "corridor_edges.csv", encoding="utf-8-sig")
+    nodes = pd.read_csv(run_dir / "node_names.csv", encoding="utf-8-sig").fillna({"display_name": ""})
+    rec = json.loads((run_dir / "run_config.json").read_text())
+    assert "near_contiguous" in e.columns, f"{from_run} has no near_contiguous column -- run its notebook 03 (D17 + classify) first"
+    e["i_id"] = [_label_num(x) for x in e["label_i"]]; e["j_id"] = [_label_num(x) for x in e["label_j"]]
+    assert e["i_id"].notna().all() and e["j_id"].notna().all(), "edge labels did not parse to node ids"
+    nz = e[(e["cost"] > 0) & (~e["is_adjacency"].astype(bool))]
+    adj = nz[nz["near_contiguous"].astype(bool)]
+    G = nx.Graph(); G.add_nodes_from(int(n) for n in nodes.node_id)
+    G.add_edges_from((int(a), int(b)) for a, b in zip(adj.i_id, adj.j_id))
+    comps = [sorted(c) for c in nx.connected_components(G)]
+    nd = nodes.set_index("node_id")
+    # number complexes NORTH -> SOUTH by the cell-weighted centroid latitude
+    def _lat(c):
+        w = nd.loc[c, "n_cells"].values.astype(float); return float((nd.loc[c, "lat"].values * w).sum() / w.sum())
+    comps.sort(key=lambda c: -_lat(c))
+    rows, names = [], []
+    seen = {}
+    for k, c in enumerate(comps, start=1):
+        sub = nd.loc[c]
+        big = sub.sort_values("n_cells", ascending=False).iloc[0]; big_id = int(sub.sort_values("n_cells", ascending=False).index[0])
+        by_pa = pd.notna(big.get("pa_overlap_name")) and str(big.get("pa_overlap_name")) not in ("", "nan") and \
+                float(big.get("pa_overlap_frac", 0) or 0) >= float(cfg["nodes"].get("naming", {}).get("pa_overlap_min", 0.10))
+        base = big["pa_overlap_name"] if by_pa else big["nearest_pa"]
+        nm = _refugium_name(base, None if by_pa else big.get("bearing"), multi=len(c) > 1)
+        if nm in seen:
+            seen[nm] += 1; nm = nm[:-1] + f", {seen[nm]})"
+        else:
+            seen[nm] = 1
+        w = sub["n_cells"].values.astype(float)
+        names.append(dict(complex_id=k, name_auto=nm, display_name="", n_patches=len(c), area_km2=round(float(sub["area_km2"].sum()), 1),
+                          n_cells=int(sub["n_cells"].sum()), largest_patch=big_id, largest_patch_name=big["name"] if "name" in sub.columns else big["label_auto"],
+                          patch_ids=" ".join(str(int(x)) for x in c),
+                          lat=round(float((sub["lat"].values * w).sum() / w.sum()), 4), lon=round(float((sub["lon"].values * w).sum() / w.sum()), 4),
+                          share_north_model=round(float((sub["share_north_model"].values * w).sum() / w.sum()), 3) if "share_north_model" in sub.columns else np.nan))
+        for nid in c:
+            rows.append(dict(node_id=int(nid), complex_id=k, n_cells=int(nd.loc[nid, "n_cells"]), area_km2=float(nd.loc[nid, "area_km2"])))
+    mem = pd.DataFrame(rows).sort_values("node_id"); nmd = pd.DataFrame(names)
+    mem.to_csv(audit_dir / "complex_membership.csv", index=False, encoding="utf-8-sig")
+    nmd.to_csv(names_out, index=False, encoding="utf-8-sig")
+    # geometry: dissolve the patch polygons per complex
+    g = gpd.read_file(run_dir / "node_parts.gpkg")
+    g["complex_id"] = g["node_id"].map(mem.set_index("node_id")["complex_id"])
+    assert g["complex_id"].notna().all(), "a patch polygon has no complex"
+    cgeo = g.dissolve(by="complex_id", aggfunc={"area_km2": "sum"}).reset_index()
+    cgeo = cgeo.merge(nmd[["complex_id", "name_auto", "n_patches", "patch_ids", "lat", "lon"]], on="complex_id")
+    cgeo["name"] = cgeo["name_auto"]
+    cgeo[["complex_id", "name", "name_auto", "n_patches", "area_km2", "patch_ids", "lat", "lon", "geometry"]].to_file(audit_dir / "complexes.gpkg", driver="GPKG")
+    # the within-complex sliver table (Layer A's backing table, run spec v3 §5) from the v2 record: owned band composition
+    owner = rioxarray.open_rasterio(run_dir / "edge_owner.tif").squeeze().values
+    res = rioxarray.open_rasterio(run_dir / "resistance.tif", masked=True).squeeze().values
+    ghm, tau = _human_proxy(cfg, rec)
+    cell_km2 = float(rec["cfg"].get("grid", {}).get("res_m", 300)) ** 2 / 1e6; cell_km = cell_km2 ** 0.5
+    order = {k: i for i, k in enumerate(e["edge_id"] if "edge_id" in e.columns else e.iloc[:, 0])}
+    srows = []
+    for r in adj.itertuples():
+        eid = getattr(r, "edge_id", None) or r[1]
+        m = owner == order[eid]
+        n = int(m.sum()); vals = res[m] if n else np.array([])
+        comp = {c: (float((vals == c).mean()) if n else np.nan) for c in (1, 10, 100, 1000)}
+        settled = int(((ghm >= tau) & m).sum()) if ghm is not None else -1
+        srows.append(dict(complex_id=int(mem.set_index("node_id").loc[int(r.i_id), "complex_id"]), edge_id=eid, patch_i=int(r.i_id), patch_j=int(r.j_id),
+                          lcp_len_km=round(float(r.lcp_len_cells) * cell_km, 1) if pd.notna(r.lcp_len_cells) else np.nan,
+                          owned_band_km2=round(n * cell_km2, 1), pct_cost1=round(100 * comp[1], 1), pct_cost10=round(100 * comp[10], 1),
+                          pct_cost100=round(100 * comp[100], 1), pct_cost1000=round(100 * comp[1000], 1),
+                          has_cost100_or_1000=bool(comp[100] > 0 or comp[1000] > 0), crosses_cost_1000=bool(getattr(r, "crosses_cost_1000", False)),
+                          settled_km2=(round(settled * cell_km2, 1) if settled >= 0 else np.nan),
+                          barrier_between=bool(getattr(r, "link_class", "") == "near_contiguous_barrier")))
+    sl = pd.DataFrame(srows)
+    sl.to_csv(audit_dir / "slivers_v2.csv", index=False, encoding="utf-8-sig")
+    summ = dict(from_run=from_run, edges_sha256=_sha256(run_dir / "corridor_edges.csv"), node_names_sha256=_sha256(run_dir / "node_names.csv"),
+                rule="complexes = connected components of the near-contiguous (D25) links of the patch-level network (MST + beta backups); no cap, no new threshold",
+                node_min_km2=rec["cfg"]["nodes"]["node_min_km2"], cwd_cutoff_abs=rec["cfg"]["cwd_cutoff_abs"], cutoff_detour_km=rec["cfg"].get("cutoff_detour_km"),
+                n_patches=int(len(mem)), n_adjacent_links=int(len(adj)), n_complexes=int(len(nmd)),
+                n_single_patch=int((nmd["n_patches"] == 1).sum()), largest_complex_patches=int(nmd["n_patches"].max()),
+                largest_complex_km2=float(nmd["area_km2"].max()), n_slivers=int(len(sl)),
+                n_slivers_with_feature=int(sl["has_cost100_or_1000"].sum()) if len(sl) else 0, human_tau=tau, contraction_pass=1)
+    (audit_dir / "complexes_summary.json").write_text(json.dumps(summ, indent=2, ensure_ascii=False))
+    if verbose:
+        print(f"complexes from {from_run}: {summ['n_patches']} patches, {summ['n_adjacent_links']} near-contiguous links -> "
+              f"{summ['n_complexes']} complexes ({summ['n_single_patch']} single-patch; largest {summ['largest_complex_patches']} patches / "
+              f"{summ['largest_complex_km2']:,.0f} km²) | slivers {summ['n_slivers']} ({summ['n_slivers_with_feature']} with a cost-100/1000 feature)")
+        print(f"  -> {audit_dir / 'complex_membership.csv'}, complex_names.csv (display_name = your rename column), complexes.gpkg, slivers_v2.csv")
+    return mem, nmd, sl, summ
+
+
+def _human_proxy(cfg, rec=None):
+    """(ghm90max grid, tau) from the variant layers + the variant meta -- the human-layer proxy of W1a; (None, None) if absent."""
+    gdir = config.PROJECT_DIR / pathlib.Path(cfg["grid"]["dir"])
+    p = gdir / "variant_layers" / "ghm90max.tif"
+    hv = cfg.get("headline_variant"); meta = None
+    if hv:
+        mp = gdir / (cfg["variants"][hv]["resistance"]["out_name"] + ".meta.json")
+        if mp.exists():
+            meta = json.loads(mp.read_text())
+    if not p.exists() or meta is None:
+        return None, None
+    return rioxarray.open_rasterio(p).squeeze().values, float(meta["thresholds"]["human_tau"])
+
+
+def merge_complexes(key, pairs, verbose=True):
+    """Second-pass D25 (run spec v3 §4): merge the listed complex pairs in the audit membership, renumber north -> south,
+    regenerate names (display names are carried over by name_auto where the complex is unchanged) and bump the pass
+    counter. Then re-run notebook 07 with a NEW run id."""
+    cfg = config.CORRIDORS[key]; audit_dir = pathlib.Path(cfg["audit_objects_dir"])
+    mem = pd.read_csv(audit_dir / "complex_membership.csv"); nmd = pd.read_csv(audit_dir / "complex_names.csv", encoding="utf-8-sig").fillna({"display_name": ""})
+    summ = json.loads((audit_dir / "complexes_summary.json").read_text())
+    G = nx.Graph(); G.add_nodes_from(int(c) for c in nmd.complex_id); G.add_edges_from((int(a), int(b)) for a, b in pairs)
+    groups = sorted((sorted(c) for c in nx.connected_components(G)), key=lambda c: float(nmd.set_index("complex_id").loc[c, "lat"].max()), reverse=True)
+    old2new = {old: k for k, grp in enumerate(groups, start=1) for old in grp}
+    mem["complex_id"] = mem["complex_id"].map(old2new)
+    nd = nmd.set_index("complex_id")
+    rows = []
+    for k, grp in enumerate(groups, start=1):
+        sub = nd.loc[grp]; w = sub["n_cells"].values.astype(float)
+        big = sub.sort_values("n_cells", ascending=False).iloc[0]
+        nm = big["name_auto"] if len(grp) == 1 else big["name_auto"].replace("Refugium (", "Refugia complex (")
+        rows.append(dict(complex_id=k, name_auto=nm, display_name=(big["display_name"] if len(grp) == 1 else ""),
+                         n_patches=int(sub["n_patches"].sum()), area_km2=round(float(sub["area_km2"].sum()), 1), n_cells=int(sub["n_cells"].sum()),
+                         largest_patch=int(big["largest_patch"]), largest_patch_name=big.get("largest_patch_name", ""),
+                         patch_ids=" ".join(str(x) for x in sorted(int(v) for s_ in sub["patch_ids"] for v in str(s_).split())),
+                         lat=round(float((sub["lat"].values * w).sum() / w.sum()), 4), lon=round(float((sub["lon"].values * w).sum() / w.sum()), 4),
+                         share_north_model=round(float((sub["share_north_model"].fillna(0).values * w).sum() / w.sum()), 3)))
+    nmd2 = pd.DataFrame(rows)
+    mem.sort_values("node_id").to_csv(audit_dir / "complex_membership.csv", index=False, encoding="utf-8-sig")
+    nmd2.to_csv(audit_dir / "complex_names.csv", index=False, encoding="utf-8-sig")
+    g = gpd.read_file(audit_dir / "complexes.gpkg"); g["complex_id"] = g["complex_id"].map(old2new)
+    cg_ = g.dissolve(by="complex_id", aggfunc={"area_km2": "sum"}).reset_index().merge(nmd2[["complex_id", "name_auto", "n_patches", "patch_ids", "lat", "lon"]], on="complex_id")
+    cg_["name"] = cg_["name_auto"]
+    cg_[["complex_id", "name", "name_auto", "n_patches", "area_km2", "patch_ids", "lat", "lon", "geometry"]].to_file(audit_dir / "complexes.gpkg", driver="GPKG")
+    sl = pd.read_csv(audit_dir / "slivers_v2.csv"); sl["complex_id"] = sl["complex_id"].map(old2new); sl.to_csv(audit_dir / "slivers_v2.csv", index=False, encoding="utf-8-sig")
+    summ.update(n_complexes=int(len(nmd2)), contraction_pass=int(summ.get("contraction_pass", 1)) + 1,
+                second_pass_merges=[[int(a), int(b)] for a, b in pairs], n_single_patch=int((nmd2["n_patches"] == 1).sum()))
+    (audit_dir / "complexes_summary.json").write_text(json.dumps(summ, indent=2, ensure_ascii=False))
+    if verbose:
+        print(f"second-pass merge: {len(pairs)} pair(s) -> {len(nmd2)} complexes (pass {summ['contraction_pass']}); re-run 07 with a new run id")
+    return mem, nmd2
+
+
+def _contract_complexes(A, membership_path, names_path=None, verbose=True):
+    """Turn the patch-level loader namespace into the contracted one (D-W3): names_raw = complexes (union of member
+    patches), the 130 patches kept as the SEED PARTS in their cached order (prebuilt for _apply_parts), one routing unit
+    per complex. GW5 fingerprint: every current patch appears exactly once in the membership with its cell count."""
+    mem = pd.read_csv(membership_path)
+    df = A.node_table
+    assert set(mem.node_id) == set(int(x) for x in df.node_id), "GW5 FAILED: the membership's patch set differs from the current node set"
+    assert mem.node_id.is_unique, "GW5 FAILED: a patch appears twice in the membership"
+    cells = df.set_index("node_id")["n_cells"]
+    bad = [int(n) for n, c in zip(mem.node_id, mem.n_cells) if int(cells.loc[int(n)]) != int(c)]
+    assert not bad, f"GW5 FAILED: cell counts differ for patches {bad[:8]} -- rebuild the membership (cc.complexes_from_run)"
+    names = None
+    if names_path is not None and pathlib.Path(names_path).exists():
+        names = pd.read_csv(names_path, encoding="utf-8-sig").fillna({"display_name": ""}).set_index("complex_id")
+    lbl2mask = dict(A.names_raw)
+    order = list(df.node_id.astype(int))                         # the seed order = node_id order (the v2 cache's part order)
+    lbl_of = dict(zip(df.node_id.astype(int), df.name_label))
+    parts = [(lbl_of[n], lbl2mask[lbl_of[n]]) for n in order]
+    pos = {n: i for i, n in enumerate(order)}
+    m2c = mem.set_index("node_id")["complex_id"]
+    cids = sorted(int(c) for c in mem.complex_id.unique())
+    nc = A.cfg["nodes"]; klabel = nc.get("kind_label", "Complex"); kind = nc.get("kind", "complex")
+    names_raw, kinds_raw, unit_parts, part_name = [], [], [], [None] * len(parts)
+    complex_id = np.zeros(A.shape, np.int16)
+    trows = []
+    for ci, c in enumerate(cids):
+        members = [int(n) for n in mem.node_id[mem.complex_id == c]]
+        pidx = sorted(pos[n] for n in members)
+        if len(pidx) == 1:
+            union = parts[pidx[0]][1]                                # alias, never copy
+        else:
+            union = np.zeros(A.shape, bool)
+            for pi in pidx:
+                union |= parts[pi][1]
+        nm = None
+        if names is not None and c in names.index:
+            r = names.loc[c]; nm = str(r["display_name"]).strip() or str(r["name_auto"])
+        nm = nm or f"complex {c}"
+        lbl = f"{klabel} · C{c:02d} {nm}"
+        names_raw.append((lbl, union)); kinds_raw.append(kind); unit_parts.append(pidx)
+        for pi in pidx:
+            part_name[pi] = ci
+        complex_id[union] = c
+        sub = df[df.node_id.isin(members)]; w = sub["n_cells"].values.astype(float)
+        trows.append(dict(complex_id=c, name=nm, label=lbl, n_patches=len(members), patch_ids=" ".join(str(n) for n in sorted(members)),
+                          area_km2=round(float(sub["area_km2"].sum()), 1), n_cells=int(sub["n_cells"].sum()),
+                          lat=float((sub["lat"].values * w).sum() / w.sum()), lon=float((sub["lon"].values * w).sum() / w.sum())))
+    A.seed_names = [dict(treatment="single") for _ in parts]      # the cache identity of the v2 patch run (_resistance_sha)
+    A.seed_n_nodes = len(parts)
+    A.patch_names_raw, A.patch_kinds_raw = A.names_raw, A.kinds_raw
+    A.names_raw, A.kinds_raw = names_raw, kinds_raw
+    A.prebuilt = dict(parts=parts, part_name=part_name, unit_parts=unit_parts)
+    A.complex_id, A.complex_table, A.patch_complex = complex_id, pd.DataFrame(trows), m2c
+    A.contracted = True
+    A.contraction_meta = dict(membership_sha256=_sha256(membership_path), n_patches=len(parts), n_complexes=len(cids),
+                              rule="connected components of the near-contiguous (D25) links of the patch-level run")
+    if verbose:
+        multi = sum(1 for x in unit_parts if len(x) > 1)
+        print(f"GW5 OK: {len(parts)} patches -> {len(cids)} complexes ({multi} multi-patch), membership sha {A.contraction_meta['membership_sha256'][:12]}")
+    return A
+
+
+def gate_gw5(A):
+    """GW5 (run spec v3 §9): every patch in exactly one complex; complex areas sum to the patch total; no complex is empty."""
+    assert getattr(A, "contracted", False), "GW5: not a contracted run"
+    n_p = sum(len(x) for x in A.unit_parts)
+    assert n_p == len(A.parts) and sorted(i for x in A.unit_parts for i in x) == list(range(len(A.parts))), "GW5 FAILED: parts not partitioned"
+    tot_patch = sum(int(m.sum()) for _, m in A.parts); tot_cx = sum(int(m.sum()) for _, m in A.nodes)
+    assert tot_patch == tot_cx, f"GW5 FAILED: complex cells {tot_cx} != patch cells {tot_patch}"
+    assert all(int(m.sum()) > 0 for _, m in A.nodes), "GW5 FAILED: an empty complex"
+    print(f"GW5 OK: {len(A.parts)} patches partitioned into {len(A.nodes)} complexes; {tot_cx * A.cell_km2:,.0f} km² of complex land = the patch total")
+    return True
+
+
+def second_pass_merges(A, write=True):
+    """Run spec v3 §4: inter-complex links that D25 still calls near-contiguous -> complex pairs to merge (a second-pass
+    contraction, same rule). Empty = accept the contraction. Writes second_pass_merges.csv into the run dir."""
+    e = A.edges
+    assert "near_contiguous" in e.columns, "run counterfactual_squeeze first"
+    nz = e[(e["cost"] > 0) & (~e["is_adjacency"].astype(bool)) & e["near_contiguous"].astype(bool)]
+    rows = [dict(edge_id=eid, complex_i=_label_num(r["label_i"]), complex_j=_label_num(r["label_j"]),
+                 lcp_len_cells=r.get("lcp_len_cells"), open_ground_width_med=r.get("open_ground_width_med"),
+                 crosses_cost_1000=bool(r.get("crosses_cost_1000", False))) for eid, r in nz.iterrows()]
+    df = pd.DataFrame(rows, columns=["edge_id", "complex_i", "complex_j", "lcp_len_cells", "open_ground_width_med", "crosses_cost_1000"])
+    if write:
+        df.to_csv(A.run_dir / "second_pass_merges.csv", index=False, encoding="utf-8-sig")
+    print(f"D25 second pass: {len(df)} inter-complex link(s) near-contiguous" + (" -> merge and re-run (cc.merge_complexes)" if len(df) else " -> contraction accepted"))
+    return df
+
+
+def complex_layer(A):
+    """Layer A (run spec v3 §5): one row per complex -- patches, area, share inside existing PAs, share ADDED by the proposed
+    IPCAs, mean of the 300 m human-modification proxy (the max of the 90 m gHM within each cell -- the W1a layer; disclosed),
+    within-complex slivers and how many carry a cost-100/1000 feature (from slivers_v2.csv)."""
+    ghm, tau = _human_proxy(A.cfg, A.rec)
+    pa = A.protected_pa if getattr(A, "protected_pa", None) is not None else np.zeros(A.shape, bool)
+    ip = A.protected_ipca if getattr(A, "protected_ipca", None) is not None else np.zeros(A.shape, bool)
+    sl = pd.read_csv(A.run_dir / "slivers_v2.csv", encoding="utf-8-sig") if (A.run_dir / "slivers_v2.csv").exists() else None
+    rows = []
+    for u, (lbl, m) in enumerate(A.nodes):
+        t = A.complex_table.iloc[u]; n = int(m.sum())
+        r = dict(t.to_dict())
+        r.update(pa_share=round(float((m & pa).sum() / n), 4), ipca_added_share=round(float((m & ip & ~pa).sum() / n), 4),
+                 protected_share=round(float((m & (pa | ip)).sum() / n), 4),
+                 mean_ghm90max=(round(float(np.nanmean(ghm[m])), 4) if ghm is not None else np.nan))
+        if sl is not None:
+            s_ = sl[sl["complex_id"] == int(t["complex_id"])]
+            r.update(n_slivers=int(len(s_)), n_slivers_with_feature=int(s_["has_cost100_or_1000"].sum()),
+                     n_slivers_crossing_1000=int(s_["crosses_cost_1000"].sum()))
+        rows.append(r)
+    return pd.DataFrame(rows)
+
+
+def complex_map(A, save=None, label_min_km2=2000):
+    """Check stop 3 (run spec v3 §3): the complexes as a numbered categorical map over the refugia + PA context."""
+    from matplotlib.colors import ListedColormap as _LCM
+    K = len(A.nodes)
+    rng = np.random.default_rng(7); cols = plt.get_cmap("tab20")(np.arange(20) / 20.0)[rng.permutation(20)]
+    cmap = _LCM(np.vstack([[1, 1, 1, 0]] + [cols[(i % 20)] for i in range(K)]))
+    step = max(1, A.shape[1] // 2400)
+    fig, ax = plt.subplots(figsize=(9, 14))
+    ctx = getattr(A, "context_pa", None)
+    if ctx is not None:
+        ax.imshow(np.where(ctx[::step, ::step], 1, np.nan), cmap=_LCM([PA_COLOR]), alpha=0.35, interpolation="nearest")
+    ax.imshow(np.where(A.marginal[::step, ::step], 1, np.nan), cmap=_LCM(["#C5E1A5"]), alpha=0.5, interpolation="nearest")
+    cid = A.complex_id[::step, ::step]
+    ax.imshow(np.where(cid > 0, cid, np.nan), cmap=cmap, vmin=0, vmax=K, interpolation="nearest")
+    for u, (lbl, m) in enumerate(A.nodes):
+        t = A.complex_table.iloc[u]
+        rr, cc_ = np.nonzero(m[::step, ::step])
+        if not len(rr):
+            continue
+        ax.text(np.median(cc_), np.median(rr), f"C{int(t['complex_id'])}", fontsize=7 if t["area_km2"] < label_min_km2 else 9,
+                ha="center", va="center", fontweight="bold", bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.75))
+    ax.set_axis_off(); ax.set_title(f"Refugia complexes — {K} (check stop 3: does any split where one range is expected?)")
+    if save:
+        fig.savefig(save, dpi=150, bbox_inches="tight")
+    plt.show()
+    return fig
+
+
+def centreline_comparison(A, surfaces, verbose=True):
+    """Run spec v3 §6 (D-W5): the SAME complex pairs routed on other surfaces, compared at least-cost-CENTRELINE level only.
+    `surfaces` = {name: path to a cost GeoTIFF on the routing grid}; the variant's own centreline is the reference
+    (A.paths). One find_costs per source complex per surface, its tracebacks taken immediately (the traceback trap).
+    Per link and surface: cumulative cost, path length, share of the path on cost 1000, cost-1000 cells by layer of origin
+    (elevation / slope / glacier / lake / river / ocean / human proxy / unexplained), cells on cost 10 and 100 (the roads,
+    cuts and converted-land bands -- the source's road classes are not separable from the published surface), settled land
+    traversed (human-proxy cells x cell size), elevation median and max, and the displacement from the variant centreline
+    (symmetric Hausdorff and mean nearest-neighbour separation, km). Writes centreline_comparison.csv + _summary.json."""
+    from scipy.spatial import cKDTree
+    gdir = config.PROJECT_DIR / pathlib.Path(A.cfg["grid"]["dir"]); ldir = gdir / "variant_layers"
+    L = {k: rioxarray.open_rasterio(ldir / f"{k}.tif").squeeze().values.astype(bool)
+         for k in ("elev_gt", "slope_gt", "glacier", "lake", "river", "ocean")}
+    ghm, tau = _human_proxy(A.cfg, A.rec)
+    dem = rioxarray.open_rasterio(ldir / "dem.tif").squeeze().values if (ldir / "dem.tif").exists() else None
+    e = A.edges[(A.edges["cost"] > 0) & (~A.edges["is_adjacency"].astype(bool))]
+    xs, ys = A.template.x.values, A.template.y.values
+
+    def _metrics(path, cost_arr):
+        rr = np.array([p[0] for p in path]); cc_ = np.array([p[1] for p in path])
+        c = cost_arr[rr, cc_]
+        is1000 = c >= 1000
+        by = {k: int((L[k][rr, cc_] & is1000).sum()) for k in L}
+        hum = (ghm[rr, cc_] >= tau) if ghm is not None else np.zeros(len(rr), bool)
+        by["human_proxy"] = int((hum & is1000).sum())
+        expl = np.zeros(len(rr), bool)
+        for k in L:
+            expl |= L[k][rr, cc_]
+        by["unexplained"] = int((is1000 & ~expl & ~hum).sum())
+        out = dict(path_cells=len(rr), path_len_km=round(len(rr) * A.cell_km, 1), share_cost1000=round(float(is1000.mean()), 4),
+                   n_cost10=int((c == 10).sum()), n_cost100=int((c == 100).sum()), n_cost1000=int(is1000.sum()),
+                   settled_km=round(float(hum.sum()) * A.cell_km, 1))
+        out.update({f"n1000_{k}": v for k, v in by.items()})
+        if dem is not None:
+            z = dem[rr, cc_]; out.update(elev_med_m=round(float(np.nanmedian(z))), elev_max_m=round(float(np.nanmax(z))))
+        return out, np.c_[xs[cc_], ys[rr]]
+
+    def _displacement(P0, P1):
+        from scipy.spatial.distance import directed_hausdorff
+        h = max(directed_hausdorff(P0, P1)[0], directed_hausdorff(P1, P0)[0]) / 1e3
+        d01 = cKDTree(P1).query(P0)[0]; d10 = cKDTree(P0).query(P1)[0]
+        return round(float(h), 2), round(float((d01.mean() + d10.mean()) / 2) / 1e3, 2)
+
+    rows = []
+    ref_xy = {}
+    cost_var = A.cost
+    for eid, r in e.iterrows():
+        m, xy = _metrics(A.paths[eid], cost_var); ref_xy[eid] = xy
+        rows.append(dict(edge_id=eid, surface="variant", cost=round(float(r["cost"]), 2), hausdorff_km=0.0, mean_sep_km=0.0, **m))
+    for name, path in surfaces.items():
+        t0 = time.time()
+        arr = rioxarray.open_rasterio(path, masked=True).squeeze().values.astype("float64")
+        res = np.where(A.pu & np.isfinite(arr), arr, np.inf)
+        mcp = MCP_Geometric(res)
+        by_src = defaultdict(list)
+        for eid, r in e.iterrows():
+            by_src[int(r["i"])].append((eid, int(r["j"])))
+        for i, lst in by_src.items():
+            cum, _ = mcp.find_costs([tuple(x) for x in np.argwhere(A.nodes[i][1])])
+            for eid, j in lst:                               # tracebacks BEFORE the next find_costs (the traceback trap)
+                mj = A.nodes[j][1]; cells = np.argwhere(mj); vals = cum[mj]
+                k = int(np.nanargmin(vals)); target = tuple(int(v) for v in cells[k])
+                pth = [tuple(int(v) for v in q) for q in mcp.traceback(target)]
+                m, xy = _metrics(pth, arr)
+                h, ms_ = _displacement(ref_xy[eid], xy)
+                rows.append(dict(edge_id=eid, surface=name, cost=round(float(vals[k]), 2), hausdorff_km=h, mean_sep_km=ms_, **m))
+        if verbose:
+            print(f"  {name}: {len(by_src)} source complexes routed, {sum(len(v) for v in by_src.values())} links, {time.time()-t0:,.0f} s")
+    df = pd.DataFrame(rows)
+    df.to_csv(A.run_dir / "centreline_comparison.csv", index=False, encoding="utf-8-sig")
+    # summary per surface (H-W5 / H-W6 inputs)
+    ref = df[df.surface == "variant"].set_index("edge_id")
+    summ = {}
+    for name in surfaces:
+        d = df[df.surface == name].set_index("edge_id")
+        one_cell = d["hausdorff_km"] > A.cell_km * 1.0001
+        settled_new = (d["settled_km"] > ref.loc[d.index, "settled_km"])
+        h1000_new = (d["n1000_human_proxy"] > ref.loc[d.index, "n1000_human_proxy"])
+        lower = (d["elev_med_m"] < ref.loc[d.index, "elev_med_m"]) if "elev_med_m" in d.columns else pd.Series(False, index=d.index)
+        summ[name] = dict(n_links=int(len(d)), hausdorff_km=dict(median=round(float(d.hausdorff_km.median()), 2), p90=round(float(d.hausdorff_km.quantile(0.9)), 2), max=round(float(d.hausdorff_km.max()), 2)),
+                          mean_sep_km=dict(median=round(float(d.mean_sep_km.median()), 2), max=round(float(d.mean_sep_km.max()), 2)),
+                          n_moved_over_one_cell=int(one_cell.sum()), links_moved_over_one_cell=list(d.index[one_cell]),
+                          n_more_settled_land=int(settled_new.sum()), n_more_human_1000=int(h1000_new.sum()), n_lower_median_elevation=int(lower.sum()),
+                          n_identical=int((d["hausdorff_km"] == 0).sum()))
+    (A.run_dir / "centreline_comparison_summary.json").write_text(json.dumps(summ, indent=2, ensure_ascii=False))
+    if verbose:
+        for name, s_ in summ.items():
+            print(f"{name}: displacement median {s_['hausdorff_km']['median']} km, p90 {s_['hausdorff_km']['p90']}, max {s_['hausdorff_km']['max']} | "
+                  f"{s_['n_moved_over_one_cell']} link(s) moved > 1 cell | {s_['n_more_settled_land']} through more settled land | "
+                  f"{s_['n_lower_median_elevation']} lower median elevation | {s_['n_identical']} identical")
+    return df, summ
+
+
 def _name_designation(label, kind, desig, multisite):
     """Designation string for a name. IPCAs carry PA_TYPE from the source; the PA layer has no
     designation attribute, so for existing PAs the designation is DERIVED from PA_Name by matching
@@ -861,6 +1274,17 @@ def _apply_parts(A, treatments):
     A.node_union stays the union of FULL name masks: parts < part_min_km2 remain area-accounted
     but are never seeds (spec §2).
     """
+    pre = getattr(A, "prebuilt", None)
+    if pre is not None:                          # wolverine v3 (D-W3): complexes = names, patches = parts, ONE unit per complex
+        A.names = [dict(label=lbl, kind=kind, mask=m, treatment="contract", parts=list(pidx), n_comps=len(pidx), n_seeds=len(pidx))
+                   for (lbl, m), kind, pidx in zip(A.names_raw, A.kinds_raw, pre["unit_parts"])]
+        A.parts, A.part_name = pre["parts"], pre["part_name"]
+        A.nodes = [(lbl, m) for lbl, m in A.names_raw]
+        A.kinds, A.unit_name, A.unit_parts = list(A.kinds_raw), list(range(len(A.names_raw))), [list(x) for x in pre["unit_parts"]]
+        multi = sum(1 for x in A.unit_parts if len(x) > 1)
+        print(f"contraction (D-W3): {len(A.parts)} patches (the cached seed parts) -> {len(A.nodes)} complexes as routing units "
+              f"({multi} multi-patch; unit field = pointwise min over member patches; no intra-complex links)")
+        return A
     part_min = max(1, int(round(A.cfg["part_min_km2"] / A.cell_km2)))
     names, parts, part_name = [], [], []
     units, unit_kinds, unit_name, unit_parts = [], [], [], []
@@ -931,6 +1355,9 @@ def load(run_dir):
     if cfg.get("nodes", {}).get("source", "vector") == "raster":
         names_path = run_dir / "node_names.csv"
         A = _raster_nodes(cfg, cost_path, names_path if names_path.exists() else None)
+        if cfg["nodes"].get("contract"):                            # wolverine v3: complexes from the pinned membership
+            _contract_complexes(A, run_dir / "complex_membership.csv",
+                                run_dir / "complex_names.csv" if (run_dir / "complex_names.csv").exists() else None)
     else:
         A = _grid_nodes(cfg, cost_path)
     A.key, A.rec, A.run_id, A.run_dir = key, rec, rec["run_id"], run_dir
@@ -1111,10 +1538,22 @@ def _resistance_sha(A):
     h.update(np.ascontiguousarray(A.node_union).tobytes())
     for plbl, m in getattr(A, "parts", [(lbl, m) for lbl, m in A.nodes]):
         h.update(np.packbits(m).tobytes())
-    for n in getattr(A, "names", []):
+    # contracted runs (wolverine v3, D-W3): the SEED structure is the patch set exactly as v2 ran it (130 single-part
+    # names), so the per-part fields are byte-identical and the cache dir is v2's; unit fields carry their own
+    # composition hash (_unit_fname). Uncontracted runs hash their names/units as before.
+    for n in (getattr(A, "seed_names", None) or getattr(A, "names", [])):
         h.update(n["treatment"].encode())
-    h.update(str(len(A.nodes)).encode())
+    h.update(str(getattr(A, "seed_n_nodes", None) or len(A.nodes)).encode())
     return h.hexdigest()[:16]
+
+
+def _unit_fname(A, u):
+    """Materialised multi-part unit field: `unit_UUU.npy` (north, D16) or, on a contracted run, a name keyed by the
+    unit's part composition so a second-pass merge never reads a stale file."""
+    if getattr(A, "contracted", False):
+        key = ",".join(str(int(i)) for i in sorted(A.unit_parts[u]))
+        return f"unit_{hashlib.sha1(key.encode()).hexdigest()[:12]}.npy"
+    return f"unit_{u:03d}.npy"
 
 
 def _n_groups(A, corr):
@@ -1387,6 +1826,8 @@ def _locked_edges(A, cutoff, cutoff_mode="abs"):
         if len(pidx) < 2:
             continue
         n = A.names[A.unit_name[u]]
+        if n["treatment"] != "link_locked":        # contracted complexes (v3, D-W3) have parts but NO intra-name links
+            continue
         k = len(pidx)
         Dp = np.full((k, k), np.inf)
         for a in range(k):
@@ -1610,7 +2051,7 @@ def cost_distances(A, cache=True):
             if len(pidx) == 1:
                 upaths.append(A.cwd_parts.paths[pidx[0]])
             else:
-                p = cache_dir / f"unit_{u:03d}.npy"
+                p = cache_dir / _unit_fname(A, u)
                 if not p.exists():
                     rd = (A.cwd_parts.compact if compact else A.cwd_parts.__getitem__)
                     fld = np.asarray(rd(pidx[0]), dtype="float32").copy()
@@ -2540,7 +2981,8 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
           f"with cost >= {thr:g} set to 1; banding every edge at cutoff {A.cutoff:g}")
 
     # ---- CWD on the counterfactual surface (per part -> unit min-fields), cached ------------
-    A_cf = _NS(cost=cf_cost, node_union=A.node_union, parts=A.parts, names=A.names, nodes=A.nodes)
+    A_cf = _NS(cost=cf_cost, node_union=A.node_union, parts=A.parts, names=A.names, nodes=A.nodes,
+               seed_names=getattr(A, "seed_names", None), seed_n_nodes=getattr(A, "seed_n_nodes", None))   # contracted runs: v2's cf identity
     cache_dir = None
     if cache:
         gdir = config.PROJECT_DIR / pathlib.Path(A.cfg["grid"]["dir"])
@@ -2562,7 +3004,7 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
             if len(pidx) == 1:
                 upaths.append(cwd_parts_cf.paths[pidx[0]])
             else:
-                p = cache_dir / f"unit_{u:03d}.npy"
+                p = cache_dir / _unit_fname(A, u)
                 if not p.exists():
                     rd = (cwd_parts_cf.compact if compact else cwd_parts_cf.__getitem__)
                     fld = np.asarray(rd(pidx[0]), dtype="float32").copy()
@@ -3138,6 +3580,11 @@ def write_run(A):
     if getattr(A, "node_id", None) is not None:                 # raster nodes: the numbered patches
         _tif(A, A.node_id, dst / "node_id.tif", "int16", 0)
         written.append("node_id.tif")
+    if getattr(A, "contracted", False):                         # v3: the complexes (Layer A) beside the patches
+        _tif(A, A.complex_id, dst / "complex_id.tif", "int16", 0)
+        la = complex_layer(A)
+        la.to_csv(dst / "complexes_layer_a.csv", index=False, encoding="utf-8-sig")
+        written += ["complex_id.tif", "complexes_layer_a.csv"]
     if getattr(A, "corridor_unprotected", None) is not None:    # W11: the corridor land still to secure
         _tif(A, np.where(A.corridor_unprotected, 1, 0), dst / "corridors_unprotected.tif", "uint8", 0)
         written.append("corridors_unprotected.tif")
@@ -3181,6 +3628,9 @@ def write_run(A):
         n_names=len(getattr(A, "names", [])) or None,
         n_seed_parts=len(getattr(A, "parts", [])) or None,
         n_nodes=len(A.nodes),
+        n_complexes=(len(A.nodes) if getattr(A, "contracted", False) else None),
+        n_patches=(len(A.parts) if getattr(A, "contracted", False) else None),
+        contraction=(getattr(A, "contraction_meta", None) if getattr(A, "contracted", False) else None),
         n_ipca=sum(k == "ipca" for k in A.kinds),
         n_existing_pa=sum(k == "pa" for k in A.kinds),
         n_by_kind={k: int(sum(kk == k for kk in A.kinds)) for k in sorted(set(A.kinds))},
@@ -4139,6 +4589,21 @@ def load_results(run_dir):
         nm = run_dir / "node_names.csv"
         if nm.exists():
             R.node_table = pd.read_csv(nm, encoding="utf-8-sig").fillna({"display_name": ""})
+    # v3 contraction (D-W3): the complexes as the node layer the package reads, the patches kept underneath
+    R.contracted, R.complexes, R.complex_table, R.complex_id, R.slivers, R.centrelines = False, None, None, None, None, None
+    if (run_dir / "complex_membership.csv").exists() and (run_dir / "complexes_layer_a.csv").exists():
+        R.contracted = True
+        R.complex_table = pd.read_csv(run_dir / "complexes_layer_a.csv", encoding="utf-8-sig")
+        R.complex_id = _open("complex_id.tif")
+        cg_ = gpd.read_file(run_dir / "complexes.gpkg").to_crs(R.crs)
+        R.complexes = cg_.merge(R.complex_table.drop(columns=[c for c in R.complex_table.columns if c in cg_.columns and c != "complex_id"]),
+                                on="complex_id", how="left")
+        if (run_dir / "slivers_v2.csv").exists():
+            R.slivers = pd.read_csv(run_dir / "slivers_v2.csv", encoding="utf-8-sig")
+        try:
+            R.centrelines = gpd.read_file(run_dir / "corridor_edges.gpkg", layer="centrelines").to_crs(R.crs)
+        except Exception:      # noqa: BLE001 -- a run written before centrelines were a layer
+            R.centrelines = None
     # the 1 km audit grid (pinned; see AUDIT_TEMPLATE) -- needed by the value-profiling views
     R.audit_template = rioxarray.open_rasterio(config.HANDOFF_DIR / AUDIT_TEMPLATE,
                                                masked=True).squeeze()

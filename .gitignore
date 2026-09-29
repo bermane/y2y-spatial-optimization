@@ -106,3 +106,4 @@ analyses/*/director_package/**
 !analyses/alberta_prioritization/data/ab_extent_v1.gpkg
 !analyses/northern_connectivity/audit/audit_objects/node_parts.gpkg
 !analyses/wolverine_refugia_connectivity/audit/audit_objects/node_parts.gpkg
+!analyses/wolverine_refugia_connectivity/audit/audit_objects/complexes.gpkg

@@ -1067,6 +1067,28 @@ CORRIDORS = {
         # (recompute-the-maximum semantics). The repo holds the published surface, not the
         # source's 23 layers -- disclosed in the spec.
         "headline_variant": "terrain_withheld",
+        # ---- run spec v3 (Ethan 2026-09-28): the two-level network -- refugia COMPLEXES (connected components of the
+        # D25 near-contiguous links of v2_run001, on the registered 250 km2 patch set) and the corridors between them.
+        # Applied by the v3 notebooks as `overrides` on top of the headline variant; nothing below is read by v2.
+        "v3": {
+            "from_run": "v2_run001",                     # the patch-level run the complexes are contracted from
+            "run_id": "v3_run001",                       # pass a new id after a second-pass merge
+            "overrides": {
+                "nodes": {
+                    "contract": {"rule": "connected components of the near-contiguous (D25) links of the patch-level run",
+                                 "membership": "complex_membership.csv", "names_file": "complex_names.csv"},
+                    "kind": "complex", "kind_label": "Complex",
+                    "anchor_kinds": ["refugium", "complex"], "anchor_label_prefixes": ["Refugium", "Complex"],
+                    "legend": {"anchor": "refugia complexes (nodes)", "pa": "existing PAs (context, not nodes)"},
+                },
+            },
+            "surfaces": ["as_published", "glacier_1000", "glacier_10"],   # section 6 + H-W6, centreline level only
+            "acts": {"breaks_lat": [51.0], "three_act_breaks": [58.5, 51.0],   # two acts by default (spec section 8)
+                     "banff_lonlat": [-115.57, 51.18], "banff_check_km": 60, "bow_valley_lat": 51.2},
+            "hypotheses": {"H-W1": {"complexes_min": 10, "complexes_max": 30, "corridor_links_max": 40},
+                           "H-W2": {"v2_corridor_irreplaceables": 4},
+                           "H-W6": {"max_displacement_cells": 1.0}},
+        },
         "variants": {
             "terrain_withheld": {
                 "resistance": {
