@@ -69,7 +69,9 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
 
 - **M3.1 Nodes from a raster (W2):** `corridors_core._raster_nodes` — the refugia raster warped `-r near`
   (Byte, nodata 255) onto the routing grid (GW1); core = classes {2, 12} ∧ routable; 8-connected
-  components (`ndimage.label`, 3 × 3); patches ≥ 500 km² (`node_min_km2`; 5,556 cells) are the nodes;
+  components (`ndimage.label`, 3 × 3); patches ≥ **250 km²** (`node_min_km2`; 2,778 cells) are the nodes — SUPERSEDES
+  the 500 km² floor of the first build (Ethan 2026-09-28, after check stop 1: 500 km² captured 81.7% of core in 67 nodes;
+  250 km² captures 88.8% in 130; the ladder and the compute per step are in results_log R3);
   no morphological closing. Numbered north → south by centroid row. One boolean array per node (the
   mask is the seed part AND the routing unit — `_apply_parts` aliases instead of copying).
 - **M3.2 The model seam (W4):** values 10/11/12 come from the northern source model, 0/1/2 from the
@@ -102,6 +104,27 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
 - **M4.1 Band cutoff inherited (W5):** `cwd_cutoff_abs = 13.622951589524746` from `north/v2_run002`
   (same grid, same cost units ⇒ ≈ 4 km detour allowance); pinned with `set_cutoff`, `calibration =
   {inherited_from: north/v2_run002}`; `calibrate_cutoff` never called.
+- **M4.3 Link classes mirrored from the north (W12; 2026-09-28, the same day the north adopted D23–D25):** `cc.classify_links` is
+  the one derivation of `link_class` for this analysis too — precedence adjacency → near-contiguous (D25: `lcp_len_cells <
+  open_ground_width_med`; barrier variant when a cost-1000 cell sits on the path) → width not assessable (D24: barrier-free median
+  width < 8 cells or path < 10 cells; classed on the alternative-link sense alone) → only viable connection (D23: no affordable
+  alternative AND one branch AND `squeeze_ratio_obs` < 0.5) → last affordable → already narrowing → options. **D12 amended** the
+  same way (route-irreplaceable = one branch AND narrow; `route_irreplaceable_topo` kept), so R5.1's "133 route-irreplaceable" is
+  the topology-only count and is SUPERSEDED on the re-run. **Consequence: D17 (the counterfactual width) moves from parked to
+  REQUIRED** — it is the only measure of movement-land scarcity in the pipeline and the top class cannot be assigned without it;
+  notebook 03 now runs it BEFORE the branch decomposition (the near-contiguous rule decides which links get no decomposition).
+  D27 is vacuous here (no locked links, W7; G20 has nothing to check). Constants pre-registered in `config.CORRIDORS["wolverine"]`
+  and pinned into `run_config.json` on re-attach BEFORE any class count is read (the northern tuning prohibition): `width_floor_cells`
+  8, `len_floor_cells` 10, `near_contiguous` rule, `alt_res_tol` 1.5. Gates G13, G18, G19 (spec §4).
+- **M4.4 Geometry rules mirrored (D26, D28–D31; 2026-09-28):** the branch sliver floor is RELATIVE (`branch_min_frac` 0.05 × the
+  link's band area at `cutoff_branch` AND ≥ `branch_min_cells` 20; `branch_min_km2` 10 retired — G21 lists the links whose branch
+  count moves); `width_ratio_p10` + `pinch_pos` reported, not classed (D28); the cheapest alternative decomposed into `alt_cost` /
+  `alt_len_km` / `alt_mean_res` / `alt_kind` ∈ {far, hard, both} at `alt_res_tol` 1.5 (D29); near-optimality tiers are FIXED slack
+  breaks at cutoff/6, /2, /1 (D30; the percentile tiers of M4.2 retired; G22); the cutoff is stated as **detour distance:
+  `cutoff_detour_km` = 13.6229 × 0.3 km = 4.087 km** on cost-1 ground (D31) — pinned beside `cwd_cutoff_abs` in the run record and
+  used in every caption; the cost-unit value stays in the methods note. W5 restated accordingly: the allowance is per link and the
+  corridor AREA is an outcome (Y2Y-wide, 130 nodes), never a target — a derived analysis with no v1 area calibrates by detour
+  distance (D31's rule), and this one inherits the north's.
 - **M4.2 Everything else verbatim from the north (W6):** MST + β = 2.5 bridge backup (D7), priority
   tiers p90/p70 (D9), near-optimality tiers p10/p30 (D11), route branches at 0.5× cutoff, ≥ 10 km²
   (D12), current-flow centrality (D19). D21 skipped (W8).
@@ -128,6 +151,12 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
 - **M5.4 Kind generalisation:** `_node_masks` uses `nodes.anchor_kinds`; `_node_legend` / `_is_anchor_label`
   replace the literal "existing PAs" / "proposed IPCAs" / `startswith("IPCA")` sites; defaults reproduce the
   north. `new_run` takes `nodes.proposed` optionally and records `inputs.nodes_raster` + the variant meta.
+- **M5.6 The counterfactual CWD set at Y2Y scale (2026-09-28, with M4.3):** `counterfactual_squeeze` honours `cwd_compact` and the
+  band store — the relaxed-surface fields are saved compact under `cwd_cache/<sha_cf>_cf_c/` (≈ 8 GB for 130 nodes instead of
+  ≈ 25 GB full-grid), the unit-minimum derivation reads the compact vectors, and the counterfactual bands go through `edge_bands`
+  with their own store tag (`cf_<sha_cf>`, `run_dir/band_cache/cf_<sha>/`) with early-stop tracebacks — so re-attaching after the
+  counterfactual is seconds, like the baseline. Same predicate, same numbers as the northern full-grid path (the compact path is
+  the toy-verified one of M5.1/M5.2; the north's `counterfactual_squeeze` is unchanged because its config has neither flag).
 - **M5.5 Regression:** `cc.load(north/v2_run002)` + `cost_distances` still HITS cache `148af4ab9b8b898a`
   (full-grid memmaps, no band store) — verified 2026-09-28.
 
@@ -143,9 +172,47 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
 - **M6.3** `wolverine_director.py` = the assets (spec 06w §2); examples by the automatic top-k rule
   unless pinned.
 
+- **M6.4 Output notebooks mapped to the northern 2026-09-28 structure (PRESENTATION ONLY):** `04_tables_and_figures`
+  (the record, every asset) + `05_director_outputs` (the curated few) — the same first two maps as the northern 07, drawn
+  through `director_plot.wide_map` from `wolverine_director.director_frame` (G = the routing grid decimated ×2 to 600 m:
+  pu = routable cells, locked2d = existing PAs; overlay = the refugia nodes with their short names; window = the Y2Y frame +
+  40 km; y2y towns), surfaces from `corridors_director.cost_surface` / `classes_surface` (the §3a swatches and pressure
+  words; H8 folding), the proposed IPCAs as a second fill over the corridor land (W11 overlay), insets by
+  `wolverine_director.inset_windows` (examples or densest clusters; equalised by `corridors_director._same_scale`). The
+  decimation is display-only: nothing analytical changes.
+- **M6.5 05 · 03–05 = the northern 07 · 03–05 mirrored (2026-09-28, PRESENTATION ONLY):** the route options = the package's
+  numbered examples (automatic rule, `max_examples` 4, capped by pressure priority, numbered north → south; the northern
+  example schema so `corridors_director`'s option machinery reads them), drawn in the y2y cluster palette
+  (`corridors_director.option_color`); stars + consequences on the Y2Y director construction exactly as the north
+  (`option_profiles_y2y`: `director_core.block_percentiles` / `ValueRatios`, `cc._to_audit_frac` cover weights); reference
+  columns = Banff National Park (PA) + Dene Kʼéh Kusān (proposed IPCA) rasterized from the vectors (the nodes are refugia,
+  so the north's node-based references do not apply). Nothing analytical changes.
+
+- **M6.6 Package mirror of the northern link-class presentation (2026-09-28, PRESENTATION ONLY; package spec v1.1):** classes read
+  `link_class` (`P.classified`; the record notebook asserts it); the near-contiguous links drawn in `ms.NEAR_CONTIGUOUS` (neutral grey,
+  hatch, barrier outline) UNDER the corridor classes on the TALL maps, the act crops and the wide layout (`_draw_near_contiguous`,
+  `_near_contiguous_wide`), two legend rows with counts after the four classes; example selection class-and-width-first (top class by
+  `squeeze_ratio_obs` asc → `width_ratio_p10` → `n_pairs_lost`; fill from last-affordable by `width_ratio_p10`; near-contiguous and
+  already-connected links never examples); tables gain Geometry / Alternative link is / p10 width; captions state the band as detour
+  distance and the geometric class counts. Pressure strings = `cc.LINK_CLASS_LABEL`.
+- **M6.7 04 slimmed to the record that matters (Ethan 2026-09-28, PRESENTATION ONLY):** the Y2Y-scale contract figures (W0, W0b, W0c, W1,
+  the three act crops — each minutes of hillshade + 130 node chips + 170 link labels) and the Y2Y-wide engine record maps were never going to
+  be shared, and 05 does not consume anything 04 writes (it loads the run and calls the asset functions itself). 04 now writes only the
+  link-class record (G18/G19 tables, class counts), T0/T3/T2/T4/T1 as CSV (+ PNG when ≤ 30 rows), the GIS export and a results-log numbers
+  cell; the figure functions remain in `wolverine_director` / `corridors_core` for on-demand use (a commented cell). Nothing analytical
+  changes; the §3a.3 QA checklist is not produced unless a contract figure is drawn. Two first-execution fixes on the classified run
+  (both presentation): the link tables and the shared GIS exporter (`corridors_director._pressure_polygons`) now carry near-contiguous
+  links — no branch decomposition (D25) meant `n_branches` NaN ("—" in the tables, −1 in the GeoPackage) and no `ms.CLASS` entry
+  (the `ms.NEAR_CONTIGUOUS` label + grey fill instead). The north's exports are unchanged until a northern run is classified. Measured:
+  the slimmed 04 = ~3 min on run001 (tables 10 s, GIS export 94 s). Third fix, found while drafting the report-back: the label
+  parser behind the tables' "Connects" column, the endpoint-protection and jurisdiction lookups read two digits of the node number
+  (`R108` → node 10 — a northern Nááts'Ihch'Oh patch), so every link touching a node numbered ≥ 100 was mis-named in the T1–T4 tables
+  Ethan's first 04 run wrote; now any width (`_node_id_of_label`, regex). Maps were unaffected (they draw from node ids, not labels).
+  Ethan re-runs 04 (3 min) so the run-dir tables carry the right names.
+
 ## 7. QA gates (definitions; measured values in results_log R1)
 
-G2, GW1, GW2, G4, G8, G0 + GW3, G3, GW4, G15, G10, G9 — see the spec §4.
+G2, GW1, GW2, G4, G8, G0 + GW3, G3, GW4, G15, G10, G22, G13, G9, G21, G18, G19 — see the spec §4 (G20 vacuous: no locked links).
 
 ## 8. Provenance conventions
 

@@ -39,10 +39,15 @@ PKG_SUB = "director_package"
 # to a yellow-brown), so its own fallback applies. Chosen from the Okabe-Ito-compatible range.
 CLASS = {
     "securing": ("#b8c4c9", "Corridor land with options — route and partners can be chosen"),
-    "both":     ("#d7301f", "Only viable connection — no alternative link or route"),
+    "both":     ("#d7301f", "Only viable connection — no alternative link or route, and the land is already narrowing"),   # D23 (2026-09-28)
     "edge":     ("#fc8d59", "Last affordable link — alternatives cost far more"),
     "squeezed": ("#7b3294", "Already narrowing — corridor below its natural width"),
+    # D25 / D25a (2026-09-28): near-contiguous links -- neutral grey, drawn UNDER the four corridor classes, never one of them
+    "near_contiguous_open":    ("#D9D9D9", "Adjacent areas — open front"),
+    "near_contiguous_roads":   ("#D9D9D9", "Adjacent areas — front crossed by roads or cuts"),
+    "near_contiguous_barrier": ("#D9D9D9", "Adjacent areas — barrier between"),
 }
+NEAR_CONTIGUOUS_KEYS = ("near_contiguous_open", "near_contiguous_roads", "near_contiguous_barrier")
 OPTIONS_COLOR = "#2c7fb8"          # M2: route alternatives, ONE colour, equal weight
 PA_LABEL = "Existing protected areas"
 IPCA_LABEL = ("Proposed Indigenous Protected and Conserved Areas\n"
@@ -68,6 +73,8 @@ def package(R, n_examples=7, south_of_frac=0.40, out=None):
     both, irr, sq = classes[0][1], classes[1][1], classes[2][1]
     cls = pd.Series("securing", index=e.index)
     cls[sq] = "squeezed"; cls[irr] = "edge"; cls[both] = "both"       # disjoint, precedence up
+    if len(classes) >= 6:                                              # D25a (a run classified by classify_links): the three near-contiguous rows
+        cls[classes[3][1]] = "near_contiguous_open"; cls[classes[4][1]] = "near_contiguous_roads"; cls[classes[5][1]] = "near_contiguous_barrier"
     cls[e["is_adjacency"] | (e["cost"] <= 0)] = "adjacency"
     P.cls = cls
     P.owner = np.nan_to_num(R.edge_owner.values, nan=-1).astype(int)
@@ -202,11 +209,72 @@ def option_color(num):
     return dp.STYLE["cluster_colors"].get(OPTION_COLOR_ORDER.get(num, num), OPTIONS_COLOR)
 
 
+def propose_examples(P, n_south=3, n_north=2):
+    """Spec 06 §2 (v1.2.18, patch D26–D31): the RULE-BASED proposal for the example slots, printed for signing into
+    EXAMPLE_PICKS (the pins govern the deck; regeneration is expected on run003).
+      S1–S3: links in the top class ("only viable connection", D23: no alternative link, one branch AND narrow -- classify_links'
+             `link_class == "both"`; on a run classified before D23 the old both-senses flag, which the printout says), ranked by squeeze_ratio_obs
+             ascending (most constrained first), ties by width_ratio_p10, then by criticality (n_pairs_lost desc). Fewer than
+             n_south in the top class -> filled from "last affordable link" ranked by width_ratio_p10 ascending; the class is
+             stated per pick. Criticality is no longer the primary key.
+      N2–N3: unchanged rule -- n_branches (relative floor, D26) x axis-C attribution, ties toward links whose branches fall
+             in different jurisdictions.
+    Returns a DataFrame (slot, edge_id, pair, class, the ranking columns)."""
+    e = P.edges.copy(); e["class"] = [P.cls.get(k, "securing") for k in e.index]
+    for col in ("squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost", "n_branches"):
+        if col not in e.columns:
+            e[col] = np.nan
+    def _rank(d, keys):
+        return d.sort_values(keys, ascending=[True, True, False][:len(keys)], na_position="last")
+    top = _rank(e[e["class"] == "both"], ["squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost"])
+    rows = [dict(slot=f"S{i+1}", edge_id=k, pair=_pair_title(e.loc[k]), cls="both") for i, k in enumerate(top.index[:n_south])]
+    if len(rows) < n_south:
+        fill = _rank(e[e["class"] == "edge"], ["width_ratio_p10", "squeeze_ratio_obs", "n_pairs_lost"])
+        for k in fill.index[:n_south - len(rows)]:
+            rows.append(dict(slot=f"S{len(rows)+1}", edge_id=k, pair=_pair_title(e.loc[k]), cls="edge (filled: fewer than %d in the top class)" % n_south))
+    attr = getattr(P, "attr", None)
+    att = lambda k: float(attr.get(k, 0.0)) if isinstance(attr, (dict, pd.Series)) and k in attr else 0.0
+    jur = getattr(P, "jur", None)
+    njur = lambda k: len(set(jur.get(k, []))) if isinstance(jur, dict) and k in jur else (len(set(jur.loc[k])) if isinstance(jur, pd.Series) and k in jur.index else 0)
+    north = e[(e["class"] != "adjacency") & (e["n_branches"].fillna(0) >= 2)].copy()
+    north["score"] = north["n_branches"].fillna(0) * [att(k) for k in north.index]; north["n_jur"] = [njur(k) for k in north.index]
+    north = north.sort_values(["score", "n_jur"], ascending=[False, False])
+    for i, k in enumerate(north.index[:n_north]):
+        rows.append(dict(slot=f"N{i+2}", edge_id=k, pair=_pair_title(e.loc[k]), cls=e.loc[k, "class"]))
+    out = pd.DataFrame(rows)
+    keep = [c for c in ("squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost", "n_branches", "alt_kind") if c in e.columns]
+    out = out.join(e[keep], on="edge_id")
+    src = "D23 land-aware top class (classify_links)" if "link_class" in P.R.edges.columns else "the RETIRED both-senses flag (run classified before D23)"
+    print(f"proposed example slots (spec 06 §2 v1.2.18 -- class-and-width-first; top class = {src}; sign into EXAMPLE_PICKS):")
+    print(out.to_string(index=False))
+    # G18 / the pin rule: a pinned example that was only-viable under the retired rule and is not under D23 (classify_links'
+    # G18 list in run_config) is a post-pin class change -- said here, logged by hand
+    lost = set((getattr(P.R, "rec", {}) or {}).get("g18", {}).get("old_rule_only_viable_now_last_affordable", []))
+    moved = [f"{ex['slot']} {ex['title']} -> {P.cls.get(ex['edge_id'])}" for ex in getattr(P, "examples", []) if ex.get("edge_id") in lost]
+    if moved:
+        print("  G18 pin check: pinned example(s) lost the top class under D23 -> the 06 regeneration rule fires: " + "; ".join(moved))
+    elif lost:
+        print(f"  G18: {len(lost)} link(s) lost the top class under D23, none of them pinned")
+    near = [f"{ex['slot']} {ex['title']} ({k}: {P.cls.get(k)})" for ex in getattr(P, "examples", [])
+            for k in ([ex.get("edge_id")] + list(ex.get("option_edges", []))) if k is not None and str(P.cls.get(k, "")).startswith("near_contiguous")]
+    if near:
+        print("  D25 pin check: pinned example link(s) are now near-contiguous (no corridor to design) -> the pin rule fires: " + "; ".join(dict.fromkeys(near)))
+    return out
+
+
 def _find_edge(e, pair):
+    """The edge for a pinned example pair (two name fragments). Under D22 (2026-09-28: within-name parts are their own routing
+    units, labelled 'name [part k]') a pair can match several part-level edges: prefer the MST edge, then the cheapest, and say
+    which was taken -- the pick stays reviewable in the printed line."""
     a, b = pair
     m = e[(e.label_i.str.contains(a, regex=False) & e.label_j.str.contains(b, regex=False)) |
           (e.label_i.str.contains(b, regex=False) & e.label_j.str.contains(a, regex=False))]
-    assert len(m) == 1, f"example pair {pair} resolves to {len(m)} edges"
+    assert len(m) >= 1, f"example pair {pair} resolves to no edge"
+    if len(m) > 1:
+        order = m.assign(_mst=(m["in_mst"] == True) if "in_mst" in m.columns else False).sort_values(["_mst", "cost"], ascending=[False, True])
+        print(f"  example pair {pair}: {len(m)} part-level edges -> {order.index[0]} ({order.iloc[0].label_i} ↔ {order.iloc[0].label_j}; "
+              f"{'MST' if order.iloc[0]._mst else 'backup'}, cost {order.iloc[0].cost:,.0f})")
+        return order.index[0]
     return m.index[0]
 
 
@@ -425,9 +493,44 @@ def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, 
     ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
 
 
+def adjacent_sentence(P, prefix=""):
+    """Spec 06 §2 (D25a patch): 'N of the sector's links join areas that are effectively adjacent; corridor design in the north is a
+    question about the remaining M.' Empty on a run classified before D25."""
+    if not any(str(v).startswith("near_contiguous") for v in P.cls.values):
+        return ""
+    n_near = int(P.cls.astype(str).str.startswith("near_contiguous").sum()); n_links = int((P.cls != "adjacency").sum())
+    return f"{prefix}{n_near} of the sector's {n_links} links join areas that are effectively adjacent; corridor design in the north is a question about the remaining {n_links - n_near}"
+
+
+def _paint_near_contiguous(P, ax):
+    """D25: the near-contiguous links' bands in the neutral grey with the mapstyle hatch (contourf carries the hatch; imshow
+    cannot), the barrier variant outlined. Returns the two legend handles (empty list on a run without the class)."""
+    import corridors_mapstyle as ms
+    R = P.R; handles = []
+    for c in NEAR_CONTIGUOUS_KEYS:
+        ids = list(P.cls.index[P.cls == c])
+        if not ids:
+            continue
+        m = np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor
+        if not m.any():
+            continue
+        tok = ms.NEAR_CONTIGUOUS[c]
+        cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(ax=ax, cmap=ListedColormap([tok["fill"]]), add_colorbar=False)
+        with plt.rc_context({"hatch.color": tok["hatch_color"], "hatch.linewidth": 0.5}):
+            ax.contourf(R.template.x.values, R.template.y.values, m.astype(float), levels=[0.5, 1.5], colors="none", hatches=[tok["hatch"]])
+        if tok["outline"]:
+            ax.contour(R.template.x.values, R.template.y.values, m.astype(float), levels=[0.5], colors=[tok["outline"][0]], linewidths=tok["outline"][1],
+                       linestyles=[tok["outline"][2] if len(tok["outline"]) > 2 else "solid"])
+        handles.append(Patch(facecolor=tok["fill"], hatch=tok["hatch"], edgecolor=(tok["outline"][0] if tok["outline"] else tok["hatch_color"]),
+                             linewidth=(tok["outline"][1] if tok["outline"] else 0.0), linestyle=(tok["outline"][2] if tok["outline"] and len(tok["outline"]) > 2 else "solid"),
+                             label=f"{CLASS[c][1]}  [{len(ids)}]"))
+    return handles
+
+
 def _paint_classes(P, ax):
-    """All four routing classes in the M1 palette (squeezed folded into securing while H8 is
-    open). Returns the legend handles in legend order."""
+    """The four corridor classes in the M1 palette (squeezed folded into securing while H8 is open), over the near-contiguous
+    rows (D25, neutral hatch, drawn first). Returns the legend handles in legend order: the four, then the adjacent rows."""
+    nc_handles = _paint_near_contiguous(P, ax)
     handles = []
     for c in ("securing", "squeezed", "edge", "both"):
         ids = list(P.cls.index[P.cls == c])
@@ -439,7 +542,7 @@ def _paint_classes(P, ax):
         _paint(P, ax, ids, col)
         if not (c == "squeezed" and P.h8_open):
             handles.append(Patch(color=col, label=f"{lbl}  [{len(ids)}]"))
-    return handles
+    return handles + nc_handles
 
 
 def _m1_scale(P):
@@ -531,7 +634,7 @@ def map_m1(P, pad=0.07, area_names=14):
     handles += _node_handles()
     fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
                fontsize=9.5, frameon=True)
-    ax.set_title("Where the land still offers choices — and where it does not", fontsize=15,
+    ax.set_title("Where the land still offers choices — and where it does not" + adjacent_sentence(P, prefix="\n"), fontsize=15,
                  pad=12)
     fig.savefig(P.fig / "M1_regime.png", dpi=170, bbox_inches="tight"); plt.show()
     return P
@@ -686,13 +789,19 @@ def _pressure_polygons(P):
             continue
         polys = [_shape(g) for g, v in rfeatures.shapes(m.astype("uint8"), mask=m, transform=tr) if v == 1]
         e = R.edges.loc[eid]
+        if c in ms.CLASS:
+            label, hx = ms.CLASS[c][3], ms.CLASS[c][0]
+        else:                                                    # D25 near-contiguous rows: the mapstyle's neutral tokens
+            tok = ms.NEAR_CONTIGUOUS.get(c, {}); label, hx = tok.get("label", c), tok.get("fill", "#D9D9D9")
+        nb = e.get("n_branches", np.nan)
         rows.append(dict(edge_id=eid, label_i=e["label_i"], label_j=e["label_j"], pressure=c,
-                         pressure_label=ms.CLASS[c][3], hex=ms.CLASS[c][0], cost=float(e["cost"]),
+                         pressure_label=label, hex=hx, cost=float(e["cost"]),
                          in_mst=bool(e["in_mst"]), irreplaceable=bool(e.get("irreplaceable", False)),
                          route_irreplaceable=bool(e.get("route_irreplaceable", False)),
                          squeezed=bool(e.get("squeezed", False)) if pd.notna(e.get("squeezed", np.nan)) else False,
                          squeeze_ratio=float(e.get("squeeze_ratio_obs", np.nan)),
-                         n_branches=int(e.get("n_branches", 0) or 0), band_km2=round(float(m.sum()) * R.cell_km2, 1),
+                         n_branches=(int(nb) if pd.notna(nb) else -1),         # -1 = no decomposition (near-contiguous, D25)
+                         band_km2=round(float(m.sum()) * R.cell_km2, 1),
                          geometry=gpd.GeoSeries(polys, crs=R.crs).union_all()))
     return gpd.GeoDataFrame(rows, crs=R.crs)
 
@@ -1415,16 +1524,22 @@ def profile_pages(P):
 
 def _profile_words(P, ex, r, c, nb, att, chips, jur):
     a, b = cc._short_node_name(r["label_i"], 26), cc._short_node_name(r["label_j"], 26)
+    kind = r.get("alt_kind") if hasattr(r, "get") else None                       # D29: why the alternative failed
+    alt_sentence = {"far": " The next link is far: the alternative route is much longer over similar ground.",
+                    "hard": " The next link crosses hard ground: the alternative is not much longer but runs through costlier land.",
+                    "both": " The next link is both far and over hard ground."}.get(kind, "")
+    locked_line = (" This link was locked as part of one named area and tested against every alternative (D27)."
+                   if bool(r.get("locked", False)) else "")
     if c == "both":
         w = (f"The corridor between {a} and {b} is the only viable connection: no other link "
              f"would reconnect the network at a reasonable price (the cheapest alternative costs "
              f"{r['backup_ratio']:.1f}× as much, about {(r['backup_ratio']-1)*r['cost']/(10/3):,.0f} km of "
              f"extra intact-land travel), and within the corridor there is a single physical route. "
-             f"Losing this land leaves neither a plan B route nor a plan B link.")
+             f"Losing this land leaves neither a plan B route nor a plan B link." + alt_sentence + locked_line)
     elif c == "edge":
         w = (f"{a} and {b} nearly touch, and the contact zone is the connection. There is no "
              f"affordable substitute link — the cheapest alternative costs {r['backup_ratio']:.1f}× "
-             f"as much. What matters here is the junction itself rather than a swath of corridor.")
+             f"as much. What matters here is the junction itself rather than a swath of corridor." + alt_sentence + locked_line)
     elif c == "squeezed":
         hl = ex.get("headline", "")
         w = (f"The corridor between {a} and {b} is {hl or 'narrower than its natural width'}: "
@@ -1599,8 +1714,10 @@ WIDE_STYLE = dict(
     inset_windows=None,                            # set per figure by _wide()
     inset_codes={}, inset_town_skip={}, main_skip_codes=(),          # the y2y skips (WA / CA, Jasper / Banff) do not apply on this frame
     wide_main_towns=(), wide_main_names="abbrev",                    # the frame panel: postal codes only, no towns (as on the y2y Act 1 panel)
-    pa_layer_min_km2=300, inset_pa_names=5, window_scale_km=100,     # the y2y values; the scale bar on the (windowed) frame
+    pa_layer_min_km2=300, window_scale_km=100,                       # the y2y values; the scale bar on the (windowed) frame
+    inset_pa_names=99, inset_ipca_names=99, inset_declutter=False, locator_pa_names=99,   # Ethan 2026-09-28: EVERY PA and IPCA node named in the insets + locators (F.PAN = the network's PA nodes)
     hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=True,   # 21's export settings + the §3a PDF twin
+    wide_legend_between=True,                                        # the legend box centred between inset B's bottom edge and the bottom of the page (Ethan 2026-09-28)
 )
 IPCA_WIDE_LABEL = "Proposed IPCAs"                     # the §3a jurisdictions row (v1.2.15); no parenthetical (Ethan 2026-09-28: it widened the legend past inset B)
 COST_CLASSES = (1, 10, 100, 1000)
@@ -1643,6 +1760,11 @@ def director_frame(P, pad_km=40):
     (x0, x1), (y0, y1) = ms.sector_frame(R, pad_km)
     px0, pyb = dc.xy_to_px(G, x0, y0); px1, pyt = dc.xy_to_px(G, x1, y1)
     F = dp.load_frame(G, overlay=overlay, window=(px0, px1, pyt, pyb), towns={**dc.Y2Y_TOWNS, **cc._TOWNS})
+    # the PA name layer = the network's 32 PA nodes (every one, no area floor; display names via AREA_OVERRIDES) instead of the y2y
+    # PA vector at >= 300 km2, which drops Klua Lakes / Stone Mountain / Mount Blanchet (Ethan 2026-09-28: label all the PAs and IPCAs)
+    pan = parts[~parts["name_label"].astype(str).str.startswith("IPCA")].dissolve(by="name_label").reset_index()
+    pan["PA_Name"] = [_display_name(s) for s in pan["name_label"]]; pan["km2"] = pan.geometry.area / 1e6
+    F.PAN = pan[["PA_Name", "km2", "geometry"]]
     picks, clusters = P.out / "tables" / "picks.csv", P.out / "geotiffs" / "clusters.gpkg"
     if picks.exists() and clusters.exists():
         F.PICKS = pd.read_csv(picks, dtype={"number": str, "cids": str})
@@ -1749,25 +1871,60 @@ def classes_surface(P):
     n = len(order)
     S_ = dict(img=img, cmap=ListedColormap([ms.CLASS[c][0] for c in order]), norm=BoundaryNorm(np.arange(-0.5, n + 0.5, 1), n),
               extend="neither", ticks=list(range(n)), ticklabels=[_tick(c) for c in order],
-              label=f"{ms.CLASS_HEADING.lower()} — how much the network's connection depends on this land", end_words=None)
+              label=f"{ms.CLASS_HEADING.lower()} — how much the network's connection depends on this land"
+                    + ("; the top class also requires the corridor to be below its barrier-free width" if "link_class" in R.edges.columns else ""),   # D23 clause
+              end_words=None)
     return S_, counts
 
 
-def _wide_overlay(F):
+def _near_contiguous_wide(P, F):
+    """D25 on the wide layout: (draw, handles) for the near-contiguous links -- their bands in the neutral grey with the mapstyle
+    hatch (contourf in pixel space), the barrier variant outlined; nothing when the run has no such link."""
+    import corridors_mapstyle as ms
+    R = P.R; layers = []
+    for c in NEAR_CONTIGUOUS_KEYS:
+        ids = list(P.cls.index[P.cls == c])
+        m = np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor if ids else None
+        if m is not None and m.any():
+            layers.append((c, m, len(ids)))
+    if not layers:
+        return (lambda ax: None), []
+
+    def draw(ax):
+        for c, m, _ in layers:
+            tok = ms.NEAR_CONTIGUOUS[c]
+            ax.imshow(np.where(m, 1.0, np.nan).astype(np.float32), cmap=ListedColormap([tok["fill"]]), interpolation="nearest", zorder=0.85)
+            with plt.rc_context({"hatch.color": tok["hatch_color"], "hatch.linewidth": 0.5}):
+                ax.contourf(m.astype(float), levels=[0.5, 1.5], colors="none", hatches=[tok["hatch"]], zorder=0.86)
+            if tok["outline"]:
+                ax.contour(m.astype(float), levels=[0.5], colors=[tok["outline"][0]], linewidths=tok["outline"][1],
+                           linestyles=[tok["outline"][2] if len(tok["outline"]) > 2 else "solid"], zorder=0.87)
+    handles = [Patch(facecolor=ms.NEAR_CONTIGUOUS[c]["fill"], hatch=ms.NEAR_CONTIGUOUS[c]["hatch"],
+                     edgecolor=(ms.NEAR_CONTIGUOUS[c]["outline"][0] if ms.NEAR_CONTIGUOUS[c]["outline"] else ms.NEAR_CONTIGUOUS[c]["hatch_color"]),
+                     linewidth=(ms.NEAR_CONTIGUOUS[c]["outline"][1] if ms.NEAR_CONTIGUOUS[c]["outline"] else 0.0),
+                     linestyle=(ms.NEAR_CONTIGUOUS[c]["outline"][2] if ms.NEAR_CONTIGUOUS[c]["outline"] and len(ms.NEAR_CONTIGUOUS[c]["outline"]) > 2 else "solid"),
+                     label=CLASS[c][1]) for c, _, _ in layers]
+    return draw, handles
+
+
+def _wide_overlay(F, P=None):
     """The overlay callback for the wide layout: the draft IPCAs as filled nodes (the §3a IPCA fill, opaque like the layout's PA
-    grey so the two node kinds read alike) with their outlines. Called on the frame and on every inset."""
+    grey so the two node kinds read alike) with their outlines; with `P`, the near-contiguous links' bands first (D25).
+    Called on the frame and on every inset."""
     import director_plot as dp
     import corridors_mapstyle as ms
     a = ms.AREA["ipca"]
     fill = np.full(F.G.shape, np.nan, np.float32); fill[F.IP.mask2d] = 1.0
+    nc_draw, nc_handles = _near_contiguous_wide(P, F) if P is not None else ((lambda ax: None), [])
 
     def draw(ax):
+        nc_draw(ax)
         ax.imshow(fill, cmap=ListedColormap([a["fill"]]), interpolation="nearest", zorder=1.1)
         lw = 0.9 * dp.STYLE.get("_lw_scale", 1.0)
         for _, r in F.IP.gdf.iterrows():
             for ring in F.rings_px(r.geometry):
                 ax.plot(ring[:, 0], ring[:, 1], color=a["edge"], lw=lw, zorder=3.5)
-    handles = [Patch(facecolor=dp.PA_COLOR, label=PA_LABEL), Patch(facecolor=a["fill"], edgecolor=a["edge"], label=IPCA_WIDE_LABEL)]
+    handles = [Patch(facecolor=dp.PA_COLOR, label=PA_LABEL), Patch(facecolor=a["fill"], edgecolor=a["edge"], label=IPCA_WIDE_LABEL)] + nc_handles
     return draw, handles
 
 
@@ -1776,7 +1933,7 @@ def _wide(P, path, surface, insets):
     F = director_frame(P)
     assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(cd.WIDE_STYLE) first (07's setup cell)"
     dp.STYLE["inset_windows"] = inset_windows(P, insets)
-    draw, handles = _wide_overlay(F)
+    draw, handles = _wide_overlay(F, P)
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=surface)
     return path
@@ -1823,6 +1980,26 @@ def _number_marker_px(ax, xy, num, color, side="nw", fs=None):
                 bbox=dict(boxstyle="circle,pad=0.3", fc="white", ec=color, lw=1.8), arrowprops=dict(arrowstyle="-", color=color, lw=1.2, shrinkB=0))
 
 
+def _options_overlay(P, F, nums=OPTIONS_MAP_NUMS):
+    """The route options' overlay for any panel (the wide map's frame + insets, the locators): the IPCA nodes, each option's band
+    in its colour (under the PA / IPCA fills, as on M2), the numbered markers. Returns (draw, handles, marks, colors) with the
+    legend handles = PA, IPCA, the y2y cluster swatch reading "Route options" in option order."""
+    import director_plot as dp
+    marks = _option_marks(P, F, nums)
+    colors = {n: option_color(n) for n, _, _, _ in marks}
+    layers = [(np.where(m, 1.0, np.nan).astype(np.float32), colors[n]) for n, m, _, _ in marks]
+    ipca_draw, handles = _wide_overlay(F, P)
+
+    def draw(ax):
+        ipca_draw(ax)
+        for img, col in layers:
+            ax.imshow(img, cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)     # under the PA (1) / IPCA (1.1) fills
+        for num, _, xy, side in marks:
+            _number_marker_px(ax, xy, num, colors[num], side)
+    handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in colors])]     # swatches in option order
+    return draw, handles, marks, colors
+
+
 def figure_options_wide(P, path, insets="interim", nums=OPTIONS_MAP_NUMS):
     """07 · 03 -- the route options on the wide layout (Ethan 2026-09-28: "the options, 1–4; 1 and 2 in panel A, 3 and 4 in
     panel B"): the pressure classes as on 02, each option's corridor band on top in ITS NUMBER'S COLOUR from the y2y cluster
@@ -1832,19 +2009,7 @@ def figure_options_wide(P, path, insets="interim", nums=OPTIONS_MAP_NUMS):
     import director_plot as dp
     F = director_frame(P)
     S_, _ = classes_surface(P)
-    marks = _option_marks(P, F, nums)
-    colors = {n: option_color(n) for n, _, _, _ in marks}
-    layers = [(np.where(m, 1.0, np.nan).astype(np.float32), colors[n]) for n, m, _, _ in marks]
-    ipca_draw, handles = _wide_overlay(F)
-    shown = [n for n, _, _, _ in marks]
-
-    def draw(ax):
-        ipca_draw(ax)
-        for img, col in layers:
-            ax.imshow(img, cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)     # under the PA (1) / IPCA (1.1) fills
-        for num, _, xy, side in marks:
-            _number_marker_px(ax, xy, num, colors[num], side)
-    handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in shown])]     # swatches in option order (1-4)
+    draw, handles, marks, colors = _options_overlay(P, F, nums)
     print("route options: " + " · ".join(f"{n} {colors[n]} at px {tuple(round(v) for v in xy)} ({side})" for n, _, xy, side in marks))
     assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(cd.WIDE_STYLE) first (07's setup cell)"
     dp.STYLE["inset_windows"] = inset_windows(P, insets)
@@ -1860,3 +2025,119 @@ def figure_choices_wide(P, path, insets="interim"):
     print("links per class: " + " · ".join(f"{c} {n}" for c, n in counts.items())
           + (" | H8 OPEN -- squeezed folded into securing" if P.h8_open else ""))
     return _wide(P, path, S_, insets)
+
+
+# ---- 07 · 04 / 05: the route options' stars, locators and consequences on the y2y construction + assets (Ethan 2026-09-28) ----
+CONSEQ_REFERENCE_NODES = [("Nahanni National", "Nahanni National Park Reserve"),   # (fragment of the node_parts name_label, column name);
+                          ("Dene K", "Dene Kʼéh Kusān")]                          # the y2y tables' rule: real example areas, one PA + one IPCA
+
+
+def option_profiles_y2y(P, nums=OPTIONS_MAP_NUMS):
+    """Cached on P: the deck's route options (+ the reference nodes) on the y2y DIRECTOR CONSTRUCTION over the Y2Y-wide
+    allocatable landscape -- per star axis the mean PERCENTILE (director_core.block_percentiles; M5.15) and the consequences
+    RATIO (director_core.ValueRatios: mean raw value / mean over allocatable land, "2.3x"), both with the fractional 300 m ->
+    1 km cover weights (M6.5). Returns a DataFrame: kind (option | reference), number, name, area_km2 (300 m native),
+    pct_<axis>, ratio_<axis> -- the T-D1 / T-D7 columns the y2y assets read."""
+    key = ("_y2y_profiles", tuple(nums))
+    cache = getattr(P, "_y2y_profiles", {})
+    if key in cache:
+        return cache[key]
+    import director_core as dc
+    from rasterio.features import rasterize as _rasterize
+    R = P.R
+    G = dc.grid(); B = dc.block_percentiles(G); VR = dc.ValueRatios(G, B)
+    items = [("option", n, t, m) for n, t, m, _ in _option_masks(P) if n in nums]
+    parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
+    for frag, name in CONSEQ_REFERENCE_NODES:
+        sel = parts[parts["name_label"].astype(str).str.contains(frag, regex=False)]
+        assert len(sel), f"reference node {frag!r} not in node_parts"
+        m = _rasterize(((g, 1) for g in sel.geometry), out_shape=R.shape, transform=R.transform, fill=0, dtype="uint8").astype(bool)
+        items.append(("reference", "", name, m))
+    rows = []
+    for kind, num, name, m in items:
+        w1 = cc._to_audit_frac(R, m)[G.pu]
+        assert w1.sum() > 0, f"{kind} {num or name}: no 1 km cover"
+        pct = {ax: float((w1 * B.axes[ax]).sum() / w1.sum()) for ax in dc.STAR_AXES}
+        rat = VR.of(None, weights=w1)
+        rows.append(dict(kind=kind, number=str(num), name=name.replace("\n", " — "), area_km2=int(m.sum()) * R.cell_km2,
+                         **{f"pct_{a}": v for a, v in pct.items()}, **{f"ratio_{a}": v for a, v in rat.items()}))
+    df = pd.DataFrame(rows)
+    cache[key] = df; P._y2y_profiles = cache
+    return df
+
+
+def option_stars(P, path, nums=OPTIONS_MAP_NUMS):
+    """07 · 04 -- star plots of the route options on the y2y asset (director_plot.star_grid, one star per option in the option's
+    colour): axes = mean percentile per theme vs the Y2Y-wide allocatable landscape (dashed ring 0.5 = the typical unprotected
+    cell), titles "Option N / (the link) / km²" as the y2y clusters' "Cluster N / (Region) / km²"."""
+    import director_core as dc
+    import director_plot as dp
+    df = option_profiles_y2y(P, nums)
+    prof = [dict(title=f"Option {int(r.number)}\n({r['name']})\n{r.area_km2:,.0f} km²", values={a: float(r[f"pct_{a}"]) for a in dc.STAR_AXES},
+                 color=option_color(int(r.number))) for _, r in df[df.kind == "option"].iterrows()]
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.star_grid(prof, path, "Route options — value profile (percentile vs the allocatable landscape)")
+    return df
+
+
+def option_locators(P, path, nums=OPTIONS_MAP_NUMS, insets="interim", panel_px=None):
+    """07 · 04b -- the two inset windows as locator panels on the star grid's geometry (the y2y cluster_locators rule: same
+    figure width, panels of STYLE["locator_panel_in"]): A (options 1–2) centred under the first two stars, B (3–4) under the
+    last two -- two panels for four stars (Ethan 2026-09-28). Square windows at one scale, the pressure classes + the options
+    drawn as on 03, the tag letter as the title; `panel_px` also writes each panel as its own file."""
+    import math
+    import director_core as dc
+    import director_plot as dp
+    F = director_frame(P)
+    S_, _ = classes_surface(P)
+    draw, _, marks, _ = _options_overlay(P, F, nums)
+    wins = inset_windows(P, insets)
+    n_stars = len(nums); ncols = min(4, max(n_stars, 1)); L = dc.STAR_GRID; STYLE = dp.STYLE
+    tags = list(wins)                                                         # A, B
+    per = max(1, n_stars // len(tags))                                        # stars per window (2)
+    with plt.rc_context(dp.SPEC_RC):
+        fig_w, fig_h = L["panel_w"] * ncols, max(L["panel_h"], STYLE["locator_panel_in"] + 0.4)
+        fig = plt.figure(figsize=(fig_w, fig_h))
+        left, right = 0.125, 0.9
+        aw = (right - left) / (ncols + (ncols - 1) * L["wspace"])
+        pw = STYLE["locator_panel_in"] / fig_w; ph = STYLE["locator_panel_in"] / fig_h
+        axes = []
+        for i, tag in enumerate(tags):
+            cols_ = range(i * per, min((i + 1) * per, ncols))
+            cx = float(np.mean([left + aw * (c_ + 0.5) + c_ * aw * L["wspace"] for c_ in cols_]))
+            axes.append(fig.add_axes([cx - pw / 2, 0.5 - ph / 2, pw, ph]))
+        sc = STYLE["locator_fs_scale"]
+        STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"] * sc; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"] * sc
+        fs0, pa0 = STYLE["inset_fs"], STYLE["inset_pa_names"]; STYLE["inset_fs"] = fs0 * sc; STYLE["inset_pa_names"] = STYLE["locator_pa_names"]
+        try:
+            for ax, tag in zip(axes, tags):
+                win = dp._fit_window(F, wins[tag], 1.0)                       # square, never shrunk: both at the same scale (INSET_SAME_SCALE)
+                dp._draw_inset(F, ax, win, draw, tag, True, towns=STYLE["locator_towns"], codes=None, img=S_["img"], cmap=S_["cmap"], norm=S_["norm"])   # every PA + IPCA node named
+        finally:
+            STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE["inset_fs"] = fs0; STYLE["inset_pa_names"] = pa0
+        path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(path, dpi=STYLE["export_dpi"])
+        if panel_px:
+            fig.canvas.draw(); r = fig.canvas.get_renderer()
+            for ax, tag in zip(axes, tags):
+                bb = ax.get_tightbbox(r).transformed(fig.dpi_scale_trans.inverted()).padded(0.02)
+                fig.savefig(path.with_name(f"{path.stem}_{tag}{path.suffix}"), bbox_inches=bb, dpi=STYLE["panel_export_scale"] * panel_px / bb.width)
+        plt.show()
+    return path
+
+
+def option_consequences(P, path, nums=OPTIONS_MAP_NUMS):
+    """07 · 05 -- the consequences table for the route options on the y2y asset (director_plot.consequences_table: transposed,
+    per-row RdBu fills over the option columns, the spec type): mean raw value in the option's land / mean over Y2Y-wide
+    allocatable land per star axis, columns = the options then the reference nodes (CONSEQ_REFERENCE_NODES). The rows also
+    go to tables/route_option_consequences.csv."""
+    import director_plot as dp
+    F = director_frame(P)
+    df = option_profiles_y2y(P, nums)
+    rows = df[df.kind == "option"].reset_index(drop=True); ref = df[df.kind == "reference"].reset_index(drop=True)
+    P.tab.mkdir(parents=True, exist_ok=True); df.to_csv(P.tab / "route_option_consequences.csv", index=False, encoding="utf-8-sig")
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.consequences_table(F, rows, path, "ROUTE OPTIONS  ·  CONSEQUENCES", "What the route options hold", ref=ref,
+                          col_label=lambda r, wrap=18: f"Option {int(r.number)}\n({textwrap.fill(str(r.name), wrap)})", group_label="Route options",
+                          source=f"Y2Y northern corridors ({P.R.run_id}, least-cost network); values on the Y2Y director construction (manifest {__import__('director_core').VP.version} layers).")
+    return df

@@ -24,14 +24,12 @@ INPUT = ROOT / "input_data"
 
 DATASETS = {
     "rgi70_r01": dict(dir=INPUT / "glaciers", glob="*01_alaska*/*.shp", required=True,
-                      urls=["https://daacdata.apps.nsidc.org/pub/DATASETS/nsidc0770_rgi_v7/regional_files/RGI2000-v7.0-G/RGI2000-v7.0-G-01_alaska.zip",
-                            "https://www.glims.org/RGI/rgi70_files/RGI2000-v7.0-G-01_alaska.zip"],
-                      landing="https://www.glims.org/RGI/rgi70_dl.html  (or https://nsidc.org/data/nsidc-0770/versions/7)",
+                      urls=["https://daacdata.apps.nsidc.org/pub/DATASETS/nsidc0770_rgi_v7/regional_files/RGI2000-v7.0-G/RGI2000-v7.0-G-01_alaska.zip"],
+                      landing="https://nsidc.org/data/nsidc-0770/versions/7 (NASA Earthdata Login required; ~/.netrc, see _opener)",
                       note="RGI 7.0 region 01 (Alaska) -- the St Elias / Yukon side"),
     "rgi70_r02": dict(dir=INPUT / "glaciers", glob="*02_western_canada_usa*/*.shp", required=True,
-                      urls=["https://daacdata.apps.nsidc.org/pub/DATASETS/nsidc0770_rgi_v7/regional_files/RGI2000-v7.0-G/RGI2000-v7.0-G-02_western_canada_usa.zip",
-                            "https://www.glims.org/RGI/rgi70_files/RGI2000-v7.0-G-02_western_canada_usa.zip"],
-                      landing="https://www.glims.org/RGI/rgi70_dl.html  (or https://nsidc.org/data/nsidc-0770/versions/7)",
+                      urls=["https://daacdata.apps.nsidc.org/pub/DATASETS/nsidc0770_rgi_v7/regional_files/RGI2000-v7.0-G/RGI2000-v7.0-G-02_western_canada_usa.zip"],
+                      landing="https://nsidc.org/data/nsidc-0770/versions/7 (NASA Earthdata Login required; ~/.netrc, see _opener)",
                       note="RGI 7.0 region 02 (Western Canada and USA)"),
     "hydrolakes": dict(dir=INPUT / "hydrosheds", glob="**/HydroLAKES_polys_v10*.shp", required=True,
                        urls=["https://data.hydrosheds.org/file/hydrolakes/HydroLAKES_polys_v10_shp.zip"],
@@ -66,12 +64,58 @@ def check(verbose=True):
     return status
 
 
-def _download(url, dst):
-    def hook(n, bs, total):
-        done = n * bs
-        if total > 0:
-            sys.stdout.write(f"\r    {done/1e6:8.0f} / {total/1e6:.0f} MB"); sys.stdout.flush()
-    urllib.request.urlretrieve(url, dst, hook)
+USER_AGENT = "Mozilla/5.0 (Macintosh) y2y-spatial-optimization/acquire"   # data.hydrosheds.org returns 403 to Python's default agent
+EARTHDATA_HOST = "urs.earthdata.nasa.gov"
+
+
+def _opener(url):
+    """urllib opener: a browser-style User-Agent everywhere; for NSIDC (RGI 7.0) the NASA Earthdata Login flow --
+    credentials from ~/.netrc (`machine urs.earthdata.nasa.gov login <user> password <password>`, chmod 600),
+    HTTP basic auth against URS plus a cookie jar for the redirect dance. Never paste credentials into a notebook."""
+    import http.cookiejar
+    import netrc
+    handlers = [urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())]
+    if "nsidc.org" in url or EARTHDATA_HOST in url:
+        try:
+            auth = netrc.netrc().authenticators(EARTHDATA_HOST)
+        except (FileNotFoundError, netrc.NetrcParseError):
+            auth = None
+        if not auth:
+            raise PermissionError(f"NSIDC needs a NASA Earthdata Login: add to ~/.netrc the line "
+                                  f"'machine {EARTHDATA_HOST} login <user> password <password>' (chmod 600) -- free account at "
+                                  f"https://{EARTHDATA_HOST}/users/new")
+        pm = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+        pm.add_password(None, f"https://{EARTHDATA_HOST}", auth[0], auth[2])
+        handlers.append(urllib.request.HTTPBasicAuthHandler(pm))
+    op = urllib.request.build_opener(*handlers)
+    op.addheaders = [("User-Agent", USER_AGENT)]
+    return op
+
+
+def _download(url, dst, chunk=1 << 20):
+    if "nsidc.org" in url:
+        # NASA Earthdata's redirect chain (daacdata -> urs /oauth/authorize -> back) trips urllib's auth handler; curl's --netrc
+        # flow completes it (verified 2026-09-28). Same ~/.netrc line, cookies kept in a temp jar beside the file.
+        import subprocess
+        jar = pathlib.Path(str(dst) + ".cookies")
+        cmd = ["curl", "-L", "--netrc", "-c", str(jar), "-b", str(jar), "-A", USER_AGENT, "--fail", "--progress-bar",
+               "--retry", "3", "--max-time", "3600", "-o", str(dst), url]
+        print("    (curl, Earthdata login from ~/.netrc)")
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        jar.unlink(missing_ok=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"curl failed ({proc.returncode}): {proc.stderr.strip()[-300:]}")
+        return
+    op = _opener(url)
+    with op.open(url, timeout=120) as r, open(dst, "wb") as f:
+        total = int(r.headers.get("Content-Length") or 0); done = 0
+        while True:
+            b = r.read(chunk)
+            if not b:
+                break
+            f.write(b); done += len(b)
+            if total:
+                sys.stdout.write(f"\r    {done/1e6:8.0f} / {total/1e6:.0f} MB"); sys.stdout.flush()
     print()
 
 

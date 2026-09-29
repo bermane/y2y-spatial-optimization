@@ -52,6 +52,15 @@ CLASS_PALETTE = "cividis"
 CLASS_WORDS = {"securing": "Minimum (options)", "squeezed": "Some (narrowing)", "edge": "A lot (last affordable)",
                "both": "Maximum (only viable connection)"}         # legend heading "Corridor Pressure", four levels (Ethan, 2026-09-11)
 CLASS = {c: (CLASS_PALETTES[CLASS_PALETTE][c], None, None, CLASS_WORDS[c]) for c in CLASS_WORDS}   # key: (fill, outline or None, hatch or None, director string); plain fills, no outline / hatch (Ethan)
+# D25 (2026-09-28): the two NEAR-CONTIGUOUS rows -- neutral by design (not corridor priorities, never a fifth / sixth corridor
+# class): the link's band in a light grey with a diagonal hatch; the barrier variant adds a thin outline. Legend order: the four
+# corridor classes, then these two, then PA / IPCA / lines.
+NEAR_CONTIGUOUS = {   # D25a (spec 06 §3, patch 2026-09-28): three sub-classes, all neutral -- open front: hatch only; roads or cuts: hatch +
+                      # a #8A8A8A 0.6 pt outline; barrier: hatch + a #3A3A3A 0.8 pt outline. Never coloured as corridor priorities.
+    "near_contiguous_open":    dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=None, label="Adjacent areas — open front"),
+    "near_contiguous_roads":   dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=("#8A8A8A", 0.6, "solid"), label="Adjacent areas — front crossed by roads or cuts"),
+    "near_contiguous_barrier": dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=("#3A3A3A", 0.8, "solid"), label="Adjacent areas — barrier between"),
+}
 CLASS_HEADING = "Corridor Pressure"
 CLASS_ORDER = ["securing", "squeezed", "edge", "both"]          # draw + legend order
 
@@ -64,12 +73,14 @@ def set_class_palette(name):
         CLASS[c] = (CLASS_PALETTES[name][c], None, None, CLASS_WORDS[c])
 AREA = {"ipca": dict(fill="#5F9EA0", alpha=0.55, edge="#3E6F70", lw=0.5, label="Proposed IPCAs"),
         "pa":   dict(fill="#9A9A9A", alpha=0.55, edge="#6E6E6E", lw=0.5, label="Existing Protected Areas"),
-        # wolverine package (2026-09-28): refugia fills + outline-only PA context. Measured with
-        # cvd_separability: every pale marginal tint fails against a FILLED PA grey (dE 9-18), so
-        # PAs are context outlines there; core #238B45 @0.85 / marginal #C5E1A5 @0.70 clear dE 20
-        # against the four class hues and the water blue under both simulations.
-        "refugia_core":     dict(fill="#238B45", alpha=0.85, edge=None, lw=0, label="Wolverine climate refugia: core"),
-        "refugia_marginal": dict(fill="#C5E1A5", alpha=0.70, edge=None, lw=0, label="Wolverine climate refugia: marginal"),
+        # wolverine package (2026-09-28): refugia fills + outline-only PA context. Chosen by a grid search
+        # (36 hues x saturation x value, rendered over the land tone at their alphas) maximising the worst
+        # CIE76 dE between the two fills and the four CLASS steps (cividis), water, land and the PA grey
+        # under normal vision, deuteranopia and protanopia: the indigo family is the only one clearing 20
+        # (25.0; the first-build greens scored 7.7 against the olive "Some" step under protanopia).
+        # Filled PA grey still fails every pale tint, so PAs stay context outlines on these maps.
+        "refugia_core":     dict(fill="#4D4DBF", alpha=0.85, edge=None, lw=0, label="Wolverine climate refugia: core"),
+        "refugia_marginal": dict(fill="#8585CC", alpha=0.70, edge=None, lw=0, label="Wolverine climate refugia: marginal"),
         "pa_outline":       dict(fill=None, alpha=0.0, edge="#6E6E6E", lw=0.5, label="Existing protected areas (context)"),
         "ipca_outline":     dict(fill=None, alpha=0.0, edge="#3E6F70", lw=0.7, label="Proposed IPCAs / PAs (taken as given; context)")}
 NODE = dict(edge="#1A1A1A", lw=0.6, chip_fs=6.5, chip_fc="white", chip_ec="#1A1A1A")   # numbered node outlines + chips

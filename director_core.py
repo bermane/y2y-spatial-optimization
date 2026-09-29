@@ -697,11 +697,17 @@ class ValueRatios:
         self.raw = {f: np.nan_to_num(lc._read(RATIO_SOURCE.get(f, config.Y2Y_STACK_DIR) / f"{f}.tif")[G.pu], nan=0.0) for d in BLOCK_AXES.values() for f in d}
         self.raw["__efg_count"] = P.efg_count.astype(np.float32)
         self.base = {k: float(v[G.disc].mean()) for k, v in self.raw.items()}
-    def of(self, mask1d):
+    def of(self, mask1d, weights=None):
+        """Ratios for a boolean PU mask, or -- `weights` (1-D over PU cells, e.g. a 300 m mask's fractional cover per 1 km cell,
+        the northern corridors' M6.5 rule) -- the cover-weighted mean instead of the plain mean; the denominator is unchanged."""
+        if weights is not None:
+            w = np.asarray(weights, dtype=np.float64); mean = lambda v: float((w * v).sum() / w.sum())
+        else:
+            mean = lambda v: float(v[mask1d].mean())
         out = {}
         for ax, members in BLOCK_AXES.items():
-            out[ax] = float(sum(w * (self.raw[f][mask1d].mean() / self.base[f]) for f, w in members.items()))
-        out["representativeness"] = float(self.raw["__efg_count"][mask1d].mean() / self.base["__efg_count"])
+            out[ax] = float(sum(wt * (mean(self.raw[f]) / self.base[f]) for f, wt in members.items()))
+        out["representativeness"] = float(mean(self.raw["__efg_count"]) / self.base["__efg_count"])
         return {a: out[a] for a in STAR_AXES}
 
 
@@ -1252,8 +1258,9 @@ def read_hillshade_window(G, window, scale=3, path=HILLSHADE_PATH):
                         resampling=Resampling.average, boundless=True, fill_value=255)
 
 
-def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, taken=None):
-    """Label the biggest named areas intersecting a pixel window (italic, white halo), greedy declutter on a 45 km grid."""
+def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, taken=None, declutter=True):
+    """Label the biggest named areas intersecting a pixel window (italic, white halo), greedy declutter on a 45 km grid
+    (`declutter=False` labels every one of the top_n -- the northern insets name every network node, 2026-09-28)."""
     import matplotlib.patheffects as _pe
     px0, px1, py0, py1 = window
     x0 = G.transform.c + px0 * G.transform.a; x1 = G.transform.c + px1 * G.transform.a
@@ -1269,7 +1276,7 @@ def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, 
     span = px1 - px0
     for _, r in g.iterrows():
         pt = r.geometry.representative_point(); px, py = xy_to_px(G, pt.x, pt.y)
-        if any(abs(px - tx) < 16 * fs * ppk and abs(py - ty) < 3.3 * fs * ppk for tx, ty in taken):
+        if declutter and any(abs(px - tx) < 16 * fs * ppk and abs(py - ty) < 3.3 * fs * ppk for tx, ty in taken):
             continue
         ax_w_in = ax.get_position(original=True).width * ax.figure.get_figwidth()                      # the axes box width in inches (before aspect)
         px_per_in = span / max(ax_w_in, 1e-6)                                                             # data px per inch

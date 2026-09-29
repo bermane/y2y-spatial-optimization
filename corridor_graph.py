@@ -139,9 +139,10 @@ def augment(D, beta, labels=None, verbose=True):
                     best, best_c = (min(i, j), max(i, j)), c
 
         e_cost = G[u][v]["cost"]
+        alt = dict(alt=best, alt_cost=(float(best_c) if best is not None and np.isfinite(best_c) else None))   # D29: the alternative the test used
         if best is not None and best_c <= beta * e_cost:
             G.add_edge(*best, cost=best_c, in_mst=False)
-            backup[(u, v)] = dict(added=best, ratio=best_c / e_cost, irreplaceable=False)
+            backup[(u, v)] = dict(added=best, ratio=best_c / e_cost, irreplaceable=False, **alt)
             n_add += 1
             if verbose:
                 print(f"  backup for {name(u)} <-> {name(v)}: add {name(best[0])} <-> "
@@ -150,7 +151,7 @@ def augment(D, beta, labels=None, verbose=True):
             backup[(u, v)] = dict(
                 added=None,
                 ratio=(best_c / e_cost) if best is not None and np.isfinite(best_c) else None,
-                irreplaceable=True)
+                irreplaceable=True, **alt)
             n_irrep += 1
             if verbose:
                 cheapest = (f"cheapest alternative {best_c/e_cost:.1f}x"
@@ -329,6 +330,10 @@ def build(D, labels, kinds=None, beta=2.5, verbose=True, centrality_method="curr
             "backup_ratio": b.get("ratio"),
             "irreplaceable": bool(b.get("irreplaceable", False)),
             "insures_edge_id": edge_id(*insured[e]) if e in insured else None,
+            # D29 (2026-09-28): the cheapest alternative link the beta test compared against (unit indices + cost); corridors_core
+            # decomposes it into path length and mean resistance (alt_len_km, alt_mean_res, alt_kind)
+            "alt_i": (b["alt"][0] if b.get("alt") else None), "alt_j": (b["alt"][1] if b.get("alt") else None),
+            "alt_cost": b.get("alt_cost"),
         })
     df = pd.DataFrame(rows).set_index("edge_id")
 

@@ -163,6 +163,121 @@ rule; quantitative outcomes live there, methods decisions here);
   links in the same order + Gwillim↔Pine Le Moray [already red] + Wilps Gwininitxw↔Mount
   Blanchet + Wilps Gwininitxw↔Sustut); 6 narrower-counterfactual links reported, Liard↔Nahanni
   the textbook braided case (results_log R9.1). H8 CLOSED on measured data.
+- **M4.9 Short-link rules (D24 width-test resolution floor, D25 near-contiguous class; 2026-09-28; applied from
+  `spec/05_patch_D24_D25_short_links.md`):** in `counterfactual_squeeze`, per non-zero-cost link, `open_ground_width_med` =
+  the counterfactual band's median cross-section (cells, from the D28 profiles), `lcp_len_cells`, `path_max_cost` and
+  `crosses_cost_1000` (a cost-1000 cell on the least-cost path); `near_contiguous` = path shorter than the barrier-free
+  width (D25; no constant); `width_not_assessable` = width < `width_floor_cells` (8) or length < `len_floor_cells` (10)
+  (D24; both pinned into run_config BEFORE any class count is read — tuning prohibition; a derived analysis may raise,
+  never lower). The 2 km length floor that used to blank short links' widths is gone (D24 governs; G18 needs the ratio on
+  every non-zero-cost edge). `route_branches` skips near-contiguous links (no decomposition; `n_branches` NaN) and
+  therefore requires the counterfactual first — notebook 04 runs step 2b before 4b (the wolverine notebooks must do the
+  same). `classify_links` (the single source, called at the end of `route_branches` and by `finish`) applies the eleven-row
+  precedence → `link_class` / `link_class_label`; **G19** (in it): p10/50/90 of `lcp_len_cells` and `open_ground_width_med`,
+  the unassessable and near-contiguous counts, the halved / doubled floors' effect on the class counts (`floor_effect.csv`,
+  > 10% moved → "discussed, not changed"), and the three asserts. Presentation: `corridors_mapstyle.NEAR_CONTIGUOUS`
+  (grey #D9D9D9, hatch, the barrier variant outlined), drawn UNDER the four corridor classes on M1 (`_paint_near_contiguous`)
+  and the 07 maps (`_near_contiguous_wide`); legend rows after the four. Approximate run002 read (area/length width): ~11 of
+  45 links near-contiguous (T’akú Tlatsini ↔ Mount Edziza / Stikine, Dene ↔ Liard River Corridor, Tatonduk ↔ Fishing Branch,
+  Wędzih Yiné' ↔ Chase, …), 0 below the width floor, 8 below the length floor (R10, to be measured properly on run003).
+- **M4.11 D25a / D25b (2026-09-28; applied from `spec/05_patch_D25a_near_contiguous.md`; supersedes the provisional build
+  noted under M4.9 below):** sub-classes exactly as the patch — barrier (`lcp_max_cost` ≥ 100), roads or cuts (`lcp_max_cost`
+  == 10 or ratio < `squeeze_ratio`), open front (otherwise); `near_contiguous_links.csv` with the five per-link columns (gap_km,
+  open_ground_width_med, squeeze_ratio_obs, lcp_max_cost, both areas' sizes); **D25b** accounting on per-edge band sums —
+  `corridor_area_km2` (inter-name tree edges off fronts), `near_contiguous_area_km2`, `intra_name_area_km2`,
+  `augmentation_area_km2`, `total_band_area_km2` — in `corridor_summary.json`; cutoff NOT recalibrated (comparability;
+  the dependence of the area calibration on fronts is a known limitation the detour rule D31 avoids); **G23** = width floor
+  before the trigger (the zero-new-land extension of the provisional build is WITHDRAWN: a link with no counterfactual front
+  is width-not-assessable), non-null ratio and lcp_max_cost on every front, sub-class counts sum, and the area identity.
+  Legend symbols per the patch (#8A8A8A 0.6 pt / #3A3A3A 0.8 pt outlines). `adjacent_sentence` for the Act 1 count.
+- **M4.9 addendum — D25a (spec chat, 2026-09-28; implemented PROVISIONALLY ahead of the formal patch, which the chat files once
+  the 18-link table is seen):** the near-contiguous trigger is unchanged (path shorter than the counterfactual median width; plus the
+  zero-new-land case); the two sub-classes become THREE, decided by the maximum cost class on the least-cost path and the actual
+  band's width ratio (D17, assessable on these links) — **barrier between** (cost ≥ 100 on the path), **front crossed by roads or
+  cuts** (cost 10 on the path, or ratio < `squeeze_ratio`), **open front** (cost-1 ground, ratio ≥ threshold; a front with no
+  width to measure counts as open). Nothing new is tuned. Per link `near_contiguous_links.csv`: gap length, counterfactual width,
+  ratio, max cost class, the two areas' sizes, sub-class, edge flag, band area. **Knock-ons settled as proposed:** the cutoff is
+  NOT recalibrated (it would move every band and break run002 comparability); the near-contiguous fronts' band area is reported
+  as its own line (`near_contiguous_band_km2`, `corridor_km2_excl_near_contiguous` in corridor_summary.json and the classify
+  printout) so the deck's corridor figure stops counting fronts; the pin check flags any pinned example link (N2–N3 option links
+  included) that is now near-contiguous. Map symbol: hatch only / hatch + dashed outline / hatch + solid outline
+  (`corridors_mapstyle.NEAR_CONTIGUOUS`). Story line for the chat: 18 of 45 links join areas that are effectively adjacent;
+  corridor design in the north is a question about the remaining 27.
+- **M4.9 addendum (2026-09-28, first execution — notebook 04 re-run on run002 under the new rules):** two amendments.
+  (i) **D25 by its rationale:** a non-zero-cost link whose band holds NO new land (Gladys Lake Ecological Reserve ↔ Spatsizi
+  Plateau, cost 1.0, path 0.6 km, every band cell inside the two parks) is near-contiguous — it has no width to measure and
+  nothing to design; the rule is `lcp_len_cells < open_ground_width_med OR band_new_km2 == 0` (still no parameter).
+  (ii) **G18's ratio requirement** holds on every link that REACHES the width test; a link declared near-contiguous or
+  width-not-assessable may carry no ratio and is listed with its reason (the gate had failed on that one link). Measured on
+  run002 at this re-run: **18 of 45 non-zero-cost links are near-contiguous under D25** (path shorter than the counterfactual
+  band's MEDIAN cross-section, which is wider than the area/length width the earlier approximate read used), 0 with a
+  cost-1000 barrier, 1 unassessable, 26 assessable; 8 squeezed; 28 branches over 27 decomposed links. **Record note:** this
+  re-run wrote the D30 tiers, the D26 branch products and the D28 counterfactual bands (+ pinned constants) into run002's
+  directory before G18 stopped it, so run002 on disk is mixed until 04 is re-run to completion there — intended by the D23
+  patch (G18 is checked on run002, the pinned run), and the deck's run002 products change accordingly (post-pin class change).
+- **M4.8 addendum — D23 ADOPTED (2026-09-28; applied from `spec/05_patch_D23_only_viable.md`; the proposal in M4.8 above
+  is now the rule):** "only viable connection" = edge-irreplaceable (D7) ∧ one branch (D12) ∧ narrow (D17: `squeeze_ratio_obs`
+  < `squeeze_ratio` 0.5, the ONLY width threshold — `resolve()` raises on `only_viable_ratio` / `route_width_thresh`). D12
+  amended: `route_irreplaceable` = one branch ∧ narrow; `route_irreplaceable_topo` retained. Precedence (spec 05 §6, eight
+  cells after the D24/D25 rows) in `_link_class`; `classify_links` writes `class_truth_table.csv` and runs **G18**: row sums =
+  map counts, `squeeze_ratio_obs` non-null on every non-zero-cost edge, and the adoption check — links E ∧ B1 ∧ ¬S (only-viable
+  under the retired rule, not now) are listed and, when pinned, the 06 regeneration rule fires. **Measured on run002 (R10):
+  1 of the 4 pinned only-viable links sits in (E, B1, S) — Gwillim ↔ Pine Le Moray 0.41; Tatonduk ↔ Fishing Branch 1.00,
+  Wilps Gwininitxw ↔ Swan Lake 0.96, Wędzih Yiné' ↔ Chase 0.99 fall to "last affordable link"** → post-pin class change,
+  S1–S3 regenerated on run003 (`propose_examples`). Legend string updated (spec 06 v1.2.19); the 07 key and M1/M3 captions
+  gain the "below its barrier-free width" clause. Every class consumer (`_routing_classes`, `package`, the 06/07 maps, the
+  tables) reads `link_class`.
+- **M4.10 Geometry-vs-ecology audit, run003 (D26–D31; 2026-09-28; applied from
+  `spec/05_patch_D26_D31_geometry_audit.md`; adopted before D23–D25 landed, then the stand-ins were REMOVED the same session
+  once they did — D28's assessable set is D24's, the example rule's top class is D23's):** six
+  engine-generic rules (inherited by derived analyses), three gates. **D26** relative branch-sliver floor:
+  `branch_min_frac` 0.05 × the link's new-land band at `cutoff_branch` AND `branch_min_cells` 20; `branch_min_km2` retired
+  (`resolve()` raises); per link `branch_dropped_n`, `branch_dropped_max_frac`, and `n_branches_fixed_floor` (what the
+  10 km² floor would have kept) for **G21** (dropped-fraction distribution; every link whose branch count changes, listed;
+  kept branches asserted against both minima). **D27** `locked`, `alt_test_run`, `edge_irreplaceable`: a locked link's
+  irreplaceable class is eligible only after the D7 test on the full candidate set — `_locked_criticality` already prices
+  the cheapest part-pair alternative under β on the extended part graph for every locked link, so `alt_test_run` is True
+  for all of them and `alt_cost` = the priced backup (or the detour's cost when a route via other names survives); every
+  class consumer (`_routing_classes`) reads `edge_irreplaceable`; **G20** asserts the eligibility invariant. Moot on
+  run003 (D22: no locked links) and on wolverine (single-component raster nodes); kept for the engine. **D28**
+  `width_ratio_p10`, `width_ratio_p50`, `pinch_pos` from per-position cross-sections (each band cell allocated to its
+  nearest least-cost-path cell by distance transform on the band's window, new land only, 50 fractional bins along each
+  band's OWN path; ratio real/counterfactual per position) — reported, not classed; **G22 (width)** asserts p10 ≤
+  `squeeze_ratio_obs` with 5% tolerance (the latter is the area/length ratio, not a quantile — disclosed). **D29**
+  `cg.augment` records the alternative the β test compared (`alt_i`, `alt_j`, `alt_cost`); `alt_len_km` = one early-stop
+  traceback per tested bridge, `alt_mean_res` = cost/cells, `alt_kind` far / hard / both (plus affordable / none) with
+  `alt_res_tol` 1.5. **D30** `near_opt_tiers` = fixed slack breaks cutoff/6, cutoff/2, cutoff (+ a fourth class, routable
+  land beyond the band); percentile tiers retired (a run predating the constants takes config.py's and pins them);
+  **G22 (tiers)** asserts the breaks. **D31** `cutoff_detour_km` = `cwd_cutoff_abs` × cell size written by `resolve()` and
+  `set_cutoff()`; a derived analysis may set the detour and get the cost cutoff (both set and inconsistent → raise);
+  **G22 (cutoff)** asserts the identity; `near_opt_map` / `near_opt_tiers_map` captions state the detour (≈ 4.1 km on
+  run002). Constants in both config blocks (north + wolverine). 06: `propose_examples` (class-and-width-first S1–S3,
+  N2–N3 unchanged) prints the proposal; `_profile_words` gains the D29 / D27 sentences. Zero-cost adjacency vector check
+  declined (patch §7). Measured on run003 → R10.
+- **M4.8 (D22) Within-name part links COMPETE (Ethan 2026-09-28; supersedes M4.4 / D16's rule-4 default
+  for every `link_locked` name):** trigger = the 80 km² third part of Dene Kʼéh Kusān, 12.9 km from part 2, drawn
+  as orphaned on the 07 maps although the network held a locked 695 km² band to it (locked edges have no
+  centrality, owner or class, so their land is invisible on every class map and absent from
+  `linkage_priority.tif` — the open question logged 2026-08-21). Ruling: option 2 of three (1 = draw the locked
+  bands as their own class; 3 = merge the part) — the four `link_locked` names (Dene Kʼéh Kusān 3 parts, Liard
+  River Corridor 3, Nahanni 2, Nááts'ihch'oh 2) become `link_competing` in `multipart_review.csv`: each part
+  its own routing unit, its direct edges competing like any other (classified, owned, banded, prioritised);
+  Tombstone stays `merge_parts`. The review file is Ethan's to edit and re-sign (H7); the run is a NEW run dir
+  (`v2_run003`; the CWD cache is reused — seeds unchanged). **Calibration:** D16's rule "inter-name MST only"
+  stands, so `calibrate_cutoff` now drops within-name part edges from the calibration set (they still enter the
+  network; the count is printed) — otherwise the cutoff would absorb the new intra-name bands. Engine path
+  verified (`_build_units`: link_competing → one unit per part; `_unit_D`; `_locked_edges` empty).
+  `corridors_director._find_edge` resolves a pinned pair to the MST edge, then the cheapest, when parts give
+  several matches (printed). **OPEN — D23 proposal, for the spec chat (Ethan: "we may need to rethink the
+  criteria for 'only viable connection', since there is no scarcity there"):** today both = edge-irreplaceable
+  (D7: cheapest alternative LINK > β × the bridge's cost) ∧ route-irreplaceable (`n_branches == 1` in the
+  near-optimal band). Neither measures land scarcity: a leaf's bridge is the cheapest by construction, and one
+  WIDE lens across intact land counts as one branch. The D17 counterfactual already measures scarcity (band
+  width ÷ its barrier-free width). Proposed: 'only viable connection' := edge-irreplaceable ∧ n_branches == 1
+  ∧ `squeeze_ratio_obs` < θ (θ = the D17 threshold 0.5, or 0.75 for a 'narrowing' margin); a leaf across
+  intact land then reads 'last affordable link' at most. Expected on run003: part 3's bridge (cost 48.8) has
+  Dene part 1 at 121.4 (≤ β·48.8 = 122.0) and cheaper neighbours (Liard River Corridor Park 3 km from option
+  2's band) → a backup → 'securing', so the criterion change is a general safeguard, not a rescue of this case.
 - **M4.5 Irreplaceable-flag semantics (for the paper):** the flag records "no affordable DIRECT
   backup existed when the bridge was processed" — affordable = within β; an alternative always
   exists at SOME price, and `backup_ratio` is that price. Later backups can close cycles that
@@ -412,6 +527,33 @@ rule; quantitative outcomes live there, methods decisions here);
   and water tones so no step goes pale: worst ΔE 22.7 (mustard vs the option orange, deutan), classes ≥ 28 apart. Of the
   28 colormaps searched, only afmhot (black + cream), plasma (magenta / orange, the option hues) and gist_earth (black +
   navy) scored higher; cividis is the muted, CVD-designed one.
+  *Addendum (2026-09-28, Ethan: "star plots for the four route options, same as y2y ... two insets ... the same consequences
+  table"):* **07 · 04 stars + locators, 07 · 05 consequences**, all on the y2y CONSTRUCTION and the y2y ASSETS.
+  `corridors_director.option_profiles_y2y` (cached on P) puts each option and the two reference nodes on the y2y director
+  construction over the Y2Y-wide allocatable landscape: per star axis the mean percentile (`director_core.block_percentiles`,
+  M5.15) and the consequences ratio (`director_core.ValueRatios`: mean raw value ÷ mean over allocatable land), both with the
+  fractional 300 m → 1 km cover weights (M6.5; `ValueRatios.of(weights=)` added for it, y2y M4.41 addendum). Stars =
+  `director_plot.star_grid` (split out of the y2y `_stars`: one drawing function), one star per option in the option's colour,
+  titles "Option N / (the link) / km²". Locators = the two inset windows A (1–2) and B (3–4) on the star grid's geometry
+  (`option_locators`: A centred under stars 1–2, B under 3–4; square, one scale, the classes + options as on 03) — two panels
+  for four stars, Ethan's call. Consequences = `director_plot.consequences_table` (transposed, per-row RdBu over the option
+  columns) with `ref=` / `col_label=` / `group_label=` / `source=` from outside; reference columns = Nahanni National Park
+  Reserve + Dene Kʼéh Kusān (`CONSEQ_REFERENCE_NODES`, the y2y rule of one real PA + one real IPCA; both are network nodes).
+  Rows to `director_package/tables/route_option_consequences.csv`. Nothing analytical changed; the record's `star_options` /
+  `table_options` stand.
+  *Addendum (2026-09-28, Ethan: "label all the PAs and IPCAs in the insets"):* the northern frame's PA name layer is the
+  network's 32 PA nodes (node_parts, display names via `AREA_OVERRIDES`, no area floor) instead of the y2y PA vector at
+  ≥ 300 km² (which drops Klua Lakes, Stone Mountain, Mount Blanchet); `WIDE_STYLE` sets `inset_pa_names` / `inset_ipca_names`
+  / `locator_pa_names` = 99 and `inset_declutter = False` (new director_plot knobs, y2y defaults 5 / 3 / True unchanged;
+  `director_core.label_areas_px(declutter=)`), so every PA and IPCA node inside a wide-map inset or a locator panel is named.
+  *Addendum (2026-09-28, Ethan: "the legend box on 03 needs to be moved down"):* the wide layout's legend is anchored by
+  its TOP edge just under inset B (`WIDE_STYLE`: `wide_legend_loc = "upper center"`, `wide_legend_y = 0.165`; new
+  director_plot knobs, y2y default `"center"` / 0.103 unchanged), so the three-entry legend on 03 grows downward instead of
+  into inset B, and the legends on 01–03 share one top edge.
+  *Superseded the same day (Ethan: "center it between the bottom of panel B and bottom of page"):* `wide_legend_between = True`
+  — director_plot measures, at draw time, the gap from inset B's bottom edge to the bottom of the ramp block under A (the
+  page bottom once the figure is trimmed) and centres the legend box in it; a box taller than the gap hangs from B's bottom
+  edge instead. The y2y default (False: the fixed "center" / 0.103 anchor) is unchanged.
 - **M5.20 Cartographic contract + basemap data (2026-09-11, PRESENTATION ONLY — spec 06 §3a,
   v1.2.14):** `corridors_mapstyle.py` is the single style source (palette, type, templates,
   layers in the §3a.1.6 order, legend builder, locator, 100 km bar + north, PDF/PNG export,

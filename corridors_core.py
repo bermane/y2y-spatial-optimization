@@ -119,6 +119,9 @@ _DEAD_KEYS = {
     "ensemble.n_runs":         "D8 -- jitter ensemble retired",
     "ensemble.jitter":         "D8 -- jitter ensemble retired",
     "ensemble.n_alternatives": "D8 -- jitter ensemble retired",
+    "branch_min_km2":          "D26 (2026-09-28) -- a fixed km2 sliver floor is length-biased; replaced by branch_min_frac x band area AND branch_min_cells",
+    "only_viable_ratio":       "D23 (2026-09-28) -- squeeze_ratio is the ONLY width threshold (no second width / ratio key)",
+    "route_width_thresh":      "D23 (2026-09-28) -- squeeze_ratio is the ONLY width threshold (no second width / ratio key)",
 }
 
 
@@ -160,7 +163,9 @@ def _git():
 # the same no-dead-flags doctrine as _DEAD_KEYS, pointed the other way: a config predating the
 # addendum must not silently produce a run missing the D11/D12/D16 products.
 _REQUIRED_ADDENDUM_KEYS = [
-    "branch_mult", "branch_min_km2", "near_opt_tiers",              # D11/D12
+    "branch_mult", "branch_min_frac", "branch_min_cells", "near_opt_tiers",   # D11/D12 (D26: relative sliver floor)
+    "alt_res_tol",                                                  # D29
+    "width_floor_cells", "len_floor_cells",                         # D24
     "part_min_km2", "multisite_designations", "multipart_link_km",  # D16
     "carroll_ref", "audit_objects_dir",                             # D14 / H7
     "squeeze_ratio", "squeeze_cf_min_cost",                         # D17
@@ -191,6 +196,18 @@ def resolve(key, overrides=None, require_cutoff=True):
             f"pre-registered constants (spec §2 of the 2026-08-21 addendum) and must be set in "
             f"config.py BEFORE cc.start().")
 
+    # D31 (2026-09-28): the cutoff stated as detour distance on open ground -- cost-1 cells x cell size. The northern network
+    # keeps its v1 AREA calibration (D6); a derived analysis with no v1 target SETS cutoff_detour_km and the cost cutoff is
+    # derived from it (never calibrated by area or by class counts). Both are written; they must agree.
+    cell_km = float(cfg["grid"]["res_m"]) / 1000.0
+    if cfg.get("cwd_cutoff_abs") is None and cfg.get("cutoff_detour_km") is not None:
+        cfg["cwd_cutoff_abs"] = float(cfg["cutoff_detour_km"]) / cell_km
+    if cfg.get("cwd_cutoff_abs") is not None:
+        want = float(cfg["cwd_cutoff_abs"]) * cell_km
+        if cfg.get("cutoff_detour_km") is not None and abs(float(cfg["cutoff_detour_km"]) - want) > 1e-6 * max(want, 1e-9):
+            raise ValueError(f"config.CORRIDORS[{key!r}]: cutoff_detour_km {cfg['cutoff_detour_km']} disagrees with cwd_cutoff_abs x cell "
+                             f"size = {want:.6f} km (D31) -- set ONE of them")
+        cfg["cutoff_detour_km"] = want
     if require_cutoff and cfg.get("cwd_cutoff_abs") is None:
         raise ValueError(
             f"config.CORRIDORS[{key!r}]['cwd_cutoff_abs'] is None. The absolute band cutoff (D6) is "
@@ -317,7 +334,7 @@ def new_run(key, overrides=None, label="", run_id=None, require_cutoff=True, req
             **h7,                       # H7 artifacts, hash-pinned (D16)
             **_extra_inputs(cfg, cost),  # raster node source + variant meta (wolverine), when present
         },
-        "overrides": overrides or {},
+        "overrides": _jsonable(overrides or {}),      # a variant override carries Paths (wolverine): project-relative strings
         "cfg": _jsonable(cfg),
     }
     (run_dir / "run_config.json").write_text(json.dumps(rec, indent=2, ensure_ascii=False))
@@ -802,6 +819,7 @@ def node_map(A, n_insets=3, win_km=350, save=None):
         fig.savefig(save, dpi=130, bbox_inches="tight")
     plt.show()
     return fig
+
 
 
 def _name_designation(label, kind, desig, multisite):
@@ -1465,6 +1483,93 @@ def _locked_criticality(A, locked_df, beta):
     return out
 
 
+def _locked_eligibility(A):
+    """D27 (2026-09-28): a locked intra-name link (D16) never competed in the tree, so an irreplaceable class on it is a
+    management assertion until the alternative-link test (D7) has been run against the full candidate set. _locked_criticality
+    prices the cheapest part-pair alternative under beta for EVERY locked link on the extended part graph (routes via other
+    names included), so `alt_test_run` is True for all of them; `edge_irreplaceable` = the class-eligible flag every consumer
+    reads. Its `alt_cost` = the priced backup (disconnecting) or the detour's cost (a route via other names survives).
+    G20: no locked link is edge-irreplaceable without the test; every tested locked link has a non-null alt_cost unless no
+    alternative exists at all."""
+    e = A.edges
+    e["locked"] = e["edge_class"].eq("intra_name")
+    e["alt_test_run"] = e["locked"]
+    if "alt_cost" not in e.columns:
+        e["alt_cost"] = np.nan
+    for eid in e.index[e["locked"]]:
+        r = e.loc[eid]
+        if pd.notna(r.get("backup_ratio")) and r["cost"] > 0:
+            e.loc[eid, "alt_cost"] = float(r["backup_ratio"]) * float(r["cost"])
+        elif not bool(r.get("disconnects", False)) and pd.notna(r.get("cost_inflation")) and np.isfinite(r["cost_inflation"]):
+            e.loc[eid, "alt_cost"] = float(r["cost_inflation"]) * float(r["cost"])
+    e["edge_irreplaceable"] = (e["irreplaceable"] == True) & (~e["locked"] | e["alt_test_run"])
+    bad = e.index[e["locked"] & (e["edge_irreplaceable"] == True) & ~e["alt_test_run"]]
+    assert not len(bad), f"G20 FAILED: locked link(s) carry an irreplaceable class without the alternative-link test: {list(bad)}"
+    untested = e.index[e["locked"] & e["alt_test_run"] & e["alt_cost"].isna() & ~(e["irreplaceable"] == True)]
+    assert not len(untested), f"G20 FAILED: tested locked link(s) without a priced alternative: {list(untested)}"
+    n_lk = int(e["locked"].sum())
+    print(f"  G20 OK: {n_lk} locked link(s), all tested against the full candidate set; "
+          f"{int(e['edge_irreplaceable'].sum())} edge-irreplaceable links after eligibility")
+
+
+def _pair_path_cells(A, a, b):
+    """Least-cost path length (cells) between units a and b on the baseline fields -- the alternative link's own route (D29).
+    Mirrors edge_bands' traceback in both storage modes; seeds from a, stops at b's nearest cell (early stop)."""
+    cwd, mcp = A.cwd, A.mcp
+    compact = (getattr(cwd, "pu", None) is not None and getattr(A, "node_flat", None) is not None
+               and cwd.pu.shape == tuple(A.shape))
+    if compact:
+        fa = np.asarray(cwd.compact(a)); cb = A.node_cidx[b]
+        k = int(np.argmin(fa[cb]))
+        target = tuple(int(v) for v in np.unravel_index(int(A.node_flat[b][k]), A.shape))
+    else:
+        fa = np.asarray(cwd[a]); mb = A.nodes[b][1]
+        cells = np.argwhere(mb)
+        target = tuple(int(v) for v in cells[int(np.nanargmin(fa[mb]))])
+    mcp.find_costs([tuple(x) for x in np.argwhere(A.nodes[a][1])], ends=[target])
+    return int(len(mcp.traceback(target)))
+
+
+def _alt_kind(len_ratio, cost_ratio, res_ratio, beta, tol):
+    """D29: why the alternative failed the beta test. far = the route is >= beta x longer at similar resistance; hard = not
+    that much longer, so resistance did it; both = longer AND harder; affordable = it passed (a backup); none = no alternative."""
+    if not np.isfinite(cost_ratio):
+        return "none"
+    if cost_ratio < beta:
+        return "affordable"
+    far, hard = len_ratio >= beta, res_ratio > tol
+    return "far" if far and not hard else ("hard" if not far else "both")
+
+
+def _alt_link_metrics(A, beta):
+    """D29 (2026-09-28): decompose the cheapest alternative link the beta test compared against (cg.augment's `alt`) into
+    least-cost path length (`alt_len_km`) and mean resistance per cell (`alt_mean_res` = alt_cost / cells), and name its kind
+    (`alt_kind`) against the edge's own route. One early-stop traceback per tested bridge."""
+    e = A.edges
+    if "alt_i" not in e.columns:
+        for col in ("alt_i", "alt_j", "alt_cost"):
+            e[col] = np.nan
+    live = config.CORRIDORS[A.key]
+    tol = float(A.cfg.get("alt_res_tol", live.get("alt_res_tol", 1.5)))
+    e["alt_len_km"] = np.nan; e["alt_mean_res"] = np.nan; e["alt_kind"] = None
+    n = 0
+    for eid in e.index:
+        r = e.loc[eid]
+        if pd.isna(r.get("alt_i")) or pd.isna(r.get("alt_cost")) or r["cost"] <= 0:
+            if bool(r.get("irreplaceable", False)) and pd.isna(r.get("alt_cost")):
+                e.loc[eid, "alt_kind"] = "none"
+            continue
+        cells = _pair_path_cells(A, int(r["alt_i"]), int(r["alt_j"])); n += 1
+        own = max(float(r["centreline_cells"]), 1.0)
+        e.loc[eid, "alt_len_km"] = cells * A.cell_km
+        e.loc[eid, "alt_mean_res"] = float(r["alt_cost"]) / max(cells, 1)
+        own_res = float(r["cost"]) / own
+        e.loc[eid, "alt_kind"] = _alt_kind(cells / own, float(r["alt_cost"]) / float(r["cost"]),
+                                           (float(r["alt_cost"]) / max(cells, 1)) / own_res if own_res > 0 else np.inf, beta, tol)
+    kinds = e["alt_kind"].value_counts(dropna=True).to_dict()
+    print(f"  D29: alternative links decomposed for {n} tested bridge(s) -- kinds {kinds} (alt_res_tol {tol:g})")
+
+
 # ================= baseline network =================
 def cost_distances(A, cache=True):
     """Cost-weighted distance from every SEED PART; unit fields derived on top. The expensive
@@ -1573,6 +1678,8 @@ def corridor_network(A, cutoff=None, cutoff_mode="abs", beta=None, verbose=True)
     A.edges["centreline_km"] = A.edges["centreline_cells"] * A.cell_km
     A.base_path_cells = int(A.edges["centreline_cells"].sum())
     A.n_groups = _n_groups(A, A.corridor)
+    _locked_eligibility(A)                    # D27 + G20: locked links carry an irreplaceable class only once tested
+    _alt_link_metrics(A, beta)                # D29: the alternative link's length and resistance, and its kind
 
     if verbose:
         n_adj = int(A.edges.is_adjacency.sum())
@@ -1802,6 +1909,14 @@ def calibrate_cutoff(A, target_km2=None, edges="mst", lo=0.0, hi=None, tol_km2=5
         D = A.D = _unit_D(A)
     labels = [lbl for lbl, _ in A.nodes]
     _, df = cg.build(D, labels, A.kinds, beta=0 if edges == "mst" else A.cfg["beta"], verbose=False)
+    # D22 (2026-09-28): under link_competing a name's parts are separate units, so the unit MST can hold WITHIN-NAME edges.
+    # D16's rule stands -- calibration uses the inter-name MST only, intra-name area is reported separately -- so those
+    # edges are dropped from the calibration set here (they still enter the network and its bands).
+    if edges == "mst" and hasattr(A, "unit_name") and {"i", "j"} <= set(df.columns):
+        same = [A.unit_name[int(r.i)] == A.unit_name[int(r.j)] for r in df.itertuples()]
+        if any(same):
+            print(f"  D16/D22: {sum(same)} within-name part edge(s) in the unit MST excluded from calibration (inter-name MST only)")
+            df = df[[not x for x in same]]
 
     if hi is None:                       # start from a cutoff that comfortably overshoots
         hi = float(np.nanpercentile(D[np.isfinite(D) & (D > 0)], 50))
@@ -1836,11 +1951,12 @@ def set_cutoff(A, cutoff, area_km2=None):
     config.CORRIDORS is a separate, manual act (it changes the baseline for FUTURE runs)."""
     A.cfg["cwd_cutoff_abs"] = float(cutoff)
     A.rec["cfg"]["cwd_cutoff_abs"] = float(cutoff)
+    A.cfg["cutoff_detour_km"] = A.rec["cfg"]["cutoff_detour_km"] = float(cutoff) * A.cell_km     # D31: the same cutoff as detour distance on open ground
     A.rec["calibration_result"] = {"cwd_cutoff_abs": float(cutoff),
                                    "area_km2": (None if area_km2 is None else float(area_km2)),
                                    "target_km2": A.cfg.get("calibration", {}).get("target_km2")}
     (A.run_dir / "run_config.json").write_text(json.dumps(A.rec, indent=2, ensure_ascii=False))
-    print(f"cwd_cutoff_abs = {cutoff:,.1f} written into {A.run_id}/run_config.json")
+    print(f"cwd_cutoff_abs = {cutoff:,.1f} (= {cutoff * A.cell_km:.2f} km of extra travel on open ground, D31) written into {A.run_id}/run_config.json")
     return A
 
 
@@ -1915,6 +2031,23 @@ def _edge_fields(A, eid):
     return A.cwd[int(e["i"])], A.cwd[int(e["j"])]
 
 
+def _tier_breaks(spec, cutoff):
+    """D30: {tier: slack break in cost units} from a spec whose values are 'cutoff', 'cutoff/N' or a number (absolute)."""
+    out = {}
+    for name, v in spec.items():
+        if isinstance(v, str):
+            s = v.replace(" ", "").lower()
+            if s == "cutoff":
+                out[name] = float(cutoff)
+            elif s.startswith("cutoff/"):
+                out[name] = float(cutoff) / float(s.split("/", 1)[1])
+            else:
+                raise ValueError(f"near_opt_tiers[{name!r}] = {v!r}: expected 'cutoff', 'cutoff/N' or a number (D30)")
+        else:
+            out[name] = float(v)
+    return out
+
+
 def near_optimality(A):
     """D11 -- the wall-to-wall near-optimality surface: min over baseline edges of slack, in RAW
     COST UNITS, defined on every routable cell.
@@ -1957,29 +2090,42 @@ def near_optimality(A):
             f"(lcp {A.band_meta[eid]['lcp']:g}) -- slack must be ~0 there by construction.")
     print(f"G10 OK: max residual on baseline least-cost paths = {worst:.3g} cost units")
 
-    # Tiers: percentiles OF SLACK over the union band at 2x cutoff (== cells with min-slack
-    # <= 2x cutoff, exactly the axis-B 2x member's union). Cells outside that domain but routable
-    # fall to "occasional" (queued clarification 3).
-    t = A.cfg["near_opt_tiers"]
-    dom = no[np.isfinite(no) & (no <= 2.0 * A.cutoff)]
-    thr = {k: float(np.percentile(dom, v)) for k, v in t.items() if v < 100}
+    # Tiers (D30, 2026-09-28): FIXED slack breaks in cost units -- fractions of the calibrated cutoff (robust core <= cutoff/6,
+    # frequent <= cutoff/2, occasional <= cutoff = the band); routable cells beyond the band form a fourth class. Percentile
+    # tiers were retired: over the union band they were area-weighted, and area is dominated by the long northern links, so
+    # the breaks were set by the north; raw slack is comparable across links and fixed breaks keep it so.
+    t = A.cfg.get("near_opt_tiers")
+    live = config.CORRIDORS[A.key]["near_opt_tiers"]
+    if not (isinstance(t, dict) and all(isinstance(v, str) for v in t.values())):
+        print("  D30: this run's near_opt_tiers are the retired percentile spec -- using config.py's fixed breaks and pinning them into run_config")
+        t = live; A.cfg["near_opt_tiers"] = t; A.rec["cfg"]["near_opt_tiers"] = t
+        (A.run_dir / "run_config.json").write_text(json.dumps(A.rec, indent=2, ensure_ascii=False))
+    thr = _tier_breaks(t, A.cutoff)
     ordered = sorted(thr.items(), key=lambda kv: kv[1])
     assert all(a[1] <= b[1] for a, b in zip(ordered, ordered[1:])), f"G10: tiers not monotone {thr}"
     cls = np.zeros(A.shape, "uint8")
-    cls[A.pu] = len(ordered) + 1                                   # occasional = rest of routable
+    cls[A.pu] = len(ordered) + 1                                   # routable land beyond the band (slack > cutoff)
     # assign the tightest tier last so the smallest threshold wins
     for c, (name, v) in list(enumerate(ordered, start=1))[::-1]:
         cls[np.isfinite(no) & (no <= v)] = c
     cls[~A.pu] = 0
+    # G22 (tiers + cutoff): breaks exactly at the registered fractions of the cutoff; the detour twin reproduces the cutoff
+    for name, frac in (("robust_core", 6.0), ("frequent", 2.0), ("occasional", 1.0)):
+        if name in thr:
+            assert abs(thr[name] - A.cutoff / frac) <= 1e-9 * max(A.cutoff, 1.0), f"G22 FAILED: tier {name} break {thr[name]} != cutoff/{frac:g}"
+    det = A.cfg.get("cutoff_detour_km")
+    if det is not None:
+        assert abs(float(det) / A.cell_km - A.cutoff) <= 1e-6 * max(A.cutoff, 1.0), f"G22 FAILED: cutoff_detour_km / cell size != cwd_cutoff_abs"
+    print("  G22 OK: tier breaks at the registered fractions of the cutoff" + ("; detour twin consistent" if det is not None else ""))
 
     A.near_opt, A.near_opt_owner, A.near_opt_class, A.near_opt_thresholds = \
         no.astype("float32"), owner, cls, thr
     print(f"near-optimality surface over {int(A.pu.sum()):,} routable cells "
-          f"(tier domain = union band at 2x cutoff, {dom.size:,} cells)")
+          f"(tiers = fixed slack breaks, fractions of the cutoff {A.cutoff:,.1f} = {A.cutoff * A.cell_km:.1f} km of detour on open ground)")
     for c, (name, v) in enumerate(ordered, start=1):
-        print(f"  {name:12s} (slack <= {v:>12,.0f} = p{t[name]:>2}): "
+        print(f"  {name:12s} (slack <= {v:>10,.2f} = {t[name]:>9s}): "
               f"{int((cls == c).sum())*A.cell_km2:>9,.0f} km²")
-    print(f"  {'occasional':12s} (rest of routable):        "
+    print(f"  {'beyond band':12s} (routable, slack > cutoff): "
           f"{int((cls == len(ordered)+1).sum())*A.cell_km2:>9,.0f} km²")
 
     dst = A.run_dir
@@ -2011,16 +2157,34 @@ def route_branches(A):
     make it two alternatives), then node land is removed and slivers < branch_min_km2 dropped
     (count reported).
     """
-    bm, bmin = A.cfg["branch_mult"], A.cfg["branch_min_km2"]
+    # D26 (2026-09-28): the sliver floor is RELATIVE to the link's band -- a component is a branch if its new-land area is
+    # >= branch_min_frac x the link's new-land band area at cutoff_branch AND >= branch_min_cells. A fixed 10 km2 was noise on a
+    # 200 km link and a real second route on a 30 km one (branch counts were length-biased). Runs predating the constants take
+    # config.py's values and pin them. G21 reports the effect against the retired fixed floor.
+    live = config.CORRIDORS[A.key]
+    bm = A.cfg["branch_mult"]
+    if "branch_min_frac" not in A.cfg or "branch_min_cells" not in A.cfg:
+        print("  D26 constants not in this run's run_config (run predates them) -- taken from config.py and pinned into run_config.json")
+        A.cfg["branch_min_frac"] = A.rec["cfg"]["branch_min_frac"] = float(live["branch_min_frac"])
+        A.cfg["branch_min_cells"] = A.rec["cfg"]["branch_min_cells"] = int(live["branch_min_cells"])
+        (A.run_dir / "run_config.json").write_text(json.dumps(A.rec, indent=2, ensure_ascii=False))
+    bfrac, bcells = float(A.cfg["branch_min_frac"]), int(A.cfg["branch_min_cells"])
     cutoff_b = bm * A.cutoff
-    min_cells = max(1, int(round(bmin / A.cell_km2)))
+    legacy_cells = max(1, int(round(10.0 / A.cell_km2)))          # the retired fixed floor (10 km2), for G21 only
+    # D25 (2026-09-28): near-contiguous links get NO branch decomposition -- the counterfactual step (which measures the
+    # barrier-free width) must therefore run first; notebook 04 orders step 2b before 4b.
+    if "near_contiguous" not in A.edges.columns:
+        raise RuntimeError("route_branches: run cc.counterfactual_squeeze(A) FIRST (D25: near-contiguous links are excluded "
+                           "from the branch decomposition, and D24's floor is measured there) -- notebook 04 step 2b before 4b")
     eids = [e for e in A.edges.index
-            if A.edges.loc[e, "cost"] > 0 and not A.edges.loc[e, "is_adjacency"]]
+            if A.edges.loc[e, "cost"] > 0 and not A.edges.loc[e, "is_adjacency"] and not bool(A.edges.loc[e, "near_contiguous"])]
+    n_skipped = int(A.edges["near_contiguous"].sum())
 
     lab_out = np.zeros(A.shape, "int32")
     lab_pri = np.full(A.shape, np.inf, "float32")     # overlap resolution: lower min_slack wins
     rows, idx_store = [], {}
     n_dropped = 0
+    dropped_frac, per_edge_drop, per_edge_legacy = [], {}, {}
     bid = 0
     struct = np.ones((3, 3), int)
     for eid in eids:
@@ -2030,6 +2194,9 @@ def route_branches(A):
         m = np.zeros(A.shape[0] * A.shape[1], bool)
         m[keep] = True
         m = m.reshape(A.shape)
+        band_new_cells = int((m & ~A.node_union).sum())                              # the link's new-land band at cutoff_branch
+        floor_cells = max(bcells, int(np.ceil(bfrac * band_new_cells)))
+        per_edge_drop[eid] = [0, 0.0]; per_edge_legacy[eid] = 0
 
         if e["edge_class"] == "intra_name":
             mi, mj = A.parts[int(e["i"])][1], A.parts[int(e["j"])][1]
@@ -2050,9 +2217,15 @@ def route_branches(A):
         for cm in comps:
             cm2 = cm & ~A.node_union
             cells = int(cm2.sum())
-            if cells < min_cells:
+            if cells >= legacy_cells:
+                per_edge_legacy[eid] += 1                                             # what the retired fixed floor would have kept (G21)
+            if cells < floor_cells:
                 n_dropped += 1
+                frac = cells / band_new_cells if band_new_cells else 0.0
+                dropped_frac.append(frac)
+                per_edge_drop[eid][0] += 1; per_edge_drop[eid][1] = max(per_edge_drop[eid][1], frac)
                 continue
+            assert cells >= bcells and cells >= bfrac * band_new_cells, "G21: a kept branch violates the floor"
             fidx = np.flatnonzero(cm2.ravel())
             sl_sel = A.slack[eid][np.isin(A.bands[eid], fidx)]
             rr, cc = np.nonzero(cm2)
@@ -2081,16 +2254,33 @@ def route_branches(A):
         br["k"] = br.groupby("edge_id")["min_slack"].rank(method="first").astype(int)
         br["branch_id"] = br["edge_id"] + "_" + br["k"].astype(str)
         per_edge = br.groupby("edge_id").size()
-        A.edges["n_branches"] = per_edge.reindex(A.edges.index).fillna(0).astype(int)
-        A.edges["route_irreplaceable"] = A.edges["n_branches"] == 1
+        nb = per_edge.reindex(A.edges.index).astype(float)
+        nb[[e for e in A.edges.index if e in eids and e not in per_edge.index]] = 0.0     # decomposed, nothing kept
+        A.edges["n_branches"] = nb                                                          # NaN = not decomposed (near-contiguous / adjacency)
+        A.edges["route_irreplaceable_topo"] = (A.edges["n_branches"] == 1)                 # the old one-branch-only flag, retained (D12 amended)
+    A.edges["branch_dropped_n"] = pd.Series({k: v[0] for k, v in per_edge_drop.items()}).reindex(A.edges.index)
+    A.edges["branch_dropped_max_frac"] = pd.Series({k: v[1] for k, v in per_edge_drop.items()}).reindex(A.edges.index)
+    A.edges["n_branches_fixed_floor"] = pd.Series(per_edge_legacy).reindex(A.edges.index)     # G21 comparison column
     A.branches, A.branch_idx = br, idx_store
     A.branch_label = lab_out
 
-    n_multi = int((A.edges.get("n_branches", pd.Series(dtype=int)) > 1).sum())
-    n_route_irr = int(A.edges.get("route_irreplaceable", pd.Series(dtype=bool)).sum())
+    n_multi = int((A.edges.get("n_branches", pd.Series(dtype=float)) > 1).sum())
+    n_topo = int((A.edges.get("route_irreplaceable_topo", pd.Series(dtype=bool)) == True).sum())
     print(f"route branches @ {bm:g}x cutoff ({cutoff_b:,.0f}): {len(br)} branches over "
-          f"{len(eids)} edges | {n_route_irr} ROUTE-irreplaceable edges, {n_multi} with "
-          f"alternatives | {n_dropped} slivers < {bmin} km² dropped")
+          f"{len(eids)} edges ({n_skipped} near-contiguous links not decomposed, D25) | {n_topo} one-branch edges (topology), "
+          f"{n_multi} with alternatives | {n_dropped} slivers dropped under the relative floor "
+          f"(>= {bfrac:g} x band AND >= {bcells} cells, D26)")
+    # G21 -- the floor's effect: dropped-fraction distribution, and every link whose branch count differs from the retired fixed floor
+    if dropped_frac:
+        q = np.percentile(dropped_frac, [50, 90, 100])
+        print(f"  G21: dropped components' share of their band -- median {q[0]:.3f}, p90 {q[1]:.3f}, max {q[2]:.3f}")
+    changed = [(eid, int(A.edges.loc[eid, "n_branches_fixed_floor"]), int(A.edges.loc[eid, "n_branches"]))
+               for eid in eids if int(A.edges.loc[eid, "n_branches_fixed_floor"]) != int(A.edges.loc[eid, "n_branches"])]
+    print(f"  G21: {len(changed)} link(s) change branch count vs the retired 10 km² floor"
+          + (": " + ", ".join(f"{e} {a}->{b}" for e, a, b in changed) if changed else ""))
+    A.rec.setdefault("g21", {}).update(dict(n_dropped=n_dropped, dropped_frac_p50=(float(np.median(dropped_frac)) if dropped_frac else None),
+                                            dropped_frac_max=(float(max(dropped_frac)) if dropped_frac else None), n_links_changed=len(changed),
+                                            links_changed=[e for e, _, _ in changed]))
     print("  route-irreplaceable (D12, within-link) vs edge-irreplaceable (D7, no alternative "
           "link) are DIFFERENT senses -- always reported together, never merged")
 
@@ -2110,10 +2300,210 @@ def route_branches(A):
         gpd.GeoDataFrame(polys, crs=A.crs).to_file(dst / "branches.gpkg", driver="GPKG")
     br.drop(columns=["branch"]).to_csv(dst / "branches.csv", index=False, encoding="utf-8-sig")
     print(f"  wrote branches.tif, branches.gpkg, branches.csv")
+    classify_links(A)                                              # D23 / D24 / D25: the classes, G18, G19 -- now that both senses exist
+    return A
+
+
+# ================= the link classes (D23 / D24 / D25) =================
+LINK_CLASS_LABEL = {                       # internal key -> director string (spec 06 §3; D23 top-class string, D25 / D25a rows)
+    "both": "Only viable connection — no alternative link or route, and the land is already narrowing",
+    "edge": "Last affordable link — alternatives cost far more",
+    "squeezed": "Already narrowing — corridor below its natural width",
+    "securing": "Corridor land with options — route and partners can be chosen",
+    "near_contiguous_open": "Adjacent areas — open front",
+    "near_contiguous_roads": "Adjacent areas — front crossed by roads or cuts",
+    "near_contiguous_barrier": "Adjacent areas — barrier between",
+    "adjacency": "touching (zero-cost adjacency; not a link on the map)",
+}
+CORRIDOR_CLASSES = ("securing", "squeezed", "edge", "both")
+NEAR_CLASSES = ("near_contiguous_open", "near_contiguous_roads", "near_contiguous_barrier")
+
+
+def _near_subclass(path_max_cost, ratio, rmax):
+    """D25a (spec chat 2026-09-28, PROVISIONAL until the patch lands): the near-contiguous sub-class from the maximum cost class
+    on the least-cost path and the actual band's width ratio (D17, assessable on a near-contiguous link). barrier = a cost >= 100
+    cell on the path; roads = cost 10 on the path OR the front already below the squeeze threshold; open = cost-1 ground and a
+    ratio at or above it (a front with no width to measure counts as open). Nothing new is tuned: the squeeze ratio and the
+    surface's own classes."""
+    mc = float(path_max_cost) if pd.notna(path_max_cost) else 1.0
+    if mc >= 100:
+        return "near_contiguous_barrier"
+    if mc >= 10 or (pd.notna(ratio) and float(ratio) < rmax):
+        return "near_contiguous_roads"
+    return "near_contiguous_open"
+
+
+def _link_class(adj, near_sub, unass, E, B1, S):
+    """The spec 05 §6 precedence, top-down, first match wins (D25 / D25a rows, then the D24 gate, then D23's eight-cell table).
+    `near_sub` = None or one of NEAR_CLASSES."""
+    if adj:
+        return "adjacency"
+    if near_sub:
+        return near_sub
+    if unass:
+        return "edge" if E else "securing"
+    if E and B1 and S:
+        return "both"
+    if E:
+        return "edge"
+    if S:
+        return "squeezed"
+    return "securing"
+
+
+def classify_links(A, floors=None, verbose=True):
+    """D23 (land-aware top class; D12 amended) + D24 (resolution floor) + D25 (near-contiguous): the ONE derivation of every
+    link's class -- map classes, legend counts and both alternatives tables read `link_class`. Needs the counterfactual step
+    (width, near_contiguous, width_not_assessable) and the branch decomposition (n_branches). Writes class_truth_table.csv
+    (G18) and floor_effect.csv (G19) into the run dir. `floors` = (width_floor_cells, len_floor_cells) override for the G19
+    diagnostic only (never written)."""
+    e = A.edges
+    need = [c for c in ("near_contiguous", "width_not_assessable", "squeeze_ratio_obs", "n_branches", "edge_irreplaceable") if c not in e.columns]
+    if need:
+        raise RuntimeError(f"classify_links: missing {need} -- run counterfactual_squeeze then route_branches first")
+    rmax = float(A.cfg["squeeze_ratio"])
+    wf, lf = floors if floors else (float(A.cfg["width_floor_cells"]), float(A.cfg["len_floor_cells"]))
+    nz = (e["cost"] > 0) & (~e["is_adjacency"])
+    near = e["near_contiguous"].astype(bool)
+    narrow_front = e["open_ground_width_med"].isna() | (e["open_ground_width_med"] < wf)
+    if not floors:                                                     # G23 ordering: the width floor precedes the trigger
+        assert not (near & narrow_front).any(), "G23 FAILED: a near-contiguous link sits below the width floor (D24 applies first)"
+    else:                                                              # the diagnostic floors re-derive the trigger the same way
+        near = nz & ~narrow_front & (e["lcp_len_cells"] < e["open_ground_width_med"]).fillna(False)
+    unass = nz & ~near & (narrow_front | (e["lcp_len_cells"] < lf))
+    E = e["edge_irreplaceable"] == True
+    B1 = e["n_branches"] == 1
+    S = e["squeeze_ratio_obs"] < rmax
+    subs = [(_near_subclass(e.loc[k, "lcp_max_cost"], e.loc[k, "squeeze_ratio_obs"], rmax) if bool(near[k]) else None) for k in e.index]
+    cls = pd.Series([_link_class(bool(a), n, bool(u), bool(x), bool(y), bool(z))
+                     for a, n, u, x, y, z in zip(e["is_adjacency"], subs, unass, E, B1, S)], index=e.index)
+    if floors:                                                     # diagnostic call: return the classes, touch nothing
+        return cls
+    e["width_not_assessable"] = unass.astype(bool)
+    e["squeezed"] = (nz & ~near & ~unass & S).astype(bool)
+    e["route_irreplaceable_topo"] = (B1 & nz).astype(bool)
+    e["route_irreplaceable"] = (nz & ~near & ~unass & B1 & S).astype(bool)          # D12 amended: one branch AND narrow
+    e["link_class"] = cls
+    e["link_class_label"] = cls.map(LINK_CLASS_LABEL)
+    counts = cls[nz].value_counts()
+    # ---- G18: the eight-cell table over E x B1 x S for the links that reach it, before any class raster ----
+    reach = nz & ~near & ~unass
+    tt = (pd.DataFrame({"E": E[reach].astype(int), "B1": B1[reach].astype(int), "S": S[reach].astype(int), "link_class": cls[reach]})
+          .groupby(["E", "B1", "S", "link_class"]).size().rename("n").reset_index().sort_values(["E", "B1", "S"], ascending=False))
+    tt.to_csv(A.run_dir / "class_truth_table.csv", index=False)
+    for k in CORRIDOR_CLASSES:
+        assert int(tt.loc[tt.link_class == k, "n"].sum()) + int(((cls == k) & unass).sum()) == int(counts.get(k, 0)), \
+            f"G18 FAILED: class {k} count on the map != the truth table's row sums (+ the unassessable links classed from the edge sense)"
+    # G18's ratio requirement holds on every link that REACHES the width test; a link declared near-contiguous or
+    # width-not-assessable (D24: no counterfactual band / below the floors) may carry no ratio -- it is listed with its reason
+    # (amended 2026-09-28 on run002: E017_035, a link whose counterfactual band holds no new land, has no width to measure)
+    missing_ratio = list(e.index[reach & e["squeeze_ratio_obs"].isna()])
+    assert not missing_ratio, f"G18 FAILED: squeeze_ratio_obs is null on link(s) that reach the width test: {missing_ratio}"
+    no_ratio = e.index[nz & ~reach & e["squeeze_ratio_obs"].isna()]
+    reasons = {k: ("near-contiguous" if bool(near[k]) else ("no counterfactual band" if pd.isna(e.loc[k, "open_ground_width_med"]) else "below the resolution floor")) for k in no_ratio}
+    old_top = list(e.index[reach & E & B1 & ~S])                                   # only-viable under the retired rule, not now
+    A.rec["g18"] = dict(truth_table=tt.to_dict("records"), old_rule_only_viable_now_last_affordable=old_top,
+                        n_only_viable=int(counts.get("both", 0)))
+    # ---- G19: the floor's effect (histograms, counts, the halved / doubled diagnostic; asserts) ----
+    hist = {c: {f"p{q}": float(np.nanpercentile(e.loc[nz, c], q)) for q in (10, 50, 90)} for c in ("lcp_len_cells", "open_ground_width_med")}
+    alt = {}
+    for tag, mult in (("halved", 0.5), ("doubled", 2.0)):
+        c2 = classify_links(A, floors=(wf * mult, lf * mult), verbose=False)
+        alt[tag] = int((c2[nz] != cls[nz]).sum())
+    moved = max(alt.values()) / max(int(nz.sum()), 1)
+    assert not (near & e["n_branches"].notna()).any(), "G19 FAILED: a near-contiguous link carries a branch decomposition"
+    assert not (near & cls.isin(CORRIDOR_CLASSES)).any(), "G19 FAILED: a near-contiguous link carries a corridor class"
+    assert not (unass & e["squeezed"]).any(), "G19 FAILED: a width-not-assessable link is classed squeezed"
+    # ---- D25a per-link report + the near-contiguous band area as its own line (the deck's corridor figure must not count fronts) ----
+    nc = e.index[near]
+    def _unit_km2(u):
+        try:
+            return float(np.asarray(A.nodes[int(u)][1]).sum()) * A.cell_km2
+        except Exception:
+            return np.nan
+    rep_df = pd.DataFrame([dict(edge_id=k, label_i=e.loc[k, "label_i"], label_j=e.loc[k, "label_j"], subclass=cls[k],
+                                gap_km=float(e.loc[k, "centreline_km"]), open_ground_width_med=float(e.loc[k, "open_ground_width_med"]),
+                                open_ground_width_km=float(e.loc[k, "open_ground_width_med"]) * A.cell_km,
+                                squeeze_ratio_obs=(float(e.loc[k, "squeeze_ratio_obs"]) if pd.notna(e.loc[k, "squeeze_ratio_obs"]) else np.nan),
+                                lcp_max_cost=(float(e.loc[k, "lcp_max_cost"]) if pd.notna(e.loc[k, "lcp_max_cost"]) else np.nan),
+                                area_i_km2=_unit_km2(e.loc[k, "i"]), area_j_km2=_unit_km2(e.loc[k, "j"]),
+                                edge_irreplaceable=bool(e.loc[k, "edge_irreplaceable"]), band_new_km2=float(e.loc[k, "band_new_km2"]))
+                           for k in nc]).sort_values("gap_km") if len(nc) else pd.DataFrame()
+    rep_df.to_csv(A.run_dir / "near_contiguous_links.csv", index=False, encoding="utf-8-sig")
+    # ---- D25b: near-contiguous area is NOT corridor area -- the per-edge band sums partitioned by kind (G23's identity) ----
+    bn = e["band_new_km2"].fillna(0.0)
+    intra = e["edge_class"].eq("intra_name")
+    backup = (e["in_mst"] == False) & ~e["is_adjacency"] & ~intra
+    acct = dict(near_contiguous_area_km2=float(bn[near].sum()),
+                intra_name_area_km2=float(bn[intra & ~near].sum()),
+                augmentation_area_km2=float(bn[backup & ~near].sum()),
+                corridor_area_km2=float(bn[nz & ~near & ~intra & ~backup].sum()),
+                total_band_area_km2=float(bn[nz | intra].sum()))
+    A.near_contiguous_km2 = acct["near_contiguous_area_km2"]; A.band_accounting = acct
+    # ---- G23: the front check ----
+    assert e.loc[near, "squeeze_ratio_obs"].notna().all() and e.loc[near, "lcp_max_cost"].notna().all(), \
+        "G23 FAILED: a near-contiguous link lacks squeeze_ratio_obs or lcp_max_cost"
+    assert sum(int((cls == k).sum()) for k in NEAR_CLASSES) == int(near.sum()), "G23 FAILED: sub-class counts do not sum to the near-contiguous count"
+    parts_sum = acct["corridor_area_km2"] + acct["near_contiguous_area_km2"] + acct["intra_name_area_km2"] + acct["augmentation_area_km2"]
+    assert abs(parts_sum - acct["total_band_area_km2"]) <= 1e-6 * max(acct["total_band_area_km2"], 1.0), \
+        f"G23 FAILED: corridor + near-contiguous + intra-name + augmentation ({parts_sum:,.1f}) != total band area ({acct['total_band_area_km2']:,.1f})"
+    A.rec["d25a"] = dict(n_near_contiguous=int(len(nc)), by_subclass={k: int((cls == k).sum()) for k in NEAR_CLASSES}, **acct)
+    fe = pd.DataFrame([dict(floor="registered", width_floor_cells=wf, len_floor_cells=lf, **{k: int(counts.get(k, 0)) for k in LINK_CLASS_LABEL if k != "adjacency"})]
+                      + [dict(floor=tag, width_floor_cells=wf * m, len_floor_cells=lf * m,
+                              **{k: int((classify_links(A, floors=(wf * m, lf * m), verbose=False)[nz] == k).sum()) for k in LINK_CLASS_LABEL if k != "adjacency"})
+                         for tag, m in (("halved", 0.5), ("doubled", 2.0))])
+    fe.to_csv(A.run_dir / "floor_effect.csv", index=False)
+    A.rec["g19"] = dict(hist=hist, n_width_not_assessable=int(unass.sum()), n_near_contiguous=int(near.sum()), moved_halved=alt["halved"],
+                        moved_doubled=alt["doubled"], moved_frac_max=float(moved))
+    (A.run_dir / "run_config.json").write_text(json.dumps(A.rec, indent=2, ensure_ascii=False))
+    if verbose:
+        print("link classes (D23/D24/D25 precedence; the single source):  " + " · ".join(f"{k} {int(counts.get(k, 0))}" for k in LINK_CLASS_LABEL if k != "adjacency"))
+        sub = A.rec["d25a"]["by_subclass"]
+        print(f"  D25a: {len(nc)} near-contiguous link(s) -> near_contiguous_links.csv (gap, front width, ratio, lcp_max_cost, the two areas' sizes): "
+              f"open front {sub['near_contiguous_open']} · roads or cuts {sub['near_contiguous_roads']} · barrier {sub['near_contiguous_barrier']}")
+        print(f"  G23 OK (D25b accounting, per-edge band sums): corridor {acct['corridor_area_km2']:,.0f} + near-contiguous fronts {acct['near_contiguous_area_km2']:,.0f} "
+              f"+ intra-name {acct['intra_name_area_km2']:,.0f} + augmentation {acct['augmentation_area_km2']:,.0f} = {acct['total_band_area_km2']:,.0f} km²; "
+              f"{len(nc)} of {int(nz.sum())} links join areas that are effectively adjacent -- corridor design is a question about the remaining {int(nz.sum()) - len(nc)}")
+        print(f"  G18 OK: eight-cell table -> class_truth_table.csv; {len(old_top)} link(s) only-viable under the retired rule but not "
+              f"now (E and one branch, land NOT narrowing): {old_top or 'none'}" + ("  -> the 06 example-regeneration rule FIRES (post-pin class change)" if old_top else ""))
+        if reasons:
+            print(f"  G18: {len(reasons)} non-zero-cost link(s) carry no width ratio, each outside the width test: " + ", ".join(f"{k} ({v})" for k, v in reasons.items()))
+        print(f"  G19 OK: {int(unass.sum())} width-not-assessable, {int(near.sum())} near-contiguous; lcp_len_cells p10/50/90 "
+              f"{hist['lcp_len_cells']['p10']:.0f}/{hist['lcp_len_cells']['p50']:.0f}/{hist['lcp_len_cells']['p90']:.0f}, open_ground_width_med "
+              f"{hist['open_ground_width_med']['p10']:.1f}/{hist['open_ground_width_med']['p50']:.1f}/{hist['open_ground_width_med']['p90']:.1f}; "
+              f"floor halved moves {alt['halved']}, doubled moves {alt['doubled']} of {int(nz.sum())} links"
+              + (f"  -> more than 10% move: the floor is DISCUSSED for this run, not changed" if moved > 0.10 else ""))
     return A
 
 
 # ================= D17 -- the squeezed class (counterfactual band) =================
+def _cross_sections(shape, band_idx, path, n_pos=50, exclude=None):
+    """D28: width along a route. Every band cell (optionally excluding `exclude`, a flat boolean such as node land) is
+    allocated to its nearest least-cost-path cell (distance transform on the band's bounding window); the cell count per path
+    cell is the cross-section there (cells; x cell size = km); the profile is binned to n_pos fractional positions along the
+    path. Returns n_pos widths (NaN where a bin holds no path cell)."""
+    if path is None or len(path) < 2 or band_idx is None or len(band_idx) == 0:
+        return np.full(n_pos, np.nan)
+    band_idx = np.asarray(band_idx, dtype=np.int64)
+    if exclude is not None:
+        band_idx = band_idx[~np.asarray(exclude)[band_idx]]
+    if len(band_idx) == 0:
+        return np.full(n_pos, np.nan)
+    rr, cc = np.divmod(band_idx, shape[1]); pr, pc = path[:, 0].astype(np.int64), path[:, 1].astype(np.int64)
+    r0, r1 = int(min(rr.min(), pr.min())), int(max(rr.max(), pr.max())); c0, c1 = int(min(cc.min(), pc.min())), int(max(cc.max(), pc.max()))
+    H, W = r1 - r0 + 1, c1 - c0 + 1
+    bg = np.ones((H, W), bool); bg[pr - r0, pc - c0] = False                         # zeros at the path cells
+    _, (ir, ic) = ndimage.distance_transform_edt(bg, return_indices=True)
+    order = np.full((H, W), -1, np.int64); order[pr - r0, pc - c0] = np.arange(len(path))
+    pos = order[ir[rr - r0, cc - c0], ic[rr - r0, cc - c0]]
+    counts = np.bincount(pos[pos >= 0], minlength=len(path)).astype(float)
+    t = np.arange(len(path)) / max(len(path) - 1, 1)
+    bins = np.minimum((t * n_pos).astype(int), n_pos - 1)
+    s = np.bincount(bins, weights=counts, minlength=n_pos); n = np.bincount(bins, minlength=n_pos)
+    width = np.full(n_pos, np.nan); ok = n > 0; width[ok] = s[ok] / n[ok]
+    return width
+
+
 def counterfactual_squeeze(A, cache=True, tol=0.02):
     """D17 (H8 closed 2026-09-03): per link, how wide is the real band relative to the band the
     SAME link would have on a surface with nothing constraining it?
@@ -2154,12 +2544,17 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
     cache_dir = None
     if cache:
         gdir = config.PROJECT_DIR / pathlib.Path(A.cfg["grid"]["dir"])
-        cache_dir = gdir / "cwd_cache" / f"{_resistance_sha(A_cf)}_cf"
+        compact = bool(A.cfg.get("cwd_compact", False))          # wolverine: routable cells only (M5.1), as the real set
+        sha_cf = _resistance_sha(A_cf)
+        cache_dir = gdir / "cwd_cache" / f"{sha_cf}_cf{'_c' if compact else ''}"
         hit = cache_dir.exists() and len(list(cache_dir.glob("part_*.npy"))) == len(A.parts)
         print(f"  counterfactual CWD from {len(A.parts)} seed parts "
               f"({'cache HIT' if hit else 'computing -- expect ~the cost_distances runtime'}: "
               f"{cache_dir.name})")
-    cwd_parts_cf, mcp_cf = _cwd_all(A, res_cf, [m for _, m in A.parts], cache_dir, prefix="part")
+    else:
+        compact, sha_cf = False, None
+    pu_cf = A.pu if compact else None
+    cwd_parts_cf, mcp_cf = _cwd_all(A, res_cf, [m for _, m in A.parts], cache_dir, prefix="part", pu=pu_cf)
     if cache:
         upaths = []
         for u in range(len(A.nodes)):
@@ -2169,12 +2564,13 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
             else:
                 p = cache_dir / f"unit_{u:03d}.npy"
                 if not p.exists():
-                    fld = np.asarray(cwd_parts_cf[pidx[0]], dtype="float32").copy()
+                    rd = (cwd_parts_cf.compact if compact else cwd_parts_cf.__getitem__)
+                    fld = np.asarray(rd(pidx[0]), dtype="float32").copy()
                     for pi in pidx[1:]:
-                        np.minimum(fld, np.asarray(cwd_parts_cf[pi], dtype="float32"), out=fld)
+                        np.minimum(fld, np.asarray(rd(pi), dtype="float32"), out=fld)
                     np.save(p, fld)
                 upaths.append(p)
-        cwd_cf = _CwdCache(upaths)
+        cwd_cf = _CwdCache(upaths, pu_cf)
     else:
         cwd_cf = []
         for u in range(len(A.nodes)):
@@ -2186,13 +2582,15 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
 
     # ---- bands at the same cutoff: unit edges on unit fields, locked edges on part fields ---
     unit_rows = A.edges[A.edges["edge_class"] != "intra_name"]
-    bands_cf, _, _, meta_cf = edge_bands(A, cwd_cf, mcp_cf, unit_rows, A.cutoff, "abs",
-                                         want_slack=False)
+    # wolverine band store (M5.2): the counterfactual bands under their own tag, early-stop tracebacks -- absent in the north
+    cf_tag = f"cf_{sha_cf}" if (sha_cf and getattr(A, "band_memo", None) is not None) else None
+    bands_cf, _, paths_cf, meta_cf = edge_bands(A, cwd_cf, mcp_cf, unit_rows, A.cutoff, "abs",
+                                                want_slack=False, tag=cf_tag)
     lk_rows = A.edges[A.edges["edge_class"] == "intra_name"]
     if len(lk_rows):
-        b2, _, _, m2 = edge_bands(_NS(nodes=A.parts, shape=A.shape), cwd_parts_cf, mcp_cf,
-                                  lk_rows, A.cutoff, "abs", want_slack=False)
-        bands_cf.update(b2); meta_cf.update(m2)
+        b2, _, p2, m2 = edge_bands(_NS(nodes=A.parts, shape=A.shape), cwd_parts_cf, mcp_cf,
+                                   lk_rows, A.cutoff, "abs", want_slack=False)
+        bands_cf.update(b2); paths_cf.update(p2); meta_cf.update(m2)
 
     # ---- WIDTH, not area (measured 2026-09-08 on v2_run002): relaxing barriers also SHORTENS
     # routes that detoured around water/ice, and band area ∝ length × width -- on 6 links the
@@ -2210,15 +2608,80 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
     A.edges["band_new_km2"] = pd.Series(new_km2)
     A.edges["band_cf_km2"] = pd.Series(cf_km2)
     A.edges["centreline_cf_km"] = pd.Series(cf_len)
-    L_new = A.edges["centreline_km"].where(A.edges["centreline_km"] >= 2.0)
-    L_cf = A.edges["centreline_cf_km"].where(A.edges["centreline_cf_km"] >= 2.0)
-    A.edges["width_new_km"] = (A.edges["band_new_km2"] / L_new).round(2)
-    A.edges["width_cf_km"] = (A.edges["band_cf_km2"] / L_cf).round(2)
-    eligible = ((A.edges["cost"] > 0) & (~A.edges["is_adjacency"])
-                & A.edges["width_new_km"].notna() & (A.edges["width_cf_km"] > 0))
+    # (the 2 km length floor that used to blank short links' widths is gone: D24's resolution floor, below, governs which
+    # links are width-ASSESSABLE; the ratio itself is computed wherever both bands hold new land, so G18 can require it)
+    L_new = A.edges["centreline_km"].where(A.edges["centreline_km"] > 0)
+    L_cf = A.edges["centreline_cf_km"].where(A.edges["centreline_cf_km"] > 0)
+    A.edges["width_new_km"] = (A.edges["band_new_km2"] / L_new).round(3)
+    A.edges["width_cf_km"] = (A.edges["band_cf_km2"] / L_cf).round(3)
+    nz = (A.edges["cost"] > 0) & (~A.edges["is_adjacency"])
+    eligible = nz & A.edges["width_new_km"].notna() & (A.edges["width_cf_km"] > 0)
     A.edges["squeeze_ratio_obs"] = np.where(
         eligible, A.edges["width_new_km"] / A.edges["width_cf_km"].replace(0, np.nan), np.nan)
-    A.edges["squeezed"] = eligible & (A.edges["squeeze_ratio_obs"] < rmax)
+
+    # ---- D24 (2026-09-28): the width test's RESOLUTION FLOOR, pre-registered and pinned into run_config BEFORE any class
+    # count is read (tuning prohibition). open_ground_width_med = the counterfactual band's median cross-section (cells);
+    # lcp_len_cells = the least-cost path length. Below either floor the width test is NOT ASSESSABLE: such links are classed
+    # from the edge sense alone (classify_links), never 'narrowing' or 'only viable' from two-cell arithmetic.
+    # ---- D25: NEAR-CONTIGUOUS -- a path shorter than the band's barrier-free width is a blob, not a route: no branch
+    # decomposition, no width class; reported with the edge sense and whether a cost-1000 barrier sits on the path.
+    for k in ("width_floor_cells", "len_floor_cells"):
+        if k not in A.cfg:
+            A.cfg[k] = A.rec["cfg"][k] = live[k]
+            print(f"  D24 constant {k} not in this run's run_config -- taken from config.py ({live[k]}) and pinned")
+    (A.run_dir / "run_config.json").write_text(json.dumps(A.rec, indent=2, ensure_ascii=False))
+    wfloor, lfloor = float(A.cfg["width_floor_cells"]), float(A.cfg["len_floor_cells"])
+    N_POS = 50
+    p10, p50, ppos, ogw = {}, {}, {}, {}
+    pmax, x1000 = {}, {}
+    for eid in A.edges.index[nz]:
+        w_r = _cross_sections(A.shape, A.bands.get(eid, np.empty(0, np.int32)), A.paths.get(eid), N_POS, exclude=flat_nodes)
+        w_c = _cross_sections(A.shape, bands_cf.get(eid, np.empty(0, np.int32)), paths_cf.get(eid), N_POS, exclude=flat_nodes)
+        ogw[eid] = float(np.nanmedian(w_c)) if np.isfinite(w_c).any() else np.nan            # cells: the barrier-free median width
+        pth = A.paths.get(eid)
+        if pth is not None and len(pth):
+            pc = A.cost[pth[:, 0], pth[:, 1]]; pmax[eid] = float(np.nanmax(pc)); x1000[eid] = bool(pmax[eid] >= 1000)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ratio = np.where((w_c > 0) & np.isfinite(w_c) & np.isfinite(w_r), w_r / w_c, np.nan)
+        ok = np.isfinite(ratio)
+        if ok.sum() < 5:
+            continue
+        p10[eid] = float(np.nanpercentile(ratio, 10)); p50[eid] = float(np.nanpercentile(ratio, 50))
+        ppos[eid] = float(np.nanargmin(np.where(ok, ratio, np.inf)) / max(N_POS - 1, 1))
+    A.edges["open_ground_width_med"] = pd.Series(ogw).reindex(A.edges.index)
+    A.edges["lcp_len_cells"] = A.edges["centreline_cells"].astype(float)
+    A.edges["lcp_max_cost"] = pd.Series(pmax).reindex(A.edges.index)                       # D25a: the maximum cost class on the least-cost path
+    A.edges["crosses_cost_1000"] = pd.Series(x1000).reindex(A.edges.index).fillna(False).astype(bool)
+    # ordering (D25a patch, G23): the WIDTH floor applies before the near-contiguous trigger -- a link whose barrier-free front is
+    # narrower than width_floor_cells (or absent: no counterfactual band, e.g. E017_035 Gladys Lake ↔ Spatsizi on run002) is
+    # width-not-assessable, never near-contiguous. The LENGTH floor applies only off fronts: a short path between two facing
+    # areas IS the near-contiguous case, not a resolution problem.
+    ogw = A.edges["open_ground_width_med"]
+    narrow_front = ogw.isna() | (ogw < wfloor)
+    A.edges["near_contiguous"] = (nz & ~narrow_front & (A.edges["lcp_len_cells"] < ogw)).fillna(False).astype(bool)
+    A.edges["width_not_assessable"] = (nz & ~A.edges["near_contiguous"] & (narrow_front | (A.edges["lcp_len_cells"] < lfloor))).astype(bool)
+    assessable = eligible & ~A.edges["near_contiguous"] & ~A.edges["width_not_assessable"]
+    A.edges["squeezed"] = assessable & (A.edges["squeeze_ratio_obs"] < rmax)      # provisional: classify_links (after the branches) is the record
+    print(f"  D24/D25: {int(A.edges['near_contiguous'].sum())} near-contiguous link(s) (path shorter than the barrier-free width; "
+          f"{int((A.edges['near_contiguous'] & A.edges['crosses_cost_1000']).sum())} with a cost-1000 barrier on the path), "
+          f"{int(A.edges['width_not_assessable'].sum())} width-not-assessable (floors {wfloor:g} cells wide / {lfloor:g} cells long), "
+          f"{int(assessable.sum())} assessable of {int(nz.sum())} non-zero-cost")
+    # ---- D28 (2026-09-28): pinch-aware width -- width_ratio_p10 / p50 = quantiles of the per-position real/counterfactual
+    # cross-section ratio, pinch_pos = the fractional position of the minimum. REPORTED, NOT CLASSED; only for assessable links.
+    for d in (p10, p50, ppos):
+        for eid in [k for k in d if not bool(assessable.get(k, False))]:
+            d.pop(eid)
+    A.edges["width_ratio_p10"] = pd.Series(p10).reindex(A.edges.index)
+    A.edges["width_ratio_p50"] = pd.Series(p50).reindex(A.edges.index)
+    A.edges["pinch_pos"] = pd.Series(ppos).reindex(A.edges.index)
+    # G22 (width): the tenth percentile cannot exceed the link's width ratio (5% tolerance: squeeze_ratio_obs is the AREA/length
+    # ratio, the p10 a quantile of per-position ratios; a violation beyond that means the two constructions disagree -- report)
+    viol = [e for e in p10 if pd.notna(A.edges.loc[e, "squeeze_ratio_obs"]) and p10[e] > 1.05 * float(A.edges.loc[e, "squeeze_ratio_obs"])]
+    assert not viol, (f"G22 FAILED: width_ratio_p10 exceeds squeeze_ratio_obs on {viol} -- the per-position cross-sections and the "
+                      f"area/length ratio disagree; inspect before shipping the width columns")
+    n_p = len(p10); pinched = sorted(p10, key=p10.get)[:5]
+    print(f"  G22 OK: width_ratio_p10 <= squeeze_ratio_obs on all {n_p} assessable edges | narrowest pinches: "
+          + ", ".join(f"{_short_node_name(A.edges.loc[e,'label_i'],12)}↔{_short_node_name(A.edges.loc[e,'label_j'],12)} p10 {p10[e]:.2f} @ {ppos[e]:.2f}" for e in pinched))
 
     # ---- G13 (restated 2026-09-08, second time -- measured on v2_run002) --------------------
     # The counterfactual band bounds the real band in NEITHER direction. Two legitimate ways it
@@ -2690,6 +3153,13 @@ def write_run(A):
     crit_cols = ["label_i", "label_j", "edge_class", "cost", "in_mst", "is_adjacency", "ecfb_raw",
                  "disconnects", "n_pairs_lost", "cost_inflation", "mean_pair_inflation",
                  "backup_edge_id", "backup_ratio", "irreplaceable", "insures_edge_id",
+                 "locked", "alt_test_run", "edge_irreplaceable",                            # D27
+                 "alt_cost", "alt_len_km", "alt_mean_res", "alt_kind",                      # D29
+                 "width_ratio_p10", "width_ratio_p50", "pinch_pos",                         # D28
+                 "open_ground_width_med", "lcp_len_cells", "width_not_assessable",          # D24
+                 "near_contiguous", "lcp_max_cost", "crosses_cost_1000",                    # D25 / D25a
+                 "route_irreplaceable_topo", "link_class", "link_class_label",              # D23 / D12 amended
+                 "branch_dropped_n", "branch_dropped_max_frac", "n_branches_fixed_floor",   # D26 / G21
                  "n_branches", "route_irreplaceable", "band_new_km2", "band_cf_km2",
                  "centreline_cf_km", "width_new_km", "width_cf_km", "lcp_real", "lcp_cf",
                  "squeeze_ratio_obs", "squeezed", "band_km2", "centreline_km",
@@ -2717,6 +3187,7 @@ def write_run(A):
         calibration=A.rec.get("calibration_result"),
         corridor_unprotected_km2=(round(int(A.corridor_unprotected.sum()) * A.cell_km2)
                                   if getattr(A, "corridor_unprotected", None) is not None else None),
+        **(getattr(A, "band_accounting", {}) or {}),                                       # D25b: corridor_area_km2 / near_contiguous_area_km2 / intra_name / augmentation / total (per-edge band sums)
         n_secured_links=(int(A.edges["secured"].sum()) if "secured" in A.edges.columns else None),
         n_secured_by_pa=(int((A.edges["secured_by"] == "pa").sum()) if "secured_by" in A.edges.columns else None),
         n_secured_by_ipca=(int((A.edges["secured_by"] == "ipca").sum()) if "secured_by" in A.edges.columns else None),
@@ -2765,6 +3236,8 @@ def write_run(A):
 
 def finish(A):
     """write_run + append this run to the analysis-level index."""
+    if "link_class" not in A.edges.columns and {"near_contiguous", "n_branches", "edge_irreplaceable"} <= set(A.edges.columns):
+        classify_links(A)
     write_run(A)
     idx = config.RESULTS_DIR / config.CORRIDORS[A.key]["results_subdir"] / "runs.csv"
     runs(A.key).to_csv(idx, index=False)
@@ -3647,6 +4120,7 @@ def load_results(run_dir):
         allp = _pa_polys(float(pc.get("pa_min_km2", 0.0))).to_crs(R.crs)
         R.protected = rasterize([(g, 1) for g in allp.geometry], out_shape=R.shape, transform=R.transform,
                                 fill=0, dtype="uint8").astype(bool)
+        R.protected_pa = R.protected.copy()                 # existing PAs only (the wide layout's grey layer)
         R.protected_ipca = np.zeros(R.shape, bool)
         if pc.get("include_proposed") and pc.get("proposed"):
             ip = gpd.read_file(config.PROJECT_DIR / pathlib.Path(pc["proposed"])).to_crs(R.crs)
@@ -3895,8 +4369,8 @@ def near_opt_map(R, pad=0.05):
     _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch, legend=True,
                    anchor_color=NEAR_OPT_ANCHOR_COLOR)
     ax.set_title(f"{R.region_label} — near-optimality surface (D11): min slack over all links\n"
-                 f"a slack surface, NOT a frequency; cutoff {R.cutoff:,.1f} sits at the low end",
-                 fontsize=12)
+                 f"a slack surface, NOT a frequency; the band cutoff = about {R.cutoff * R.cell_km:.1f} km of extra travel on open ground "
+                 f"({R.cutoff:,.1f} cost units) sits at the low end", fontsize=12)
     fig.savefig(R.fig_dir / "near_optimality_map.png", dpi=150, bbox_inches="tight")
     plt.show()
     return R
@@ -3984,21 +4458,23 @@ def near_opt_tiers_map(R, pad=0.05):
     """D11 deliverable figure 2 of 2: the pre-registered near-optimality tiers."""
     XL, YL = _region_extent(R, pad)
     cls = np.nan_to_num(R.near_opt_class.values, nan=0)
-    colors = ["#1a9850", "#a6d96a", "#ffffbf"]          # robust / frequent / occasional
+    colors = ["#1a9850", "#a6d96a", "#ffffbf", "#f2f2f2"]          # robust / frequent / occasional / routable beyond the band (D30)
     fig, ax = plt.subplots(figsize=(12, 13))
     _da(R, np.where(cls > 0, cls, np.nan).astype("float32")).plot.imshow(
-        ax=ax, cmap=ListedColormap(colors), vmin=0.5, vmax=3.5, add_colorbar=False)
+        ax=ax, cmap=ListedColormap(colors), vmin=0.5, vmax=4.5, add_colorbar=False)
     _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch,
                    anchor_color=NEAR_OPT_ANCHOR_COLOR)
-    km2 = {c: int((cls == c).sum()) * R.cell_km2 for c in (1, 2, 3)}
-    ax.legend(handles=[Patch(color=colors[0], label=f"robust core ({km2[1]:,.0f} km²)"),
-                       Patch(color=colors[1], label=f"frequent ({km2[2]:,.0f} km²)"),
-                       Patch(color=colors[2], label=f"occasional (rest of routable)"),
+    km2 = {c: int((cls == c).sum()) * R.cell_km2 for c in (1, 2, 3, 4)}
+    c6, c2, c1 = R.cutoff / 6, R.cutoff / 2, R.cutoff                                   # D30 fixed breaks
+    ax.legend(handles=[Patch(color=colors[0], label=f"robust core — slack ≤ cutoff/6 = {c6:,.1f} ({km2[1]:,.0f} km²)"),
+                       Patch(color=colors[1], label=f"frequent — slack ≤ cutoff/2 = {c2:,.1f} ({km2[2]:,.0f} km²)"),
+                       Patch(color=colors[2], label=f"occasional — slack ≤ cutoff = {c1:,.1f} (the band; {km2[3]:,.0f} km²)"),
+                       Patch(color=colors[3], label=f"routable land beyond the band"),
                        Patch(color=PA_COLOR, label="existing PAs"),
                        Patch(color=NEAR_OPT_ANCHOR_COLOR, label="proposed IPCAs")],
               loc="lower left", fontsize=9, frameon=True)
-    ax.set_title(f"{R.region_label} — near-optimality tiers "
-                 f"(slack percentiles over the 2× union band)", fontsize=12)
+    ax.set_title(f"{R.region_label} — near-optimality tiers (fixed slack breaks in cost units, D30; "
+                 f"the cutoff = about {R.cutoff * R.cell_km:.1f} km of extra travel on open ground)", fontsize=12)
     fig.savefig(R.fig_dir / "near_optimality_tiers_map.png", dpi=150, bbox_inches="tight")
     plt.show()
     return R
@@ -4062,7 +4538,8 @@ def branches_map(R, pad=0.05):
         col = np.asarray(to_rgb(plt.get_cmap("tab10")(k)))
         pair = f"{g.iloc[0].label_i.split(' · ')[-1]} ↔ {g.iloc[0].label_j.split(' · ')[-1]}"
         for j, r in enumerate(g.sort_values("k").itertuples()):
-            c = tuple(col * (1 - 0.45 * j) + 0.45 * j * np.array([1, 1, 1]))
+            # lighter per extra branch; clipped so a link with >= 4 branches (wolverine) stays a valid colour
+            c = tuple(np.clip(col * (1 - 0.45 * j) + 0.45 * j * np.array([1, 1, 1]), 0.0, 1.0))
             _da(R, np.where(lab == r.value, 1.0, np.nan).astype("float32")).plot.imshow(
                 ax=ax, cmap=ListedColormap([c]), add_colorbar=False)
             handles.append(Patch(color=c, label=f"{pair} — branch {r.k} "
@@ -4104,9 +4581,20 @@ def _edge_squeeze(edges, cutoff, cost_per_km_intact=10.0 / 3.0):
 def _routing_classes(R, squeeze_max=0.5):
     """The routing-regime edge classes shared by routing_problem_map and its zoom panel."""
     e = _edge_squeeze(R.edges, R.cutoff)
+    if "link_class" in e.columns:                                   # D23/D24/D25 (2026-09-28): classify_links is the single source
+        lc = e["link_class"]
+        return e, [
+            (LINK_CLASS_LABEL["both"], e.index[lc == "both"], "#d73027"),
+            (LINK_CLASS_LABEL["edge"], e.index[lc == "edge"], "#fc8d59"),
+            (LINK_CLASS_LABEL["squeezed"], e.index[lc == "squeezed"], "#dfb515"),
+            (LINK_CLASS_LABEL["near_contiguous_open"], e.index[lc == "near_contiguous_open"], "#D9D9D9"),
+            (LINK_CLASS_LABEL["near_contiguous_roads"], e.index[lc == "near_contiguous_roads"], "#D9D9D9"),
+            (LINK_CLASS_LABEL["near_contiguous_barrier"], e.index[lc == "near_contiguous_barrier"], "#D9D9D9"),
+        ]
     ri = e.get("route_irreplaceable", pd.Series(False, index=e.index))
-    both = e.index[(e["irreplaceable"] == True) & (ri == True)]
-    irr = e.index[(e["irreplaceable"] == True) & ~e.index.isin(both)]
+    ei = e["edge_irreplaceable"] if "edge_irreplaceable" in e.columns else e["irreplaceable"]   # D27: the class-eligible flag (runs before it: the raw flag)
+    both = e.index[(ei == True) & (ri == True)]
+    irr = e.index[(ei == True) & ~e.index.isin(both)]
     if "squeezed" in e.columns and e["squeezed"].notna().any():
         # D17 (H8 closed): the counterfactual band ratio from corridor_edges.csv
         rmax = float(R.cfg.get("squeeze_ratio", squeeze_max))

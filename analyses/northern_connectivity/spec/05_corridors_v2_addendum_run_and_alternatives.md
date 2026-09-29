@@ -15,6 +15,58 @@
 > delete. Same convention as the y2y flagship's spec/ logs.
 
 **Changelog**
+- 2026-09-28 — **geometry-vs-ecology audit for run003 (D26–D31).** Rules whose result was driven by link length, node
+  position, or raster resolution rather than land: (D26) the branch-sliver floor becomes relative to band area; (D27)
+  locked intra-name links are ineligible for the irreplaceable classes until the alternative-link test (D7) is run against
+  the full candidate set; (D28) a tenth-percentile width ratio joins the median so a single pinch is visible in the
+  table; (D29) the alternative link's cost is decomposed into length and mean resistance; (D30) near-optimality tiers use
+  fixed cost-unit breaks instead of area-weighted percentiles; (D31) the calibrated cutoff is also stated as detour
+  distance on open ground, which is the calibration rule for derived analyses. Example selection in 06 changed to
+  class-and-width-first with criticality as tie-break. Gates G20–G22. Zero-cost adjacency vector check declined (patch
+  §7). M4.10; R10. Applied from `05_patch_D26_D31_geometry_audit.md` (kept in spec/ as the record). **Adopted 2026-09-28
+  BEFORE D23–D25 landed** (the patch says apply after them): D23's land-aware top class is still the proposal logged under
+  D22/M4.8 (the 'both' class stands in for it in §2 of spec 06); D24's resolution floor is a hook (`assessable` = every
+  eligible edge in D28's G22); D25 is not referenced by any implemented rule. **SUPERSEDED the same day:** D23–D25 landed
+  and were spliced (below); the stand-ins are gone — the top class in the example rule is D23's, and D28's assessable set is
+  D24's.
+- 2026-09-28 — **near-contiguous sub-classes (D25a) and area accounting (D25b).** Run002 classed 18 of 45 non-zero-cost
+  links near-contiguous under the D25 trigger. The count is correct: between two large facing areas the barrier-free
+  near-optimal set is a front spanning the facing perimeters, not an ellipse, so its median width exceeds the gap by a wide
+  margin. Two defects in D25 as written are fixed. (D25a) The barrier variant keyed on cost-1000 only; roads and cuts are
+  cost 10 in this surface, so a highway along the gap did not register. Sub-classes are now decided by the actual band's
+  width ratio (D17, assessable because the front is wide) and the maximum cost class on the least-cost path. (D25b)
+  Near-contiguous band area is reported separately from corridor area; the calibrated cutoff (D6) is **not** recalibrated.
+  Gate G23. Northern example slots N2–N3 re-checked against the pin rule. M4.11; R10. Applied from
+  `05_patch_D25a_near_contiguous.md` (a provisional build of the same rules preceded it the same day, M4.9 addendum).
+  Implementation note: the WIDTH floor (D24) precedes the trigger (G23 ordering); the LENGTH floor applies only off fronts —
+  a short gap between facing areas is the near-contiguous case itself.
+- 2026-09-28 — **short-link rules (D24, D25).** Raised by the wolverine refugia network (133 of 170 links one-branch at
+  half cutoff) but baked into the northern engine because the failure is geometric, not network-specific. (D24) the width
+  test (D17) is declared *not assessable* below a resolution floor in cells; such links are classed from the edge sense (D7)
+  alone and flagged in the tables. (D25) links whose least-cost path is shorter than their barrier-free width are a
+  **near-contiguous** class — no corridor to design unless a barrier intervenes — classed by the edge sense and the
+  barrier-crossing flag only. Precedence table (§6) extended to eleven rows. Gate on the floor's effect (G19). Both constants
+  pre-registered; tuning them to a class count is prohibited (§2). M4.9; R10. Applied from `05_patch_D24_D25_short_links.md`.
+  **Implementation note:** the counterfactual step (D17) now runs BEFORE the branch decomposition in notebook 04 (it measures
+  the barrier-free width that decides both rules); `route_branches` refuses to run without it.
+- 2026-09-28 — **land-aware top class (D23).** "Only viable connection" now requires all three: no alternative link (D7),
+  one route branch (D12), and band width below its barrier-free width (D17, ratio < `squeeze_ratio`). The route sense (D12)
+  is **redefined** to include the width condition, so a single wide branch is no longer called route-irreplaceable anywhere.
+  One threshold only: the existing `squeeze_ratio` (0.5). Full eight-cell precedence table added (§6). Adoption gated on the
+  run002 eight-cell count table (G18): **measured on run002 — only Gwillim Lake ↔ Pine Le Moray (0.41) sits in the
+  (E, B1, S) cell; Tatonduk ↔ Fishing Branch (1.00), Wilps Gwininitxw ↔ Swan Lake (0.96) and Wędzih Yiné' ↔ Chase (0.99) do
+  not, so the 06 example-regeneration rule FIRES and the change is a post-pin class change** (R10). Raised by the part-3
+  bridge case; adopted on the general argument (a leaf's only tree edge is its cheapest edge by the cut property, so the edge
+  flag measures isolation, not land; one wide lens is one branch, so the branch flag measures topology, not land). M4.8; R10.
+  Applied from `05_patch_D23_only_viable.md`.
+- 2026-09-28 — **D22: within-name part links COMPETE** (Ethan; supersedes D16's rule-4 default for every
+  `link_locked` name — Dene Kʼéh Kusān, Liard River Corridor, Nahanni, Nááts'ihch'oh → `link_competing`; Tombstone
+  stays `merge_parts`). Trigger: Dene Kʼéh Kusān's 80 km² third part read as orphaned on the deck maps while the
+  network held a locked, unclassified, unprioritised 695 km² band to it. Re-sign H7 → new run (`v2_run003`).
+  `calibrate_cutoff` keeps D16's "inter-name MST only" rule by dropping within-name part edges from the
+  calibration set. **D23 (PROPOSED, for the chat):** 'only viable connection' should require land scarcity, not
+  graph topology alone — edge-irreplaceable ∧ one branch ∧ D17 width ratio < θ (0.5 or 0.75); a leaf across intact
+  land would otherwise read as irreplaceable by construction. methods_log M4.8.
 - 2026-09-11 — **D21: Linkage Mapper–style adjacency graph computed as a diagnostic
   universe beside the backbone.** Cost-allocation neighbour graph on the part-level CWD
   fields, contracted to names; per-name degree (`n_neighbours`), adjacency status of every
@@ -121,6 +173,18 @@ grizzly work remains a separate unapproved plan.
 | D18 (DEFERRED — future comparison) | **External validation against Linkage Mapper.** v2's per-edge slack (`CWD_i + CWD_j − min_e`) is, term for term, Linkage Pathways' normalized least-cost corridor (McRae & Kavanagh 2011), and its calibrated band is the CWD-truncated corridor. Validate: run Linkage Pathways in ArcGIS Pro on `validation_pairs` (5 MST edges spanning short/long and open/constrained cases) with the identical O'Brien surface and node rasters; compare NLCC to our slack (Pearson r over the union of both corridors at matched cutoff; Jaccard of the truncated bands). Recorded as G14; performed once per resistance-surface hash. | Buys external credibility for the whole engine at the cost of an afternoon; the comparison is exact in principle, so disagreement is a bug, not a difference of opinion. Not a routing input; nothing changes in the pipeline on pass. |
 | D19 | **Centrality = current-flow betweenness** on the backbone graph (locked intra-name + inter-name MST + β augmentation), edge weights = corridor cost (`min_e`), nodes = names (parts contracted). Implemented via `networkx.current_flow_betweenness_centrality` / `edge_current_flow_betweenness_centrality`. **As implemented (2026-09-11, M5.18): the engine has used exactly this measure since the v2 rebuild** (`corridor_graph.centrality`, conductance = 1/cost, zero-cost cliques contracted), so nothing in `linkage_priority.tif` changes; D19 PINS the method via the `centrality` config key, ADDS the shortest-path edge betweenness as the comparison column `centrality_sp` beside `centrality_cf`, writes `centrality_compare.csv` and asserts G15. | Linkage Mapper's Centrality Mapper standard: cores as nodes, linkages as resistors weighted by corridor cost, current flow summed over all pairs. Credits all paths, not only the shortest, so it behaves on a sparse augmented graph where shortest-path betweenness is brittle to a single cheap backup. Zero-cost adjacency edges are contracted as before (§7). |
 | D20 (DEFERRED — future comparison) | **Pinch points sit beside D17, not instead of it.** Phase 6 diagnostic: a pairwise circuit solve (`i` source / `j` ground) run **inside each edge's band** on the O'Brien surface, giving within-band current density `pinch_e`. **Implemented natively**: graph Laplacian on band cells (8-neighbour, conductance = 1/mean resistance of the two cells, diagonal scaled by 1/√2), source cells fixed at unit potential and ground cells at zero, `scipy.sparse.linalg` solve, cell current = sum of |branch currents| / 2 — i.e. the Circuitscape pairwise formulation (McRae et al. 2008) without the Circuitscape runtime. Cross-checked against Circuitscape 5 on one band (G16). Per edge: `pinch_max_pctl`, `pinch_len_km` (contiguous run of cells ≥ p95 of within-band current), `pinch_loc` (fractional position along the path). Never a routing input; never a legend class in the director deck until the comparison in step 4e has been read. | Two different questions. D17 asks *is the near-optimal set geometrically narrower than it would be without barriers* (director-visible, map-legible). Pinch points ask *where within a corridor would area loss hurt most* (ops-package question, Linkage Mapper's Pinchpoint Mapper). They can disagree — a wide band with a single internal choke, or a uniformly narrow band with no choke — and the disagreement is itself informative. D3's rejection of current density applies to *routing on external circuit outputs*, not to a diagnostic run on our own bands with our own surface. Native implementation because Linkage Mapper's Pinchpoint tool still depends on Circuitscape 4 (unmaintained Python 2.7-era) and Circuitscape 5 is a Julia runtime — neither belongs as a hard dependency of a gated Python pipeline; bands are small enough that a sparse solve is seconds per edge. Circuitscape 5 is used once, for the cross-check only (H10). |
+| D12 (amended 2026-09-28) | **Route-irreplaceable** = `n_branches == 1` **and** `squeeze_ratio_obs < squeeze_ratio`. The branch decomposition itself is unchanged; only the flag's definition changes. `route_irreplaceable_topo` (the old one-branch-only flag) is retained as a column for continuity with run001/run002 tables. | A single branch across a wide lens has no distinct alternative swath but abundant alternative land; calling it irreplaceable was a topology statement mistaken for a scarcity statement. With width folded in, the flag means "one route, and that route is already constrained," which is what a reader takes "no alternative route" to mean. |
+| D23 | **Only viable connection** = edge-irreplaceable (D7) **and** route-irreplaceable as amended (D12: one branch and narrow). Equivalently: no alternative link, one branch, ratio < `squeeze_ratio`. No new constant. Precedence for every combination is fixed in §6 and is the single source for map classes, legend counts, and both alternatives tables (`classify_links` → `link_class`). | The two existing senses can both fire on the least constrained land in the sector (remote leaf, open ground). The counterfactual width (D17) is the only measure of movement-land scarcity in the pipeline, so it is the missing condition. Folding it into the route sense rather than adding a third clause keeps the two-sense framing in the reporting rules intact and makes the route flag meaningful on its own. |
+| D24 | **Width-test resolution floor.** The squeeze test (D17) and therefore the amended route flag (D12) are evaluated only when `open_ground_width_med ≥ width_floor_cells` **and** `lcp_len_cells ≥ len_floor_cells` (`open_ground_width_med` = the counterfactual band's median cross-section in cells, from the D28 profiles). Otherwise `width_not_assessable = True`, `squeezed = False`, `route_irreplaceable = False`, and the link is classed from the edge sense (D7) alone (§6). The unassessable count and the affected links are reported in `corridor_edges.csv` and in the run report. | A ratio of two small integers at 300 m is rasterisation noise: three cells against six is 0.5 with one cell of margin. Without a floor the "already narrowing" class fills with short links for numerical reasons. Declaring the test unassessable is honest; declaring such links narrowing or only-viable is not. |
+| D25 | **Near-contiguous link class.** A non-zero-cost edge with `lcp_len_cells < open_ground_width_med` (path shorter than the band's barrier-free width) is `near_contiguous`. It is not a corridor-design object: no branch decomposition, no width class. It is reported with the edge sense (D7) and `crosses_cost_1000` (a cost-1000 cell on the least-cost path; `path_max_cost` carries the barrier's class). Director class: **"adjacent — no corridor needed"** when no barrier intervenes; **"adjacent — barrier between"** when one does. Both are drawn as the link's band in a neutral hatch, never as one of the four corridor classes; counts appear in the legend. Zero-cost adjacency (§7) is unchanged and remains a separate, earlier rule. | When the gap between two areas is smaller than the natural width of the near-optimal set, the band is a blob, not a route; "branch" and "narrowing" describe nothing. The information that matters for such a pair is whether anything stands between them and whether the link is the only one. Nodes a few kilometres apart are the norm in refugia networks and occur in the north wherever proposals abut existing parks. |
+| D25a | **Near-contiguous sub-classes.** For every `near_contiguous` link (trigger: `lcp_len_cells < open_ground_width_med`, D25), compute `squeeze_ratio_obs` (D17) as usual — the counterfactual front satisfies the resolution floor (D24) by construction — and `lcp_max_cost` = maximum cost class on the least-cost path (1, 10, 100, 1000). Sub-class, first match wins: **adjacent — barrier between** if `lcp_max_cost ≥ 100`; **adjacent — front crossed by roads or cuts** if `lcp_max_cost == 10` **or** `squeeze_ratio_obs < squeeze_ratio`; **adjacent — open front** otherwise. Branch decomposition remains skipped (no route sense on a front). The edge sense (D7) is still reported. Per link the table (`near_contiguous_links.csv`) carries `gap_km` (= least-cost path length), `open_ground_width_med`, `squeeze_ratio_obs`, `lcp_max_cost`, and both areas' sizes. | Branches are meaningless on a front, but width is not: the ratio of the actual band to the barrier-free front says directly whether the frontage is intact or cut. Keying "barrier" on cost 1000 missed the case that matters most for abutting areas in this sector — a road along the gap — because roads are cost 10. The three sub-classes map onto three different asks: nothing to design; a crossing-structure question; a genuine separation. |
+| D25b | **Near-contiguous area is not corridor area.** `corridor_area_km2` in every table and caption excludes near-contiguous bands; `near_contiguous_area_km2` is its own line (with `intra_name_area_km2`, `augmentation_area_km2`, `total_band_area_km2` — per-edge band sums, in `corridor_summary.json`). The calibrated cutoff (D6) stays as calibrated over all tree edges on run002 and is **not** recomputed with near-contiguous links excluded. | Recalibrating would move every band in the sector and break comparability across run002/run003 and with v1. Reporting the front area separately is enough to stop the deck counting fronts as corridors. The area-calibration rule's dependence on fronts is noted as a known limitation for the derived-analysis calibration by detour distance (D31), which does not have this problem. |
+| D26 | **Relative branch-sliver floor.** A band component at `cutoff_branch` is kept as a branch if its area ≥ `branch_min_frac` × (the link's band area at `cutoff_branch`) **and** ≥ `branch_min_cells`. `branch_min_km2` is retired; `resolve()` raises if it appears. Dropped-component count and the largest dropped fraction are reported per link. | A fixed 10 km² is noise on a 200 km link and a real second route on a 30 km one, so branch counts were length-biased. On open ground the band is one ellipse, so any second component is a barrier signal and the floor should protect it, not swallow it at short lengths. |
+| D27 | **Locked intra-name links are class-ineligible until tested.** Every locked link (D16) carries `locked = True`. The alternative-link test (D7) is run for it against the full candidate set, including routes via other names; `edge_irreplaceable` is set only if that passes. Until run and passed, locked links are classed "corridor land with options" at most and never "last affordable link" or "only viable connection". The table shows `locked` and `alt_test_run`. | A locked link never competed in the tree, so an irreplaceability class on it is a management assertion presented as a finding. Running the test makes it a finding or removes the class. |
+| D28 | **Pinch-aware width column.** Alongside `squeeze_ratio_obs` (the D17 width ratio), report `width_ratio_p10` = tenth percentile of the per-position cross-section ratio (actual band ÷ counterfactual band, both allocated to their own least-cost path and binned to 50 fractional positions) and `pinch_pos` = fractional path position of the minimum. **Reported, not classed**; the squeezed class stays on the D17 ratio. Subject to the resolution floor (D24). | The median cannot see a single constriction, which is the ecologically important case (Pinto & Keitt's merge point). This is the geometric half of the deferred pinch-point comparison (D20), computed for free from the existing bands, so the circuit-based half has something to compare against when it runs. |
+| D29 | **Alternative-link cost decomposed.** For every edge, the cheapest alternative link used by the β test (D7) is reported as `alt_cost`, `alt_len_km` (least-cost path length), `alt_mean_res` (= `alt_cost` / cells), and `alt_kind` ∈ {far, hard, both} (or affordable / none): *far* if `alt_len_km / lcp_len_km ≥ β` with `alt_mean_res` within `alt_res_tol` × the edge's own; *hard* if the length ratio is below β but the cost ratio is not; *both* otherwise. | "Alternatives cost far more" conflates distance and resistance. In the north, where resistance is nearly uniform, edge-irreplaceability is mostly node spacing; the profile text needs to be able to say "isolated" rather than "walled in". Legend string unchanged; the distinction lives in the table and the one-pagers. |
+| D30 | **Fixed-break near-optimality tiers.** `near_opt_tiers` becomes fixed slack breaks in cost units: robust core ≤ `cwd_cutoff_abs`/6, frequent ≤ `cwd_cutoff_abs`/2, occasional ≤ `cwd_cutoff_abs` (the band); routable land beyond the band is a fourth class. Percentile tiers retired. Appendix product only (unchanged). | Percentiles of slack over the union band are area-weighted, and area is dominated by the long northern links, so the breaks were set by the north. Raw slack is comparable across links; fixed breaks keep it so. Fractions of the calibrated cutoff keep the tiers consistent across the cutoff sweep (axis B). |
+| D31 | **Cutoff stated as detour distance; calibration rule for derived analyses.** `run_config.json` and every caption that mentions the cutoff also carry `cutoff_detour_km` = `cwd_cutoff_abs` × cell size on cost-1 ground (13.6 units × 0.3 km ≈ 4.1 km on run002). The northern network keeps the v1 area calibration (D6) for comparability. **A derived analysis with no v1 target calibrates by detour distance**, choosing `cutoff_detour_km` and deriving the cost cutoff from it; it never calibrates by area or by class counts. | An area target is dominated by the long links and means nothing to a reader; "routes within about four kilometres of extra travel on open ground" does. It is also the only defensible way to set a cutoff where there is no prior area to match. |
 | D21 | **Adjacency graph as diagnostic universe.** `G_adj` = cost-weighted allocation adjacency: allocate every routable cell to the seed part with the minimum CWD (argmin over the cached part fields; ties → lowest part id); two parts are adjacent if their allocation zones share an 8-connected boundary; contract parts to names (and zero-cost cliques as in §7) to give the name-level graph. Optional LM-style filters are **off** (no distance cap; no intermediate-core drop) so the graph is the raw neighbour set — filters are reported as counts, not applied. Products: `adjacency_edges.csv` (i, j, `in_backbone`, `edge_class` if in the network, `min_e` cost, LCP length), `adjacency_nodes.csv` (`n_neighbours` per name; also per part), the `is_adjacent` column added to `corridor_edges.csv`, and one appendix figure (`adjacency_map`: thin neighbour links as lines — **not bands** — over the M1 basemap). **Not a routing input; no bands are computed for adjacency-only edges; no legend class.** | Linkage Pathways' network is the neighbour graph (McRae & Kavanagh 2011); ours is the minimum backbone plus affordable backups. Reporting both makes the relationship explicit: the difference is the choice space, which is the Act 1 quantity the current products cannot state — a name's number of possible partner links. Kept as a universe rather than adopted as the network because banding ~100 neighbour links destroys the must-have/optional distinction unless a weighted priority ranks them (the D5-rejected blend). Cost is trivial: the allocation is an argmin over fields already in memmaps. |
 
 ---
@@ -136,6 +200,22 @@ grizzly work remains a separate unapproved plan.
 | `carroll_ref` | `"routable_area"` | first pass: branch mean percentile vs routable-area percentile baseline. Matched random strips (Phase 6 method) deferred. |
 | `robust_core_freq` | `0.9` | unchanged (applies to `ensemble_attribution.tif`) |
 | `part_min_km2` | `25` | = node minimum; parts below this are area-only, not seeds (D16) |
+| `width_floor_cells` | `8` | D24; counterfactual median width (cells) below which the width test is unassessable |
+| `len_floor_cells` | `10` | D24; least-cost-path length (cells) below which the width test is unassessable |
+| `near_contiguous` | `{"rule": "lcp_len_cells < open_ground_width_med"}` | D25; no free parameter — the test is relative |
+| *(D23)* | — | `squeeze_ratio` = 0.5 is the ONLY width threshold; `resolve()` raises on any second width / ratio key (`only_viable_ratio`, `route_width_thresh`) |
+| `branch_min_frac` | `0.05` | D26; fraction of the link's band area at `cutoff_branch` |
+| `branch_min_cells` | `20` | D26; absolute noise floor (≈ 1.8 km² at 300 m) |
+| `branch_min_km2` | **retired** | D26; `resolve()` raises on presence |
+| `alt_res_tol` | `1.5` | D29; resistance ratio within which an alternative is "far", not "hard" |
+| `near_opt_tiers` | `{"robust_core": "cutoff/6", "frequent": "cutoff/2", "occasional": "cutoff"}` | D30; replaces the percentile spec |
+| `cutoff_detour_km` | derived, written by `resolve()` | D31; northern: derived from `cwd_cutoff_abs`; derived analyses: set, and `cwd_cutoff_abs` derived from it |
+
+**Tuning prohibition (D24).** The two floor constants are pre-registered here and recorded in `run_config.json` before the
+eight-cell table (G18) or the floor-effect report (G19) is read for the run in question. Changing either after reading a
+class count is a post-hoc calibration and is not permitted; a derived analysis may raise a floor (stricter) with a logged
+reason, never lower one. The near-contiguous rule has no constant by design. The prohibition extends to `branch_min_frac`,
+`branch_min_cells`, and `alt_res_tol` (D26 / D29).
 | `multisite_designations` | `["Ecological Reserve", "Wildlife Management Area", "National Wildlife Area", "Migratory Bird Sanctuary"]` | step 0a rule 2; extend from the reviewed list |
 | `multipart_link_km` | `10` | step 0a rule 2 exception distance |
 | intra-name treatment | per name, from reviewed `multipart_review.csv` (`merge_parts` / `link_locked` / `link_competing` / `no_link`) | `link_competing` uses the D7 β ceiling against the cheapest inter-name path between the parts; `no_link` parts are independent nodes in the inter-name graph |
@@ -286,6 +366,12 @@ step 0b when a run is re-attached.
 |---|---|---|
 | G9 | every branch component (pre node-subtraction) intersects both endpoint node masks | step 4b, hard assert |
 | G10 | `near_optimality == 0` exactly on every baseline least-cost path cell; tier classes monotone in slack | step 4a |
+| G18 (eight-cell adoption check) | On run002 (pinned) and on every later baseline: the count table over edge-irreplaceable × one-branch × narrow (8 cells) is written to `class_truth_table.csv` and reported before class rasters are drawn. Class counts on the map must equal the table's row sums under the §6 precedence (plus the unassessable links classed from the edge sense). **Adoption condition for run002:** the four links classed only-viable under the retired rule all sit in the (E, B1, S) cell — measured: they do NOT (1 of 4), so the 06 example-regeneration rule fires and the change is logged as a post-pin class change. `squeeze_ratio_obs` must be non-null for every non-zero-cost edge, or the gate fails. | step 4b (`classify_links`, after the branches), before any figure |
+| G19 (floor effect) | For every baseline: the histogram (p10/p50/p90) of `lcp_len_cells` and `open_ground_width_med` across non-zero-cost edges, the number of links `width_not_assessable`, the number `near_contiguous`, and — as a diagnostic only — how the class counts would differ with the floor halved and doubled (`floor_effect.csv`). Assert: every `near_contiguous` link has `n_branches` unset (decomposition skipped) and no corridor class; every `width_not_assessable` link has `squeezed == False`; the four-class counts in the legend equal the §6 row sums. If the halved/doubled floors move more than 10 % of links between classes, the report says so and the floor is discussed, **not changed**, for that run. | step 4b, with G18, before any figure |
+| G23 (front check) | Every near-contiguous link has `open_ground_width_med ≥ width_floor_cells` (if not, the D24 floor applies first and the link is `width_not_assessable`, not near-contiguous — the ordering is asserted); every near-contiguous link has a non-null `squeeze_ratio_obs` and `lcp_max_cost`; sub-class counts sum to the near-contiguous count; `corridor_area_km2 + near_contiguous_area_km2 + intra_name_area_km2 + augmentation_area_km2` reproduces the total band area (per-edge band sums). Report the 18-link table (run002) with the five per-link columns from D25a. | step 4b (`classify_links`), with G19 |
+| G20 (locked-link eligibility) | No link with `locked = True` carries `edge_irreplaceable = True` unless `alt_test_run = True`; every locked link with `alt_test_run = True` has a non-null `alt_cost` (unless no alternative exists). Class counts in the legend reflect this. | step 2 (inside `corridor_network`) |
+| G21 (branch floor effect) | Per baseline: distribution of dropped-component fraction; number of links whose `n_branches` changes between the retired fixed floor and the relative floor, listed (`n_branches_fixed_floor` column). Assert every kept branch satisfies both minima. | step 4b (inside `route_branches`; with G19 once it lands) |
+| G22 (tier and cutoff consistency) | `width_ratio_p10 ≤ squeeze_ratio_obs` for every assessable edge (5% tolerance: the p10 is a quantile of per-position ratios, `squeeze_ratio_obs` the area/length ratio); tier classes monotone in slack with breaks exactly at cutoff/6, cutoff/2, cutoff; `cutoff_detour_km` / cell size reproduces `cwd_cutoff_abs` to float tolerance. | step 4a (tiers, cutoff) + step 2b (width) |
 | G11 | per-branch `audit_area_check` discrepancy ≤ 5% for branches ≥ 50 km²; all discrepancies logged | step 4c |
 | G12 | ensemble member count = 1 baseline + 2 (B, excluding the 1× duplicate) + 42 (C) + 2 (D, excluding the 2.5 duplicate) = 47 distinct members; duplicates resolved by config-hash equality, not by name | step 3 |
 | G13 (restated 2026-09-08, final) | The counterfactual band bounds the real band in NEITHER direction — measured on v2_run002 it is narrower per km on some links for two legitimate reasons: relaxation SHORTENS a detouring route, or barriers on the real surface EQUALISE two routes into a near-tie (a braided, wide band: Liard↔Nahanni's two branches) that relaxation breaks, collapsing the band to one ribbon. The gate is therefore the one true relaxation invariant: `lcp_cf ≤ lcp_real` for every banded edge (lowering costs can never make the least-cost route costlier) — hard assert. Narrower-counterfactual links are reported with widths and lengths, never classed squeezed. The `squeezed` count is reported and, if it differs from the draft map's 5, the director package regenerates from the confirmed definition | notebook 04 step 2b, hard assert |
@@ -343,6 +429,56 @@ frequency is named so it cannot be read as one. D21 adds `allocation.tif`, `adja
   option count per area; it is a count of possible partner links, not of corridors.
 
 ---
+
+**Reporting rules added by the geometry-vs-ecology audit (D26–D31, 2026-09-28):**
+- Locked intra-name links (D27) are drawn with the class they earned after the alternative test, never the class they
+  would have had without it; the profile for any locked link says it was locked and tested.
+- Where an irreplaceable class appears in a profile, the text names the alternative's kind (D29): "the next link is far"
+  versus "the next link crosses hard ground"; on the northern network most will be *far*, and the deck says so once.
+- The cutoff is described in captions as detour distance (D31), with the cost-unit value in the methods note only.
+- Tier maps in the appendix carry the fixed breaks in the legend (D30), not percentiles.
+
+**Precedence (D23 / D24 / D25, 2026-09-28) — one row per combination, applied top-down, first match wins; this table replaces
+the implicit precedence in the "four classes are derived, disjoint" line and is the single source for map classes, legend
+counts and both alternatives tables (`classify_links` → `link_class`).** E = no alternative link within β (D7), B1 = one
+branch (D12 decomposition), S = width ratio < `squeeze_ratio` (D17).
+
+| condition | class (director string) | notes |
+|---|---|---|
+| zero-cost adjacency (§7) | *not a link on the map* | unchanged |
+| `near_contiguous` and `lcp_max_cost ≥ 100` | adjacent — barrier between | water, ice or settlement on the direct path (D25a) |
+| `near_contiguous` and (`lcp_max_cost == 10` or `squeeze_ratio_obs < squeeze_ratio`) | adjacent — front crossed by roads or cuts | the crossing-structure case |
+| `near_contiguous` | adjacent — open front | nothing to design |
+| `width_not_assessable` and E | last affordable link | edge sense only; table shows `width_not_assessable` |
+| `width_not_assessable` | corridor land with options | edge sense only |
+
+Then the eight-cell table for the remaining links:
+
+| E | B1 | S | class (director string) | route-irreplaceable (amended D12) | note |
+|---|---|---|---|---|---|
+| ✓ | ✓ | ✓ | only viable connection | ✓ | the top class; all three senses |
+| ✓ | ✓ | ✗ | last affordable link | ✗ | one wide branch — a leaf across intact land lands here |
+| ✓ | ✗ | ✓ | last affordable link | ✗ | alternatives within the band exist; land narrow — width shows in the table |
+| ✓ | ✗ | ✗ | last affordable link | ✗ | |
+| ✗ | ✓ | ✓ | already narrowing | ✓ | route-irreplaceable but a backup link exists; the flag shows in the table, not the map |
+| ✗ | ✗ | ✓ | already narrowing | ✗ | |
+| ✗ | ✓ | ✗ | corridor land with options | ✗ | one wide lens |
+| ✗ | ✗ | ✗ | corridor land with options | ✗ | |
+
+- The two irreplaceability senses are still reported together in the tables (edge flag, amended route flag, and the
+  retained topology-only route flag `route_irreplaceable_topo`) and never merged; the map shows the class, the tables show
+  the flags.
+- Corridor-area statements in the methods text and captions exclude near-contiguous bands and say so once (D25b).
+- The methods text explains the front mechanism in one sentence: between two large facing areas the barrier-free
+  near-optimal set spans the facing perimeters, so a short gap is classed adjacent rather than as a corridor.
+- The methods text states that three link classes are decided by geometry before any corridor class is assigned: touching
+  (zero-cost), near-contiguous, and too short for the width test. It gives the counts for each on the run in question. For a
+  derived analysis (wolverine) the same table and constants apply, and its report states how many links fell to each
+  geometric class.
+- Provenance line for the methods text: the top-class rule was changed on 2026-09-28 after the part-3 bridge case exposed
+  that neither existing sense measured land; adopted on the general argument and checked against the pinned run (G18) so it
+  was not tuned to the case.
+
 
 ## 7. Human tasks touched
 

@@ -1346,3 +1346,15 @@ as a grey box inside the frame.
 **M4.41 addendum (2026-09-28): `cluster_handle(colors=)`.** The cluster swatch legend entry may carry an explicit colour list in swatch
 order (`_ClusterSwatches` reads it before the palette); without it the entry draws `STYLE["cluster_colors"]` N → S exactly as before. Used by
 the northern package's route-options map, whose options take the palette in a permuted order.
+**M4.41 addendum (2026-09-28): the star grid and the consequences table take their rows from outside.** `director_plot.star_grid(profiles,
+path, title)` is the drawing half of `_stars` (which now calls it); `consequences_table(..., ref=None, col_label=None, group_label="Core
+clusters", source=None)` takes the reference rows, the column-header function, the spanner label and the source note from the caller
+(defaults = the y2y behaviour: C.TD7's reference rows, cluster_label, SOURCE_NOTE). `director_core.ValueRatios.of(mask1d, weights=None)`
+takes fractional cover weights (the northern 300 m masks on the 1 km grid) in place of a boolean mask; the denominator is unchanged.
+No y2y output changes. Consumer: the northern route options (northern methods_log M5.21).
+**M4.41 addendum (2026-09-28): inset label knobs.** `STYLE["inset_ipca_names"]` (default 3, was hard-coded) and `STYLE["inset_declutter"]`
+(default True) on `_draw_inset`; `director_core.label_areas_px(declutter=)`. No y2y output changes. Consumer: the northern insets, which name every node.
+**M4.41 addendum (2026-09-28): `STYLE["wide_legend_loc"]` / `["wide_legend_y"]`** place the wide layout's legend under inset B (defaults "center" /
+0.103 = the y2y position, unchanged); the northern package anchors the top edge at 0.165.
+**M4.41 addendum (2026-09-28): `STYLE["wide_legend_between"]`** (default False = unchanged): True centres the wide layout's legend between inset B's
+bottom edge and the ramp block's bottom, measured at draw time (the northern package).

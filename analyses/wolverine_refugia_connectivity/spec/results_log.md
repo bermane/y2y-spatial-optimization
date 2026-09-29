@@ -45,10 +45,24 @@ warp with the same snapping — notebook 01 re-measures on the engine's own grid
 | G3 / GW4 / G15 | pending |
 | G10 / G9 | pending |
 
-## R2. The variant surface [notebook 01, PENDING]
+## R2. The variant surface [build-time smoke of `cp.terrain_layers` → `calibrate_human_tau` → `derive_variant` 2026-09-28 — notebook 01 reproduces it]
 
-τ, confusion table, km² withheld per rule (Y2Y-wide / under core / by elevation band), class shares
-before → after, terrain kept at 1000 by a retained layer.
+- **R2.1 Layers on the routing grid** (buffered study area, 1,551,667 km² routable; cost 1000 = 208,132 km²):
+  elevation > 2,300 m 91,319 km² (96.1% of it is cost 1000 — the source rule confirmed) · slope > 30° 27,375 km² (69.1%
+  cost 1000: the 300 m slope proxy is looser than the source's) · RGI 7.0 glaciers 12,026 km² (81.7% cost 1000 — the
+  glacier rule confirmed) · HydroLAKES ≥ 10 ha 17,539 km² (85.1%) · HydroRIVERS > 28 m³/s 4,418 km² (81.6%) · ocean 0 (the
+  cutline holds no sea). Cost 1000 explained by no natural layer (= the human layers): 83,508 km² (40.1%).
+- **R2.2 Human proxy.** τ = 0.130 on the 90 m gHM maximum (balanced accuracy 0.633; TPR 0.43, TNR 0.84; TP 35,857 / FN
+  47,651 / FP 220,036 / TN 1,123,499 km²). A weak proxy for the human layers in general, but immaterial to the variant:
+  terrain cells coincident with a retained layer total only **2,831 km²** (kept at 1000), and the variant never raises a cost.
+- **R2.3 The variant.** **104,604 km² withheld**: elevation 85,435 km² (41.0% of cost 1000), slope 18,427 (8.8%), glacier
+  9,820 (4.7%); by elevation band < 1,500 m 4,960 · 1,500–2,000 9,216 · 2,000–2,300 4,992 · 2,300–2,500 36,700 · > 2,500
+  48,735 km². Cost 1000 208,132 → 103,529 km²; class shares 74.6 / 10.0 / 2.0 / 13.4 % → 81.4 / 10.0 / 2.0 / 6.7 %.
+  GW2 passed (only cost-1000 cells changed, none raised, classes ⊆ {1, 10, 100, 1000}, grid identical); G2 on the variant
+  passed.
+- **R2.4 Under core refugia** (318,822 km²): cost 1000 90,538 km² (28.4%) → **67,361 km² withheld (74.4% of it)**; 7.3% of
+  core stays cost 1000 (lakes, rivers, human proxy and cost-1000 cells no natural layer explains).
+- **R2.5 Cost.** terrain layers 32 s (HydroLAKES read over the Y2Y box), τ < 1 s, derivation 2 s; peak RSS 3.8 GB.
 
 ## R3. Nodes [build-time smoke of `cc.node_patches` 2026-09-28 — notebook 01 reproduces it]
 
@@ -56,22 +70,53 @@ before → after, terrain kept at 1000 by a retained layer.
   Ladder: ≥ 250 km² 130 patches (88.8% of core area) · **≥ 500 → 67 (81.7%)** · ≥ 1,000 → 36 (75.0%).
   **67 nodes**, node land 260,613 km², largest 78,454 km², smallest 501 km². (The build-time scratch grid
   gave 66: one patch sits at the floor and crossed it with the engine's snapping.)
-- **R3.2** Naming (W9): 34 nodes named by PA overlap ≥ 10%, 33 by nearest PA + bearing. Several northern
+- **R3.1a (SUPERSEDES R3.1's node count; floor 500 → 250 km², Ethan 2026-09-28 after check stop 1):** ladder on the engine
+  grid ≥ 100 km² 239 patches (94.2% of core) · **≥ 250 → 130 (88.8%)** · ≥ 500 → 67 (81.7%) · ≥ 1,000 → 36 (75.0%). **130 nodes**,
+  node land 282,996 km² (43.5% of it inside existing PAs or proposed IPCAs), largest 78,454 km², smallest 254 km². Sub-floor
+  patches of 50–500 km² (measured before the change): 286 holding 47,608 km² (14.9% of core), median 6.9 km from the nearest
+  ≥ 500 km² node; within 5 km 120 patches / 7.0% of core. Compute at 250 km²: CWD ≈ 4.3 h at ~2 min per node, cache ≈ 9 GB
+  compact, masks ≈ 6 GB.
+- **R3.2** Naming (W9): at the 250 km² floor 51 nodes are named by PA overlap ≥ 10% and 79 by nearest PA + bearing (at 500 km²: 34 / 33). Several northern
   patches share a nearest PA (six "Nááts'Ihch'Oh …" variants, five "Nahanni …"); labels stay unique
   through the R-code, and `node_names.csv` is where Ethan renames. `node_patches` ran in 6 s at a
   5.2 GB peak RSS.
 
-## R4. Baseline network [notebook 02, PENDING]
+## R4. Baseline network [v2_run001, Ethan 2026-09-28; the withheld-terrain surface, 130 nodes, inherited cutoff 13.6229]
 
-MST-only new land at the inherited cutoff (the north's R4 analogue: 18,150 km² on 41 edges); edges
-(MST / backup / adjacency); irreplaceable links (D7); corridor km²; network groups; priority tiers km²;
-W11: links already connected within existing PAs / only with the proposed IPCAs; corridor land inside PAs,
-inside IPCAs, unprotected (km²).
+- **R4.1 Network:** 170 links = 129 minimum-network (MST) + 41 affordable backups (β = 2.5); no adjacency edges; ONE
+  connected group. **47 links with no affordable alternative (D7 irreplaceable).**
+- **R4.2 Corridor land:** 52,572 km² of new land (nodes excluded); **33,907 km² outside PAs and proposed IPCAs** (36% of
+  corridor land already lies inside protected land). W11: **26 links already connected within existing PAs, 23 more only
+  once the proposed IPCAs are realized** (centre-line ≥ 0.95 inside nodes + protected land).
+- (MST-only area at the inherited cutoff, priority tiers, per-class counts: read from the run's `corridor_summary.json` /
+  `criticality.csv` for the write-up.)
 
-## R5. Products [notebook 03, PENDING]
+## R5. Products [v2_run001, notebook 03, Ethan 2026-09-28]
 
-Near-optimality tiers km²; route branches; route-irreplaceable edges.
+- **R5.1 Route branches (D12, the pre-amendment topology-only flag; SUPERSEDED by R5.3 on the re-run):** 133 of the 170 links had
+  one branch at 0.5× cutoff under the retired fixed 10 km² floor. Near-optimality surface written (G10 passed in the notebook).
+  (Under D12 as amended, one branch alone is not route-irreplaceable — the width condition must hold — and the branch floor is
+  relative, so this count is a topology statement, kept for continuity as `route_irreplaceable_topo`.)
+- **R5.2 The counterfactual width (D17; notebook 03 re-run, Ethan 2026-09-28; read off the run record):** constants pinned into
+  `run_config.json` before any count was read (`width_floor_cells` 8, `len_floor_cells` 10, `branch_min_frac` 0.05, `branch_min_cells` 20,
+  tiers cutoff/6, /2, /1; `cutoff_detour_km` 4.087). **130 of the 170 links are NEAR-CONTIGUOUS (D25) — none with a cost-1000 barrier on
+  the path**; 0 links width-not-assessable (D24). Near-contiguous links: least-cost path 3–68 cells (0.9–20.4 km, median 12.5 cells = 3.8 km)
+  against a barrier-free median band width of 14–511 cells (median 64.5). The 40 corridor links: path 26–562 cells (7.8–169 km, median
+  169 cells = 51 km), width 24.5–156 cells (median 66). Reading: with a median node spacing of 2.6 km, most links join patches closer than
+  the band is wide — on open ground the counterfactual band between two patches is wider than the path whenever the path is shorter than
+  roughly twice the 4.1 km detour allowance (more when the patches present wide fronts), so D25 absorbs 76% of the links by construction of
+  the network, not by any barrier. Floor effect (G19): halved / doubled floors move ZERO links. (Runtime and cache size of the compact
+  counterfactual set: Ethan's notebook output — not recorded here.)
+- **R5.3 Link classes (D23; `class_truth_table.csv`, same run):** eight-cell table over the 40 corridor links — E·B1·¬S 3 → last affordable;
+  E·¬B1·S 1 → last affordable; ¬E·B1·S 13 → narrowing; ¬E·B1·¬S 20 → options; ¬E·¬B1·S 2 → narrowing; ¬E·¬B1·¬S 1 → options; **E·B1·S = 0
+  → NO link in the top class "only viable connection"**. Counts: only viable 0 · last affordable 4 · already narrowing 15 · options 21 ·
+  adjacent (no corridor needed) 130 · adjacent (barrier between) 0. Route branches under the relative floor: 44 (170 links; R5.1's
+  topology-only count of 133 route-irreplaceable is superseded — 33 of the 40 corridor links have one branch, 14 of those also narrow).
+  Package consequence: the examples fill from "last affordable" (4 links) by p10 width, 3 examples across the acts. `alt_kind` shares,
+  G21 moved-links list and G22: in the notebook output (04's numbers cell prints them).
 
 ## R6. Director package [notebooks 04/05, PENDING]
 
-Class counts (both / edge / securing; squeezed withheld), examples per act, QA checklist result.
+Class counts per legend = R5.3 (0 / 4 / 15 / 21 + 130 adjacent); examples per act under the class-and-width-first rule (3, all from
+"last affordable" — the top class is empty); tables T0/T3/T2/T4/T1 + GIS written by the slimmed 04; 05's five outputs (PENDING Ethan).
+

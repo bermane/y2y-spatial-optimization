@@ -329,3 +329,19 @@ backups = 0 → the D7 follow-up resolves to documentation: "backups are, empiri
 links"); adjacency-only links 37; LM would-remove counts: through-core 8, beyond 200 km 0; G17 OK.
 `n_neighbours`: median 4, max 15 (Dene Kʼéh Kusān; Peel Watershed 8, Wədzih Yiné' 8, Tū Łī́dlini 7,
 Omineca 7).
+
+- **R10 (placeholder, 2026-09-28) — D22 re-run `v2_run003` (within-name part links compete):** units 42 → 48 (Dene
+  Kʼéh Kusān 3 parts, Liard River Corridor 3, Nahanni 2, Nááts'ihch'oh 2), cutoff re-calibrated on the inter-name MST only,
+  the classification of the former locked links (esp. Dene part 2 ↔ part 3, expected 'securing'), the network / class
+  counts vs run002, the D17 squeezed set, and the E-numbering of the pinned examples — to be measured when Ethan runs
+  02 → 04 → 05 → 06 → 07 on the re-signed review.
+  Plus the D26–D31 audit's measurements (M4.10): G21's dropped-fraction distribution and the links whose branch count moves
+  under the relative floor; the alt_kind tally (far / hard / both) over the tested bridges; width_ratio_p10 and pinch_pos per
+  edge (the narrowest pinches); the fixed-break tier areas (cutoff/6, /2, band, beyond); cutoff_detour_km; the
+  `propose_examples` ranking vs the pinned EXAMPLE_PICKS.
+  **Measured on run002 in advance (2026-09-28, zero-solve read of corridor_edges.csv):** the D23 eight-cell table over the 45
+  non-zero-cost links (E × B1 × S): (E,B1,S) 1, (E,B1,¬S) 3, (E,¬B1,¬S) 3, (¬E,B1,S) 7, (¬E,B1,¬S) 24, (¬E,¬B1,¬S) 7 (8 links had
+  no ratio under the retired 2 km floor). The four links only-viable under the retired rule: Gwillim ↔ Pine Le Moray 0.41 (stays
+  only-viable), Tatonduk ↔ Fishing Branch 1.00 / Wilps Gwininitxw ↔ Swan Lake 0.96 / Wędzih Yiné' ↔ Chase 0.99 (→ last
+  affordable link) — G18's adoption condition FAILS, the 06 regeneration rule fires. D24/D25 approximate read (area/length
+  width for the cf median): 0 links below the 8-cell width floor, 8 below the 10-cell length floor, ~11 near-contiguous.

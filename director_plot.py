@@ -457,12 +457,15 @@ STYLE = dict(
     conseq_reference="named",  # reference columns: "named" = dc.CONSEQ_REFERENCE_AREAS (Banff National Park, Dene Kʼéh Kusān; Ethan 2026-09-23) or "aggregate" = all PAs + the IPCAs' unprotected part
     legend_fs=13,              # map legends (bigger, outside the region)
     wide_legend_fs=16,         # the wide Act 1 maps: legend under inset B
+    wide_legend_loc="center", wide_legend_y=0.103,   # where the legend box sits under inset B: its `loc` point at (B's centre x, this y)
+    wide_legend_between=False,                       # True (the northern package, Ethan 2026-09-28): ignore the two above and centre the box between inset B's bottom
+                                                     # edge and the bottom of the ramp block under A, measured at draw time; a box taller than the gap hangs from B
     lat53=False,               # the 53°N graticule line on maps
     titles=True,               # figure / table titles (21 sets False: the slide carries the title)
     export_dpi=200, panel_export_scale=2,   # PNG resolution (21 sets 300: 13.33 in wide -> 4,000 px, a 4K slide); locator panels at 2x their nominal px
     export_pdf=False,          # also write a .pdf twin beside each wide-layout PNG (the northern package sets True: its §3a export rule)
     map_layout="wide",         # Act 1 maps: "wide" = slide-shaped with two zoom insets (clusters 1 and 2) | "tall" = the map alone
-    inset_clusters=(1, 2), inset_pad_km=45, inset_min_km=320, inset_pa_names=5, inset_fs=11.5, inset_number_fs=18, inset_abbrev=True, inset_abbrev_fs=15,
+    inset_clusters=(1, 2), inset_pad_km=45, inset_min_km=320, inset_pa_names=5, inset_ipca_names=3, inset_declutter=True, inset_fs=11.5, inset_number_fs=18, inset_abbrev=True, inset_abbrev_fs=15,   # inset_ipca_names / inset_declutter: knobs since 2026-09-28 (the y2y values unchanged)
     wide_main_names="abbrev", wide_main_name_fs=15, wide_main_towns=(),      # the Y2Y-wide panel of the wide layout: postal codes only, big
     main_skip_codes=("CA",),  # jurisdictions never labelled on the Y2Y-wide frame (California is a sliver)
     pa_layer_min_km2=300, window_scale_km=100,                            # named-PA floor for insets/locators (read at load); the scale bar on a WINDOWED frame
@@ -512,13 +515,20 @@ def core_map_hex250(C, path, title=None, with_ipca_on_a=True):
     fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches="tight"); plt.show()
 
 
-def _stars(C, rows, color, path, title):
+def star_grid(profiles, path, title):
+    """THE star-grid asset for a list of profiles (dict(title=, values={axis: v}, color=)) with the STYLE knobs and the spec type;
+    _stars builds the profiles from T-D1 rows, the northern package's route options build theirs (corridors_director.option_stars,
+    2026-09-28) -- one drawing function either way."""
     with plt.rc_context(SPEC_RC):
-        dc.plot_star_grid(C.star_rows(rows, color), path, title if STYLE["star_title"] else None,
+        dc.plot_star_grid(profiles, path, title if STYLE["star_title"] else None,
                           fs_axis=STYLE["star_fs_axis"], fs_title=STYLE["star_fs_title"], fs_tick=STYLE["star_fs_tick"],
                           fs_suptitle=STYLE["star_fs_suptitle"], lw=STYLE["star_lw"], footnote=STYLE["star_footnote"], tight=STYLE["star_tight"],
                           label_pad=STYLE["star_label_pad"], dpi=STYLE["export_dpi"], labels=AXIS_DISPLAY)
         plt.show()
+
+
+def _stars(C, rows, color, path, title):
+    star_grid(C.star_rows(rows, color), path, title)
 
 
 def cluster_locators(C, path, act="Act 1", layer="act1", panel_px=None):
@@ -927,24 +937,29 @@ SPEC_RC = {"font.family": TABLE_FONT, "font.weight": 400, "text.color": TABLE["c
            "ytick.color": TABLE["cap"], "legend.labelcolor": TABLE["cap"], "axes.edgecolor": TABLE["cap"]}
 
 
-def consequences_table(C, rows, path, label, title):
-    """The consequences table to the spec, TRANSPOSED: one row per measure (area, mean F, the six value ratios), one column
+def consequences_table(C, rows, path, label, title, ref=None, col_label=None, group_label="Core clusters", source=None):
+    """The consequences table to the spec, TRANSPOSED: one row per measure (area, the value ratios), one column
     per cluster, then the reference columns (named example areas -- Banff National Park, Dene Kʼéh Kusān -- or, by STYLE, the two
     aggregates: existing protected areas; the proposed IPCAs' unprotected part). Ratio rows
-    are tinted red → green across the row (STYLE['conseq_*']); clusters group by leading scenario where they differ."""
-    want = "reference" if STYLE.get("conseq_reference", "named") == "named" else "reference_aggregate"   # named example areas (Ethan 2026-09-23) or the two aggregates
-    ref = C.TD7[C.TD7.act.eq(want)]
-    if not len(ref):                                                                 # a package from before the named rows: whatever is filed as reference
-        ref = C.TD7[C.TD7.act.eq("reference")]
+    are tinted red → green across the row (STYLE['conseq_*']); clusters group by leading scenario where they differ.
+    `ref` = the reference rows (name, area_km2, ratio_<axis>) from outside instead of C.TD7; `col_label(r, wrap=)` = the column
+    header per row instead of cluster_label; `group_label` = the spanner over the non-reference columns; `source` = the source
+    note (default SOURCE_NOTE) -- the northern package's route options use all four (corridors_director.option_consequences)."""
+    if ref is None:
+        want = "reference" if STYLE.get("conseq_reference", "named") == "named" else "reference_aggregate"   # named example areas (Ethan 2026-09-23) or the two aggregates
+        ref = C.TD7[C.TD7.act.eq(want)]
+        if not len(ref):                                                             # a package from before the named rows: whatever is filed as reference
+            ref = C.TD7[C.TD7.act.eq("reference")]
     body = pd.concat([rows, ref], ignore_index=True)
     nclu = len(rows)
-    cols = [cluster_label(r, wrap=18) for r in rows.itertuples()] + [REF_LABELS.get(str(nm), textwrap.fill(str(nm).replace(" (unprotected part)", "\n(unprotected part)"), 20)) for nm in ref.name]
+    lab_fn = col_label or cluster_label
+    cols = [lab_fn(r, wrap=18) for r in rows.itertuples()] + [REF_LABELS.get(str(nm), textwrap.fill(str(nm).replace(" (unprotected part)", "\n(unprotected part)"), 20)) for nm in ref.name]
     if "driving_label" in rows and rows.driving_label.nunique() > 1:
         groups, j0 = [], 0
         for k, (lab, grp) in enumerate(rows.groupby("driving_label", sort=False)):
             groups.append((lab, j0, j0 + len(grp) - 1)); j0 += len(grp)
     else:
-        groups = [("Core clusters", 0, nclu - 1)]
+        groups = [(group_label, 0, nclu - 1)]
     groups.append(("Reference", nclu, nclu + len(ref) - 1))
     cap = lambda a: (lambda w: w[0].upper() + w[1:])(axis_label(a))
     stub = ["Area (km²)"] + [cap(a) for a in dc.STAR_AXES]
@@ -989,7 +1004,7 @@ def consequences_table(C, rows, path, label, title):
                                    "classes present per cell; naturalness = 1 − human modification. "
                                    + (("Colour runs red → blue across each row from its lowest value to its highest" + (" over the cluster columns" if not all_cols else "") + "; a row whose values all round to the same figure is left neutral.") if STYLE.get("conseq_mode", "row") == "row"
                                       else "Colour runs across each row with 1.0× as the hinge and each side scaled to the row's own extreme.")),
-                          ("Source", SOURCE_NOTE)])
+                          ("Source", source or SOURCE_NOTE)])
 
 
 def values_table_spec(C, path, title="Y2Y Objectives Hierarchy", rows=None, metrics=None, label=None, units=None):
@@ -1077,9 +1092,10 @@ def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None
     if STYLE["inset_abbrev"]:                                     # jurisdiction codes first; the area names keep clear of them
         taken = dc.label_jurisdictions_window(ax, C.G, C.BM, win, fs=STYLE["inset_abbrev_fs"] * (fs / 11.5), **(codes or {}))
     pan = C.PAN[~C.PAN["PA_Name"].isin(skip_areas)] if len(skip_areas) else C.PAN     # per-window name skips (a label the window edge would clip)
-    taken = dc.label_areas_px(ax, C.G, pan, "PA_Name", win, top_n=STYLE["inset_pa_names"], color="0.25", fs=fs, taken=taken)
+    dcl = STYLE.get("inset_declutter", True)                                                   # False = every name (the northern insets, 2026-09-28)
+    taken = dc.label_areas_px(ax, C.G, pan, "PA_Name", win, top_n=STYLE["inset_pa_names"], color="0.25", fs=fs, taken=taken, declutter=dcl)
     if with_ipca_names:
-        dc.label_areas_px(ax, C.G, C.IP.gdf, "name", win, top_n=3, color="#a04a00", fs=fs, taken=taken)
+        dc.label_areas_px(ax, C.G, C.IP.gdf, "name", win, top_n=STYLE.get("inset_ipca_names", 3), color="#a04a00", fs=fs, taken=taken, declutter=dcl)
     ax.set_xlim(px0, px1); ax.set_ylim(pyb, pyt); ax.set_aspect("equal")
     ax.set_xticks([]); ax.set_yticks([])
     for sp in ax.spines.values():
@@ -1134,9 +1150,15 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
         cax_rect = [0.27 + 0.015, 0.12, 0.335 - 0.03, 0.04]                                     # inset A's full width; bar + ticks + caption centred in the strip below it
         cax = fig.add_axes(cax_rect)
         _wide_ramp(cax, S_, cbar_label, end_words=(STYLE.get("ramp_end_labels") if surface is None else S_.get("end_words")))
-        fig.legend(handles=handles, loc="center", bbox_to_anchor=(0.635 + 0.335 / 2, 0.103), fontsize=STYLE["wide_legend_fs"],
-                   frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.6, handleheight=1.3, borderpad=0.7, labelspacing=0.6,
-                   handler_map=cluster_handler_map(*handles))   # centred under inset B; the cluster entry = four colour swatches
+        leg = fig.legend(handles=handles, loc=STYLE.get("wide_legend_loc", "center"), bbox_to_anchor=(0.635 + 0.335 / 2, STYLE.get("wide_legend_y", 0.103)), fontsize=STYLE["wide_legend_fs"],
+                         frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.6, handleheight=1.3, borderpad=0.7, labelspacing=0.6,
+                         handler_map=cluster_handler_map(*handles))   # centred under inset B; the cluster entry = four colour swatches
+        if STYLE.get("wide_legend_between", False):                      # the northern package (Ethan 2026-09-28): centre the box between inset B's bottom edge and
+            r = fig.canvas.get_renderer(); inv = fig.transFigure.inverted()   # the bottom of the ramp block under A (= the page bottom once the figure is trimmed)
+            top = rects[-1][1]; bottom = cax.get_tightbbox(r).transformed(inv).y0
+            h = leg.get_window_extent(r).transformed(inv).height; pad = 0.012
+            y_leg = min(0.5 * (top + bottom), top - pad - h / 2)       # centred in the gap; a legend taller than the gap hangs from B's bottom edge instead
+            leg.set_loc("center"); leg.set_bbox_to_anchor((0.635 + 0.335 / 2, y_leg), transform=fig.transFigure)
         if STYLE["titles"]:
             fig.suptitle(title, fontsize=STYLE["map_suptitle_fs"], y=0.995, color=TABLE["ink"], fontweight=600)
         cap = fig.text(0.27, 0.955, (caption or "") if (STYLE.get("frames_caption", False) or not keep) else "", fontsize=STYLE["frames_caption_fs"],

@@ -484,15 +484,15 @@ waits on them). NA RULE (Ethan 2026-09-16): `n_groups` NA stays NA — the file 
 
 Least-cost corridors connecting **wolverine climate refugia across the whole Y2Y** with the northern
 connectivity methodology and engine (D1–D19 as configured for `north`; `config.CORRIDORS["wolverine"]`).
-**Spec = `spec/wolverine_refugia_connectivity_spec.md` v1.0 (decisions W1–W10, Ethan 2026-09-28) + the
-package spec `spec/06_wolverine_director_package_spec.md`; BINDING living logs `spec/methods_log.md` +
+**Spec = `spec/wolverine_refugia_connectivity_spec.md` v1.1 (decisions W1–W12, Ethan 2026-09-28) + the
+package spec `spec/06_wolverine_director_package_spec.md` v1.1; BINDING living logs `spec/methods_log.md` +
 `spec/results_log.md` (same-session rule).** Scope = RESULTS FIRST: maps + results only; sensitivities
-(as-published / glacier comparison runs, the ensemble), D17 squeeze and every audit are PARKED (spec §7).
+(as-published / glacier comparison runs, the ensemble) and every audit are PARKED (spec §7); D17 is REQUIRED since v1.1.
 - **Input** `input_data/wolverine_refugia/baseline_wolverine_climate_refugia.tif` (EPSG:4326 ~250 m; values
   2|12 core, 1|11 marginal, 0|10 none; the +10 = a MODEL SEAM at ~53.97 °N — one layer, disclosed; classes 0 and 10 are
   simply not refugia, never labelled; citation deferred). NOT a prioritizr feature — never enters DATASETS / aligned_stack.
-- **Nodes (W2/W9)** = 8-connected core patches ≥ 500 km² on the Y2Y-wide 300 m grid (67 on the engine grid; 82% of 318,822 km²
-  core), numbered north → south, auto-named from PAs (`node_names.csv` overrides, sha-pinned; GW3). PAs are
+- **Nodes (W2/W9)** = 8-connected core patches ≥ 250 km² on the Y2Y-wide 300 m grid (130; 88.8% of 318,822 km² core;
+  lowered from 500 km² / 67 nodes by Ethan 2026-09-28 after check stop 1), numbered north → south, auto-named from PAs (`node_names.csv` overrides, sha-pinned; GW3). PAs are
   CONTEXT only, never nodes. `cc.node_patches` = the step-0a analogue (no H7; `require_review=False`).
 - **Resistance (W1)** = the published surface with the source's three GENERIC-FAUNA TERRAIN RULES WITHHELD
   EQUALLY (Pither et al. 2023 S1 Table, retrieved 2026-09-28: cost 1000 = built-up, lights, mining, oil & gas,
@@ -502,7 +502,21 @@ package spec `spec/06_wolverine_director_package_spec.md`; BINDING living logs `
   withheld; HydroLAKES / HydroRIVERS / ocean / gHM-90 ≥ τ (calibrated) retained. Measured: 28.4% of core
   refugia is cost 1000 vs 13.8% Y2Y-wide; elevation + slope = 71% of it under core. Needs RGI 7.0 +
   HydroSHEDS dropped into `input_data/` (`data/acquire.py`).
-- **Band cutoff (W5)** INHERITED from north/v2_run002 (13.6229; never re-calibrated). β/tiers/branches verbatim.
+- **Band cutoff (W5)** INHERITED from north/v2_run002 (13.6229 = `cutoff_detour_km` 4.087 km, D31: a per-link detour allowance, the
+  corridor AREA is an outcome — 52,572 km² Y2Y-wide vs the north's 18,150; never re-calibrated). β/tiers/branches verbatim (D30 fixed
+  breaks, D26 relative branch floor).
+- **LINK CLASSES MIRRORED FROM THE NORTH (spec v1.1 / W12, 2026-09-28; BUILT, Ethan re-runs 03 → 04 → 05 on `v2_run001`):** D23 land-
+  aware top class (no alternative AND one branch AND narrow; D12 amended), D24 width floor (8/10 cells), D25 near-contiguous (drawn
+  hatched grey under the classes, never examples), D26/D28/D29/D30/D31; D27 vacuous (no locked links). **D17 is therefore REQUIRED,
+  not parked:** 03 now runs `counterfactual_squeeze` BEFORE `route_branches` (second CWD set, compact + band-store-tagged, M5.6, ~8 GB
+  ~the 02 CWD runtime) → `classify_links` (G18 `class_truth_table.csv`, G19 `floor_effect.csv`). The engine pins the new constants
+  into run001's record on re-attach (tuning prohibition), so 01/02 stand. Package: `P.classified` (04 asserts it), class-and-width-
+  first examples, Geometry / Alternative-kind / p10-width table columns, detour-distance captions. R5.1 (133 route-irreplaceable) =
+  the topology-only count, SUPERSEDED. **03 RE-RAN (Ethan 2026-09-28, R5.2/R5.3 measured): 130 of 170 links are NEAR-CONTIGUOUS (D25,
+  no barrier — median node spacing 2.6 km vs a ~4 km detour band: the rule absorbs 76% of links by network construction); the 40 corridor
+  links class as only viable 0 / last affordable 4 / narrowing 15 / options 21; floors halved/doubled move zero links; examples fill from
+  'last affordable' (3). Flagged for the spec chat, nothing tuned. REPORT-BACK = `spec/link_classes_reportback.md` (Q1–Q5: D25 at this density, the empty
+  top class, the acts, drawing 27,000 km² of near-contiguous bands, a wolverine detour allowance).**
 - **Protected land (W11, Ethan 2026-09-28)** = all existing PAs + the 32 proposed IPCAs/PAs, a STATUS layer (never
   resistance, never nodes): `cc.secured_status` flags links whose least-cost line is ≥ 0.95 inside nodes + protected
   land as already connected — `secured_by` = pa (existing PAs alone) / ipca (only once the IPCAs are realized) —
@@ -515,12 +529,19 @@ package spec `spec/06_wolverine_director_package_spec.md`; BINDING living logs `
   seconds) + early-stop tracebacks (`find_costs(ends=[target])`) — toy-verified + GW4 in 02.
 - **Package** = `wolverine_director.py` on the §3a contract (`corridors_mapstyle` gained TALL, refugia/node
   tokens, windowed Y2Y hillshade, `place_labels`, `locator(window)`): W0 refugia+nodes, W0b cost, W0c what was
-  withheld, W1 corridor pressure, W2–W4 act crops (auto examples per act, N→S), T0–T2, GIS, QA. 04 = record,
-  05 = curated (`director_outputs/`). Knobs in `wd.STYLE`; label hand-placements `wd.FULL_SPEC`/`ACT_SPEC`.
+  withheld, W1 corridor pressure, W2–W4 act crops (auto examples per act, N→S), T0–T4, GIS, QA. **04 = `tables_and_figures` (the record — SLIMMED 2026-09-28 (Ethan): link-class record + T0/T3/T2/T4/T1 CSVs + GIS + results-log
+  numbers, minutes; the W0–W4 contract figures and engine record maps are on-demand functions only, never rendered by default; 05 does NOT
+  depend on 04), 05 =
+  `director_outputs` (the curated few) — the northern 06/07 split of 2026-09-28: 05 draws the SAME five outputs as the
+  northern 07 (01 movement cost, 02 where the land still offers choices, 03 route options in the y2y cluster palette, 04 option
+  stars + 04b locators, 05 consequences table) through `director_plot.wide_map` / `star_grid` / `consequences_table` from
+  `wd.director_frame` (600 m frame, PAs grey, nodes as the overlay, IPCAs a fill over corridor land); route options = the
+  auto examples (max 4, pinnable via `wd.EXAMPLE_PICKS`), references Banff NP + Dene Kʼéh Kusān (`wd.CONSEQ_REFERENCE`).** Knobs in `wd.STYLE`
+  / `wd.WIDE_STYLE`; label hand-placements `wd.FULL_SPEC`/`ACT_SPEC`.
 - **RUN = ETHAN, numeric order:** 01 (warps G2/GW1 → `node_patches` → **CHECK STOP 1** → acquisition →
   terrain layers → τ → `derive_variant` GW2 → **CHECK STOP 2** → timing probe) → 02 (run on the VARIANT only;
-  G0, CWD ~2–3 h, inherited cutoff, network G3, GW4, G15, priority, write_run) → 03 (near-opt G10, branches G9,
-  finish) → 04 → 05. ~4–6 h of compute. Never headless-solve; zero-solve smokes tolerated (01 section A was
+  G0, CWD ~2–3 h, inherited cutoff, network G3, GW4, G15, W11 status, priority, write_run) → 03 (near-opt G10,
+  branches G9, finish) → 04 tables_and_figures → 05 director_outputs. ~4–6 h of compute. Never headless-solve; zero-solve smokes tolerated (01 section A was
   smoke-run at build time).
 
 ## Structure — two notebooks + shared config
@@ -791,6 +812,34 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 > slot). `INSETS = "clusters"` (the package's clusters in the y2y schema `tables/picks.csv` + `geotiffs/clusters.gpkg` — THE NEXT STEP) |
 > `"interim"` (frames A/B, current). §3a template / Noto / `ms.inset` do not apply to 07; §3a still governs 06's record figures. Shared engine:
 > `director_plot.load_frame` + `C.PX_PER_KM` (y2y/Alberta unchanged, identity at 1 km; y2y M4.41). Ethan renders 07 (zero-render smoke passed).
+> **2026-09-28 (later): D22 — WITHIN-NAME PART LINKS COMPETE (M4.8; spec 05 changelog).** Trigger: Dene Kʼéh Kusān's 80 km² third part
+> looked orphaned on 07's maps while the network held a locked, unclassified 695 km² band to it (the 2026-08-21 open question). Ethan: option 2,
+> everywhere — the four `link_locked` names → `link_competing` in `audit/audit_objects/multipart_review.csv` (**Ethan edits + re-signs; the
+> classifier refused my edit of the signed file, correctly**) → NB02 `cc.start` = NEW run `v2_run003` (CWD cache reused) → 03 → 04 (+D17) →
+> 05 → 06 → 07 (`RUN` updated). `calibrate_cutoff` drops within-name part edges from the calibration set (D16's "inter-name MST only" rule);
+> `_find_edge` picks the MST edge among part-level matches. **D23 PROPOSED (chat ruling needed): 'only viable connection' should require land
+> scarcity — edge-irreplaceable ∧ one branch ∧ D17 width ratio < θ — not topology alone.** **PATCH D26–D31 ADOPTED (2026-09-28, M4.10; `spec/05_patch_D26_D31_geometry_audit.md` kept as the record; adopted BEFORE D23–D25 landed — D23 = the
+> 'both' class stand-in, D24 resolution floor = a hook, D25 unreferenced):** D26 relative branch floor (`branch_min_frac` 0.05 + `branch_min_cells` 20; `branch_min_km2` RETIRED,
+> resolve() raises — both config blocks updated, wolverine too), D27 `locked`/`alt_test_run`/`edge_irreplaceable` (+G20), D28 `width_ratio_p10`/`pinch_pos` from per-position
+> cross-sections (+G22 width, 5% tolerance vs the area/length ratio), D29 `alt_i/alt_j/alt_cost` from `cg.augment` → `alt_len_km`/`alt_mean_res`/`alt_kind` (one early-stop
+> traceback per tested bridge), D30 fixed-break tiers (cutoff/6, /2, band, beyond; +G22), D31 `cutoff_detour_km` in resolve/set_cutoff + captions; `propose_examples` = the
+> new S1–S3 rule (class-and-width-first). Old run_configs (run002) take config.py's D26/D30 constants and pin them on re-attach.
+> **D23 + D24/D25 SPLICED (same day, M4.8 addendum / M4.9; stand-ins REMOVED):** `classify_links` (end of `route_branches`, and `finish`) = THE class source
+> (`link_class`): eleven-row precedence — zero-cost adjacency → near-contiguous (D25: `lcp_len_cells < open_ground_width_med`; "adjacent — barrier between" if
+> `crosses_cost_1000`, else "no corridor needed"; NO branch decomposition, grey hatch under the four classes) → D24 floor (`width_floor_cells` 8 / `len_floor_cells`
+> 10 → `width_not_assessable`, edge sense only) → D23 eight-cell table (only viable = E ∧ B1 ∧ S; `route_irreplaceable` amended = B1 ∧ S, `_topo` retained). G18
+> (`class_truth_table.csv`; run002 read: only Gwillim↔PLM stays only-viable → the 06 regeneration rule FIRES) + G19 (`floor_effect.csv`). **NB04 ORDER: step 2b
+> (counterfactual) BEFORE 4b (branches)** — `route_branches` raises otherwise (wolverine 03_products must reorder too). `squeeze_ratio` is the ONLY width key
+> (resolve raises on a second). Legend string for the top class updated; `NEAR_CONTIGUOUS` tokens in mapstyle.
+> **D25a/D25b FORMAL PATCH ADOPTED (M4.11):** three near-contiguous sub-classes (open front / roads-or-cuts / barrier, by `lcp_max_cost` and the
+> squeeze ratio), `near_contiguous_links.csv`, D25b accounting (`corridor_area_km2` excl. fronts + `near_contiguous_area_km2` + intra-name + augmentation =
+> total, G23), width floor BEFORE the trigger (zero-new-land bands = width-not-assessable), no recalibration, pin check on N2–N3, `adjacent_sentence` on M1. **First 04 re-run
+> on run002 (accidental, RUN not updated) stopped at G18 → fixed (ratio required only where the width test is reached; zero-new-land bands are
+> near-contiguous); run002's dir is MIXED until 04 completes there. run003: 02 DONE (60 edges, 47 MST, cutoff 13.44 ≈ 4.0 km, 31,103 km²; Dene part 3
+> connected by a tree edge + a backup); 03 not run; then 04 with RUN = v2_run003.** 07 also now has: 03 route options (numbering 1–2
+> Nahanni's ways south, 3 Gwillim↔Pine Le Moray, 4 Gwillim↔Monkman; y2y cluster colours 1 red / 2 blue / 3 magenta / 4 orange), 04 stars +
+> locators (A/B), 05 consequences (refs Nahanni + Dene); pressure classes in cividis steps (`ms.CLASS_PALETTES`, switchable); every PA/IPCA
+> node named in insets; legend centred between inset B and the page bottom (`wide_legend_between`).
 
 Standalone corridor analysis, NOT prioritizr: it **routes** between anchor areas, which the
 prioritizr connectivity penalty could not do (that aggregates permeable land; it cannot answer "how

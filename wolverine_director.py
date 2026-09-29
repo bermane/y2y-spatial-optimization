@@ -15,6 +15,7 @@ otherwise). Ensemble attribution is absent until the ensemble runs (parked, spec
 """
 import json
 import pathlib
+import re
 from types import SimpleNamespace
 
 import numpy as np
@@ -48,7 +49,8 @@ STYLE = dict(
     node_chips=True,            # number chips on every node (full maps) / every node in the window (acts)
     w1_marginal=True,           # draw the marginal refugia under the classes on W1
     pa_min_km2=300,             # PA outline context: PAs at or above this size
-    k_close_per_act=2, k_open_per_act=1, max_examples=7,   # automatic example selection
+    k_close_per_act=1, k_open_per_act=1, max_examples=4,   # automatic example selection: the deck's numbered route options (the north shows 4)
+    inset_max_km=700,                                       # two options share an inset window only when their land fits in this
     act_pad_km=40, act_min_km=450,                          # act windows
     act_breaks_lat=(58.5, 51.0),                            # north >= 58.5 N, central 51-58.5, south < 51 (fallback: terciles)
     towns_full=["Whitehorse", "Fort St. John", "Prince George", "Calgary", "Missoula", "Jackson"],
@@ -95,9 +97,12 @@ def package(R, out=None, picks=None):
     e, classes = cc._routing_classes(R)
     P.edges = e
     P.h8_open = not ("squeezed" in R.edges.columns and R.edges["squeezed"].notna().any())
+    P.classified = "link_class" in R.edges.columns                    # D23/D24/D25: classify_links ran (the single source)
     both, irr, sq = classes[0][1], classes[1][1], classes[2][1]
     cls = pd.Series("securing", index=e.index)
     cls[sq] = "squeezed"; cls[irr] = "edge"; cls[both] = "both"
+    if len(classes) >= 5:                                              # D25: the near-contiguous rows
+        cls[classes[3][1]] = "near_contiguous_barrier"; cls[classes[4][1]] = "near_contiguous"
     cls[e["is_adjacency"] | (e["cost"] <= 0)] = "adjacency"
     P.cls = cls
     P.owner = np.nan_to_num(R.edge_owner.values, nan=-1).astype(int)
@@ -126,8 +131,12 @@ def package(R, out=None, picks=None):
     P.examples = select_examples(P, picks)
     P.qa = {}
     n = cls.value_counts()
-    print(f"wolverine package: classes -> both {n.get('both', 0)} · edge {n.get('edge', 0)} · squeezed {n.get('squeezed', 0)} "
-          f"· securing {n.get('securing', 0)} | {len(P.nodes)} nodes | {len(P.examples)} examples | "
+    geo = (f" | geometric classes first (D25/D24): adjacent {n.get('near_contiguous', 0) + n.get('near_contiguous_barrier', 0)} "
+           f"(barrier between {n.get('near_contiguous_barrier', 0)}), width not assessable "
+           f"{int(R.edges['width_not_assessable'].fillna(False).astype(bool).sum()) if 'width_not_assessable' in R.edges.columns else 0}"
+           if P.classified else " | classes from the flags (run classified BEFORE D23 -- re-run 03)")
+    print(f"wolverine package: classes -> only viable {n.get('both', 0)} · last affordable {n.get('edge', 0)} · narrowing {n.get('squeezed', 0)} "
+          f"· options {n.get('securing', 0)}{geo} | {len(P.nodes)} nodes | {len(P.examples)} examples | "
           f"H8 {'OPEN -- squeezed withheld' if P.h8_open else 'closed'} | already connected: {int((P.secured_by == 'pa').sum())} "
           f"within existing PAs, {int((P.secured_by == 'ipca').sum())} only with the proposed IPCAs (mode '{STYLE['protected_mode']}')")
     return P
@@ -160,11 +169,10 @@ def _short(P, node_id):
 
 
 def _node_id_of_label(P, label):
-    """'Refugium · R12 name' -> 12."""
-    s = str(label).split(" · ", 1)[-1]
-    if s.startswith("R") and s[1:3].isdigit():
-        return int(s[1:3])
-    return None
+    """'Refugium · R12 name' -> 12; 'Refugium · R108 name' -> 108 (any number of digits -- 130 nodes here; a two-digit parse
+    once mapped R108 to node 10)."""
+    m = re.match(r"R(\d+)(?:\s|$)", str(label).split(" · ", 1)[-1])
+    return int(m.group(1)) if m else None
 
 
 def _act_of_edges(P):
@@ -203,25 +211,34 @@ def select_examples(P, picks=None):
             eid = cd._find_edge(e, pk["pair"])
             chosen.append(dict(edge_id=eid, act=pk.get("act"), slot=pk.get("slot", ""), kind="pinned"))
     else:
+        for col in ("squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost", "n_branches"):
+            if col not in e.columns:
+                e[col] = np.nan
         for act in ACT_ORDER:
-            ids = [k for k in e.index if P.acts.get(k) == act and not bool(P.secured.get(k, False))]   # W11: satisfied links are never examples
+            ids = [k for k in e.index if P.acts.get(k) == act and not bool(P.secured.get(k, False))    # W11: satisfied links are never examples
+                   and P.cls.get(k) not in ("adjacency", "near_contiguous", "near_contiguous_barrier")]   # D25: geometric classes are not corridor objects
             sub = e.loc[ids]
             close = []
-            for c, keys in (("both", ["n_pairs_lost", "backup_ratio"]), ("edge", ["backup_ratio"]), ("squeezed", ["squeeze_ratio_obs"])):
+            # class-and-width-first (the northern §2 rule, D26-D31): the top class ranked most-constrained first
+            # (squeeze ratio asc, tenth-percentile width asc, then criticality), then "last affordable" by the p10 width
+            for c, keys, asc in (("both", ["squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost"], [True, True, False]),
+                                 ("edge", ["width_ratio_p10", "squeeze_ratio_obs", "n_pairs_lost"], [True, True, False]),
+                                 ("squeezed", ["squeeze_ratio_obs", "width_ratio_p10"], [True, True])):
                 cand = sub[P.cls.loc[ids] == c]
                 if not len(cand):
                     continue
-                asc = c == "squeezed"
-                cand = cand.sort_values([k for k in keys if k in cand.columns], ascending=asc)
+                cand = cand.sort_values(keys, ascending=asc, na_position="last")
                 close += [dict(edge_id=k, act=act, slot=f"{act[0].upper()}-close", kind=c) for k in cand.index]
             chosen += close[:STYLE["k_close_per_act"]]
             sec = sub[(P.cls.loc[ids] == "securing")]
             if "n_branches" in sec.columns and len(sec):
                 sec = sec[sec["n_branches"] >= 2].sort_values("n_branches", ascending=False)
                 chosen += [dict(edge_id=k, act=act, slot=f"{act[0].upper()}-open", kind="securing") for k in sec.index[:STYLE["k_open_per_act"]]]
-    # de-duplicate, cap, number north -> south by the latitude of the owned land
+    # de-duplicate, cap BY PRIORITY (closing links first: both > edge > squeezed > room to choose), then number
+    # north -> south by the latitude of the owned land (Ethan's convention)
+    prio = {"both": 0, "edge": 1, "squeezed": 2, "securing": 3, "pinned": -1}
     seen, ex = set(), []
-    for x in chosen:
+    for x in sorted(chosen, key=lambda x: prio.get(x["kind"], 9)):
         if x["edge_id"] in seen:
             continue
         seen.add(x["edge_id"]); ex.append(x)
@@ -232,6 +249,8 @@ def select_examples(P, picks=None):
         x["num"] = n
         x["title"] = f"{_short(P, _node_id_of_label(P, r['label_i']) or 0)} ↔ {_short(P, _node_id_of_label(P, r['label_j']) or 0)}"
         x["cls"] = P.cls.get(x["edge_id"], "securing")
+        # the northern package's example schema, so corridors_director's option machinery reads these as options
+        x.setdefault("option_nums", [n]); x.setdefault("options", None); x.setdefault("mark", True); x.setdefault("side", "nw")
         if "squeeze_ratio_obs" in e.columns and x["cls"] == "squeezed" and pd.notna(r.get("squeeze_ratio_obs")):
             x["headline"] = f"already at {r['squeeze_ratio_obs']:.1f}× its natural width"
     P.appendix_flagged = [k for k in e.index if P.cls.get(k) in ("both", "edge") and k not in seen]
@@ -328,6 +347,42 @@ def _draw_outline(ax, R, mask, colour, z, XL, YL, lw=0.7):
     gpd.GeoSeries(polys, crs=R.crs).plot(ax=ax, facecolor="none", edgecolor=colour, linewidth=lw, zorder=z)
 
 
+def _draw_near_contiguous(P, ax, XL, YL, step):
+    """D25 on the contract maps: the near-contiguous links' bands in the neutral grey with the mapstyle hatch, UNDER the four
+    corridor classes; the barrier variant outlined. Returns {class: n links}."""
+    R = P.R; counts = {}
+    rs, cs = _window(R, XL, YL)
+    for c in ("near_contiguous", "near_contiguous_barrier"):
+        ids = list(P.cls.index[P.cls == c])
+        counts[c] = len(ids)
+        if not ids:
+            continue
+        m = np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor
+        if not m[rs, cs].any():
+            continue
+        tok = ms.NEAR_CONTIGUOUS[c]
+        _draw_mask(ax, R, m, tok["fill"], ms.Z["securing"] - 0.2, 1.0, XL, YL, step)
+        sub = R.template.isel(y=rs, x=cs); arr = m[rs, cs]
+        if step > 1:
+            sub = sub.isel(y=slice(None, None, step), x=slice(None, None, step)); arr = arr[::step, ::step]
+        with plt.rc_context({"hatch.color": tok["hatch_color"], "hatch.linewidth": 0.5}):
+            ax.contourf(sub.x.values, sub.y.values, arr.astype(float), levels=[0.5, 1.5], colors="none", hatches=[tok["hatch"]],
+                        zorder=ms.Z["securing"] - 0.15)
+        if tok["outline"]:
+            ax.contour(sub.x.values, sub.y.values, arr.astype(float), levels=[0.5], colors=[tok["outline"][0]], linewidths=tok["outline"][1],
+                       zorder=ms.Z["securing"] - 0.1)
+    return counts
+
+
+def _near_contiguous_legend(counts):
+    rows = []
+    for c in ("near_contiguous", "near_contiguous_barrier"):
+        tok = ms.NEAR_CONTIGUOUS[c]
+        rows.append((Patch(facecolor=tok["fill"], hatch=tok["hatch"], edgecolor=(tok["outline"][0] if tok["outline"] else tok["hatch_color"]),
+                           linewidth=(tok["outline"][1] if tok["outline"] else 0.0)), f"{tok['label']}  [{counts.get(c, 0)}]"))
+    return rows
+
+
 def _draw_common(P, ax, XL, YL, step, cost=False, classes=True, marginal=True, refugia=True, nodes=True, ns=None, chips=None):
     """The one layer stack every wolverine map and crop shares (spec 06w §3a.1.6):
     land -> [water under cost + cost] -> hillshade -> water -> refugia (marginal, core) ->
@@ -354,6 +409,7 @@ def _draw_common(P, ax, XL, YL, step, cost=False, classes=True, marginal=True, r
     if classes:
         overlay = STYLE["protected_mode"] == "overlay"
         land = R.corridor if overlay else P.corridor_unprotected
+        counts.update(_draw_near_contiguous(P, ax, XL, YL, step))       # D25: under the corridor classes
         for c in ms.CLASS_ORDER:
             ids = list(P.cls.index[P.cls == c])
             if c == "squeezed" and P.h8_open:
@@ -601,7 +657,7 @@ def figure_w1(P, run_tag=None):
         if xy:
             ms.number_chip(ax, ns, x["num"], xy, ms.CLASS[x["cls"]][0] if x["cls"] in ms.CLASS else ms.NODE["chip_ec"], fs=7.5)
     _labels_full(P, ax, ns, STYLE["w1_names"])
-    ms.legend(ns.legend, [(ms.CLASS_HEADING, _class_legend(counts)),
+    ms.legend(ns.legend, [(ms.CLASS_HEADING, _class_legend(counts) + _near_contiguous_legend(counts)),
                           ("Protection Status", _protection_legend(P, counts)),
                           ("Wolverine Refugia", [ms.area_handle("refugia_core")] + ([ms.area_handle("refugia_marginal")] if STYLE["w1_marginal"] else [])),
                           ("Nodes And Examples", [_node_handle(), (Patch(facecolor="white", edgecolor=ms.CLASS["both"][0]), "Numbered example links (see the table)")]),
@@ -611,10 +667,15 @@ def figure_w1(P, run_tag=None):
     n_irr = int((P.cls == "both").sum() + (P.cls == "edge").sum())
     n_pa, n_ip = int((P.secured_by == "pa").sum()), int((P.secured_by == "ipca").sum())
     unp = float(P.corridor_unprotected.sum()) * R.cell_km2; tot = float(R.corridor.sum()) * R.cell_km2
+    n_nc = int(P.cls.isin(["near_contiguous", "near_contiguous_barrier"]).sum())
+    n_un = int(R.edges["width_not_assessable"].fillna(False).astype(bool).sum()) if "width_not_assessable" in R.edges.columns else 0
     cap = (f"Least-cost corridor bands between {len(P.nodes)} core refugia patches on the withheld-terrain surface (β = "
-           f"{R.cfg.get('beta')}, band = {R.cutoff:.1f} cost units ≈ 4 km detour). {len(P.edges)} links, {n_irr} with no "
-           f"affordable alternative (D7 / D12); already connected: {n_pa} within existing PAs, {n_ip} once the proposed IPCAs are "
-           f"realized; {unp:,.0f} of {tot:,.0f} km² of corridor land lies outside PAs and proposed IPCAs. " + ("Squeezed class pending the counterfactual (H8 open). " if P.h8_open else "")
+           f"{R.cfg.get('beta')}; the band admits routes within about {R.cutoff * R.cell_km:.1f} km of extra travel on open ground). "
+           f"{len(P.edges)} links: {n_nc} join adjacent patches (no corridor to design), {n_un} too short for the width test and "
+           f"classed on the alternative-link sense alone; {n_irr} corridor links with no affordable alternative; the top class also "
+           f"requires the corridor to be below its barrier-free width. Already connected: {n_pa} within existing PAs, {n_ip} once the "
+           f"proposed IPCAs are realized; {unp:,.0f} of {tot:,.0f} km² of corridor land lies outside PAs and proposed IPCAs. "
+           + ("Squeezed class pending the counterfactual (H8 open). " if P.h8_open else "")
            + "Basemap: Natural Earth, Copernicus GLO-90 hillshade.")
     return _finish(P, fig, ns, "W1", "where the options are closing", cap, run_tag)
 
@@ -693,7 +754,7 @@ def figure_act(P, act, run_tag=None):
     for t in placed:
         ax.plot(*t.xy, marker="o", ms=2.5, color=ms.TYPE["town"][3], mec="white", mew=0.6, zorder=ms.Z["label_town"])
     ms.locator(ns.locator, R, window=(XL, YL))
-    ms.legend(ns.legend, [(ms.CLASS_HEADING, _class_legend(counts)),
+    ms.legend(ns.legend, [(ms.CLASS_HEADING, _class_legend(counts) + _near_contiguous_legend(counts)),
                           ("Protection Status", _protection_legend(P, counts)),
                           ("Wolverine Refugia", [ms.area_handle("refugia_core"), ms.area_handle("refugia_marginal")]),
                           ("Nodes And Examples", [_node_handle(), (Patch(facecolor="white", edgecolor=ms.CLASS["both"][0]), "Numbered example links (see the table)")]),
@@ -730,15 +791,21 @@ def _link_rows(P, ids, nums=None):
         status = ("already connected within existing PAs" if by == "pa" else
                   "already connected once the proposed IPCAs are realized" if by == "ipca" else
                   ("partly protected" if pd.notna(cpf) and cpf > 0 else "unprotected"))
+        geo = ("adjacent — barrier between" if c == "near_contiguous_barrier" else "adjacent — no corridor needed" if c == "near_contiguous"
+               else ("width not assessable (too short)" if bool(r.get("width_not_assessable", False)) else "corridor link"))
+        w10 = r.get("width_ratio_p10", np.nan); alt = r.get("alt_kind", "")
         rows.append({
             "#": (nums or {}).get(eid, ""),
             "Connects": f"{_short(P, _node_id_of_label(P, r['label_i']) or 0)} ↔ {_short(P, _node_id_of_label(P, r['label_j']) or 0)}",
-            "Pressure": ms.CLASS[c][3] if c in ms.CLASS else c,
+            "Pressure": (cc.LINK_CLASS_LABEL.get(c, c) if P.classified else (ms.CLASS[c][3] if c in ms.CLASS else c)),
+            "Geometry": geo,
+            "Alternative link is": (str(alt) if isinstance(alt, str) and alt else "—"),
+            "Narrowest tenth (p10 width ratio)": (f"{float(w10):.2f}" if pd.notna(w10) else "—"),
             "Protection status": status,
             "Route inside existing PAs (%)": (f"{100*cpa:.0f}" if pd.notna(cpa) else "—"),
             "Route inside proposed IPCAs only (%)": (f"{100*cpi:.0f}" if pd.notna(cpi) else "—"),
-            "Corridor land to secure (km²)": round(float(r.get("band_unprotected_km2", band - prot))),
-            "Room to move (route branches)": int(r.get("n_branches", 0) or 0),
+            "Corridor land to secure (km²)": round(float(bu) if pd.notna(bu := r.get("band_unprotected_km2", np.nan)) else band - prot),
+            "Room to move (route branches)": (int(nb) if pd.notna(nb := r.get("n_branches", np.nan)) else "—"),   # D25: near-contiguous links have no decomposition
             "Cheapest alternative (× link cost)": ("none ≤ β" if pd.isna(br) or br is None else f"{float(br):.1f}×"),
             "Width vs natural": (f"{float(r['squeeze_ratio_obs']):.2f}" if "squeeze_ratio_obs" in e.columns and pd.notna(r.get("squeeze_ratio_obs")) and not P.h8_open else "pending"),
             "Corridor land (km²)": round(band),
@@ -859,3 +926,399 @@ def qa_report(P):
         for r in bad.itertuples():
             print(f"  FAIL {r.figure}: {r.item} — {r.detail}")
     return df
+
+
+# ================= 05_director_outputs: the curated maps on the y2y Act 1 WIDE layout ===============================
+# Mirrors the northern 07 (corridors_director.director_frame / figure_cost_wide / figure_choices_wide, spec 06 v1.2.17,
+# M5.21): layout, typography, basemap, insets, ramp + legend placement = `director_plot.wide_map` (ONE codebase with the y2y
+# and northern packages); colours and words = `corridors_mapstyle` (ONE source). Differences here: the frame is the WHOLE
+# Y2Y (drawn at 600 m -- the frame panel is ~2.9 in for 1,286 km, so one 300 dpi pixel is ~1.5 km and the 300 m grid gains
+# nothing), the layout's grey layer is the existing PAs (context), the overlay in the IPCA role is the REFUGIA NODES (filled
+# in the §3a core tone, outlined, named in the insets), and the proposed IPCAs are a second fill drawn OVER the corridor land
+# -- so corridor land inside PAs / IPCAs reads as already satisfied by the overlay (Ethan 2026-09-28, W11 overlay mode).
+WIDE_STYLE = dict(
+    map_layout="wide", inset_clusters=(1, 2), inset_windows=None,
+    inset_codes={}, inset_town_skip={}, main_skip_codes=("CA",),          # the y2y frame's own skips; inset windows are ours
+    wide_main_towns=(), wide_main_names="abbrev",                          # the frame panel: postal codes only, no towns
+    pa_layer_min_km2=300, inset_pa_names=4, window_scale_km=250,           # named PAs in the insets; a 250 km bar on the Y2Y frame
+    hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=True,
+)
+WIDE_FRAME_STEP = 2            # 300 m grid -> 600 m frame for the wide layout (memory: 47 M -> 12 M cells)
+WIDE_INSET_KM = 350            # inset windows floor (each side), before the aspect fit
+NODE_WIDE_LABEL = "Core wolverine refugia (the nodes)"
+IPCA_WIDE_LABEL = "Proposed IPCAs / PAs"
+PA_WIDE_LABEL = "Existing protected areas"
+
+
+def director_frame(P, pad_km=None, step=WIDE_FRAME_STEP):
+    """The wolverine run as a director_plot frame (cached on P): G on the routing grid decimated by `step` (pu = routable
+    cells, locked2d = the EXISTING PAs as the layout's grey layer), the refugia nodes as the overlay in the IPCA role (their
+    short names label the insets), the Y2Y frame + pad as the pixel WINDOW, the y2y town table."""
+    if getattr(P, "_frame", None) is not None and getattr(P, "_frame_step", None) == step:
+        return P._frame
+    import director_plot as dp
+    from affine import Affine
+    R = P.R
+    s = int(step)
+    cost = R.resistance.values[::s, ::s]
+    pu = np.isfinite(cost) & (cost > 0)
+    pa2d = (R.protected_pa if getattr(R, "protected_pa", None) is not None else P.pa_mask300)[::s, ::s] & pu
+    tr = R.transform
+    tr2 = Affine(tr.a * s, tr.b, tr.c, tr.d, tr.e * s, tr.f)
+    G = SimpleNamespace(pu=pu, locked2d=pa2d, locked=pa2d[pu], disc=pu & ~pa2d, n_pu=int(pu.sum()), n_disc=int((pu & ~pa2d).sum()),
+                        shape=pu.shape, transform=tr2, crs=pyproj.CRS.from_wkt(R.crs.to_wkt()), profile=None, cell_km2=R.cell_km2 * s * s)
+    G.rows, G.cols = np.where(pu)
+    nodes = P.nodes[["node_id", "name", "short", "geometry"]].copy()
+    nodes["name"] = nodes["short"]                                          # the inset labels (director_plot reads gdf["name"])
+    overlay = SimpleNamespace(gdf=nodes, mask2d=P.node_mask[::s, ::s], label=NODE_WIDE_LABEL)
+    (x0, x1), (y0, y1) = ms.sector_frame(R, STYLE["frame_pad_km"] if pad_km is None else pad_km)
+    px0, pyb = dc.xy_to_px(G, x0, y0); px1, pyt = dc.xy_to_px(G, x1, y1)
+    F = dp.load_frame(G, overlay=overlay, window=(float(px0), float(px1), float(pyt), float(pyb)), towns=dc.Y2Y_TOWNS)
+    F.STEP = s
+    F.IPCA2D = (P.protected_ipca if getattr(P, "protected_ipca", None) is not None else
+                (getattr(R, "protected_ipca", None) if getattr(R, "protected_ipca", None) is not None else np.zeros(R.shape, bool)))[::s, ::s] & pu
+    F.IPCA_GDF = P.ipca
+    F.PICKS, F.CL = None, {}
+    P._frame, P._frame_step = F, s
+    return F
+
+
+def _near_contiguous_wide(P, F):
+    """D25 on the wide layout: (draw, handles) for the near-contiguous links -- bands in the neutral grey with the mapstyle
+    hatch (contourf in pixel space on the decimated frame), the barrier variant outlined; nothing when the run has none."""
+    R = P.R; s = F.STEP; layers = []
+    for c in ("near_contiguous", "near_contiguous_barrier"):
+        ids = list(P.cls.index[P.cls == c])
+        if not ids:
+            continue
+        m = (np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor)[::s, ::s]
+        if m.any():
+            layers.append((c, m, len(ids)))
+    if not layers:
+        return (lambda ax: None), []
+
+    def draw(ax):
+        for c, m, _ in layers:
+            tok = ms.NEAR_CONTIGUOUS[c]
+            ax.imshow(np.where(m, 1.0, np.nan).astype(np.float32), cmap=ListedColormap([tok["fill"]]), interpolation="nearest", zorder=0.85)
+            with plt.rc_context({"hatch.color": tok["hatch_color"], "hatch.linewidth": 0.5}):
+                ax.contourf(m.astype(float), levels=[0.5, 1.5], colors="none", hatches=[tok["hatch"]], zorder=0.86)
+            if tok["outline"]:
+                ax.contour(m.astype(float), levels=[0.5], colors=[tok["outline"][0]], linewidths=tok["outline"][1], zorder=0.87)
+    handles = [Patch(facecolor=ms.NEAR_CONTIGUOUS[c]["fill"], hatch=ms.NEAR_CONTIGUOUS[c]["hatch"],
+                     edgecolor=(ms.NEAR_CONTIGUOUS[c]["outline"][0] if ms.NEAR_CONTIGUOUS[c]["outline"] else ms.NEAR_CONTIGUOUS[c]["hatch_color"]),
+                     linewidth=(ms.NEAR_CONTIGUOUS[c]["outline"][1] if ms.NEAR_CONTIGUOUS[c]["outline"] else 0.0),
+                     label=ms.NEAR_CONTIGUOUS[c]["label"]) for c, _, _ in layers]
+    return draw, handles
+
+
+def _wide_overlay(F, P=None):
+    """The overlay callback for the wide layout: the near-contiguous bands first (D25, with `P`), then the refugia nodes filled
+    in the §3a core tone (opaque, like the layout's PA grey, so the two kinds read alike) + outlined, and the proposed IPCAs
+    filled in the §3a IPCA tone OVER the corridor land (already satisfied) + dashed outlines. Called on the frame and on every inset."""
+    import director_plot as dp
+    core, ip = ms.AREA["refugia_core"], ms.AREA["ipca"]
+    fill_n = np.full(F.G.shape, np.nan, np.float32); fill_n[F.IP.mask2d] = 1.0
+    fill_i = np.full(F.G.shape, np.nan, np.float32); fill_i[F.IPCA2D] = 1.0
+    nc_draw, nc_handles = _near_contiguous_wide(P, F) if P is not None else ((lambda ax: None), [])
+
+    def draw(ax):
+        nc_draw(ax)
+        ax.imshow(fill_i, cmap=ListedColormap([ip["fill"]]), alpha=0.85, interpolation="nearest", zorder=1.05)
+        ax.imshow(fill_n, cmap=ListedColormap([core["fill"]]), interpolation="nearest", zorder=1.1)
+        lw = 0.9 * dp.STYLE.get("_lw_scale", 1.0)
+        for _, r in F.IPCA_GDF.iterrows():
+            for ring in F.rings_px(r.geometry):
+                ax.plot(ring[:, 0], ring[:, 1], color=ip["edge"], lw=lw, ls=(0, (3, 2)), zorder=3.4)
+        for _, r in F.IP.gdf.iterrows():
+            for ring in F.rings_px(r.geometry):
+                ax.plot(ring[:, 0], ring[:, 1], color=ms.NODE["edge"], lw=lw, zorder=3.5)
+    handles = [Patch(facecolor=dp.PA_COLOR, label=PA_WIDE_LABEL),
+               Patch(facecolor=ip["fill"], alpha=0.85, edgecolor=ip["edge"], label=IPCA_WIDE_LABEL),
+               Patch(facecolor=core["fill"], edgecolor=ms.NODE["edge"], label=NODE_WIDE_LABEL)] + nc_handles
+    return draw, handles
+
+
+def inset_windows(P, mode="examples", same_scale=True):
+    """Pixel windows (on the wide frame) for insets A and B. "examples": the northernmost and the southernmost example
+    links (their corridor land + endpoint nodes + act_pad_km, floored at WIDE_INSET_KM); "clusters": the two densest node
+    clusters (the check-stop-1 rule). Both windows take the larger width and height (one map scale, as in the north)."""
+    F = director_frame(P)
+    R = P.R
+    xs, ys = R.template.x.values, R.template.y.values
+
+    def _win_from_mask(m):
+        rr, cc_ = np.nonzero(m)
+        if not len(rr):
+            return None
+        p = STYLE["act_pad_km"] * 1e3
+        x0, x1 = xs[cc_.min()] - p, xs[cc_.max()] + p; y0, y1 = ys[rr.max()] - p, ys[rr.min()] + p
+        w, h = max(x1 - x0, WIDE_INSET_KM * 1e3), max(y1 - y0, WIDE_INSET_KM * 1e3)
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        px0, pyb = dc.xy_to_px(F.G, cx - w / 2, cy - h / 2); px1, pyt = dc.xy_to_px(F.G, cx + w / 2, cy + h / 2)
+        return (float(px0), float(px1), float(pyt), float(pyb))
+
+    def _land(x):
+        m = _example_mask(P, x)
+        for lab in (R.edges.loc[x["edge_id"], "label_i"], R.edges.loc[x["edge_id"], "label_j"]):
+            nid = _node_id_of_label(P, lab)
+            if nid is not None and getattr(R, "node_id", None) is not None:
+                m = m | (np.nan_to_num(R.node_id.values, nan=0) == nid)
+        return m
+
+    def _extent_km(m):
+        rr, cc_ = np.nonzero(m)
+        return max(np.ptp(rr), np.ptp(cc_)) * R.cell_km if len(rr) else 0.0
+
+    out = {}
+    if mode == "examples" and len(P.examples) >= 1:
+        ordered = sorted(P.examples, key=lambda x: x["num"])          # 1..k, north -> south
+        half = max(1, (len(ordered) + 1) // 2)
+        groups = [ordered[:half], ordered[half:]] if len(ordered) > 1 else [ordered]
+        for tag, grp in zip("AB", groups):
+            if not grp:
+                continue
+            m = np.zeros(R.shape, bool)
+            for x in grp:
+                m |= _land(x)
+            if len(grp) > 1 and _extent_km(m) > STYLE["inset_max_km"]:     # the pair does not fit one window: the first alone
+                m = _land(grp[0])
+            w = _win_from_mask(m)
+            if w:
+                out[tag] = w
+    if len(out) < 2:                                                     # clusters fallback (or mode == "clusters")
+        pts = P.nodes.geometry.representative_point(); xy = np.c_[pts.x.values, pts.y.values]
+        remaining = np.ones(len(xy), bool); out = {}
+        for tag in "AB":
+            if not remaining.any():
+                break
+            best, cnt = None, -1
+            for i in np.flatnonzero(remaining):
+                c = int(((np.abs(xy[:, 0] - xy[i, 0]) < WIDE_INSET_KM * 500) & (np.abs(xy[:, 1] - xy[i, 1]) < WIDE_INSET_KM * 500) & remaining).sum())
+                if c > cnt:
+                    best, cnt = i, c
+            cx, cy = xy[best]; w = WIDE_INSET_KM * 1e3
+            remaining &= ~((np.abs(xy[:, 0] - cx) < w / 2) & (np.abs(xy[:, 1] - cy) < w / 2))
+            px0, pyb = dc.xy_to_px(F.G, cx - w / 2, cy - w / 2); px1, pyt = dc.xy_to_px(F.G, cx + w / 2, cy + w / 2)
+            out[tag] = (float(px0), float(px1), float(pyt), float(pyb))
+    return cd._same_scale(out) if same_scale else out
+
+
+def cost_surface(P):
+    """The four movement-cost classes for the ramp slot (corridors_director.cost_surface: the §3a magma swatches)."""
+    return cd.cost_surface(P)
+
+
+def classes_surface(P):
+    """The corridor-pressure classes for the ramp slot (corridors_director.classes_surface: the §3a pressure levels and
+    words, H8 folding). In W11 "unprotected_only" mode the surface is cut to the corridor land still to secure."""
+    S_, counts = cd.classes_surface(P)
+    if STYLE["protected_mode"] == "unprotected_only" and P.protected is not None:
+        S_["img"] = np.where(P.corridor_unprotected, S_["img"], np.nan).astype(np.float32)
+    return S_, counts
+
+
+def _wide(P, path, surface, insets):
+    import director_plot as dp
+    F = director_frame(P)
+    assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first (05's setup cell)"
+    dp.STYLE["inset_windows"] = inset_windows(P, insets)
+    S_ = dict(surface); S_["img"] = np.asarray(surface["img"])[::F.STEP, ::F.STEP]      # the frame's decimation
+    draw, handles = _wide_overlay(F, P)
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S_)
+    return path
+
+
+def figure_cost_wide(P, path, insets="examples"):
+    """05 · 01 -- the movement-cost surface on the y2y Act 1 wide layout: the four cost swatches in the ramp slot, PAs grey,
+    IPCAs filled, the refugia nodes filled + outlined, postal codes on the frame, names + towns in the insets; PNG 300 dpi + PDF."""
+    S_, shares = cost_surface(P)
+    print("movement cost (withheld-terrain surface), share of the routable area: " + " · ".join(f"{c}: {shares[c]:.1f}%" for c in cd.COST_CLASSES))
+    return _wide(P, path, S_, insets)
+
+
+def figure_choices_wide(P, path, insets="examples"):
+    """05 · 02 -- "where the land still offers choices": the corridor-pressure classes in the ramp slot as the key; PA and
+    IPCA fills over the corridor land mark what is already satisfied (W11 overlay mode); everything else as on 01."""
+    S_, counts = classes_surface(P)
+    n_pa, n_ip = int((P.secured_by == "pa").sum()), int((P.secured_by == "ipca").sum())
+    n_nc = {c: int((P.cls == c).sum()) for c in ("near_contiguous", "near_contiguous_barrier")}
+    print("links per class: " + " · ".join(f"{c} {n}" for c, n in counts.items())
+          + f" | adjacent (no corridor needed) {n_nc['near_contiguous']}, adjacent (barrier between) {n_nc['near_contiguous_barrier']}"
+          + (" | H8 OPEN -- squeezed folded into securing" if P.h8_open else "")
+          + f" | already connected: {n_pa} within existing PAs, {n_ip} once the proposed IPCAs are realized"
+          + f" | band = about {P.R.cutoff * P.R.cell_km:.1f} km of extra travel on open ground")
+    return _wide(P, path, S_, insets)
+
+
+# ================= 05 · 03-05: the route options (the northern 07 · 03-05 mirrored) =================
+# The deck's numbered examples ("route options"): up to STYLE["max_examples"] links chosen by the automatic rule (or pinned),
+# numbered north -> south. 03 = each option's corridor band in ITS NUMBER'S colour from the y2y cluster palette over the
+# pressure classes (corridors_director.option_color / OPTION_COLOR_ORDER), numbered at the band's median cell; 04 = the y2y
+# star grid + the two inset windows as locator panels; 05 = the y2y consequences table. Profiles on the Y2Y director
+# construction (director_core.block_percentiles / ValueRatios, fractional 300 m -> 1 km cover) -- the same machinery as the
+# north, with the reference columns taken from the PA / proposed-IPCA vectors (nodes here are refugia, not areas).
+CONSEQ_REFERENCE = [("pa", "Banff National Park", "Banff National Park"),            # (layer, name fragment, column name): the y2y
+                    ("ipca", "Dene K", "Dene Kʼéh Kusān (proposed IPCA)")]          # tables' rule -- real example areas, one PA + one IPCA
+
+
+def option_nums(P):
+    return tuple(x["num"] for x in P.examples)
+
+
+def _options_overlay(P, F, nums=None):
+    """The route options' overlay for any panel: the wolverine overlay (IPCA fill, node fill + outlines), each option's band in
+    its colour UNDER the PA / IPCA / node fills (as on the northern M2), the numbered markers. Returns (draw, handles, marks, colors)."""
+    import director_plot as dp
+    nums = option_nums(P) if nums is None else tuple(nums)
+    marks = cd._option_marks(P, F, nums)
+    colors = {n: cd.option_color(n) for n, _, _, _ in marks}
+    step = F.STEP
+    layers = [(np.where(m[::step, ::step], 1.0, np.nan).astype(np.float32), colors[n]) for n, m, _, _ in marks]
+    base_draw, handles = _wide_overlay(F, P)
+
+    def draw(ax):
+        base_draw(ax)
+        for img, col in layers:
+            ax.imshow(img, cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)     # under the PA (1) / IPCA (1.05) / node (1.1) fills
+        for num, _, xy, side in marks:
+            cd._number_marker_px(ax, xy, num, colors[num], side)
+    handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in colors])]
+    return draw, handles, marks, colors
+
+
+def figure_options_wide(P, path, insets="examples", nums=None):
+    """05 · 03 -- the route options on the wide layout: the pressure classes as on 02, each option's corridor band on top in its
+    number's colour (y2y cluster palette, OPTION_COLOR_ORDER), numbered at the band's median cell; PA / IPCA / node fills over
+    the options. Inset A holds options 1-2, B holds 3-4 (or one each when a pair does not fit one window)."""
+    import director_plot as dp
+    F = director_frame(P)
+    S_, _ = classes_surface(P)
+    draw, handles, marks, colors = _options_overlay(P, F, nums)
+    print("route options: " + " · ".join(f"{n} {colors[n]} at px {tuple(round(v) for v in xy)} ({side})" for n, _, xy, side in marks))
+    assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first (05's setup cell)"
+    dp.STYLE["inset_windows"] = inset_windows(P, insets)
+    S2 = dict(S_); S2["img"] = np.asarray(S_["img"])[::F.STEP, ::F.STEP]
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S2)
+    return path
+
+
+def _reference_masks(P):
+    """The consequences references as 300 m masks from the PA / proposed-IPCA vectors (CONSEQ_REFERENCE)."""
+    R = P.R
+    out = []
+    for layer, frag, name in CONSEQ_REFERENCE:
+        if layer == "pa":
+            g = P.pa_all[P.pa_all["PA_Name"].astype(str).str.contains(frag, regex=False)]
+        else:
+            g = P.ipca
+            if len(g):
+                nf = next((c for c in g.columns if "name" in c.lower()), None)
+                g = g[g[nf].astype(str).str.contains(frag, regex=False)] if nf else g.iloc[0:0]
+        if not len(g):
+            print(f"  reference {name!r}: not found in the {layer} layer -- column skipped"); continue
+        m = rasterize(((geom, 1) for geom in g.geometry), out_shape=R.shape, transform=R.transform, fill=0, dtype="uint8").astype(bool)
+        out.append((name, m))
+    return out
+
+
+def option_profiles_y2y(P, nums=None):
+    """Cached on P: the route options (+ the reference areas) on the y2y DIRECTOR CONSTRUCTION over the Y2Y-wide allocatable
+    landscape -- per star axis the mean PERCENTILE (director_core.block_percentiles) and the consequences RATIO
+    (director_core.ValueRatios), both with the fractional 300 m -> 1 km cover weights. DataFrame: kind (option | reference),
+    number, name, area_km2, pct_<axis>, ratio_<axis>."""
+    nums = option_nums(P) if nums is None else tuple(nums)
+    key = ("_y2y_profiles", nums)
+    cache = getattr(P, "_y2y_profiles", {})
+    if key in cache:
+        return cache[key]
+    R = P.R
+    G = dc.grid(); B = dc.block_percentiles(G); VR = dc.ValueRatios(G, B)
+    items = [("option", n, t, m) for n, t, m, _ in cd._option_masks(P) if n in nums]
+    items += [("reference", "", name, m) for name, m in _reference_masks(P)]
+    rows = []
+    for kind, num, name, m in items:
+        w1 = cc._to_audit_frac(R, m)[G.pu]
+        assert w1.sum() > 0, f"{kind} {num or name}: no 1 km cover"
+        pct = {ax: float((w1 * B.axes[ax]).sum() / w1.sum()) for ax in dc.STAR_AXES}
+        rat = VR.of(None, weights=w1)
+        rows.append(dict(kind=kind, number=str(num), name=str(name).replace("\n", " — "), area_km2=int(m.sum()) * R.cell_km2,
+                         **{f"pct_{a}": v for a, v in pct.items()}, **{f"ratio_{a}": v for a, v in rat.items()}))
+    df = pd.DataFrame(rows)
+    cache[key] = df; P._y2y_profiles = cache
+    return df
+
+
+def option_stars(P, path, nums=None):
+    """05 · 04 -- star plots of the route options on the y2y asset (director_plot.star_grid, one star per option in its colour)."""
+    import director_plot as dp
+    df = option_profiles_y2y(P, nums)
+    prof = [dict(title=f"Option {int(r.number)}\n({r['name']})\n{r.area_km2:,.0f} km²", values={a: float(r[f"pct_{a}"]) for a in dc.STAR_AXES},
+                 color=cd.option_color(int(r.number))) for _, r in df[df.kind == "option"].iterrows()]
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.star_grid(prof, path, "Route options — value profile (percentile vs the allocatable landscape)")
+    return df
+
+
+def option_locators(P, path, nums=None, insets="examples", panel_px=None):
+    """05 · 04b -- the two inset windows as locator panels on the star grid's geometry (the northern option_locators rule):
+    A under the first half of the stars, B under the second; square windows at one scale, the classes + options as on 03."""
+    import director_plot as dp
+    nums = option_nums(P) if nums is None else tuple(nums)
+    F = director_frame(P)
+    S_, _ = classes_surface(P); S2 = dict(S_); S2["img"] = np.asarray(S_["img"])[::F.STEP, ::F.STEP]
+    draw, _, marks, _ = _options_overlay(P, F, nums)
+    wins = inset_windows(P, insets)
+    n_stars = len(nums); ncols = min(4, max(n_stars, 1)); L = dc.STAR_GRID; STYLE_ = dp.STYLE
+    tags = list(wins)
+    per = max(1, int(np.ceil(n_stars / max(len(tags), 1))))
+    with plt.rc_context(dp.SPEC_RC):
+        fig_w, fig_h = L["panel_w"] * ncols, max(L["panel_h"], STYLE_["locator_panel_in"] + 0.4)
+        fig = plt.figure(figsize=(fig_w, fig_h))
+        left, right = 0.125, 0.9
+        aw = (right - left) / (ncols + (ncols - 1) * L["wspace"])
+        pw = STYLE_["locator_panel_in"] / fig_w; ph = STYLE_["locator_panel_in"] / fig_h
+        axes = []
+        for i, tag in enumerate(tags):
+            cols_ = range(i * per, min((i + 1) * per, ncols))
+            cx = float(np.mean([left + aw * (c_ + 0.5) + c_ * aw * L["wspace"] for c_ in cols_])) if len(cols_) else 0.5
+            axes.append(fig.add_axes([cx - pw / 2, 0.5 - ph / 2, pw, ph]))
+        sc = STYLE_["locator_fs_scale"]
+        STYLE_["_fs_scale"] = STYLE_["inset_number_fs"] / STYLE_["cluster_number_fs"] * sc; STYLE_["_lw_scale"] = STYLE_["cluster_lw_inset_scale"] * sc
+        fs0, pa0 = STYLE_["inset_fs"], STYLE_["inset_pa_names"]; STYLE_["inset_fs"] = fs0 * sc; STYLE_["inset_pa_names"] = STYLE_["locator_pa_names"]
+        try:
+            for ax, tag in zip(axes, tags):
+                win = dp._fit_window(F, wins[tag], 1.0)
+                dp._draw_inset(F, ax, win, draw, tag, True, towns=STYLE_["locator_towns"], codes=None, img=S2["img"], cmap=S2["cmap"], norm=S2["norm"])
+        finally:
+            STYLE_.pop("_fs_scale", None); STYLE_.pop("_lw_scale", None); STYLE_["inset_fs"] = fs0; STYLE_["inset_pa_names"] = pa0
+        path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(path, dpi=STYLE_["export_dpi"])
+        if panel_px:
+            fig.canvas.draw(); r = fig.canvas.get_renderer()
+            for ax, tag in zip(axes, tags):
+                bb = ax.get_tightbbox(r).transformed(fig.dpi_scale_trans.inverted()).padded(0.02)
+                fig.savefig(path.with_name(f"{path.stem}_{tag}{path.suffix}"), bbox_inches=bb, dpi=STYLE_["panel_export_scale"] * panel_px / bb.width)
+        plt.show()
+    return path
+
+
+def option_consequences(P, path, nums=None):
+    """05 · 05 -- the consequences table for the route options on the y2y asset (director_plot.consequences_table): mean raw
+    value in the option's land / mean over Y2Y-wide allocatable land per star axis; columns = the options, then the reference
+    areas (CONSEQ_REFERENCE). Rows also to tables/route_option_consequences.csv."""
+    import textwrap
+    import director_plot as dp
+    F = director_frame(P)
+    df = option_profiles_y2y(P, nums)
+    rows = df[df.kind == "option"].reset_index(drop=True); ref = df[df.kind == "reference"].reset_index(drop=True)
+    P.tab.mkdir(parents=True, exist_ok=True); df.to_csv(P.tab / "route_option_consequences.csv", index=False, encoding="utf-8-sig")
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.consequences_table(F, rows, path, "ROUTE OPTIONS  ·  CONSEQUENCES", "What the route options hold", ref=ref,
+                          col_label=lambda r, wrap=18: f"Option {int(r.number)}\n({textwrap.fill(str(r.name), wrap)})", group_label="Route options",
+                          source=f"Y2Y wolverine refugia corridors ({P.R.run_id}, least-cost network on the withheld-terrain surface); "
+                                 f"values on the Y2Y director construction (manifest {dc.VP.version} layers).")
+    return df
+

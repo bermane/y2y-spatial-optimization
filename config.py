@@ -848,19 +848,34 @@ CORRIDORS = {
         # D11: near_optimality.tif = min_e slack_e in RAW COST UNITS on every routable cell. Raw
         # units keep the surface independent of cwd_cutoff_abs (calibrated for v1 area
         # comparability, not meaning); the cutoff enters only the binary band and area accounting.
-        # near_opt_tiers are percentiles OF SLACK over the union band at 2x cutoff (the axis-B 2x
-        # member): robust_core <= p10, frequent <= p30, occasional = the rest of the routable area
-        # -- mirrors priority_tiers' p90/p70 on the inverted scale. Cells outside the 2x union
-        # fall to "occasional" (queued clarification 3).
-        "near_opt_tiers": {"robust_core": 10, "frequent": 30, "occasional": 100},
+        # near_opt_tiers (D30, 2026-09-28): FIXED slack breaks in cost units as fractions of the calibrated
+        # cutoff -- robust_core <= cutoff/6, frequent <= cutoff/2, occasional <= cutoff (the band); routable
+        # land beyond the band is a fourth class. Percentile tiers (p10/p30 of slack over the 2x union band)
+        # were retired: area-weighted over the union band, they were set by the long northern links.
+        "near_opt_tiers": {"robust_core": "cutoff/6", "frequent": "cutoff/2", "occasional": "cutoff"},
         # D12: the unit of "alternative" is the ROUTE BRANCH -- an 8-connected component of an
         # edge's band at branch_mult x cwd_cutoff_abs (0.5 reuses the axis-B 0.5x member; no new
         # CWD work). n_branches == 1 => route-irreplaceable (no alternative routing WITHIN the
         # link), reported alongside -- never merged with -- the D7 beta-ceiling edge-irreplaceable
-        # flag (no alternative LINK). branch_min_km2 drops slivers (~111 cells at 300 m; the
-        # dropped count is reported).
+        # flag (no alternative LINK). D26 (2026-09-28): the sliver floor is RELATIVE -- a component is
+        # a branch if its new-land area >= branch_min_frac x the link's band area at cutoff_branch AND
+        # >= branch_min_cells (a noise floor, ~1.8 km2 at 300 m); branch_min_km2 (10) was length-biased
+        # and is retired (resolve() raises on it). Pre-registered; a derived analysis may tighten, never loosen.
         "branch_mult": 0.5,
-        "branch_min_km2": 10,
+        "branch_min_frac": 0.05,
+        "branch_min_cells": 20,
+        # D29 (2026-09-28): the cheapest alternative link the beta test used is decomposed into path length
+        # and mean resistance; "far" = >= beta x longer at resistance within alt_res_tol x the edge's own,
+        # "hard" = not that much longer (resistance did it), "both" otherwise. Table + profiles only.
+        "alt_res_tol": 1.5,
+        # D24 (2026-09-28): the width test (D17) is NOT ASSESSABLE below a resolution floor -- the counterfactual band's median
+        # cross-section < width_floor_cells or the least-cost path < len_floor_cells; such links are classed from the edge
+        # sense alone. Pre-registered; tuning to a class count is prohibited; a derived analysis may raise, never lower.
+        "width_floor_cells": 8,
+        "len_floor_cells": 10,
+        # D25: a path shorter than the band's barrier-free width is NEAR-CONTIGUOUS (a blob, not a route): no branch decomposition,
+        # no width class; reported with the edge sense and crosses_cost_1000. No constant by design.
+        "near_contiguous": {"rule": "lcp_len_cells < open_ground_width_med"},
         # D14: Carroll 2018 current-flow centrality NEVER enters resistance (same object type as
         # Pither current density, rejected by D1-D3). It is an audit column only:
         # carroll2018_pctl = branch mean percentile vs the routable-area percentile baseline.
@@ -968,7 +983,7 @@ CORRIDORS = {
                 "citation": "Y2Y wolverine climate refugia (baseline period; source model citation pending)",
             },
             "classes_core": [2, 12], "classes_marginal": [1, 11],
-            "node_min_km2": 500,                          # ladder 250/500/1000 -> 130/66/37 nodes; 500 = 82% of core area
+            "node_min_km2": 250,                          # Ethan 2026-09-28: 500 -> 250 (ladder 250/500/1000 -> 130/67/36 nodes; 250 = 89% of core area)
             "connectivity": 8, "closing": None,           # no morphological closing (W2)
             "kind": "refugium", "kind_label": "Refugium", # labels "Refugium · R12 <name>" keep the Kind · Name shape
             "anchor_kinds": ["refugium"],                 # _node_masks: draw these kinds as the anchor layer
@@ -987,11 +1002,11 @@ CORRIDORS = {
                           "proposed": str(PROPOSED_PA_VECTOR)},
             "naming": {"pa_overlap_min": 0.10, "pa_min_km2": 1.0, "names_file": "node_names.csv"},
             "dedupe_overlap_frac": None,                  # components are disjoint by construction
-            "ladder_km2": [250, 500, 1000],               # printed by node_patches for the results log
+            "ladder_km2": [100, 250, 500, 1000],          # printed by node_patches for the results log
         },
 
         # ---- D16 keys: required by resolve(), inert for single-component raster nodes -------
-        "part_min_km2": 500,
+        "part_min_km2": 250,
         "multisite_designations": [],
         "multipart_link_km": 10,
         "audit_objects_dir": PROJECT_DIR / "analyses" / "wolverine_refugia_connectivity"
@@ -999,15 +1014,25 @@ CORRIDORS = {
 
         # ---- band cutoff (D6) INHERITED from the north (W5) --------------------------------
         "cwd_cutoff_abs": 13.622951589524746,
-        "calibration": {"inherited_from": "north/v2_run002", "target_km2": None, "edges": "mst"},
+        # D31 (2026-09-28): the cutoff STATED as detour distance on open ground -- 13.6229 cost units x 0.3 km = 4.09 km of
+        # extra travel through cost-1 land. A derived analysis defines its cutoff this way (never by area, never by class
+        # counts); the value is numerically the north's so the two networks share one allowance. Both keys must agree (resolve).
+        "cutoff_detour_km": 13.622951589524746 * 0.3,
+        "calibration": {"inherited_from": "north/v2_run002", "target_km2": None, "edges": "mst",
+                        "rule": "detour distance on open ground (D31)"},
         "secured_centreline_frac": 0.95,                  # W11: link 'already connected within protected land'
 
         # ---- network / products: verbatim from "north" (W6) --------------------------------
         "beta": 2.5,
         "priority_tiers": {"robust_core": 90, "frequent": 70, "occasional": 0},
-        "near_opt_tiers": {"robust_core": 10, "frequent": 30, "occasional": 100},
+        "near_opt_tiers": {"robust_core": "cutoff/6", "frequent": "cutoff/2", "occasional": "cutoff"},   # D30 (2026-09-28)
         "branch_mult": 0.5,
-        "branch_min_km2": 10,
+        "branch_min_frac": 0.05,                          # D26 (2026-09-28): relative sliver floor; branch_min_km2 retired
+        "branch_min_cells": 20,
+        "alt_res_tol": 1.5,                               # D29 (2026-09-28)
+        "width_floor_cells": 8,                           # D24 (2026-09-28): raised here only with a logged reason, never lowered
+        "len_floor_cells": 10,
+        "near_contiguous": {"rule": "lcp_len_cells < open_ground_width_med"},   # D25
         "carroll_ref": "routable_area",
         "squeeze_ratio": 0.5,
         "squeeze_cf_min_cost": 10,

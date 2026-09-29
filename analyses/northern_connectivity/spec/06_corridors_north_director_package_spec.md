@@ -3,6 +3,37 @@
 **Status:** v1.2.17 (2026-09-28) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_tables_and_figures.ipynb`, the record — renamed from `06_director_package` on 2026-09-28 — plus `07_director_outputs.ipynb`, the curated set on the y2y Act 1 wide layout; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
 
 ## Changelog
+- v1.2.21 (2026-09-28) — near-contiguous sub-classes (05 D25a) and area accounting (D25b; the patch labels this v1.2.13, a
+  stale number). Three adjacent-areas legend rows replace two: "Adjacent areas — open front" (band #D9D9D9, hatch #8A8A8A, no
+  outline), "— front crossed by roads or cuts" (same hatch, #8A8A8A 0.6 pt outline), "— barrier between" (same hatch,
+  #3A3A3A 0.8 pt outline); order: four corridor classes, the three adjacent rows, PA, IPCA, lines. Corridor-area figures in
+  T1/T2 and captions exclude near-contiguous bands; N2–N3 re-checked against the pin rule before any northern slot is
+  rendered (`propose_examples`; a slot that is now near-contiguous is re-picked from the remaining securing links by the
+  existing rule, logged either way); the Act 1 narrative gains the count "N of the sector's links join areas that are
+  effectively adjacent; corridor design in the north is a question about the remaining M" (`adjacent_sentence`, on M1's
+  title line).
+- v1.2.20 (2026-09-28) — short-link rules (05 D24, D25; the patch labels this v1.2.11, a stale number). Two neutral
+  "adjacent areas" legend rows added — "Adjacent areas — no corridor needed" / "Adjacent areas — barrier between them";
+  `corridors_mapstyle.NEAR_CONTIGUOUS` holds the symbol (band in #D9D9D9, diagonal hatch in #8A8A8A, the barrier variant a
+  0.6 pt #8A8A8A outline); legend order: four corridor classes, the two adjacent rows, PA, IPCA, lines. Drawn under the
+  corridor classes on M1 and the 07 maps (`_paint_near_contiguous`, `_near_contiguous_wide`). Pinned examples: the floor-effect
+  gate (G19) on run003 decides; an approximate read on run002 (area/length width, not the median cross-section) puts about
+  eleven links incl. T’akú Tlatsini ↔ Mount Edziza / Stikine and Dene Kʼéh Kusān ↔ Liard River Corridor in the near-contiguous
+  class — expect the pin rule to fire.
+- v1.2.19 (2026-09-28) — land-aware top class (05 D23; route sense D12 amended; the patch labels this v1.2.10, a stale
+  number). Legend string for the top class: **"Only viable connection — no alternative link or route, and the land is
+  already narrowing"**; "last affordable link" unchanged (its count absorbs wide-lens leaves; T1's "Room to move" column
+  shows single route vs N options). **The run002 eight-cell check (G18) FAILS** (1 of the 4 pinned only-viable links sits in
+  the (E, B1, S) cell), so S1–S3 are regenerated per the pin rule on run003 and recorded as a post-pin class change. Caption
+  footnote on M1/M3 and the 07 key gain one clause: the top class also requires the corridor to be below its barrier-free
+  width. `propose_examples` reads the D23 class (`link_class == "both"`) — no stand-in.
+- v1.2.18 (2026-09-28) — geometry-vs-ecology audit (05 D26–D31; the patch labels this entry
+  v1.2.12, a stale number — the spec was at v1.2.17). Example selection for the southern slots
+  is now class-and-width-first with criticality as tie-break (`propose_examples`); expect
+  regeneration on run003. Profiles gain the alternative-kind sentence (D29) and, for locked
+  links, the locked-and-tested line (D27) — profiles are retired from the deck since v1.2.7 but
+  the words are in `_profile_words`. Captions state the cutoff as detour distance (D31).
+  Appendix tier maps show fixed cost-unit breaks (D30).
 - v1.2.17 (2026-09-28, Ethan) — **OUTPUT NOTEBOOKS RE-MAPPED TO THE Y2Y TRAIL + THE CURATED MAPS ON THE
   Y2Y ACT 1 WIDE LAYOUT.** `06_director_package` → **`06_tables_and_figures`** (the record: every map,
   star plot, table and GIS export; unchanged otherwise) and a new **`07_director_outputs`** (the curated
@@ -243,8 +274,17 @@ doctrine as the Y2Y-wide cluster count). Slots:
   Pick the two with the largest `n_branches` × attribution product; tie-break
   toward links whose branches fall in different jurisdictions (that *is* the Act 1
   story).
-- **S1–S3 (required): the both-senses irreplaceable links** [4 on current run —
-  pick the 3 with highest criticality; the 4th goes in the appendix table].
+- **S1–S3 (required; rule replaced 2026-09-28, patch D26–D31):** links in the top class
+  ("only viable connection", D23: no alternative link, one branch AND narrow — `link_class == "both"`), ranked by
+  `squeeze_ratio_obs` ascending (most constrained first); ties by `width_ratio_p10`, then by
+  criticality. If fewer than three links are in the top class after run003, fill from "last
+  affordable link" ranked by `width_ratio_p10` ascending, and say in the profile which class each
+  is. Criticality is no longer the primary key: on a spine-shaped network it ranks mid-chain links
+  by graph position, not by how little room the land leaves. `corridors_director.propose_examples`
+  prints the proposal; the pins in `EXAMPLE_PICKS` govern the deck from the moment they are signed
+  (v1.2.4 pin rule). Regeneration of the pinned slots is expected in run003 and logged as such.
+- **N2–N3:** unchanged rule (branch count × attribution, jurisdiction tie-break), but with branch
+  count from the relative floor (D26).
 - **S4 (optional, use if total ≤ 7): the most squeezed link** — smallest
   band-to-open-ground width ratio, presented with that ratio as the headline
   number ("this corridor is already at 0.4× its natural width").

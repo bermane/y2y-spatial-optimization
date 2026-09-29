@@ -580,3 +580,4 @@ def variant_maps(g, vcfg, L, out_name, key="wolverine", dec=4):
     fig.suptitle(f"CHECK STOP 2 — {vcfg.get('label')}", fontsize=13)
     plt.show()
     return fig
+

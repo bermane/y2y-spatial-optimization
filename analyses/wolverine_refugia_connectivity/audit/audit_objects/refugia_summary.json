@@ -1,10 +1,10 @@
 {
-  "n_patches_total": 68,
-  "n_nodes": 67,
-  "node_min_km2": 500,
+  "n_patches_total": 131,
+  "n_nodes": 130,
+  "node_min_km2": 250,
   "core_km2": 318822,
   "marginal_km2": 169988,
-  "node_land_km2": 260613,
+  "node_land_km2": 282996,
   "class_km2": {
     "0": 498361,
     "1": 52957,
@@ -31,7 +31,8 @@
   },
   "seam_lat": 53.97,
   "ladder": {
-    "250": 67,
+    "100": 130,
+    "250": 130,
     "500": 67,
     "1000": 36
   }
