@@ -300,7 +300,93 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
   (`E_v2` patch-level, `E_interior` on v2's graph) are TABLE-ONLY (`A_fronts.csv`, `front_class_d23`), pending the interior D7 reading on
   the full adjacency graph (next step). Register: D7 at the reported level = the contracted graph for inter-complex links; the interior
   reading for fronts is defined but not yet computable on the right graph.
-- **M7.6 Not exercised at build time:** the contracted routing run itself (06 = a solve; first execution = Ethan's), run mode of the
+- **M7.9 BACK TO NODE LEVEL (Ethan's spec revision of 2026-09-29, the third that day; the one in force):** the deliverable is `v2_run001`
+  as routed (130 nodes, 170 links) with the northern reframe — every non-touching link a corridor on ONE pressure scale. One post-
+  processing notebook (**05_postprocess**, zero routing; `wolverine_postprocess` node-level functions): (i) `kind` front / strip;
+  a FRONT's class from the existing columns — edge sense D7 as routed, route sense = width alone (CUT when the least-cost path carries
+  a cost-10 cell or the width ratio is below 0.5; no branch decomposition; `lcp_max_cost` reported and reconciled with the engine's
+  `crosses_cost_1000`, M7.11); strips keep their v2 classes; (ii) `inter_cluster`
+  = the two ends in different components of the front subgraph (23 components = the former complexes; a reporting filter, not a node
+  definition); (iii) coverage per NODE and per link band (PAs / IPCAs incremental / the balanced core on allocatable land / outside)
+  with the expectation row; (iv) accounting: corridor land dissolved, per-class dissolved beside per-link sums, front area its own line,
+  the D25b identity on per-link sums (MST strips + MST fronts + augmentation = total), branches as links-with-n; (v) names in the audit
+  `node_names.csv` (D-W5), labels by NUMBER (R12) on every output until names are chosen; (vi) the act check, the Nodes and Links tables,
+  T1–T4, the headline, H-W1–H-W7, the §9 checklist. Then **06_director_outputs** with every style decision kept: no protected layers,
+  refugia lime on all maps, fixed insets at 312 × 346 km (A on the Nahanni links south, B on Missoula–Helena–Salmon–Bozeman), no pinch
+  marker; 02 = strips at full weight in the ramp slot with fronts as bands in their class colour (open = light tint, cut = outlined);
+  03 = the route options (strips only as examples) over the same base. **Parked (spec §10, `parked_v3/`):** the complexes chain
+  (05_complexes / 06_v25_network / 07_v25_product, runs v25_run001–002, the contraction engine, the interior D7 reading) and, on the
+  `wolverine-v3` branch, the baseline comparison and glacier surfaces. M7.7 / M7.8 stand as the record of that detour.
+- **M7.11 Path-cell lookup bug, found by the chat's reconciliation check (2026-09-29):** the post-processing read the cost class along a
+  link by sampling the resistance at the centreline vertices with `searchsorted(...) - 1`; the vertices are written at CELL CENTRES
+  (corridors_core._edge_vectors), so that landed one cell WEST and one SOUTH of the true path cell — a diagonal neighbour. Symptoms:
+  '59 fronts cross a cost-1000 cell' against the engine's `crosses_cost_1000` = 0 on every link; '43 slivers touch cost 10' and '62 with a
+  cost-100/1000 cell'. Fixed (`_path_cells`: the nearest centre from the grid origin); verified on all 170 links — max cost ≥ 1000 = 0 =
+  the engine's flag on every link, vertex count = the recorded path length on every link. Corrected: 15 fronts carry a cost-10 cell,
+  none carry cost 100 or 1000, 115 are all cost 1. Every count that used the lookup was regenerated (R7.2 / R7.3 corrected; the parked
+  audit artefacts `slivers_v2.csv` / `fronts_v2.gpkg` rewritten). The rule stands as the spec writes it (cut = a cost-10 cell on the path
+  or width ratio < 0.5) and now applies to the same number the engine reports.
+- **M7.12 Cut = width only; `crossing_class` on every link (spec §1a / §4 as amended by Ethan 2026-09-29 after the M7.11 reconciliation):**
+  a front is cut when its width ratio against the barrier-free width is below the squeeze threshold (0.5) — the northern D25c; path
+  cost never drives the class. `lcp_max_cost` / the road flag become `crossing_class` (the maximum cost class on the least-cost path,
+  exact-cell lookup) carried on every link — strips and fronts — with a profile sentence (`crossing_note`: 'the direct route crosses a
+  road or cut (cost 10)' / '… converted land or a two-lane highway (cost 100)' / '… a multi-lane highway, water or settlement (cost
+  1000)'), in the Links table and T1–T4; the class rule reads width alone. MEASURED on the 130 fronts: the class table is UNCHANGED
+  by the amendment — every front whose direct route crosses a cost-10 cell (15) is also narrower than half its barrier-free width
+  (a road along the gap narrows the front, as the spec's own reasoning says), so cut stays 34 = narrow 34, and the 15 road fronts sit in
+  narrowing (8) and only viable (7), never in options / last affordable. Classes 72 / 15 / 24 / 19, sum 130 (G23). Strips: 21 with an
+  all-intact direct route, 19 crossing cost 10. The parked 133-front artefacts were regenerated the same way (97 open / 36 cut; crossing
+  class 117 at 1, 16 at 10; sum check passes).
+- **M7.14 Presentation set, 06 (Ethan 2026-09-29, five rulings, all knobs, nothing measured changes):** (i) 03 draws the route options as
+  coloured bands only — no numbered circles / leader lines, no cluster-swatch legend row (the y2y cluster construction; the stars and
+  consequences carry the number + colour) — `option_markers=False`, `option_legend="none"`; (ii) the legend box is centred between
+  inset B's bottom edge and the page bottom (the ramp block's bottom) and its items shrink in font units until the box fits the gap —
+  `director_plot.STYLE` `wide_legend_between` + NEW `wide_legend_fit` / `wide_legend_fs_min` (default off; y2y and the north unchanged;
+  simulated: 3 rows fit at 16 pt, 4 rows at 13 pt); (iii) NEW 03 = 02's pressure surface over protected land as ONE grey layer —
+  existing PAs and the proposed IPCAs / PAs, their union filled `#8f8f8f` at 0.85 UNDER the surface (zorder 0.45; Ethan's second
+  ruling the same evening, first drawn on top) — `figure_protection_wide`, with the largest PAs (4) and proposed areas (3, suffixed ', proposed') named per inset through the
+  layout's post-draw hook (one declutter set); route options → 04, stars → 05, consequences → 06; (iv) the corridor-pressure surface and its
+  key at alpha 0.85 (`surface_alpha`, the northern maps' value) so the boundary lines show through, 01's cost surface at 0.70
+  (`cost_surface_alpha`; None = follow `surface_alpha`, 1.0 = opaque) and 03's pressure surface at 0.65 over the grey
+  (`protection_surface_alpha`) — Ethan's second pass the same evening: 0.85 hid the boundaries on 01 and the band-over-protected-land
+  overlap on 03; (v) inset A carries YT and NWT on
+  their parts inside the region (`inset_codes["A"]`, verified at 0.20/0.71 of the window width, both on the top fifth). (vi, later the same
+  evening) 04 = 03's base with the four route options OUTLINED in the option colours (the northern construction: white halo + colour
+  ring, so the pressure fill shows) and numbered 1–4 by the northern post-draw placer; the options are PINNED by link id
+  (`EXAMPLE_PICKS`): A = E020_023 / E020_026 (the Nahanni node's two links south to the Muncho Lake refugia, 0% of their bands inside
+  Nahanni NPR; 4,013 / 3,833 km²), B = E110_120 (Selway-Bitterroot ↔ Lee Metcalf, one branch, narrowing) / E110_119 (Selway-Bitterroot
+  ↔ Skull-Odell, two branches, options); numbered north → south. (vii) NO TEXT OVERLAPS (Ethan's rule): PA / proposed-area names are
+  placed by `_place_area_names` only where the text box overlaps no existing text (codes, towns, earlier names, option numbers) and
+  lies inside the panel (pole of inaccessibility first, then interior grid points; else unnamed); town labels are flipped through the
+  offset quadrants away from any overlap by `_declutter_texts` (hidden if none is clear) on every wide map. (viii) two-neutral split of
+  the protected fills is a knob pair (`protection_fill_pa` / `protection_fill_ipca`, both None = the one grey), decision pending. (ix, chat review of 01, 2026-09-29) the 1,000 cost
+  class is DRAWN as two swatches -- open water (the variant derivation's retained lake / river / ocean layers) in blue-purple `#4F63C9`,
+  settlement and other retained barriers in magma's dark -- both ticks 1,000; the cost surface itself is untouched (display only, no
+  re-route); tick words "roads and forestry cutblocks" / "farmland, other converted land"; ID pinned clear of inset B's scale bar; the
+  frame's north arrow beside the 250 km bar (`director_plot` `north_arrow_beside_bar`, default off). (x, Ethan 2026-09-29, 'why are there breaks in the corridors'):
+  DIAGNOSED on inset B -- every band holds its least-cost path at 300 m (the two option links are 1 and 2 connected pieces), the
+  visible breaks were (1) the wide layout's 2x STRIDE to the 600 m frame dropping one-cell necks (band pieces in the window 20 -> 28),
+  (2) bands stopping at the refugia they cross (correct, drawn green), (3) overlap cells owned by one link (04's outlines only); the
+  beads are road crossings (3.8% of B's band cells lie on cost 10, none on 100 / 1,000; beside the path the 4.1 km allowance is spent
+  in one or two cost-10 cells). FIX (display only, `frame_reduce="any"`): every surface and mask is reduced to the frame by block
+  ANY (masks) / nanmax (class images), so a band continuous at 300 m renders continuous; at a class boundary the higher index wins by
+  at most one 300 m cell. The class question ('options' with a one-cell pinch) is the D28 median-width rule -- p10 reported, not
+  classed -- and goes to the chat.
+- **M7.13 Refugia fill = sea-green `#5BA699` (Ethan 2026-09-29, 'any green-ish tint that works with the sand colour bar'):** a grid search
+  over the green family (hue 90–200°, saturation 0.45–0.9, value 0.35–0.65) against the sand pressure classes + water, the magma cost
+  swatches + water and the four route-option colours, CIE76 under normal vision, deuteranopia and protanopia: pure greens and limes fail
+  (sand's 'A lot' brown, the option orange); the passing region is the blue-green corner at moderate saturation. `#5BA699` (hue 170,
+  sat 0.45, val 0.65): 20.1 / 22.0 / 22.4. Replaces the indigo of M7.10 on all three maps; outline `#2F5F55` 0.3 pt.
+- **M7.10 Colour (Ethan 2026-09-29, 'the colour bar as the northern analysis'):** the pressure key on 02/03 is the SHARED default of
+  `corridors_mapstyle` (`CLASS_PALETTE = "sand"`: pale sand → tan → brown → dark umber for Minimum → Maximum, set by Ethan in the
+  northern package the same day); the wolverine package reads the same tokens, so nothing is set locally. Consequences measured:
+  (i) the open-front tint is 0.70 alpha (0.45 of pale sand sat at luminance 0.91 on the 0.97 land); (ii) the refugia fill reverts
+  to indigo `#4D4DBF` on every map — the only candidate ≥ dE 20 (CIE76, normal + deuteranopia + protanopia) against sand, the magma
+  cost swatches, water AND the four route-option colours (min 20.1); the lime of 06·01 (chosen against magma alone) is dE 12.0 from
+  sand's 'A lot' brown and 6.4 from the option orange, so it fails the §3a test on 02/03. One knob (`cost_map_refugia_fill`).
+- **M7.6 Not exercised at build time:** the wide figures on the node-level product (first render = Ethan's 06). Smoked: the node-level
+  pipeline end to end into a scratch folder and the package on it (tables, headline, hypotheses, checklist, overlays, windows).
+- **M7.6 (superseded text) Not exercised at build time:** the contracted routing run itself (06 = a solve; first execution = Ethan's), run mode of the
   module and the package on the contracted run (07/08 need that run), the second-pass merge path. Smoked: 05 end to end into scratch
   folders and its audit objects through the engine's contraction loader (23 complexes, GW5, the v2 cache identity reproduced); on the
   branch build the same loader + `_apply_parts` + GW5; the package's tables / headline / overlay on the v2-derived product.

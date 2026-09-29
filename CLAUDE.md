@@ -538,30 +538,24 @@ package spec `spec/06_wolverine_director_package_spec.md` v1.1; BINDING living l
   `wd.director_frame` (600 m frame, PAs grey, nodes as the overlay, IPCAs a fill over corridor land); route options = the
   auto examples (max 4, pinnable via `wd.EXAMPLE_PICKS`), references Banff NP + Dene Kʼéh Kusān (`wd.CONSEQ_REFERENCE`).** Knobs in `wd.STYLE`
   / `wd.WIDE_STYLE`; label hand-placements `wd.FULL_SPEC`/`ACT_SPEC`.
-- **RUN SPEC v3 (Ethan's, 2026-09-28; `spec/Wolverine refugia corridors — run spec v3.md`). §1a = v2.5, REVISED 2026-09-29: the
-  complexes are derived from v2_run001 and the ROUTING IS RE-RUN BETWEEN THE 23 COMPLEXES (spec §3 stages 3–4 + §4); the v2
-  patch-to-patch links are used only to derive the complexes + the sliver table and are NOT reported. BUILT on main (M7.1–M7.6, R7):
-  `wolverine_postprocess.py` (patch mode + run mode) + **05_complexes** (zero-solve: components of the 130 D25 links → the AUDIT
-  OBJECTS `complex_membership.csv` / `complex_names.csv` / `complexes.gpkg` / `slivers_v2.csv` / `complexes_summary.json` + D-W7
-  refugia names into `node_names.csv`; CHECK STOP 3 = the complex map; COMMIT before 06) → **06_v25_network** (`cc.start` with
-  `CORRIDORS['wolverine']['v25']['overrides']` → `nodes.contract`; run `v25_run001`; unit field = min over the cached patch fields so
-  CWD + counterfactual HIT v2's caches via the seed-structure hash; G0/GW5, clean-tree assert, second pass asserts none; ~1 h)
-  → **07_v25_product** (run mode: coverage incl. the prioritizr core ON ALLOCATABLE LAND = f_balanced_core ≥ 0.70 outside locked
-  PAs (= the package's 51,580 km², asserted) with the expectation row; accounting; Bow Valley act check; tables; `headline.json`)
-  → **08_director_outputs** (`wp.attach`, `V25_STYLE`; 02 = `figure_network_wide`: complex outlines shaded by PA share, the
-  inter-complex links by class, pinch marked, NO hatched bands; 01 = cost map with ONLY the refugia (lime `#66A61E`, thin outline;
-  `STYLE['cost_map_*']`)). Contraction engine on main = the branch's (M7.2b); the branch `wolverine-v3` (2da23c2) keeps the
-  baseline comparison + glacier surfaces (§6 = next step). Main tagged `v2_run001` (6c79be6). Build-time: 23 complexes (15
-  single-patch; Jasper 24 patches / 135,778 km²; Sustut 43 patches), 133 slivers (62 with a cost-100/1000 cell on the path).
-  **2026-09-29 REVISIONS (M7.7/M7.8, R7.1a/R7.2): the D25 second pass fired on 23 complexes (Jasper's Cabinet-Mountains tail ↔
-  Selway-Bitterroot, 17 km across the Clark Fork) → merged → v25_run002 (22 complexes, 28 links) — then Ethan's spec REVISED: NO merge,
-  fronts are corridors on the same pressure scale → merge undone, run = v25_run003 (23 complexes; 06 reports inter-complex fronts,
-  the engine's D25c classes them). Within-complex FRONTS (133) drawn under the inter-complex links (open = Minimum tint, cut = Some
-  colour + outline; `wd._front_overlay`, `FRONT_STYLE`), per-complex table `A_fronts*.csv`, front area its own line; the edge sense
-  on fronts is TABLE-ONLY (patch-level D7 = 43; the ruled interior bridge/detour reading = 91 on v2's chain-like graph → needs the
-  full adjacency graph, next step). Maps: NO PAs/IPCAs on 01–03 (`STYLE['protected_layers']=False`), refugia lime `#66A61E` on all,
-  complexes labelled by NUMBER (`complex_labels`; auto-names off until Ethan names them), fixed insets at the northern scale
-  (193 × 214 km; A = Nahanni's links south, B = Missoula–Helena–Salmon–Bozeman; `inset_specs`).**
+- **RUN SPEC v3 (Ethan's; `spec/Wolverine refugia corridors — run spec v3.md`), IN FORCE 2026-09-29 (third revision): NODE LEVEL.**
+  The deliverable = `v2_run001` as routed (130 nodes, 170 links) with the northern 2026-09-29 reframe: every link a corridor on ONE
+  pressure scale — FRONTS (the 130 near-contiguous links) classed with width as the route sense (cut = a cost-10 cell on the path or
+  width ratio < 0.5; edge sense = D7 as routed, patch-pairwise, stated once), strips unchanged. BUILT (M7.9, R7.3): `wolverine_postprocess`
+  node-level functions (`link_kinds` / `coverage_nodes` / `accounting_nodes` / `write_node_product` / `attach_nodes`) + **05_postprocess**
+  (zero routing → `<run>/postprocess/`, tables, headline, H-W1–7, §9 checklist) → **06_director_outputs** (2026-09-29 style, Ethan: 01 cost / 02 pressure / **03 protected land** /
+  04 route options / 05 stars + locators / 06 consequences; sea-green refugia `#5BA699`, no node names, no PAs/IPCAs except on 03
+  (existing PAs + proposed IPCAs as ONE grey `#8f8f8f` at 85% UNDER the bands, `figure_protection_wide`, `protection_zorder`), pressure AND cost surfaces at 85% so boundaries show (`surface_alpha` / `cost_surface_alpha`),
+  04 = options OUTLINED (northern construction) + numbered by the northern placer, PINNED by link id (`EXAMPLE_PICKS`: A = Nahanni→Muncho
+  Lake ×2, B = Selway-Bitterroot ↔ Lee Metcalf / Skull-Odell), NO TEXT OVERLAPS (`_place_area_names` / `_declutter_texts`), legend centred between inset B and the page bottom and
+  shrunk to fit (`director_plot` `wide_legend_between` + `wide_legend_fit`, shared knobs, default off), inset A codes YT + NWT inside
+  the region, B MT inside / ID pinned, fixed insets 312 × 346 km; `wd.V25_STYLE`). Measured at build time: strips 21/15/4/0, fronts 72/15/24/19 (34 cut; NO front carries cost 100/1000 — a path-cell
+  lookup bug that said 59 did was caught by the chat and fixed, M7.11; cut = WIDTH ONLY per the amended spec, `crossing_class` +
+  a profile sentence on every link, M7.12 — the 15 road fronts are all narrow, so the table did not move), 38/40 strips cross unprotected land, strips dissolved
+  37,020 km² (25,781 outside PAs+IPCAs), fronts 16,010, D25b identity reconciles. **PARKED (spec §10): the complexes chain
+  → `parked_v3/` (05_complexes / 06_v25_network / 07_v25_product; runs v25_run001–002; contraction engine + `v25` config block stay,
+  unused; audit `complex_*` files kept) and, on branch `wolverine-v3`, the baseline comparison + glacier surfaces.** Main tagged
+  `v2_run001` (6c79be6). Run: 05 → 06. The v2 chain 01–04 stands.
 - **RUN = ETHAN, numeric order:** 01 (warps G2/GW1 → `node_patches` → **CHECK STOP 1** → acquisition →
   terrain layers → τ → `derive_variant` GW2 → **CHECK STOP 2** → timing probe) → 02 (run on the VARIANT only;
   G0, CWD ~2–3 h, inherited cutoff, network G3, GW4, G15, W11 status, priority, write_run) → 03 (near-opt G10,

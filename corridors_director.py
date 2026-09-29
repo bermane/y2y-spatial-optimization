@@ -1777,6 +1777,8 @@ WIDE_STYLE = dict(
     inset_pa_names=99, inset_ipca_names=99, inset_declutter=False, locator_pa_names=99,   # Ethan 2026-09-28: EVERY PA and IPCA node named in the insets + locators (F.PAN = the network's PA nodes)
     hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=True,   # 21's export settings + the §3a PDF twin
     wide_legend_between=True,                                        # the legend box centred between inset B's bottom edge and the bottom of the page (Ethan 2026-09-28)
+    pa_alpha=0.85,                                                   # existing PAs at the same alpha as the IPCA fill (Ethan 2026-09-29)
+    surface_alpha=0.85,                                              # the cost / pressure surface at 85% so the provincial boundaries show through (Ethan 2026-09-29)
 )
 IPCA_WIDE_LABEL = "Proposed IPCAs"                     # the §3a jurisdictions row (v1.2.15); no parenthetical (Ethan 2026-09-28: it widened the legend past inset B)
 COST_CLASSES = (1, 10, 100, 1000)
@@ -1906,7 +1908,8 @@ def cost_surface(P):
     n = len(COST_CLASSES)
     S_ = dict(img=img, cmap=ListedColormap([ms.COST[c][0] for c in COST_CLASSES]), norm=BoundaryNorm(np.arange(-0.5, n + 0.5, 1), n),
               extend="neither", ticks=list(range(n)), ticklabels=[f"{c}\n{COST_TICK_WORDS[c]}" for c in COST_CLASSES],
-              label="cost of moving through the land (the four movement-cost classes)", end_words=None)
+              label="cost of moving through the land (the four movement-cost classes)", end_words=None,
+              alpha=__import__("director_plot").STYLE.get("surface_alpha", 1.0))
     return S_, shares
 
 
@@ -1933,13 +1936,13 @@ def classes_surface(P):
     S_ = dict(img=img, cmap=ListedColormap([ms.CLASS[c][0] for c in order]), norm=BoundaryNorm(np.arange(-0.5, n + 0.5, 1), n),
               extend="neither", ticks=list(range(n)), ticklabels=[_tick(c) for c in order],
               label=ms.CLASS_HEADING[:1] + ms.CLASS_HEADING[1:].lower(),   # "Corridor pressure" (Ethan 2026-09-29); the explanation lives in the caption, not the key
-              end_words=None)
+              end_words=None, alpha=__import__("director_plot").STYLE.get("surface_alpha", 1.0))
     return S_, counts
 
 
 def _wide_overlay(F, P=None):
-    """The overlay callback for the wide layout: the draft IPCAs as filled nodes (the §3a IPCA fill, opaque like the layout's PA
-    grey so the two node kinds read alike) with their outlines. `P` is accepted for signature stability (D25c retired the
+    """The overlay callback for the wide layout: the draft IPCAs as filled nodes (the §3a IPCA fill at its alpha) with their
+    outlines at the token's weight. `P` is accepted for signature stability (D25c retired the
     near-contiguous layers). Called on the frame and on every inset."""
     import director_plot as dp
     import corridors_mapstyle as ms
@@ -1947,12 +1950,13 @@ def _wide_overlay(F, P=None):
     fill = np.full(F.G.shape, np.nan, np.float32); fill[F.IP.mask2d] = 1.0
 
     def draw(ax):
-        ax.imshow(fill, cmap=ListedColormap([a["fill"]]), interpolation="nearest", zorder=1.1)
-        lw = 0.9 * dp.STYLE.get("_lw_scale", 1.0)
+        ax.imshow(fill, cmap=ListedColormap([a["fill"]]), alpha=a["alpha"], interpolation="nearest", zorder=1.1)   # the §3a IPCA fill + alpha (Ethan 2026-09-29: #5BA699 @ 85%)
+        lw = a["lw"] * dp.STYLE.get("_lw_scale", 1.0)                                                            # the outline at the token's weight (0.3 pt)
         for _, r in F.IP.gdf.iterrows():
             for ring in F.rings_px(r.geometry):
                 ax.plot(ring[:, 0], ring[:, 1], color=a["edge"], lw=lw, zorder=3.5)
-    handles = [Patch(facecolor=dp.PA_COLOR, label=PA_LABEL), Patch(facecolor=a["fill"], edgecolor=a["edge"], label=IPCA_WIDE_LABEL)]
+    handles = [Patch(facecolor=dp.PA_COLOR, alpha=dp.STYLE.get("pa_alpha", 1.0), label=PA_LABEL),
+               Patch(facecolor=a["fill"], alpha=a["alpha"], edgecolor=a["edge"], linewidth=a["lw"], label=IPCA_WIDE_LABEL)]
     return draw, handles
 
 
@@ -2015,13 +2019,17 @@ def _options_overlay(P, F, nums=OPTIONS_MAP_NUMS):
     import director_plot as dp
     marks = _option_marks(P, F, nums)
     colors = {n: option_color(n) for n, _, _, _ in marks}
-    layers = [(np.where(m, 1.0, np.nan).astype(np.float32), colors[n]) for n, m, _, _ in marks]
+    layers = [(m.astype(np.float32), colors[n]) for n, m, _, _ in marks]
     ipca_draw, handles = _wide_overlay(F, P)
 
     def draw(ax):
         ipca_draw(ax)
-        for img, col in layers:
-            ax.imshow(img, cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)     # under the PA (1) / IPCA (1.1) fills
+        # Ethan 2026-09-29: the options are OUTLINED in their colour (a ring with a thin white halo, as the y2y cluster outlines), so
+        # the corridor-pressure fill of the band shows through; drawn above the node fills
+        lw = dp.STYLE["cluster_lw"] * 1.6 * dp.STYLE.get("_lw_scale", 1.0)
+        for m, col in layers:
+            ax.contour(m, levels=[0.5], colors=["white"], linewidths=lw + 1.4, zorder=3.55)
+            ax.contour(m, levels=[0.5], colors=[col], linewidths=lw, zorder=3.6)
     # the numbers are placed by a post-draw pass (outside the band, no leader, clear of labels -- Ethan 2026-09-29)
     handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in colors])]     # swatches in option order
     return draw, handles, marks, colors

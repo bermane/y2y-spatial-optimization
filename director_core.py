@@ -1291,9 +1291,12 @@ def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, 
     return taken
 
 
-def label_jurisdictions_window(ax, G, B, window, fs=14, min_share=0.04, avoid_sw=True, skip=(), force=()):
+def label_jurisdictions_window(ax, G, B, window, fs=14, min_share=0.04, avoid_sw=True, skip=(), force=(), inside=(), at=None):
     """Postal codes of the provinces / states inside a pixel window, each at the pole of inaccessibility of its part of the
-    window (faint caps, white halo) -- for insets and locator windows. Returns the label positions (for decluttering)."""
+    window (faint caps, white halo) -- for insets and locator windows. Returns the label positions (for decluttering).
+    `inside`: codes placed on their part INSIDE the region instead of the open land around it (wolverine inset B: the Y2Y
+    boundary reads as a state line, so MT sits inside the corridor -- Ethan 2026-09-29). `at`: {code: (lon, lat)} pins a code
+    to a point (wolverine: ID below Salmon). Both additive; every other caller is unchanged."""
     from shapely.ops import polylabel
     import matplotlib.patheffects as _pe
     px0, px1, py0, py1 = window
@@ -1306,9 +1309,16 @@ def label_jurisdictions_window(ax, G, B, window, fs=14, min_share=0.04, avoid_sw
         if code in skip:
             continue
         g = r.geometry.intersection(win)
+        if at and code in at:                                                  # pinned by hand (lon, lat)
+            import pyproj as _pp
+            xx, yy = _pp.Transformer.from_crs("EPSG:4326", G.crs, always_xy=True).transform(*at[code])
+            px, py = xy_to_px(G, xx, yy)
+            ax.text(px, py, POSTAL_DISPLAY.get(code, code), fontsize=fs, fontweight=600, color=jc, alpha=0.9, ha="center", va="center", zorder=4.6, clip_on=True,
+                    path_effects=[_pe.withStroke(linewidth=0.3 * fs, foreground="white", alpha=0.85)])
+            out.append((px, py)); continue
         if g.is_empty or (g.area < min_share * win.area and code not in force):
             continue
-        free = g.intersection(outside)
+        free = g.intersection(win.intersection(B.region)) if code in inside else g.intersection(outside)
         best, best_r = None, 0.0
         for q in (free.geoms if hasattr(free, "geoms") else [free]):
             if q.geom_type != "Polygon" or q.is_empty:

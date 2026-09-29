@@ -71,21 +71,48 @@ STYLE = dict(
     complex_shade_alphas=(0.25, 0.45, 0.65, 0.90),
     pinch_marker=True, bow_valley_lat=51.2, banff_lonlat=(-115.57, 51.18), banff_check_km=60,   # the p10 pinch on each corridor link; the act check
 )
-V25_STYLE = dict(act_breaks_lat=(51.0,), draw_near_contiguous=False, inset_label_slivers=True, pinch_marker=True, protected_layers=False)   # run spec v3 §1a defaults
+V25_STYLE = dict(act_breaks_lat=(51.0,), draw_near_contiguous=False, inset_label_slivers=True, pinch_marker=False, protected_layers=False,   # run spec v3 §1a defaults
+                 front_style="plain",                              # Ethan 2026-09-29: fronts are links on the one pressure scale -- drawn in their class colour like
+                 front_legend_rows=False)                          # strips, nothing separate ("tint" = the spec §8 tint treatment; "hidden" = strips only); no legend rows
 # FIXED insets at the northern package's scale (Ethan 2026-09-29): every wide map (01-03 + the locators) shares two windows of the
 # northern insets' extent (193 x 214 km after the fit to the inset aspect, measured on north/v2_run003), A centred on the links between
 # the Nahanni complex and the complexes south of it, B on the Missoula / Helena / Salmon / Bozeman centroid.
-INSET_KM = (193.0, 214.0)
-STYLE.update(complex_labels="number",                        # "number" (C12) | "name" (the auto / display names) | "none"
+INSET_KM = (312.0, 346.0)      # the northern insets are 193 x 214 km; Ethan 2026-09-29: enlarged so A holds the full Nahanni links south (fitted once)
+STYLE.update(option_markers=False,                           # 04: the old leader markers OFF (Ethan 2026-09-29: 'get rid of clusters'); numbers come from the northern placer
+             option_style="outline",                           # 04 (Ethan 2026-09-29): options OUTLINED in their colour so the pressure fill shows | "fill" = the coloured band
+             option_legend="swatches",                         # 04's legend: "swatches" (the y2y cluster row, colours in option order) | "rows" | "none"
+             options_protected=True,                           # 04 carries 03's protected-land layer + names
+             surface_alpha=0.85,                               # the corridor-pressure surface + its key at this alpha so the boundary lines show through (Ethan 2026-09-29)
+             cost_surface_alpha=0.70,                          # 01's cost surface (Ethan 2026-09-29: more see-through than 02/04 so the boundaries read); None = follow surface_alpha
+             protection_surface_alpha=0.65,                    # 03's pressure surface over the grey: lower still, so band-over-protected-land reads (Ethan 2026-09-29); None = surface_alpha
+             protection_fill="#8f8f8f", protection_alpha=0.85, # 06 · 03: existing PAs AND proposed IPCAs / PAs in the y2y layout's PA grey (director_plot.PA_COLOR) at 85%
+             protection_fill_pa=None, protection_fill_ipca=None,   # set BOTH to split the kinds into two neutrals (two legend rows); None = protection_fill for both
+             protection_label_pa="Existing protected areas", protection_label_ipca="Proposed IPCAs / PAs",
+             protection_zorder=0.45,                           # ... drawn UNDER the corridor-pressure surface (0.5); 1.0 puts the grey over the bands
+             protection_label="Existing PAs and proposed IPCAs",     # short: the box must stay inside inset B's width
+             protection_pa_names=4, protection_ipca_names=3,   # 06 · 03 (Ethan 2026-09-29): the largest PAs / proposed IPCAs named in each inset (0 = none)
+             protection_pa_min_km2=100,                        # PAs below this are never named there
+             protection_ipca_suffix=", proposed",             # appended to a proposed area's name (both kinds share the one grey)
+             protection_frame_names=False,                     # names on the Y2Y frame panel too (default: insets only)
+             complex_labels="none",                          # "none" (Ethan 2026-09-29: the R numbers are just node ids) | "number" | "name" (when names are chosen)
              inset_km=INSET_KM,
-             inset_specs={"A": dict(links_between=[(1, 2), (2, 6)], title="Nahanni's links south"),          # complex-id pairs; fallback = the complexes' bbox centre
+             inset_specs={"A": dict(center_lonlat=(-126.05, 60.45), title="Nahanni's links south"),          # nudged ~20 km west, ~25 km south (Ethan 2026-09-29)   # fit = size the window to those links' corridor land + pad
                           "B": dict(towns=["Missoula", "Helena", "Salmon", "Bozeman"], title="The southern edge")})   # centre = the towns' centroid
 # 06 · 01, the movement-cost map (Ethan 2026-09-29): no PAs / IPCAs, the refugia in a hue with no counterpart in magma (lime green:
 # min dE 22 against the four cost swatches + water under every colour-vision simulation, as the indigo, but not in magma's purple
 # family), a thin outline, plain labels. `cost_map_context=True` restores the PA / IPCA layers.
 STYLE.update(protected_layers=False,                       # PAs / IPCAs on the wide maps (01-03, the locators): OFF (Ethan 2026-09-29) -- the
-             cost_map_refugia_fill="#66A61E", cost_map_refugia_alpha=0.85, cost_map_outline=("#3A5F0B", 0.3),   # protection analysis is a separate product
-             cost_map_refugia_label="Core wolverine refugia", cost_map_ramp_label="Cost of moving through the land")
+             cost_map_refugia_fill="#5BA699", cost_map_refugia_alpha=0.85, cost_map_outline=("#2F5F55", 0.3),   # protection analysis is a separate product.
+             # Refugia fill (Ethan 2026-09-29: "a green-ish tint that works with the sand colour bar"): a muted sea-green, hue 170 / sat 0.45 /
+             # val 0.65 from a grid search over the green family -- dE 20.1 vs the sand pressure classes + water, 22.0 vs the magma cost
+             # swatches + water, 22.4 vs the four route-option colours (CIE76; normal + deuteranopia + protanopia). Pure greens / limes fail
+             # against sand's brown or the option orange; indigo #4D4DBF (20.1 / 22.0 / 20.3) is the alternative.
+             # (earlier note: indigo was the only NON-green candidate found before the green-family grid search)
+             cost_map_refugia_label="Core wolverine refugia", cost_map_ramp_label="Cost of moving through the land",
+             cost_tick_words={10: "roads and\nforestry\ncutblocks", 100: "farmland,\nother\nconverted\nland", 1000: "water,\nsettlement"},   # chat 2026-09-29: no jargon ("cuts"); no ice at 1000 (W1)
+             frame_reduce="any",                               # 300 m -> 600 m frame by block ANY / nanmax (Ethan 2026-09-29: continuous bands stay continuous); "stride" = the old sampling
+             cost_split_water=True, cost_water_fill="#4F63C9",   # 01 (chat 2026-09-29): open water out of the 1,000 swatch in a blue-purple; settlement keeps magma's dark
+             cost_water_word="open\nwater", cost_settlement_word="settlement,\nother\nbarriers")
 
 # hand-placed jurisdiction / town labels for the FULL Y2Y frame (lon/lat; Ethan signs)
 FULL_SPEC = dict(
@@ -100,7 +127,17 @@ ACT_SPEC = {
     "central": dict(fig_id="W3", title="Wolverine Corridors: The Central Rockies", message="TBC after the run"),
     "south":   dict(fig_id="W4", title="Wolverine Corridors: The Southern Edge", message="TBC after the run"),
 }
-EXAMPLE_PICKS = []          # same schema as corridors_director.EXAMPLE_PICKS; non-empty = override the automatic rule
+# The deck's route options (Ethan 2026-09-29; 06 · 04): inset A = the two southern branches from the Nahanni node that lie OUTSIDE
+# Nahanni National Park Reserve (its two links south to the Muncho Lake refugia), inset B = the two big corridors in the middle of the
+# panel -- Selway-Bitterroot <-> Lee Metcalf (one part) and Selway-Bitterroot <-> Skull-Odell (two route branches). Pinned by EDGE
+# id (the run's stable link ids; the pair is the human-readable check), numbered north -> south by select_examples = 1-2 in A, 3-4 in B.
+# Empty list = the automatic class-and-width rule. Schema otherwise = corridors_director.EXAMPLE_PICKS (pair / act / slot / side).
+EXAMPLE_PICKS = [
+    dict(edge_id="E020_023", pair=("R21 Nahanni", "R24 Muncho Lake"), act="north", slot="A-1", side="nw"),     # 4,013 km², options, 0% inside Nahanni NPR
+    dict(edge_id="E020_026", pair=("R21 Nahanni", "R27 Muncho Lake"), act="north", slot="A-2", side="se"),     # 3,833 km², options, 0% inside Nahanni NPR
+    dict(edge_id="E110_120", pair=("R111 Selway", "R121 Lee Metcalf"), act="south", slot="B-3", side="ne"),    # 758 km², narrowing, one branch
+    dict(edge_id="E110_119", pair=("R111 Selway", "R120 Skull-Odell"), act="south", slot="B-4", side="sw"),    # 1,091 km², options, two branches
+]
 ACT_ORDER = ["north", "central", "south"]
 
 
@@ -151,6 +188,8 @@ def package(R, out=None, picks=None):
         cls = pd.Series("securing", index=e.index)
         cls[sq] = "squeezed"; cls[irr] = "edge"; cls[both] = "both"
     cls[e["is_adjacency"] | (e["cost"] <= 0)] = "adjacency"
+    P.kind = (R.edges["kind"].reindex(e.index).fillna("strip") if "kind" in R.edges.columns else pd.Series("strip", index=e.index))   # node level: front / strip
+    P.kind[cls == "adjacency"] = "adjacency"
     for k in getattr(R, "intra_complex_ids", []) or []:                 # v2.5: corridor-class links with both ends in one complex --
         if k in cls.index:                                              # listed with the slivers, never drawn or counted as corridors
             cls[k] = "intra_complex"
@@ -229,12 +268,25 @@ def _node_table(R):
         nt = nt.copy(); nt["display_name"] = nt["display_name"].astype(str).str.strip()
         nt["name"] = np.where(nt["display_name"] != "", nt["display_name"], nt["label_auto"])
         keep = [c for c in ("node_id", "name", "label_auto", "area_km2", "n_cells", "lat", "lon",
-                            "pa_overlap_name", "pa_overlap_frac", "nearest_pa", "nearest_pa_km", "bearing", "share_north_model") if c in nt.columns]
+                            "pa_overlap_name", "pa_overlap_frac", "nearest_pa", "nearest_pa_km", "bearing", "share_north_model",
+                            "pa_share", "ipca_added_share", "core_share", "core_incremental_share", "outside_all_share", "mean_ghm90max",   # the node-level
+                            "n_links", "n_fronts", "n_strips", "n_securing", "n_squeezed", "n_edge", "n_both") if c in nt.columns]              # product (05)
         g = g.drop(columns=[c for c in keep if c in g.columns and c != "node_id"], errors="ignore").merge(nt[keep], on="node_id", how="left")
     if "name" not in g.columns:
         g["name"] = [cc._short_node_name(n, 40) for n in g.name_label]
-    g["short"] = [cc._short_node_name("X · " + str(n), 22) for n in g["name"]]
+    mode = STYLE.get("complex_labels", "number")                          # node level: "R12" until names are chosen (Ethan 2026-09-29)
+    if mode == "name":
+        g["short"] = [cc._short_node_name("X · " + str(n).replace("Refugium (", "").rstrip(")"), 22) for n in g["name"]]
+    elif mode == "none":
+        g["short"] = ""
+    else:
+        g["short"] = [f"R{int(c)}" for c in g["node_id"]]
     g["core_km2"] = g["area_km2"]
+    if "pa_share" not in g.columns and "pa_overlap_frac" in g.columns:
+        g["pa_share"] = g["pa_overlap_frac"]
+    for c in ("ipca_added_share", "core_share", "core_incremental_share", "outside_all_share", "n_links", "n_fronts", "n_strips"):
+        if c not in g.columns:
+            g[c] = 0
     return g
 
 
@@ -289,7 +341,7 @@ def bow_valley_check(P, lonlat=None, radius_km=None):
     xs, ys = R.template.x.values, R.template.y.values
     rows = []
     for eid, k in P.order.items():
-        if P.cls.get(eid) not in cc.CORRIDOR_CLASSES:
+        if P.cls.get(eid) not in cc.CORRIDOR_CLASSES or P.kind.get(eid, "strip") != "strip":
             continue
         m = (P.owner == k) & R.corridor
         rr, cc_ = np.nonzero(m)
@@ -324,15 +376,26 @@ def select_examples(P, picks=None):
     chosen = []
     if picks:
         for pk in picks:
-            eid = cd._find_edge(e, pk["pair"])
-            chosen.append(dict(edge_id=eid, act=pk.get("act"), slot=pk.get("slot", ""), kind="pinned"))
+            if pk.get("edge_id") is not None:                                  # pinned by the run's link id (wolverine, 2026-09-29); the pair is the readable check
+                eid = pk["edge_id"] if pk["edge_id"] in e.index else None
+                if eid is None:
+                    print(f"  PIN RULE FIRES: {pk['edge_id']} ({pk.get('pair')}) is not a link of this run -- dropped")
+                    continue
+                r = e.loc[eid]
+                if pk.get("pair") and not all(any(str(frag) in str(lab) for lab in (r.label_i, r.label_j)) for frag in pk["pair"]):
+                    print(f"  WARNING: {eid}'s labels ({r.label_i} ↔ {r.label_j}) do not both match the pinned pair {pk['pair']} -- check the pin")
+            else:
+                eid = cd._find_edge(e, pk["pair"])
+            if eid is None:
+                continue
+            chosen.append(dict(edge_id=eid, act=pk.get("act"), slot=pk.get("slot", ""), kind="pinned", side=pk.get("side", "nw")))
     else:
         for col in ("squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost", "n_branches"):
             if col not in e.columns:
                 e[col] = np.nan
         for act in getattr(P, "act_order", ACT_ORDER):
             ids = [k for k in e.index if P.acts.get(k) == act and not bool(P.secured.get(k, False))    # W11: satisfied links are never examples
-                   and P.cls.get(k) in cc.CORRIDOR_CLASSES]                                              # D25: geometric / within-complex links are not corridor objects
+                   and P.cls.get(k) in cc.CORRIDOR_CLASSES and P.kind.get(k, "strip") == "strip"]         # examples = strips (spec §5: the last-affordable STRIPS)
             sub = e.loc[ids]
             close = []
             # class-and-width-first (the northern §2 rule, D26-D31): the top class ranked most-constrained first
@@ -920,6 +983,8 @@ def _link_rows(P, ids, nums=None):
                          (cc.LINK_CLASS_LABEL.get(c, c) if P.classified else (ms.CLASS[c][3] if c in ms.CLASS else c))),
             "Geometry": geo,
             "Alternative link is": (str(alt) if isinstance(alt, str) and alt else "—"),
+            "Crossing class": (int(r["crossing_class"]) if pd.notna(r.get("crossing_class", np.nan)) else "—"),
+            "Direct route": (r.get("crossing_note") if isinstance(r.get("crossing_note"), str) and r.get("crossing_note") else "all intact land"),
             "Narrowest tenth (p10 width ratio)": (f"{float(w10):.2f}" if pd.notna(w10) else "—"),
             "Protection status": status,
             "Route inside existing PAs (%)": (f"{100*cpa:.0f}" if pd.notna(cpa) else "—"),
@@ -1058,33 +1123,62 @@ def qa_report(P):
 # -- so corridor land inside PAs / IPCAs reads as already satisfied by the overlay (Ethan 2026-09-28, W11 overlay mode).
 WIDE_STYLE = dict(
     map_layout="wide", inset_clusters=(1, 2), inset_windows=None,
-    inset_codes={}, inset_town_skip={}, main_skip_codes=("CA",),          # the y2y frame's own skips; inset windows are ours
+    inset_codes={"A": dict(inside=["YT", "NT"], force=["YT", "NT"]),        # Ethan 2026-09-29: YT + NWT on their parts inside the region (the window is all Y2Y land)
+                 "B": dict(inside=["MT"], at={"ID": (-113.05, 44.80)})},   # Ethan 2026-09-29: MT inside the corridor (the Y2Y line reads as a state line), ID south-east of Salmon, clear of the scale bar
+    inset_town_skip={}, main_skip_codes=("CA",),                          # the y2y frame's own skips; inset windows are ours
     wide_main_towns=(), wide_main_names="abbrev",                          # the frame panel: postal codes only, no towns
     pa_layer_min_km2=300, inset_pa_names=4, window_scale_km=250,           # named PAs in the insets; a 250 km bar on the Y2Y frame
     hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=True,
+    wide_legend_between=True, wide_legend_fit=True, wide_legend_fs_min=9,   # Ethan 2026-09-29: the legend box centred between inset B's bottom and the page bottom, its
+                                                                             # items shrunk (font units) until the box fits the gap
+    pa_alpha=0.85,                                                           # the layout's PA grey at 85% (the northern maps' value); inert here -- every frame is built without the PA layer
+    north_arrow_beside_bar=True,                                             # the frame's north arrow to the right of the 250 km bar, not floating above it (chat 2026-09-29)
 )
 WIDE_FRAME_STEP = 2            # 300 m grid -> 600 m frame for the wide layout (memory: 47 M -> 12 M cells)
 WIDE_INSET_KM = 350            # inset windows floor (each side), before the aspect fit
 NODE_WIDE_LABEL = "Core wolverine refugia (the nodes)"
+WIDE_TOWNS = {**dc.Y2Y_TOWNS, "Fort Liard": (60.24, -123.47), "Nahanni Butte": (61.03, -123.38),   # added for inset A (Ethan 2026-09-29) -- both fell off its east
+              "Lower Post": (59.92, -128.49)}                                                       # edge after the window moved; Lower Post (Ethan's pick) sits on its west edge
 IPCA_WIDE_LABEL = "Proposed IPCAs / PAs"
 PA_WIDE_LABEL = "Existing protected areas"
 
 
-def director_frame(P, pad_km=None, step=WIDE_FRAME_STEP, pa=None):
+def _reduce(a, step, how=None):
+    """300 m -> the frame grid. STYLE["frame_reduce"]: "any" (Ethan 2026-09-29) = a frame cell is drawn if ANY 300 m cell in its
+    step x step block is, so a band that is continuous at 300 m stays continuous at 600 m (striding dropped one-cell necks at
+    road crossings and drew beads with gaps); "stride" = every step-th cell, the old sampling. Float images (NaN = nothing) take the
+    block's nanmax, so at a boundary between two classes the higher index wins -- one 300 m cell at most; bool masks take any."""
+    import warnings
+    how = how or STYLE.get("frame_reduce", "any")
+    a = np.asarray(a); s_ = int(step)
+    if s_ == 1 or how == "stride":
+        return a[::s_, ::s_]
+    H, W = a.shape; Hp, Wp = -(-H // s_) * s_, -(-W // s_) * s_
+    if a.dtype == bool:
+        q = np.zeros((Hp, Wp), bool); q[:H, :W] = a
+        return q.reshape(Hp // s_, s_, Wp // s_, s_).any(axis=(1, 3))
+    q = np.full((Hp, Wp), np.nan, np.float32); q[:H, :W] = a
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)                        # all-NaN blocks are NaN, as they should be
+        return np.nanmax(q.reshape(Hp // s_, s_, Wp // s_, s_), axis=(1, 3))
+
+
+def director_frame(P, pad_km=None, step=WIDE_FRAME_STEP, pa=None, names=None):
     """The wolverine run as a director_plot frame (cached on P): G on the routing grid decimated by `step` (pu = routable
     cells, locked2d = the EXISTING PAs as the layout's grey layer), the refugia nodes as the overlay in the IPCA role (their
     short names label the insets), the Y2Y frame + pad as the pixel WINDOW, the y2y town table."""
     pa = bool(STYLE.get("protected_layers", True)) if pa is None else bool(pa)
-    key = (step, pa)
+    names = pa if names is None else bool(names)                               # PA names in the insets (06 · 04 draws the grey without them)
+    key = (step, pa, names)
     if getattr(P, "_frames", None) and key in P._frames:
         return P._frames[key]
     import director_plot as dp
     from affine import Affine
     R = P.R
     s = int(step)
-    cost = R.resistance.values[::s, ::s]
-    pu = np.isfinite(cost) & (cost > 0)
-    pa2d = (R.protected_pa if getattr(R, "protected_pa", None) is not None else P.pa_mask300)[::s, ::s] & pu
+    cost = R.resistance.values
+    pu = _reduce(np.isfinite(cost) & (cost > 0), s)
+    pa2d = _reduce(np.asarray(R.protected_pa if getattr(R, "protected_pa", None) is not None else P.pa_mask300, bool), s) & pu
     if not pa:                                                                  # 06 · 01 (Ethan 2026-09-29): no protected-area layer
         pa2d = np.zeros_like(pa2d)
     tr = R.transform
@@ -1098,14 +1192,15 @@ def director_frame(P, pad_km=None, step=WIDE_FRAME_STEP, pa=None):
         nodes["name"] = [(f"{sh} [{int(a)}/{int(b)}]" if sh else "") for sh, a, b in zip(P.nodes["short"], P.nodes["n_fronts"], P.nodes["n_cut"])]   # [fronts / cut]
     elif getattr(P, "contracted", False) and STYLE.get("inset_label_slivers", True) and "n_slivers" in P.nodes.columns:
         nodes["name"] = [(f"{sh} [{int(a)}]" if sh else "") for sh, a in zip(P.nodes["short"], P.nodes["n_slivers"])]      # [within-complex slivers]
-    overlay = SimpleNamespace(gdf=nodes, mask2d=P.node_mask[::s, ::s], label=NODE_WIDE_LABEL)
+    overlay = SimpleNamespace(gdf=nodes, mask2d=_reduce(np.asarray(P.node_mask, bool), s), label=NODE_WIDE_LABEL)
     (x0, x1), (y0, y1) = ms.sector_frame(R, STYLE["frame_pad_km"] if pad_km is None else pad_km)
     px0, pyb = dc.xy_to_px(G, x0, y0); px1, pyt = dc.xy_to_px(G, x1, y1)
-    F = dp.load_frame(G, overlay=overlay, window=(float(px0), float(px1), float(pyt), float(pyb)), towns=dc.Y2Y_TOWNS,
-                      pa_min_km2=(None if pa else 1e15))                    # no PA layer -> no named PAs in the insets / locators either
+    F = dp.load_frame(G, overlay=overlay, window=(float(px0), float(px1), float(pyt), float(pyb)), towns=WIDE_TOWNS,
+                      pa_min_km2=(None if names else 1e15))                 # no PA layer / names off -> no named PAs in the insets / locators either
     F.STEP = s
     F.IPCA2D = (P.protected_ipca if getattr(P, "protected_ipca", None) is not None else
-                (getattr(R, "protected_ipca", None) if getattr(R, "protected_ipca", None) is not None else np.zeros(R.shape, bool)))[::s, ::s] & pu
+                (getattr(R, "protected_ipca", None) if getattr(R, "protected_ipca", None) is not None else np.zeros(R.shape, bool)))
+    F.IPCA2D = _reduce(np.asarray(F.IPCA2D, bool), s) & pu
     F.IPCA_GDF = P.ipca
     F.PICKS, F.CL = None, {}
     if getattr(P, "_frames", None) is None:
@@ -1123,7 +1218,7 @@ def _near_contiguous_wide(P, F):
         ids = list(P.cls.index[P.cls == c])
         if not ids:
             continue
-        m = (np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor)[::s, ::s]
+        m = _reduce(np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor, s)
         if m.any():
             layers.append((c, m, len(ids)))
     if not layers:
@@ -1142,6 +1237,16 @@ def _near_contiguous_wide(P, F):
                      linewidth=(NEAR_TOKENS[c]["outline"][1] if NEAR_TOKENS[c]["outline"] else 0.0),
                      label=NEAR_TOKENS[c]["label"]) for c, _, _ in layers]
     return draw, handles
+
+
+def _boundary_handles():
+    """Legend rows for the two boundary lines the wide layout draws (director_core.BASEMAP): the Y2Y region and the province /
+    state boundaries -- so neither reads as the other (Ethan 2026-09-29). STYLE["boundary_legend"] switches them off."""
+    if not STYLE.get("boundary_legend", True):
+        return []
+    y2y = dc.BASEMAP["y2y"]; adm = dc.BASEMAP["admin"]
+    return [Line2D([], [], color=y2y[0], lw=y2y[1] * 1.6, ls=(0, y2y[2]), label="Y2Y region"),
+            Line2D([], [], color=adm[0], lw=adm[1] * 1.6, ls=(0, adm[2]), label="Province / state boundary")]
 
 
 def _base_overlay(F, P):
@@ -1217,17 +1322,27 @@ def inset_windows(P, mode="examples", same_scale=True):
 
     out = {}
     if mode == "fixed":                                                  # the northern scale, fixed centres (STYLE["inset_specs"])
-        w_km, h_km = STYLE["inset_km"]
+        w0, h0 = STYLE["inset_km"]
         to_xy = pyproj.Transformer.from_crs("EPSG:4326", R.crs, always_xy=True)
         cl = getattr(R, "centrelines", None)
+        centres, sizes = {}, {}
         for tag, spec in STYLE["inset_specs"].items():
-            cx = cy = None
+            cx = cy = None; w_km, h_km = w0, h0
             if spec.get("links_between") and cl is not None:
                 cid = lambda lab: cc._label_num(lab)
                 pairs = {tuple(sorted(pr)) for pr in spec["links_between"]}
-                sel = cl[[tuple(sorted((cid(a), cid(b)))) in pairs for a, b in zip(cl["label_i"], cl["label_j"])]]
-                if len(sel):
-                    b = sel.total_bounds; cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+                hit = [k for k, a, b in zip(cl["edge_id"], cl["label_i"], cl["label_j"]) if tuple(sorted((cid(a), cid(b)))) in pairs]
+                if hit:
+                    m = np.isin(P.owner, [P.order[k] for k in hit if k in P.order]) & R.corridor      # the links' full corridor land
+                    rr, cc_ = np.nonzero(m)
+                    if len(rr):
+                        x0, x1 = xs[cc_.min()], xs[cc_.max()]; y0, y1 = ys[rr.max()], ys[rr.min()]
+                    else:
+                        b = cl.set_index("edge_id").loc[hit].total_bounds; x0, y0, x1, y1 = b
+                    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+                    if spec.get("fit"):                                            # size the window to the links + pad, never below the floor
+                        pad = float(spec.get("pad_km", 30)) * 1e3
+                        w_km = max(w0, (x1 - x0 + 2 * pad) / 1e3); h_km = max(h0, (y1 - y0 + 2 * pad) / 1e3)
                 else:                                                    # no such link in this run: the complexes themselves
                     ids = sorted({c for pr in spec["links_between"] for c in pr})
                     g = P.nodes[P.nodes.node_id.isin(ids)]
@@ -1240,8 +1355,12 @@ def inset_windows(P, mode="examples", same_scale=True):
                 cx, cy = to_xy.transform(*spec["center_lonlat"])
             if cx is None:
                 continue
+            centres[tag] = (cx, cy); sizes[tag] = (w_km, h_km)
+        w_km = max(w for w, _ in sizes.values()); h_km = max(h for _, h in sizes.values())      # A and B at ONE size (the larger)
+        for tag, (cx, cy) in centres.items():
             px0, pyb = dc.xy_to_px(F.G, cx - w_km * 500, cy - h_km * 500); px1, pyt = dc.xy_to_px(F.G, cx + w_km * 500, cy + h_km * 500)
             out[tag] = (float(px0), float(px1), float(pyt), float(pyb))
+        print(f"  insets (fixed): {w_km:.0f} x {h_km:.0f} km each" + (" (A fitted to its links)" if any(sp.get('fit') for sp in STYLE['inset_specs'].values()) else ""))
         return out
     if mode == "examples" and len(P.examples) >= 1:
         ordered = sorted(P.examples, key=lambda x: x["num"])          # 1..k, north -> south
@@ -1277,9 +1396,57 @@ def inset_windows(P, mode="examples", same_scale=True):
 
 
 def cost_surface(P):
-    """The four movement-cost classes for the ramp slot (corridors_director.cost_surface: the §3a magma swatches)."""
-    return cd.cost_surface(P)
+    """The movement-cost classes for the ramp slot (corridors_director.cost_surface: the §3a magma swatches), with the 1,000 class
+    SPLIT for the reader (chat 2026-09-29): open water (lakes >= 10 ha, rivers > 28 m³/s, ocean -- the retained water layers of the
+    variant derivation, `variant_layers/`) in STYLE["cost_water_fill"], settlement and the other retained barriers in the magma dark;
+    both ticks read 1,000 -- the cost is unchanged, only the reading. STYLE["cost_split_water"]=False restores the four swatches.
+    Tick words from STYLE["cost_tick_words"] over corridors_director.COST_TICK_WORDS (no jargon: "forestry cutblocks", "farmland")."""
+    from matplotlib.colors import BoundaryNorm
+    S_, shares = cd.cost_surface(P)
+    words = dict(cd.COST_TICK_WORDS); words.update(STYLE.get("cost_tick_words", {}))
+    S_ = dict(S_)
+    wm = _water_mask(P) if STYLE.get("cost_split_water", True) else None
+    if wm is not None:
+        cost = P.R.resistance.values
+        img = np.full(cost.shape, np.nan, np.float32)
+        for k, c in enumerate((1, 10, 100)):
+            img[cost == c] = k
+        img[(cost == 1000) & wm] = 3; img[(cost == 1000) & ~wm] = 4
+        fin = np.isfinite(cost) & (cost > 0); n_fin = float(fin.sum())
+        shares = {**{c: shares[c] for c in (1, 10, 100)}, "1000 water": 100 * float(((cost == 1000) & wm).sum()) / n_fin,
+                  "1000 settlement": 100 * float(((cost == 1000) & ~wm).sum()) / n_fin}
+        cols = [ms.COST[1][0], ms.COST[10][0], ms.COST[100][0], STYLE["cost_water_fill"], ms.COST[1000][0]]
+        S_.update(img=img, cmap=ListedColormap(cols), norm=BoundaryNorm(np.arange(-0.5, 5.5, 1), 5), ticks=list(range(5)),
+                  ticklabels=[f"1\n{words[1]}", f"10\n{words[10]}", f"100\n{words[100]}", f"1,000\n{STYLE['cost_water_word']}", f"1,000\n{STYLE['cost_settlement_word']}"])
+    else:
+        if STYLE.get("cost_split_water", True):
+            print("  cost surface: water layers not found -- the 1,000 class is drawn as one swatch")
+        S_["ticklabels"] = [f"{c}\n{words[c]}" for c in cd.COST_CLASSES]
+    a = STYLE.get("cost_surface_alpha")                                         # None = follow the corridor surface's alpha (Ethan 2026-09-29: boundaries show through)
+    S_["alpha"] = float(STYLE.get("surface_alpha", 1.0) if a is None else a)
+    return S_, shares
 
+
+def _water_mask(P):
+    """Open water on the routing grid = the variant derivation's retained water layers (lake | river | ocean in `variant_layers/`
+    under the run's grid dir); cached on P; None when the files are missing."""
+    if getattr(P, "_water_mask", None) is not None:
+        return P._water_mask
+    import rasterio
+    cfg = getattr(P.R, "cfg", None)
+    gd = cfg.get("grid", {}).get("dir") if isinstance(cfg, dict) else None
+    cands = ([pathlib.Path(gd) / "variant_layers"] if gd else []) + [config.INPUT_DIR / "corridors_300m_y2y" / "variant_layers"]
+    vl = next((c for c in cands if all((c / f).exists() for f in ("lake.tif", "river.tif", "ocean.tif"))), None)
+    if vl is None:
+        return None
+    m = np.zeros(P.R.shape, bool)
+    for f in ("lake.tif", "river.tif", "ocean.tif"):
+        with rasterio.open(vl / f) as r:
+            a = r.read(1)
+            assert a.shape == tuple(P.R.shape), f"{f}: {a.shape} vs the routing grid {P.R.shape}"
+            m |= a > 0
+    P._water_mask = m
+    return m
 
 def classes_surface(P):
     """The corridor-pressure classes for the ramp slot (corridors_director.classes_surface: the §3a pressure levels and
@@ -1287,6 +1454,7 @@ def classes_surface(P):
     S_, counts = cd.classes_surface(P)
     if STYLE["protected_mode"] == "unprotected_only" and P.protected is not None:
         S_["img"] = np.where(P.corridor_unprotected, S_["img"], np.nan).astype(np.float32)
+    S_["alpha"] = float(STYLE.get("surface_alpha", 1.0))       # the wide layout draws the surface + its key at this alpha (director_plot, 2026-09-29)
     return S_, counts
 
 
@@ -1295,11 +1463,27 @@ def _wide(P, path, surface, insets):
     F = director_frame(P)
     assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first (05's setup cell)"
     dp.STYLE["inset_windows"] = inset_windows(P, insets)
-    S_ = dict(surface); S_["img"] = np.asarray(surface["img"])[::F.STEP, ::F.STEP]      # the frame's decimation
+    S_ = dict(surface); S_["img"] = _reduce(surface["img"], F.STEP)                    # the frame's reduction (block any / nanmax)
     draw, handles = _base_overlay(F, P)
+    handles = handles + _boundary_handles()
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
-    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S_)
+    log = dict(flipped=0, hidden=0)
+
+    def post(ax, win):                                                         # no text overlaps (Ethan 2026-09-29): town labels flipped clear of the codes
+        f, h = _declutter_texts(ax); log["flipped"] += f; log["hidden"] += h
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=(STYLE.get("complex_labels", "none") != "none"), surface=S_, post_draw=post)
+    if log["flipped"] or log["hidden"]:
+        print(f"town labels flipped {log['flipped']}, hidden {log['hidden']}")
+    _legend_note()
     return path
+
+
+def _legend_note():
+    """Print the legend font the fit settled on (director_plot's wide_legend_fit), for the record."""
+    import director_plot as dp
+    fs = dp.STYLE.pop("_wide_legend_fs_used", None)
+    if fs is not None:
+        print(f"legend: {len(dp.STYLE.get('inset_clusters', ()))} insets · items at {fs:g} pt (fit to the gap under inset B; configured {dp.STYLE['wide_legend_fs']} pt)")
 
 
 def _cost_overlay(F, P):
@@ -1325,7 +1509,7 @@ def figure_cost_wide(P, path, insets="examples"):
     (STYLE["cost_map_context"]=True restores the W11 layers) -- postal codes on the frame, refugia names + towns in the insets."""
     import director_plot as dp
     S_, shares = cost_surface(P)
-    print("movement cost (withheld-terrain surface), share of the routable area: " + " · ".join(f"{c}: {shares[c]:.1f}%" for c in cd.COST_CLASSES))
+    print("movement cost (withheld-terrain surface), share of the routable area: " + " · ".join(f"{c}: {v:.1f}%" for c, v in shares.items()))   # 5 keys when water is split
     S_ = dict(S_); S_["label"] = STYLE["cost_map_ramp_label"]
     return _wide(P, path, S_, insets)
 
@@ -1360,43 +1544,80 @@ def option_nums(P):
 
 
 def _options_overlay(P, F, nums=None):
-    """The route options' overlay for any panel: the wolverine overlay (IPCA fill, node fill + outlines), each option's band in
-    its colour UNDER the PA / IPCA / node fills (as on the northern M2), the numbered markers. Returns (draw, handles, marks, colors)."""
+    """The route options' overlay for any panel (Ethan 2026-09-29, the northern 07 · 03 construction): the protected-land overlay of
+    03 underneath, each option's corridor band OUTLINED in its number's colour (a ring with a thin white halo) so the band's
+    pressure fill shows through, the numbers placed by the northern post-draw placer (outside the band, no leader, clear of every
+    other text). Returns (draw, handles, marks, colors); the legend gets the y2y cluster swatch row "Route options" (option_legend)."""
     import director_plot as dp
     nums = option_nums(P) if nums is None else tuple(nums)
     marks = cd._option_marks(P, F, nums)
     colors = {n: cd.option_color(n) for n, _, _, _ in marks}
     step = F.STEP
-    layers = [(np.where(m[::step, ::step], 1.0, np.nan).astype(np.float32), colors[n]) for n, m, _, _ in marks]
-    base_draw, handles = _base_overlay(F, P)
-    fr_draw, fr_handles = _front_overlay(F, P); handles = handles + fr_handles
+    layers = [(_reduce(np.asarray(m, bool), step), colors[n]) for n, m, _, _ in marks]
+    base_draw, handles = (_protection_overlay(F, P) if STYLE.get("options_protected", True) else _base_overlay(F, P))
+    fr_draw, fr_handles = _front_layer(F, P)
+    handles = handles + fr_handles
 
     def draw(ax):
         fr_draw(ax); base_draw(ax)
-        for img, col in layers:
-            ax.imshow(img, cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)     # under the PA (1) / IPCA (1.05) / node (1.1) fills
-        for num, _, xy, side in marks:
-            cd._number_marker_px(ax, xy, num, colors[num], side)
-    handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in colors])]
+        if STYLE.get("option_style", "outline") == "outline":
+            lw = dp.STYLE["cluster_lw"] * 1.6 * dp.STYLE.get("_lw_scale", 1.0)
+            for m, col in layers:
+                mf = m.astype(np.float32)
+                ax.contour(mf, levels=[0.5], colors=["white"], linewidths=lw + 1.4, zorder=3.55)
+                ax.contour(mf, levels=[0.5], colors=[col], linewidths=lw, zorder=3.6)
+        else:                                                                  # "fill": the band in its colour (the first wolverine 03)
+            for m, col in layers:
+                ax.imshow(np.where(m, 1.0, np.nan).astype(np.float32), cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)
+        if STYLE.get("option_markers", False):                                 # the old leader markers; the default numbers come from the placer
+            for num, _, xy, side in marks:
+                cd._number_marker_px(ax, xy, num, colors[num], side)
+    mode = STYLE.get("option_legend", "swatches")
+    if mode == "swatches":
+        handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in colors])]
+    elif mode == "rows":
+        handles = handles + [Patch(facecolor="none", edgecolor=colors[n], linewidth=2.0, label=f"Route option {n}") for n in colors]
+    handles = handles + _boundary_handles()
     return draw, handles, marks, colors
 
 
-def figure_options_wide(P, path, insets="examples", nums=None):
-    """05 · 03 -- the route options on the wide layout: the pressure classes as on 02, each option's corridor band on top in its
-    number's colour (y2y cluster palette, OPTION_COLOR_ORDER), numbered at the band's median cell; PA / IPCA / node fills over
-    the options. Inset A holds options 1-2, B holds 3-4 (or one each when a pair does not fit one window)."""
+def figure_options_wide(P, path, insets="fixed", nums=None):
+    """06 · 04 -- the route options on the wide layout: 03's map (pressure surface over the grey protected land, names) with each
+    option's corridor band outlined in its number's colour (y2y cluster palette, OPTION_COLOR_ORDER) and numbered 1-4 outside the
+    band; inset A holds 1-2, B holds 3-4 (EXAMPLE_PICKS, numbered north -> south). Names, numbers and town labels never overlap."""
     import director_plot as dp
     F = director_frame(P)
-    S_, _ = classes_surface(P)
+    S_, _ = _strips_surface(P)
+    assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first (06's setup cell)"
+    dp.STYLE["inset_windows"] = inset_windows(P, insets)
+    S2 = dict(S_); S2["img"] = _reduce(S_["img"], F.STEP)
+    a = STYLE.get("protection_surface_alpha")
+    if a is not None and STYLE.get("options_protected", True):
+        S2["alpha"] = float(a)                                                 # as on 03
     draw, handles, marks, colors = _options_overlay(P, F, nums)
     print("route options: " + " · ".join(f"{n} {colors[n]} at px {tuple(round(v) for v in xy)} ({side})" for n, _, xy, side in marks))
-    assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first (05's setup cell)"
-    dp.STYLE["inset_windows"] = inset_windows(P, insets)
-    S2 = dict(S_); S2["img"] = np.asarray(S_["img"])[::F.STEP, ::F.STEP]
-    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
-    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S2)
-    return path
+    names_post, log = _names_post(P, F) if STYLE.get("options_protected", True) else ((lambda ax, win: None), dict(names=[], flipped=0, hidden=0))
+    marks_f = [(n, _reduce(np.asarray(m, bool), F.STEP), xy, side) for n, m, xy, side in marks]   # the placer walks the FRAME grid (600 m); the marks carry 300 m masks
+    numbers_post = cd._option_marker_placer(P, F, marks_f, colors)
 
+    def post(ax, win):                                                         # names first, then the numbers avoid them, then the towns flip clear of both
+        if STYLE.get("options_protected", True):
+            n_pa, n_ip = int(STYLE.get("protection_pa_names", 0)), int(STYLE.get("protection_ipca_names", 0))
+            if (n_pa or n_ip) and not (tuple(win) == tuple(F.WINDOW) and not STYLE.get("protection_frame_names", False)):
+                pan = P.pa_all[P.pa_all["km2"] >= float(STYLE.get("protection_pa_min_km2", 100))].copy()
+                pan["_label"] = pan["PA_Name"].astype(str).str.split(" (", regex=False).str[0].str.split(" [", regex=False).str[0]
+                log["names"] += _place_area_names(ax, F, win, pan, "_label", n_pa, dp.STYLE["inset_fs"]) if n_pa else []
+                if n_ip and len(P.ipca):
+                    ipg = P.ipca.copy(); nf = next((c for c in ipg.columns if "name" in c.lower()), None)
+                    ipg["_label"] = (ipg[nf].astype(str) + str(STYLE.get("protection_ipca_suffix", ""))) if nf else ""
+                    log["names"] += _place_area_names(ax, F, win, ipg, "_label", n_ip, dp.STYLE["inset_fs"])
+        numbers_post(ax, win)
+        f, h = _declutter_texts(ax); log["flipped"] += f; log["hidden"] += h
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=False, surface=S2, post_draw=post)
+    print(f"names placed: {log['names']} · town labels flipped {log['flipped']}, hidden {log['hidden']}")
+    _legend_note()
+    return path
 
 def _reference_masks(P):
     """The consequences references as 300 m masks from the PA / proposed-IPCA vectors (CONSEQ_REFERENCE)."""
@@ -1461,7 +1682,7 @@ def option_locators(P, path, nums=None, insets="examples", panel_px=None):
     import director_plot as dp
     nums = option_nums(P) if nums is None else tuple(nums)
     F = director_frame(P)
-    S_, _ = classes_surface(P); S2 = dict(S_); S2["img"] = np.asarray(S_["img"])[::F.STEP, ::F.STEP]
+    S_, _ = classes_surface(P); S2 = dict(S_); S2["img"] = _reduce(S_["img"], F.STEP)
     draw, _, marks, _ = _options_overlay(P, F, nums)
     wins = inset_windows(P, insets)
     n_stars = len(nums); ncols = min(4, max(n_stars, 1)); L = dc.STAR_GRID; STYLE_ = dp.STYLE
@@ -1484,7 +1705,7 @@ def option_locators(P, path, nums=None, insets="examples", panel_px=None):
         try:
             for ax, tag in zip(axes, tags):
                 win = dp._fit_window(F, wins[tag], 1.0)
-                dp._draw_inset(F, ax, win, draw, tag, True, towns=STYLE_["locator_towns"], codes=None, img=S2["img"], cmap=S2["cmap"], norm=S2["norm"])
+                dp._draw_inset(F, ax, win, draw, tag, (STYLE.get("complex_labels", "none") != "none"), towns=STYLE_["locator_towns"], codes=None, img=S2["img"], cmap=S2["cmap"], norm=S2["norm"])
         finally:
             STYLE_.pop("_fs_scale", None); STYLE_.pop("_lw_scale", None); STYLE_["inset_fs"] = fs0; STYLE_["inset_pa_names"] = pa0
         path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
@@ -1587,7 +1808,7 @@ def _complex_overlay(F, P):
     import director_plot as dp
     pins = _pinch_points(P) if STYLE.get("pinch_marker", True) else []
     pins_px = [(eid, *dc.xy_to_px(F.G, x, y)) for eid, x, y in pins]
-    fr_draw, fr_handles = _front_overlay(F, P)
+    fr_draw, fr_handles = _front_overlay(F, P) if STYLE.get("fronts_on_map", True) else ((lambda ax: None), [])
     if not STYLE.get("protected_layers", True):                 # Ethan 2026-09-29: the refugia as on 01, no protection shading, no PAs / IPCAs
         base_draw, handles = _cost_overlay(F, P)
         handles = handles + fr_handles
@@ -1632,26 +1853,245 @@ def _complex_overlay(F, P):
     return draw, handles
 
 
-def figure_network_wide(P, path, insets="examples"):
-    """v2.5 (06 · 02) -- the complexes and the corridors between them on the wide layout: complexes shaded by protection, corridor
-    links by class in the ramp slot, the p10 pinch on each link, complex labels with [within-complex slivers / with a feature]
-    in the insets. Near-contiguous bands are not drawn (D-W6)."""
-    import director_plot as dp
-    assert P.contracted, "figure_network_wide needs the post-processed run (wolverine_postprocess.attach)"
+FRONT_TINT = dict(open_alpha=0.70, cut_alpha=0.95, cut_outline=("#3A3A3A", 0.45))   # node level (spec §8): open fronts = a lighter tint of the class colour; cut fronts outlined.
+# The pressure palette is the SHARED default (corridors_mapstyle.CLASS_PALETTE = "sand" since 2026-09-29, as the northern 07): light ->
+# dark = low -> high, so an open front's tint must not fade into the land (sand Minimum at 0.45 alpha sat at luminance 0.91 on land 0.97)
+
+
+def _strips_surface(P):
+    """The corridor-pressure surface for 02 / 03. STYLE["front_style"]: "plain" (Ethan 2026-09-29, the default) = every link -- strips
+    AND fronts -- in its class colour on the one scale, nothing drawn separately; "tint" = the spec §8 treatment (strips only here,
+    fronts as tinted bands from _fronts_tint); "hidden" = strips only, fronts not drawn."""
     S_, counts = classes_surface(P)
+    if STYLE.get("front_style", "plain") == "plain":
+        return S_, counts
+    img = np.asarray(S_["img"]).copy()
+    front_ids = [k for k in P.cls.index if P.kind.get(k) == "front"]
+    if front_ids:
+        img[np.isin(P.owner, [P.order[k] for k in front_ids if k in P.order])] = np.nan
+    S_ = dict(S_); S_["img"] = img
+    counts = {c: int(sum(1 for k in P.cls.index if P.cls.get(k) == c and P.kind.get(k) == "strip")) for c in counts}
+    return S_, counts
+
+
+def _front_layer(F, P):
+    """The separate front layer, only under STYLE["front_style"] == "tint"."""
+    return _fronts_tint(F, P) if STYLE.get("front_style", "plain") == "tint" else ((lambda ax: None), [])
+
+
+def _fronts_tint(F, P):
+    """Node level (spec §8): fronts as bands in their class colour -- open fronts as the light tint, cut fronts at full strength with an
+    outline; drawn above the strip surface and below the nodes. Returns (draw, handles); nothing when the run has no fronts."""
+    import director_plot as dp
+    R = P.R; s = F.STEP
+    front_ids = [k for k in P.cls.index if P.kind.get(k) == "front" and P.cls.get(k) in cc.CORRIDOR_CLASSES]
+    if not front_ids:
+        return (lambda ax: None), []
+    cut = R.edges["front_cut"].fillna(False).astype(bool) if "front_cut" in R.edges.columns else pd.Series(False, index=R.edges.index)
+    layers = []
+    for c in ms.CLASS_ORDER:
+        for is_cut in (False, True):
+            ids = [k for k in front_ids if P.cls.get(k) == c and bool(cut.get(k, False)) == is_cut]
+            if not ids:
+                continue
+            m = _reduce(np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor, s)
+            layers.append((c, is_cut, np.where(m, 1.0, np.nan).astype(np.float32), m, len(ids)))
+    n_open = sum(n for _, cut_, _, _, n in layers if not cut_); n_cut = sum(n for _, cut_, _, _, n in layers if cut_)
+
+    def draw(ax):
+        for c, is_cut, img, m, n in layers:
+            ax.imshow(img, cmap=ListedColormap([ms.CLASS[c][0]]), alpha=(FRONT_TINT["cut_alpha"] if is_cut else FRONT_TINT["open_alpha"]), interpolation="nearest", zorder=0.8)
+            if is_cut:
+                ec, lw = FRONT_TINT["cut_outline"]
+                ax.contour(m.astype(float), levels=[0.5], colors=[ec], linewidths=lw * dp.STYLE.get("_lw_scale", 1.0), zorder=0.85)
+    handles = []
+    if STYLE.get("front_legend_rows", False):                    # Ethan 2026-09-29: no front rows in the legend -- the colour bar is the key
+        handles = [Patch(facecolor=ms.CLASS["securing"][0], alpha=FRONT_TINT["open_alpha"], label=f"Fronts between neighbouring refugia, open: light tint of the class colour ({n_open})"),
+                   Patch(facecolor=ms.CLASS["squeezed"][0], alpha=FRONT_TINT["cut_alpha"], edgecolor=FRONT_TINT["cut_outline"][0], linewidth=0.8,
+                         label=f"Fronts, cut (narrower than half the barrier-free width): class colour, outlined ({n_cut})")]
+    return draw, handles
+
+
+def figure_network_wide(P, path, insets="fixed"):
+    """06 · 02 -- the network by corridor pressure on the wide layout, one scale: strips at full weight in the ramp slot (the key),
+    fronts as bands in their class colour (open = light tint, cut = outlined), the refugia in the 01 scheme, no protected layers."""
+    import director_plot as dp
+    S_, counts = _strips_surface(P)
     F = director_frame(P)
     assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first"
     dp.STYLE["inset_windows"] = inset_windows(P, insets)
-    S_ = dict(S_); S_["img"] = np.asarray(S_["img"])[::F.STEP, ::F.STEP]
-    draw, handles = _complex_overlay(F, P)
-    n_pa, n_ip = int((P.secured_by == "pa").sum()), int((P.secured_by == "ipca").sum())
-    print("corridor links per class: " + " · ".join(f"{c} {n}" for c, n in counts.items())
-          + f" | {len(P.nodes)} complexes | already connected: {n_pa} within existing PAs, {n_ip} once the proposed IPCAs are realized"
-          + f" | band = about {P.R.cutoff * P.R.cell_km:.1f} km of extra travel on open ground")
+    S_ = dict(S_); S_["img"] = _reduce(S_["img"], F.STEP)
+    base_draw, handles = (_complex_overlay(F, P) if P.contracted else _base_overlay(F, P))
+    fr_draw, fr_handles = _front_layer(F, P)
+
+    def draw(ax):
+        fr_draw(ax); base_draw(ax)
+    handles = handles + fr_handles + _boundary_handles()
+    n_f = int(sum(1 for k in P.cls.index if P.kind.get(k) == "front")); n_pa, n_ip = int((P.secured_by == "pa").sum()), int((P.secured_by == "ipca").sum())
+    print("strips per class: " + " · ".join(f"{c} {n}" for c, n in counts.items()) + f" | fronts {n_f} | {len(P.nodes)} nodes"
+          + f" | already connected: {n_pa} within existing PAs, {n_ip} once the proposed IPCAs are realized | band = about {P.R.cutoff * P.R.cell_km:.1f} km of extra travel on open ground")
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
-    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S_)
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=(STYLE.get("complex_labels", "none") != "none"), surface=S_)
+    _legend_note()
     return path
 
+
+def _protection_overlay(F, P):
+    """06 · 03 / 04's overlay: the refugia as on 01, and the protected land UNDER the corridor-pressure surface (zorder 0.45 < the
+    surface's 0.5; Ethan 2026-09-29: 'put the PAs and IPCAs under the corridor pressure colours'), so the bands keep their class
+    colour and the grey reads through them at the surface's alpha. ONE grey for both kinds (protection_fill, one legend row) unless
+    protection_fill_pa AND protection_fill_ipca are set (two neutrals, two rows; cells under both take the PA fill). The layout's
+    own PA layer stays empty (the default no-PA frame). Returns (draw, handles)."""
+    import director_plot as dp
+    alpha = float(STYLE.get("protection_alpha", 0.85)); z = STYLE.get("protection_zorder", 0.45)
+    one = STYLE.get("protection_fill") or dp.PA_COLOR
+    f_pa, f_ip = STYLE.get("protection_fill_pa"), STYLE.get("protection_fill_ipca")
+    split = bool(f_pa and f_ip)
+    R = P.R; s_ = F.STEP
+    pa2d = _reduce(np.asarray(R.protected_pa, bool) if getattr(R, "protected_pa", None) is not None else np.asarray(P.pa_mask300, bool), s_) & F.G.pu
+    ip2d = F.IPCA2D & F.G.pu & ~pa2d
+    ref_draw, ref_handles = _cost_overlay(F, P)
+    if split:
+        layers = [(pa2d, f_pa), (ip2d, f_ip)]
+        handles = ref_handles + [Patch(facecolor=f_pa, alpha=alpha, label=STYLE["protection_label_pa"]),
+                                 Patch(facecolor=f_ip, alpha=alpha, label=STYLE["protection_label_ipca"])]
+    else:
+        layers = [(pa2d | ip2d, one)]
+        handles = ref_handles + [Patch(facecolor=one, alpha=alpha, label=STYLE["protection_label"])]
+    imgs = []
+    for m, col in layers:
+        a = np.full(F.G.shape, np.nan, np.float32); a[m] = 1.0; imgs.append((a, col))
+
+    def draw(ax):
+        for a, col in imgs:
+            ax.imshow(a, cmap=ListedColormap([col]), alpha=alpha, interpolation="nearest", zorder=z)
+        ref_draw(ax)
+    return draw, handles
+
+
+def _place_area_names(ax, F, win, gdf, name_col, top_n, fs, color="0.25", pad_pt=2.0, wrap=22):
+    """Names for the largest areas in a panel's window, each at the first position where its text box overlaps NO other text on the
+    axes -- postal codes, towns, earlier names, option numbers (Ethan 2026-09-29: no text overlaps) -- and lies inside the panel:
+    the area's pole of inaccessibility first, then a coarse grid of its interior points; an area with no clear spot stays unnamed.
+    Returns the names placed."""
+    from shapely.ops import polylabel
+    import matplotlib.patheffects as _pe, textwrap as _tw
+    G = F.G; px0, px1, py0, py1 = win
+    x0 = G.transform.c + px0 * G.transform.a; x1 = G.transform.c + px1 * G.transform.a
+    yt = G.transform.f + py0 * G.transform.e; yb = G.transform.f + py1 * G.transform.e
+    winp = _box(x0, yb, x1, yt)
+    g = gdf[gdf.intersects(winp)].copy()
+    if not len(g):
+        return []
+    g["geometry"] = g.geometry.intersection(winp); g = g[~g.geometry.is_empty].copy(); g["_a"] = g.geometry.area
+    g = g.sort_values("_a", ascending=False).head(int(top_n))
+    fig = ax.figure; r = fig.canvas.get_renderer(); axbb = ax.get_window_extent(r); pad = pad_pt * fig.dpi / 72.0
+    placed = []
+    for _, row in g.iterrows():
+        geom = row.geometry
+        polys = sorted([q for q in (geom.geoms if hasattr(geom, "geoms") else [geom]) if q.geom_type == "Polygon" and not q.is_empty], key=lambda q: -q.area)
+        cands = []
+        for q in polys[:2]:
+            try:
+                cands.append(polylabel(q, tolerance=500))
+            except Exception:
+                cands.append(q.representative_point())
+            minx, miny, maxx, maxy = q.bounds
+            for fx in (0.5, 0.35, 0.65, 0.2, 0.8):
+                for fy in (0.5, 0.35, 0.65, 0.2, 0.8):
+                    pt = Point(minx + fx * (maxx - minx), miny + fy * (maxy - miny))
+                    if q.contains(pt):
+                        cands.append(pt)
+        name = "\n".join(_tw.wrap(str(row[name_col]), wrap))
+        others = [t.get_window_extent(r) for t in ax.texts if t.get_visible() and t.get_text().strip()]
+        for pt in cands:
+            px, py = dc.xy_to_px(G, pt.x, pt.y)
+            t = ax.text(px, py, name, fontsize=fs, fontstyle="italic", color=color, ha="center", va="center", zorder=5.5, clip_on=True, linespacing=1.1,
+                        path_effects=[_pe.withStroke(linewidth=2.0, foreground="white", alpha=0.9)])
+            bb = t.get_window_extent(r).padded(pad)
+            if axbb.contains(bb.x0, bb.y0) and axbb.contains(bb.x1, bb.y1) and not any(bb.overlaps(o) for o in others):
+                placed.append(str(row[name_col])); break
+            t.remove()
+    return placed
+
+
+def _declutter_texts(ax):
+    """Ethan 2026-09-29: no text overlaps. A town label (an annotation anchored to its dot) that overlaps any other text is flipped
+    through the offset quadrants; one that still overlaps is hidden (its dot stays). Returns (flipped, hidden)."""
+    from matplotlib.text import Annotation
+    fig = ax.figure; r = fig.canvas.get_renderer()
+    texts = [t for t in ax.texts if t.get_visible() and t.get_text().strip()]
+    flipped = hidden = 0
+    for t in [t for t in texts if isinstance(t, Annotation)]:
+        others = [o.get_window_extent(r) for o in texts if o is not t and o.get_visible()]
+        if not any(t.get_window_extent(r).overlaps(o) for o in others):
+            continue
+        ok = False
+        for dx, dy, ha, va in ((4, 3, "left", "baseline"), (-4, 3, "right", "baseline"), (4, -3, "left", "top"), (-4, -3, "right", "top"),
+                               (0, 7, "center", "bottom"), (0, -7, "center", "top")):
+            t.set_position((dx, dy)); t.set_ha(ha); t.set_va(va)
+            if not any(t.get_window_extent(r).overlaps(o) for o in others):
+                ok = True; break
+        if ok:
+            flipped += 1
+        else:
+            t.set_visible(False); hidden += 1
+    return flipped, hidden
+
+
+def _names_post(P, F):
+    """post_draw(ax, win) for the protected-land maps: the largest PAs and proposed areas named (insets only unless
+    protection_frame_names), then the town labels decluttered. Returns the callback and a dict it fills with what it did."""
+    import director_plot as dp
+    n_pa, n_ip = int(STYLE.get("protection_pa_names", 0)), int(STYLE.get("protection_ipca_names", 0))
+    pan = P.pa_all[P.pa_all["km2"] >= float(STYLE.get("protection_pa_min_km2", 100))].copy() if n_pa else None
+    if pan is not None:
+        pan["_label"] = pan["PA_Name"].astype(str).str.split(" (", regex=False).str[0].str.split(" [", regex=False).str[0]
+    ipg = None
+    if n_ip and len(P.ipca):
+        ipg = P.ipca.copy(); nf = next((c for c in ipg.columns if "name" in c.lower()), None)
+        ipg["_label"] = (ipg[nf].astype(str) + str(STYLE.get("protection_ipca_suffix", ""))) if nf else ""
+    log = dict(names=[], flipped=0, hidden=0)
+
+    def post(ax, win):
+        if not (tuple(win) == tuple(F.WINDOW) and not STYLE.get("protection_frame_names", False)):
+            fs = dp.STYLE["inset_fs"]
+            if pan is not None and len(pan):
+                log["names"] += _place_area_names(ax, F, win, pan, "_label", n_pa, fs)
+            if ipg is not None and len(ipg):
+                log["names"] += _place_area_names(ax, F, win, ipg, "_label", n_ip, fs)
+        f, h = _declutter_texts(ax); log["flipped"] += f; log["hidden"] += h
+    return post, log
+
+def figure_protection_wide(P, path, insets="fixed"):
+    """06 · 03 -- the network by corridor pressure (02's surface and key) over protected land: existing PAs and the proposed
+    IPCAs / PAs as ONE grey layer (director_plot.PA_COLOR #8f8f8f at 85%) UNDER the bands, the refugia as on 01, the largest PAs and
+    proposed areas NAMED in each inset with no text overlapping (STYLE protection_pa_names / protection_ipca_names; the proposed
+    ones carry protection_ipca_suffix). Prints the corridor land inside existing PAs / inside the proposed IPCAs only / outside both."""
+    import director_plot as dp
+    F = director_frame(P)                                                      # the default no-PA frame: the grey and the names are this map's
+    S_, counts = _strips_surface(P)
+    assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first"
+    dp.STYLE["inset_windows"] = inset_windows(P, insets)
+    S2 = dict(S_); S2["img"] = _reduce(S_["img"], F.STEP)
+    a = STYLE.get("protection_surface_alpha")
+    if a is not None:
+        S2["alpha"] = float(a)                                                 # this map's surface (and its key) more transparent than 02 / 04
+    draw, handles = _protection_overlay(F, P)
+    handles = handles + _boundary_handles()
+    post, log = _names_post(P, F)
+    R = P.R; corr = np.asarray(R.corridor, bool)
+    pa = np.asarray(R.protected_pa, bool) if getattr(R, "protected_pa", None) is not None else P.pa_mask300
+    ip = np.asarray(R.protected_ipca, bool) if getattr(R, "protected_ipca", None) is not None else np.zeros(R.shape, bool)
+    a_ = R.cell_km2; k_pa, k_ip, k_out = (corr & pa).sum() * a_, (corr & ip & ~pa).sum() * a_, (corr & ~pa & ~ip).sum() * a_
+    print(f"corridor land {corr.sum() * a_:,.0f} km²: inside existing PAs {k_pa:,.0f} ({k_pa / (corr.sum() * a_):.0%}) · inside the proposed IPCAs / PAs only "
+          f"{k_ip:,.0f} ({k_ip / (corr.sum() * a_):.0%}) · outside both {k_out:,.0f} ({k_out / (corr.sum() * a_):.0%})"
+          + f" | links already connected: {int((P.secured_by == 'pa').sum())} within existing PAs, {int((P.secured_by == 'ipca').sum())} once the IPCAs are realized")
+    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=False, surface=S2, post_draw=post)
+    print(f"names placed: {log['names']} · town labels flipped {log['flipped']}, hidden {log['hidden']}")
+    _legend_note()
+    return path
 
 def table_complexes(P):
     """Layer A (run spec v3 §1a): one row per complex with its coverage and act."""
@@ -1831,3 +2271,170 @@ def headline(P):
         print(f"  last affordable: {x['connects']} ({x['act']}) p10 {x['width_ratio_p10']}, median {x['width_ratio_median']}, alt {x['alt_kind']}, branches {x['n_branches']}")
     return out
 
+
+
+# ================= NODE LEVEL (run spec v3 §1a / §5 as revised 2026-09-29): the two tables, the headline, hypotheses, the §9 checklist =================
+def _node_act(P, nid):
+    return _complex_act(P, nid)
+
+
+def table_nodes_v25(P):
+    """§5 Nodes table: one row per refugia patch -- area, share in existing PAs, incremental share from proposed IPCAs, share in the
+    prioritizr core, mean gHM (the 300 m human proxy), act, and its links by kind and class."""
+    g = P.nodes
+    df = pd.DataFrame({
+        "Node": g["node_id"], "Name": g["name"], "Area (km²)": g["area_km2"].round(0).astype("Int64"),
+        "Inside existing PAs (%)": (100 * g["pa_share"]).round(0).astype("Int64"),
+        "Added by proposed IPCAs (%)": (100 * g["ipca_added_share"]).round(0).astype("Int64"),
+        "In the prioritizr core (%)": (100 * g["core_share"]).round(0).astype("Int64"),
+        "Outside PAs, IPCAs and core (%)": (100 * g["outside_all_share"]).round(0).astype("Int64"),
+        "Mean human modification (gHM, 90 m max in cell)": g["mean_ghm90max"].round(3) if "mean_ghm90max" in g.columns else np.nan,
+        "Links": g["n_links"], "Fronts": g["n_fronts"], "Strips": g["n_strips"],
+        "Only viable": g.get("n_both", 0), "Last affordable": g.get("n_edge", 0), "Narrowing": g.get("n_squeezed", 0), "Options": g.get("n_securing", 0),
+        "Act": [_node_act(P, n) for n in g["node_id"]], "lat": g["lat"].round(3), "lon": g["lon"].round(3)})
+    df.to_csv(P.tab / "nodes_table.csv", index=False, encoding="utf-8-sig")
+    print(f"nodes_table: {len(df)} refugia patches -> {P.tab / 'nodes_table.csv'}")
+    return df
+
+
+def table_links_v25(P):
+    """§5 Links table: kind (front / strip), inter_cluster, class, D29 alternative kind, median and p10 width ratio, branches (strips
+    only), lcp_max_cost, band land per link, share of the band outside PAs and IPCAs, W11 status, act."""
+    R = P.R; e = R.edges
+    ids = [k for k in P.cls.index if P.cls.get(k) in cc.CORRIDOR_CLASSES]
+    rows = []
+    for k in ids:
+        r = e.loc[k]; a, b = _complex_of_edge(P, r)
+        rows.append({"edge_id": k, "Connects": f"{_short(P, a or 0)} ↔ {_short(P, b or 0)}", "Kind": P.kind.get(k, "strip"),
+                     "Inter-cluster": bool(r.get("inter_cluster", False)), "Class": cc.LINK_CLASS_LABEL.get(P.cls.get(k), P.cls.get(k)),
+                     "Alternative link is": (r.get("alt_kind") if isinstance(r.get("alt_kind"), str) and r.get("alt_kind") else "—"),
+                     "Width ratio, median": (round(float(r["squeeze_ratio_obs"]), 2) if pd.notna(r.get("squeeze_ratio_obs")) else np.nan),
+                     "Width ratio, tenth percentile": (round(float(r["width_ratio_p10"]), 2) if pd.notna(r.get("width_ratio_p10")) else np.nan),
+                     "Route branches (strips)": (int(r["n_branches"]) if P.kind.get(k) == "strip" and pd.notna(r.get("n_branches")) else pd.NA),
+                     "Crossing class (max cost on the direct route)": (int(r["crossing_class"]) if pd.notna(r.get("crossing_class")) else pd.NA),
+                     "Direct route": (r.get("crossing_note") if isinstance(r.get("crossing_note"), str) and r.get("crossing_note") else "all intact land"),
+                     "Front cut (narrower than half the barrier-free width)": bool(r.get("front_cut", False)) if P.kind.get(k) == "front" else pd.NA,
+                     "Band land (km², dissolved per link; links overlap)": round(float(r.get("band_new_km2", np.nan))) if pd.notna(r.get("band_new_km2")) else pd.NA,
+                     "Outside PAs and IPCAs (km²)": round(float(r.get("band_unprotected_km2", np.nan))) if pd.notna(r.get("band_unprotected_km2")) else pd.NA,
+                     "Already connected": {"pa": "within existing PAs", "ipca": "once the proposed IPCAs are realized", "": "no"}.get(P.secured_by.get(k, ""), ""),
+                     "In the minimum network": bool(r.get("in_mst", False)), "Path (km)": round(float(r.get("lcp_len_cells", np.nan)) * R.cell_km, 1) if pd.notna(r.get("lcp_len_cells")) else pd.NA,
+                     "Act": P.acts.get(k, "")})
+    df = pd.DataFrame(rows)
+    order = {c: i for i, c in enumerate(["both", "edge", "squeezed", "securing"])}
+    df["_o"] = [order.get(P.cls.get(k), 9) for k in df["edge_id"]]; df["_k"] = [0 if P.kind.get(k) == "strip" else 1 for k in df["edge_id"]]
+    df = df.sort_values(["_k", "_o", "Width ratio, tenth percentile"]).drop(columns=["_o", "_k"])
+    df.to_csv(P.tab / "links_table.csv", index=False, encoding="utf-8-sig")
+    print(f"links_table: {len(df)} links ({int((df.Kind == 'strip').sum())} strips, {int((df.Kind == 'front').sum())} fronts) -> {P.tab / 'links_table.csv'}")
+    return df
+
+
+def headline_v25(P):
+    """§5 / §8 headline statistics -> tables/headline.json + headline_by_act.csv: links by kind and class by act; node area protected by
+    act; strips crossing unprotected land; corridor land outside PAs, IPCAs and core; fronts by class with front area on its own line;
+    narrowing links by act; the four last-affordable strips by name with p10. Every number traced to postprocess/ files."""
+    R = P.R; e = R.edges; g = P.nodes; acc = getattr(R, "accounting", {}) or {}
+    acts_n = [_node_act(P, n) for n in g["node_id"]]
+    ids = [k for k in P.cls.index if P.cls.get(k) in cc.CORRIDOR_CLASSES]
+    strips = [k for k in ids if P.kind.get(k) == "strip"]; fronts = [k for k in ids if P.kind.get(k) == "front"]
+    rows = []
+    for a in getattr(P, "act_order", ACT_ORDER):
+        sel = g[[x == a for x in acts_n]]; area = float(sel["area_km2"].sum()) if len(sel) else 0.0
+        row = dict(act=a, nodes=int(len(sel)), node_area_km2=round(area),
+                   node_share_in_pas=round(float((sel["area_km2"] * sel["pa_share"]).sum() / area), 3) if area else None,
+                   node_share_with_ipcas=round(float((sel["area_km2"] * (sel["pa_share"] + sel["ipca_added_share"])).sum() / area), 3) if area else None,
+                   node_share_in_core=round(float((sel["area_km2"] * sel["core_share"]).sum() / area), 3) if area else None)
+        for kind, lst in (("strips", strips), ("fronts", fronts)):
+            for c in cc.CORRIDOR_CLASSES:
+                row[f"{kind}_{c}"] = int(sum(1 for k in lst if P.acts.get(k) == a and P.cls.get(k) == c))
+            row[f"{kind}_total"] = int(sum(1 for k in lst if P.acts.get(k) == a))
+        row["narrowing_links"] = int(sum(1 for k in ids if P.acts.get(k) == a and P.cls.get(k) in ("squeezed", "both")))
+        rows.append(row)
+    by_act = pd.DataFrame(rows)
+    unp = [k for k in strips if float(e.loc[k].get("band_unprotected_km2", 0) or 0) > 0]
+    last = [dict(edge_id=k, connects=" ↔ ".join(_short(P, c or 0) for c in _complex_of_edge(P, e.loc[k])), act=P.acts.get(k),
+                 width_ratio_p10=(round(float(e.loc[k, "width_ratio_p10"]), 2) if pd.notna(e.loc[k].get("width_ratio_p10")) else None),
+                 width_ratio_median=(round(float(e.loc[k, "squeeze_ratio_obs"]), 2) if pd.notna(e.loc[k].get("squeeze_ratio_obs")) else None),
+                 alt_kind=e.loc[k].get("alt_kind"), n_branches=(int(e.loc[k, "n_branches"]) if pd.notna(e.loc[k].get("n_branches")) else None))
+            for k in strips if P.cls.get(k) in ("edge", "both")]
+    out = dict(run=R.run_id, level="node", n_nodes=int(len(g)), n_links=len(ids), n_strips=len(strips), n_fronts=len(fronts),
+               strips_by_class={c: int(sum(1 for k in strips if P.cls.get(k) == c)) for c in cc.CORRIDOR_CLASSES},
+               fronts_by_class={c: int(sum(1 for k in fronts if P.cls.get(k) == c)) for c in cc.CORRIDOR_CLASSES},
+               fronts_cut=int(e.loc[fronts, "front_cut"].fillna(False).astype(bool).sum()) if "front_cut" in e.columns and fronts else 0,
+               n_strips_crossing_unprotected=len(unp), share_strips_crossing_unprotected=round(len(unp) / max(len(strips), 1), 3),
+               corridor_land_dissolved_km2=acc.get("corridor_land_dissolved_km2"), strip_land=acc.get("strips"), front_land=acc.get("fronts"),
+               corridor_land_outside_pas_ipcas_km2=acc.get("corridor_land_outside_pas_ipcas_km2"), corridor_land_outside_pas_ipcas_core_km2=acc.get("corridor_land_outside_pas_ipcas_core_km2"),
+               d25b_identity=acc.get("d25b_identity"), branches=acc.get("branches"),
+               narrowing_by_act={r["act"]: r["narrowing_links"] for r in rows}, last_affordable_strips=last,
+               top_class_empty_among_strips=bool(sum(1 for k in strips if P.cls.get(k) == "both") == 0),
+               n_secured_by_pa=int((P.secured_by == "pa").sum()), n_secured_by_ipca=int((P.secured_by == "ipca").sum()),
+               cutoff_cost_units=float(R.cutoff), cutoff_detour_km=round(float(R.cutoff) * R.cell_km, 3), act_breaks_lat=list(STYLE["act_breaks_lat"]), act_note=getattr(P, "act_note", ""),
+               sources=["postprocess/links_v25.csv", "postprocess/nodes_v25.csv", "postprocess/coverage.csv", "postprocess/accounting.json", "corridor_edges.csv"])
+    P.tab.mkdir(parents=True, exist_ok=True)
+    (P.tab / "headline.json").write_text(json.dumps(out, indent=2, ensure_ascii=False, default=str)); by_act.to_csv(P.tab / "headline_by_act.csv", index=False, encoding="utf-8-sig")
+    print(by_act.to_string(index=False))
+    print(f"strips {len(strips)}: {out['strips_by_class']} | {len(unp)} cross unprotected land ({100*out['share_strips_crossing_unprotected']:.0f}%) | fronts {len(fronts)}: {out['fronts_by_class']}, cut {out['fronts_cut']} | "
+          f"corridor land dissolved {out['corridor_land_dissolved_km2']} km²; strips {acc.get('strips', {}).get('dissolved_union_km2')} (outside PAs+IPCAs {acc.get('strips', {}).get('outside_pas_ipcas_km2')}, +core {acc.get('strips', {}).get('outside_pas_ipcas_core_km2')}); "
+          f"fronts {acc.get('fronts', {}).get('dissolved_union_km2')} | top class empty among strips: {out['top_class_empty_among_strips']}")
+    for x in last:
+        print(f"  last affordable strip: {x['connects']} ({x['act']}) p10 {x['width_ratio_p10']}, median {x['width_ratio_median']}, alt {x['alt_kind']}, branches {x['n_branches']}")
+    return out
+
+
+def hypotheses_v25(P):
+    """§7 H-W1..H-W7 at node level, confirmed / refuted from the record; H-W5 / H-W6 wait for section 6."""
+    R = P.R; e = R.edges; g = P.nodes
+    ids = [k for k in P.cls.index if P.cls.get(k) in cc.CORRIDOR_CLASSES]; strips = [k for k in ids if P.kind.get(k) == "strip"]; fronts = [k for k in ids if P.kind.get(k) == "front"]
+    cut = e["front_cut"].fillna(False).astype(bool) if "front_cut" in e.columns else pd.Series(False, index=e.index)
+    rows = []
+    n_open = sum(1 for k in fronts if not cut.get(k, False))
+    rows.append(("H-W1", f"fronts {len(fronts)} of {len(ids)} links ({100*len(fronts)/max(len(ids),1):.0f}%); open fronts {n_open} of {len(fronts)}",
+                 "confirmed" if len(fronts) > len(ids) / 2 and n_open > len(fronts) / 2 else "REFUTED (reported as measured)"))
+    v2 = e["link_class_v2"] if "link_class_v2" in e.columns else e["link_class"]
+    la_v2 = [k for k in strips if v2.get(k) in ("edge", "both")]; la_now = [k for k in strips if P.cls.get(k) in ("edge", "both")]
+    rows.append(("H-W2", f"last-affordable strips v2 {len(la_v2)} -> now {len(la_now)} (same set: {set(la_v2) == set(la_now)}); top class among strips {sum(1 for k in strips if P.cls.get(k) == 'both')}",
+                 "confirmed" if set(la_v2) == set(la_now) and sum(1 for k in strips if P.cls.get(k) == "both") == 0 else "reported as measured"))
+    narrow = {a: sum(1 for k in strips if P.acts.get(k) == a and P.cls.get(k) in ("squeezed", "both")) for a in getattr(P, "act_order", ACT_ORDER)}
+    rows.append(("H-W3", f"narrowing strips by act {narrow}", "confirmed" if narrow.get("north", 0) == 0 and narrow.get("south", 0) >= max(narrow.values() or [0]) else "REFUTED (reported as measured)"))
+    unp = sum(1 for k in strips if float(e.loc[k].get("band_unprotected_km2", 0) or 0) > 0)
+    south = g[g["lat"] < float(min(STYLE["act_breaks_lat"]))]; s_share = float((south["area_km2"] * south["pa_share"]).sum() / max(south["area_km2"].sum(), 1e-9)) if len(south) else np.nan
+    rows.append(("H-W4", f"{unp} of {len(strips)} strips cross unprotected land; node area south of {min(STYLE['act_breaks_lat'])} N inside PAs {100*s_share:.0f}%",
+                 "confirmed" if (len(strips) and unp / len(strips) > 0.5 and s_share > 0.5) else "partial / REFUTED (reported as measured)"))
+    rows.append(("H-W5", "section 6 not run (parked)", "n/a")); rows.append(("H-W6", "section 6 not run (parked)", "n/a"))
+    if "cluster_i" in e.columns and fronts:
+        d7 = e.loc[fronts]; d7 = d7[d7["link_class"].isin(["edge", "both"])]
+        per = d7.groupby("cluster_i").size().sort_values(ascending=False)
+        rows.append(("H-W7", f"D7-driven front classes {len(d7)} of {len(fronts)} fronts, in {len(per)} front-subgraph components (largest {per.head(3).to_dict()})",
+                     "reported (motivates the parked ecosystem-level D7 reading)"))
+    df = pd.DataFrame(rows, columns=["id", "measured", "verdict"]); df.to_csv(P.tab / "hypotheses.csv", index=False, encoding="utf-8-sig")
+    print(df.to_string(index=False))
+    return df
+
+
+def checklist_v25(P, extra=None):
+    """§9 at node level -> tables/validation_checklist.csv."""
+    R = P.R; e = R.edges; rec = R.cfg; git = getattr(R, "rec", {}).get("git", {}) if hasattr(R, "rec") else {}; acc = getattr(R, "accounting", {}) or {}; extra = extra or {}
+    ids = [k for k in P.cls.index if P.cls.get(k) in cc.CORRIDOR_CLASSES]; fronts = [k for k in ids if P.kind.get(k) == "front"]; strips = [k for k in ids if P.kind.get(k) == "strip"]
+    rows = []
+    def add(item, ok, evidence):
+        rows.append(dict(item=item, ok=(None if ok is None else bool(ok)), evidence=evidence))
+    add("run record on a clean tree", (not git.get("dirty", True)) if git else None, f"git {git.get('sha', '')[:8]} dirty={git.get('dirty')} (v2_run001 was dirty; disclosed)")
+    add("pins in the record", all(k in rec for k in ("cwd_cutoff_abs", "cutoff_detour_km", "beta", "width_floor_cells", "len_floor_cells", "near_opt_tiers")),
+        f"node_min_km2 {rec.get('nodes', {}).get('node_min_km2')}, cutoff {rec.get('cwd_cutoff_abs')} = {rec.get('cutoff_detour_km')} km, beta {rec.get('beta')}, floors {rec.get('width_floor_cells')}/{rec.get('len_floor_cells')}")
+    add("variant reconciles by layer of origin", extra.get("variant_ok"), extra.get("variant_note", "the variant meta (notebook 01 / 02)"))
+    add("RGI 7.0 vs CanVec ice difference recorded", extra.get("ice_ok"), extra.get("ice_note", "not computed (CanVec not on disk)"))
+    unass = e.loc[fronts, "width_not_assessable"].fillna(False).astype(bool).sum() if "width_not_assessable" in e.columns else 0
+    ok23 = (unass == 0) and e.loc[fronts, "squeeze_ratio_obs"].notna().all() and e.loc[fronts, "crossing_class"].notna().all() if fronts else True
+    fc = {c: int(sum(1 for k in fronts if P.cls.get(k) == c)) for c in cc.CORRIDOR_CLASSES}
+    add("front check (G23): D24 floor, width ratio + crossing_class non-null, class counts sum", ok23 and sum(fc.values()) == len(fronts), f"{len(fronts)} fronts; not assessable {int(unass)}; classes {fc} (sum {sum(fc.values())})")
+    ident = acc.get("d25b_identity", {})
+    add("area identity: MST strips + MST fronts + augmentation = total (per-link sums); union dissolved", bool(ident.get("reconciles")), f"{ident} | corridor union {acc.get('corridor_land_dissolved_km2')} km²")
+    br = acc.get("branches", {})
+    add("branch arithmetic reconciles", bool(br.get("reconciles")), f"{br}")
+    ok_names = all(_node_id_of_label(P, e.loc[k, c]) in set(P.nodes.node_id) for k in ids for c in ("label_i", "label_j"))
+    add("link names map to node ids (post two-digit fix)", ok_names, f"{len(ids)} links parsed")
+    add("act assignment: Banff-Yoho / Bow Valley in one act", extra.get("bow_ok"), extra.get("bow_note", "run wd.bow_valley_check"))
+    add("section 6 table (when run)", None, "parked"); add("glacier sensitivities (when run)", None, "parked")
+    add("every statistic traced to a file", (P.tab / "headline.json").exists(), "tables/headline.json lists its sources")
+    df = pd.DataFrame(rows); df.to_csv(P.tab / "validation_checklist.csv", index=False, encoding="utf-8-sig")
+    print(df.to_string(index=False))
+    return df

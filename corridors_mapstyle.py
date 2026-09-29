@@ -46,9 +46,15 @@ CLASS_PALETTES = {              # fill per class; switch with set_class_palette 
     # orange, deutan); the classes >= 28 apart from each other. "cividis_r" = the same steps the other way (Minimum yellow).
     "cividis":   {"securing": "#00224e", "squeezed": "#aea371", "edge": "#d6c35d", "both": "#fee838"},
     "cividis_r": {"securing": "#fee838", "squeezed": "#d6c35d", "edge": "#aea371", "both": "#00224e"},
+    # "sand" (Ethan 2026-09-29: the cividis yellow on the dominant Minimum class was rejected on sight): four BrBG steps (0.90 /
+    # 0.75 / 0.60 / 0.45 of the brown half), pale sand -> tan -> brown -> dark umber for Minimum -> Maximum -- light -> dark like the
+    # cost swatches on 01, a MUTED low end (L* 86, chroma < 32), and still >= dE 20.1 (CIE76) from every option colour, the IPCA
+    # fill, the PA grey and the basemap land / water under normal vision, deuteranopia and protanopia (the binding pair is
+    # brown vs dark umber, its own neighbour, under protanopia).
+    "sand":      {"securing": "#ead59f", "squeezed": "#cfa256", "edge": "#a5691b", "both": "#6e4007"},
 }
 CMAP_STEPS = {"viridis": (0.0, 0.70, 0.80, 1.0), "cividis": (0.0, 0.70, 0.85, 1.0)}   # matplotlib colormap positions behind the sampled palettes, Minimum -> Maximum
-CLASS_PALETTE = "cividis"
+CLASS_PALETTE = "sand"        # Ethan 2026-09-29: light -> dark = low -> high pressure (as the cost swatches on 01), a muted low end; cividis / cividis_r / okabe / viridis stay registered
 CLASS_WORDS = {"securing": "Minimum (options)", "squeezed": "Some (narrowing)", "edge": "A lot (last affordable)",
                "both": "Maximum (only viable connection)"}         # legend heading "Corridor Pressure", four levels (Ethan, 2026-09-11)
 CLASS = {c: (CLASS_PALETTES[CLASS_PALETTE][c], None, None, CLASS_WORDS[c]) for c in CLASS_WORDS}   # key: (fill, outline or None, hatch or None, director string); plain fills, no outline / hatch (Ethan)
@@ -64,7 +70,7 @@ def set_class_palette(name):
     CLASS_PALETTE = name
     for c in CLASS_WORDS:
         CLASS[c] = (CLASS_PALETTES[name][c], None, None, CLASS_WORDS[c])
-AREA = {"ipca": dict(fill="#5F9EA0", alpha=0.55, edge="#3E6F70", lw=0.5, label="Proposed IPCAs"),
+AREA = {"ipca": dict(fill="#5BA699", alpha=0.85, edge="#2F5F55", lw=0.3, label="Proposed IPCAs"),   # Ethan 2026-09-29 (was #5F9EA0 @55%, edge #3E6F70 0.5 pt)
         "pa":   dict(fill="#9A9A9A", alpha=0.55, edge="#6E6E6E", lw=0.5, label="Existing Protected Areas"),
         # wolverine package (2026-09-28): refugia fills + outline-only PA context. Chosen by a grid search
         # (36 hues x saturation x value, rendered over the land tone at their alphas) maximising the worst

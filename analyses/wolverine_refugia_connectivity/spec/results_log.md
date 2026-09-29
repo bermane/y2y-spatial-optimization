@@ -162,16 +162,33 @@ Class counts per legend = R5.3 (0 / 4 / 15 / 21 + 130 adjacent); examples per ac
   Jasper 0.14, Wenaha Tucannon ↔ Eagle Cap 0.14, Jasper ↔ Mission Mountains 0.17, Jasper ↔ Lee Metcalf 0.17, Eagle Cap ↔ North Fork
   John Day 0.19, Sustut E ↔ Omineca 0.20 (tenth-percentile width ratios). Narrowing by act: north 3, south 7.
 - **R7.2 Fronts (from the v2 record, notebook 05 regenerated 2026-09-29 on the 23 complexes):** 133 within-complex fronts (130
-  near-contiguous + 3 corridor-class links inside one complex); route sense: 36 narrow (width ratio < 0.5), 43 with a road (cost 10)
-  on the path, 4 with cost 100 on the path → **49 cut, 84 open** (drawn). Edge sense (table-only, M7.8): patch-level D7 43; interior
-  reading on v2's front graph 91 (60 bridges + 31 detours > β) → four-class table reading: options 28 · narrowing 14 · last affordable
-  56 · only viable 35 — the chain artefact, not a finding. Front band land (v2 per-link sums): open 9,138 + cut 3,635 + last affordable
+  near-contiguous + 3 corridor-class links inside one complex); route sense (CORRECTED after M7.11): 36 narrow (width ratio < 0.5), 16
+  with a cost-10 cell on the path, none with cost 100 or 1000 → **36 cut, 97 open**. Edge sense (table-only, M7.8): patch-level D7 43;
+  interior reading on v2's front graph 91 (60 bridges + 31 detours > β) → four-class table reading: options 35 · narrowing 7 · last
+  affordable 62 · only viable 29 — the chain artefact, not a finding. Front band land (v2 per-link sums): open 9,138 + cut 3,635 + last affordable
   2,393 + only viable 2,200 km² under the four-class reading; the dissolved open / cut figures are written by 07 (`accounting.json`).
   Per complex: Nahanni 21 fronts (1 cut), Sustut 59 (12 cut), Jasper 34 (30 cut), Northern Rockies 9 (2), Yellowstone 8 (4), Glacier
   1, Stikine 1. The C12–C20 contact (M7.8): Cabinet Mountains / Barktable Ridge ↔ Selway-Bitterroot, 16.8–17.4 km paths, both
   narrowing at patch level.
 - **R7.1 (superseded: `v25_run002` was the merge-era run; `v25_run003` on the 23 complexes PENDING Ethan).**
-- **R7.1b (PENDING Ethan's 07/08 run):** the run-dir tables (A / slivers / B / T1–T4), `headline.json`, the five maps. inter-complex links (MST + backups), links per class, the eight-cell table, D7
+- **R7.3 NODE LEVEL (the product in force; build-time run of the 05 pipeline on `v2_run001`, 2026-09-29; Ethan's 05 reproduces it):**
+  170 links = **130 fronts + 40 strips** (no contacts). Strips by class: options 21 · narrowing 15 · last affordable 4 · only viable 0
+  (unchanged from v2; H-W2 confirmed); fronts by class (CORRECTED after M7.11): **options 72 · narrowing 15 · last affordable 24 · only
+  viable 19 (34 cut = the 34 narrow; the rule is width only, M7.12); crossing class on the direct route: 115 fronts all intact, 15
+  cross cost 10 (all 15 also narrow → narrowing 8, only viable 7), none cross cost 100 or 1000 (the engine's `crosses_cost_1000` = 0
+  reproduced); strips: 21 all intact, 19 cross cost 10; 96 of 130 fronts open**; 43 fronts carry D7 (the
+  patch-pairwise reading, stated once; H-W7: in 7 front-subgraph components, largest 17 / 10 / 9). H-W1 confirmed (76% fronts, 83 of
+  130 open). By act (51 °N): north 92 nodes / 186,138 km² / 32% in PAs (44% with IPCAs, 9% core); strips 19 (13 / 4 / 2 / 0), fronts 99
+  (65 / 8 / 19 / 7); south 38 nodes / 96,857 km² / 43% in PAs (43% with IPCAs, 5% core); strips 21 (8 / 11 / 2 / 0), fronts 31 (7 / 7 / 5 /
+  12). H-W3 refuted as measured (narrowing strips north 4, south 11 — the north is not free of them); H-W4 partial (38 of 40 strips cross
+  unprotected land, but node area south of 51 °N is 43% inside PAs, not 'most').
+  Coverage vs expectation (PAs 13.0 · +IPCAs 11.0 · core 3.3 · outside 73.0%): nodes 35.4 · 8.1 · 7.5 · 49.7%; strip bands 19.8 · 9.1 ·
+  4.4 · 66.8%. Accounting: corridor land (all bands, dissolved) 52,572 km²; strips dissolved 37,020 (per-link 39,970; **25,781 outside
+  PAs + IPCAs, 24,456 also outside the core**); fronts dissolved 16,010 (per-link 16,577); D25b: 18,533 + 12,558 + 25,456 = 56,547
+  reconciles; branches {1: 36, 2: 4} = 44. Bow Valley: 0 strips within 60 km of Banff. Last-affordable strips: R69 ↔ R74 (p10 0.61),
+  R76 ↔ R80 (0.23), R108 ↔ R109 (0.05, two branches — the G21 boundary case), R116 ↔ R126 (0.32). (R7.1 / R7.2 = the parked complex
+  detour's record.)
+- **R7.1b (PENDING Ethan's 05/06 run at node level):** the run-dir tables and the five maps. the run-dir tables (A / slivers / B / T1–T4), `headline.json`, the five maps. inter-complex links (MST + backups), links per class, the eight-cell table, D7
   irreplaceables as complex pairs (the four v2 corridor-level ones expected to survive, H-W2 informally), the second-pass count, W11,
   corridor land dissolved / outside PAs + IPCAs / outside PAs + IPCAs + core. (R7.0's coverage and accounting were measured on the v2
   patch-to-patch links and are SUPERSEDED by the contracted run's; R7.0's complexes, names and slivers stand.)

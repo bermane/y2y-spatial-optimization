@@ -180,6 +180,16 @@ rule; quantitative outcomes live there, methods decisions here);
   and the 07 maps (`_near_contiguous_wide`); legend rows after the four. Approximate run002 read (area/length width): ~11 of
   45 links near-contiguous (T’akú Tlatsini ↔ Mount Edziza / Stikine, Dene ↔ Liard River Corridor, Tatonduk ↔ Fishing Branch,
   Wędzih Yiné' ↔ Chase, …), 0 below the width floor, 8 below the length floor (R10, to be measured properly on run003).
+- **M5.26 Pressure palette "sand" (2026-09-29, Ethan: the cividis yellow on the dominant Minimum class was rejected on sight;
+  presentation):** `CLASS_PALETTE = "sand"` — four BrBG steps #ead59f / #cfa256 / #a5691b / #6e4007 (pale sand → tan → brown →
+  dark umber) for Minimum → Maximum: light → dark like 01's cost swatches, a muted low end (L* 86, chroma < 32, so the 31-link
+  Minimum class no longer shouts), and ≥ ΔE 20.1 from every option colour, the IPCA fill, the PA grey and the basemap under
+  normal vision, deuteranopia and protanopia (grid search over 24 colormaps constrained to light → dark with a muted low end;
+  the runner-up families — gist_earth, cubehelix — end in black). cividis / cividis_r / okabe / viridis stay registered.
+- **M5.25 Pressure palette direction (2026-09-29, Ethan; presentation):** `CLASS_PALETTE = "cividis_r"` — the same four cividis
+  steps reversed, pale yellow (#fee838) for Minimum through mustard and olive to navy (#00224e) for Maximum, so 02/03 read light →
+  dark = low → high exactly as 01's cost swatches (cream intact → near-black barrier); the two keys had run in opposite
+  directions. Colour-vision separations unchanged (the same set of colours).
 - **M5.24 Option numbers on the band edge (2026-09-29, Ethan; presentation):** on 07 · 03 and the locators the numbered discs
   sit OUTSIDE their band, on its edge, with no leader, and clear of every other label: a post-draw pass (`director_plot`
   `post_draw=` on `_wide_map` / `_draw_inset`, run after each panel's labels and limits exist; y2y unaffected, default None)

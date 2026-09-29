@@ -224,6 +224,17 @@ def coverage(P0):
     return cov
 
 
+
+def _path_cells(xs, ys, pts):
+    """The exact grid cell of each centreline vertex. The centrelines are written at CELL CENTRES (corridors_core._edge_vectors:
+    (xs[c], ys[r]) per path cell), so the cell is the nearest centre -- rounded from the grid origin, never searchsorted - 1,
+    which lands one cell west and one south of the true path (the 2026-09-29 discrepancy against the engine's crosses_cost_1000)."""
+    dx = float(xs[1] - xs[0]); dy = float(ys[0] - ys[1])
+    cols = np.clip(np.rint((pts[:, 0] - xs[0]) / dx).astype(int), 0, len(xs) - 1)
+    rr = np.clip(np.rint((ys[0] - pts[:, 1]) / dy).astype(int), 0, len(ys) - 1)
+    return cols, rr
+
+
 # ================= 4. slivers =================
 def slivers(P0):
     """One row per near-contiguous link: complex, patches, path length, and the cost classes met along the centreline
@@ -237,7 +248,7 @@ def slivers(P0):
         n10 = n100 = n1000 = np.nan
         if geom is not None:
             pts = np.asarray(geom.coords)
-            cols = np.clip(np.searchsorted(xs, pts[:, 0]) - 1, 0, len(xs) - 1); rr = np.clip(np.searchsorted(-ys, -pts[:, 1]) - 1, 0, len(ys) - 1)
+            cols, rr = _path_cells(xs, ys, pts)
             v = res[rr, cols]; n10, n100, n1000 = int((v == 10).sum()), int((v == 100).sum()), int((v >= 1000).sum())
         rows.append(dict(complex_id=int(m2c.loc[int(r["i_id"])]), edge_id=eid, patch_i=int(r["i_id"]), patch_j=int(r["j_id"]),
                          path_len_km=round(float(r["lcp_len_cells"]) * P0.cell_km, 1) if pd.notna(r.get("lcp_len_cells")) else np.nan,
@@ -249,7 +260,7 @@ def slivers(P0):
         n10 = n100 = n1000 = np.nan
         if geom is not None:
             pts = np.asarray(geom.coords)
-            cols = np.clip(np.searchsorted(xs, pts[:, 0]) - 1, 0, len(xs) - 1); rr = np.clip(np.searchsorted(-ys, -pts[:, 1]) - 1, 0, len(ys) - 1)
+            cols, rr = _path_cells(xs, ys, pts)
             v = res[rr, cols]; n10, n100, n1000 = int((v == 10).sum()), int((v == 100).sum()), int((v >= 1000).sum())
         rows.append(dict(complex_id=int(r["complex_from"]), edge_id=eid, patch_i=int(r["i_id"]), patch_j=int(r["j_id"]),
                          path_len_km=round(float(r["lcp_len_cells"]) * P0.cell_km, 1) if pd.notna(r.get("lcp_len_cells")) else np.nan,
@@ -291,7 +302,8 @@ def fronts(P0):
     sl["E_v2"] = sl["edge_irreplaceable"].fillna(False).astype(bool)
     sl["narrow"] = sl["squeeze_ratio_obs"] < SQUEEZE
     sl["road_on_path"] = sl["path_cells_cost10"].fillna(0) > 0
-    sl["cut"] = sl["narrow"] | sl["road_on_path"]
+    sl["crossing_class"] = np.select([sl["path_cells_cost1000"].fillna(0) > 0, sl["path_cells_cost100"].fillna(0) > 0, sl["path_cells_cost10"].fillna(0) > 0], [1000, 100, 10], 1)
+    sl["cut"] = sl["narrow"]                                                                 # width only (spec 2026-09-29); the crossing class is reported
     rows = {}
     for cid, grp in sl.groupby("complex_id"):
         Gc = nx.Graph()
@@ -313,11 +325,11 @@ def fronts(P0):
     P0.fronts = sl
     g = P0.bands.loc[[k for k in sl["edge_id"] if k in P0.bands.index], ["geometry"]].reset_index()      # index 'edge_id' -> a column
     g = g.merge(sl[["edge_id", "complex_id", "patch_i", "patch_j", "path_len_km", "front_class", "front_class_d23", "E_v2", "E_interior", "bridge", "cut", "narrow", "road_on_path",
-                    "squeeze_ratio_obs", "band_new_km2"]], on="edge_id", how="left")
+                    "crossing_class", "squeeze_ratio_obs", "band_new_km2"]], on="edge_id", how="left")
     P0.fronts_gdf = gpd.GeoDataFrame(g, geometry="geometry", crs=P0.R.crs)
     n = len(sl)
     print(f"fronts: {n} within-complex links -> drawn {int((sl.front_class == 'open').sum())} open + {int((sl.front_class == 'cut').sum())} cut "
-          f"({int(sl.narrow.sum())} narrow, {int(sl.road_on_path.sum())} with a road on the path) | edge sense: patch-level D7 {int(sl.E_v2.sum())}, "
+          f"(cut = narrow only; crossing class {sl.crossing_class.value_counts().sort_index().to_dict()} reported) | edge sense: patch-level D7 {int(sl.E_v2.sum())}, "
           f"interior reading {int(sl.E_interior.sum())} ({int(sl.bridge.sum())} bridges of v2's front graph + {int((~sl.bridge & (sl.detour_ratio > BETA)).sum())} detours > beta) -- table only for the draft (M7.8)")
     print("  four-class table reading:", sl["front_class_d23"].value_counts().to_dict())
     return sl
@@ -396,11 +408,14 @@ def rename(P0, audit_names_path=None, write_audit=True):
         base, bearing = _base(r); disp.append(refugium_name(base, bearing, multi=False))
     nd["display_name"] = disp
     nd["name"] = nd["display_name"]
-    nd["complex_id"] = nd["node_id"].map(P0.mem.set_index("node_id")["complex_id"])
+    if getattr(P0, "mem", None) is not None:                     # complex level only (parked_v3)
+        nd["complex_id"] = nd["node_id"].map(P0.mem.set_index("node_id")["complex_id"])
     nd.to_csv(P0.out / "node_names_v25.csv", index=False, encoding="utf-8-sig")
-    cn = P0.cx[["complex_id", "name_auto", "n_patches", "patch_ids", "area_km2", "largest_patch", "largest_patch_name", "lat", "lon"]].copy()
-    cn["display_name"] = ""
-    cn.to_csv(P0.out / "complex_names.csv", index=False, encoding="utf-8-sig")
+    cn = None
+    if getattr(P0, "cx", None) is not None:                      # complex level only (parked_v3)
+        cn = P0.cx[["complex_id", "name_auto", "n_patches", "patch_ids", "area_km2", "largest_patch", "largest_patch_name", "lat", "lon"]].copy()
+        cn["display_name"] = ""
+        cn.to_csv(P0.out / "complex_names.csv", index=False, encoding="utf-8-sig")
     if write_audit:
         ap = pathlib.Path(audit_names_path or (pathlib.Path(config.CORRIDORS["wolverine"]["audit_objects_dir"]) / "node_names.csv"))
         if ap.exists():
@@ -572,4 +587,197 @@ def attach(R, out=None):
     R.coverage = pd.read_csv(out / "coverage.csv", encoding="utf-8-sig") if (out / "coverage.csv").exists() else None
     R.intra_complex_ids = list(R.postprocess.get("within_complex_corridor_class_links", []))
     print(f"attached v2.5 product: {len(cx)} complexes, corridor links {R.postprocess.get('n_corridor_links')}")
+    return R
+
+
+# ================= NODE-LEVEL product (run spec v3 §1a as revised 2026-09-29 back to node level; §3-§5, D-W3/D-W5) =================
+# v2_run001 as routed (130 nodes, 170 links); no new routing. Fronts (the 130 near-contiguous links) are corridors on the one
+# pressure scale with width as the whole route sense; strips keep their v2 classes. The complex-level work is parked (parked_v3/).
+FRONT_LABEL = {"securing": "options", "squeezed": "narrowing", "edge": "last affordable", "both": "only viable"}
+
+
+CROSSING_NOTE = {1: "", 10: "the direct route crosses a road or cut (cost 10)", 100: "the direct route crosses converted land or a two-lane highway (cost 100)",
+                 1000: "the direct route crosses a multi-lane highway, water or settlement (cost 1000)"}
+
+
+def _lcp_costs(P0):
+    """Per link, read at the centreline vertices (= the path cells, exact cell lookup): the CROSSING CLASS = the maximum cost class on
+    the least-cost path (spec §1a, revised 2026-09-29: reported on every link and stated in profiles, as in the north; NEVER a class
+    driver) and whether the path carries a cost-10 cell (kept as a plain flag)."""
+    R = P0.R; res = R.resistance.values; xs, ys = R.template.x.values, R.template.y.values
+    mx, has10 = {}, {}
+    for eid, geom in P0.centrelines["geometry"].items():
+        if geom is None or geom.is_empty:
+            mx[eid] = np.nan; has10[eid] = False; continue
+        pts = np.asarray(geom.coords)
+        cols, rr = _path_cells(xs, ys, pts)
+        v = res[rr, cols]; v = v[np.isfinite(v)]
+        mx[eid] = float(v.max()) if len(v) else np.nan; has10[eid] = bool((v == 10).any())
+    return pd.Series(mx), pd.Series(has10)
+
+
+def link_kinds(P0):
+    """§1a items 1-2 on the v2 link table: `kind` (front / strip / contact), `lcp_max_cost`, the front classes (edge sense = D7 as
+    routed; route sense = width alone: CUT when the path carries a cost >= 10 or the width ratio is below the squeeze threshold;
+    no branch decomposition), `inter_cluster` (the two ends in different connected components of the front subgraph -- a
+    reporting filter, not a node definition). Strips keep their v2 class. Writes P0.links (all 170) and returns it."""
+    e = P0.edges.copy()
+    nz = (e["cost"] > 0) & (~e["is_adjacency"].astype(bool))
+    e = e[nz].copy()
+    mx, has10 = _lcp_costs(P0)
+    e["crossing_class"] = mx.reindex(e.index); e["lcp_has_cost10"] = has10.reindex(e.index).fillna(False).astype(bool)
+    e["crossing_note"] = [CROSSING_NOTE.get(int(v), "") if pd.notna(v) else "" for v in e["crossing_class"]]
+    near = e["near_contiguous"].astype(bool); unass = e["width_not_assessable"].fillna(False).astype(bool) if "width_not_assessable" in e.columns else pd.Series(False, index=e.index)
+    e["kind"] = np.where(unass, "contact", np.where(near, "front", "strip"))
+    E = e["edge_irreplaceable"].fillna(False).astype(bool)
+    cut = e["squeeze_ratio_obs"] < SQUEEZE                                                # spec §1a / §4 (2026-09-29): WIDTH ONLY -- path cost never drives the class
+    e["front_cut"] = np.where(e["kind"] == "front", cut, False)
+    e["front_road"] = np.where(e["kind"] == "front", e["lcp_has_cost10"], False)        # a plain flag; the crossing class + note carry it into profiles
+    e["front_narrow"] = np.where(e["kind"] == "front", e["squeeze_ratio_obs"] < SQUEEZE, False)
+    front_class = np.select([E & cut, E, cut], ["both", "edge", "squeezed"], "securing")
+    e["link_class_v2"] = e["link_class"]
+    e["link_class"] = np.where(e["kind"] == "front", front_class, e["link_class"])
+    e.loc[e["kind"] == "contact", "link_class"] = np.where(E[e["kind"] == "contact"], "edge", "securing")
+    # inter_cluster: components of the FRONT subgraph
+    G = nx.Graph(); G.add_nodes_from(int(n) for n in P0.nodes.node_id)
+    G.add_edges_from((int(a), int(b)) for a, b in zip(e.loc[e.kind == "front", "i_id"], e.loc[e.kind == "front", "j_id"]))
+    comp = {n: k for k, c in enumerate(nx.connected_components(G), 1) for n in c}
+    e["cluster_i"] = e["i_id"].map(comp); e["cluster_j"] = e["j_id"].map(comp)
+    e["inter_cluster"] = e["cluster_i"] != e["cluster_j"]
+    P0.links = e; P0.n_clusters = len(set(comp.values()))
+    k = e["kind"].value_counts().to_dict(); fc = e.loc[e.kind == "front", "link_class"].value_counts().to_dict()
+    print(f"links: {len(e)} = {k.get('front', 0)} fronts + {k.get('strip', 0)} strips + {k.get('contact', 0)} contacts | fronts: "
+          + " · ".join(f"{FRONT_LABEL[c]} {fc.get(c, 0)}" for c in ("securing", "squeezed", "edge", "both"))
+          + f" (cut = narrow {int(e.front_cut.sum())}; crossing class on the direct route: {e.loc[e.kind == 'front', 'crossing_class'].value_counts().sort_index().to_dict()}, reported not classed) | front-subgraph components {P0.n_clusters}; "
+          f"inter-cluster links {int(e.inter_cluster.sum())} (strips {int((e.inter_cluster & (e.kind == 'strip')).sum())})")
+    return e
+
+
+def coverage_nodes(P0):
+    """§1a item 3 at node level: the coverage shares per NODE (patch) and per link's dissolved band + the expectation row."""
+    R = P0.R
+    pa = R.protected_pa & P0.pu; ip = R.protected_ipca & P0.pu; core = _core300(P0)
+    P0.masks = dict(pa=pa, ipca=ip, core=core)
+    ghm, tau = cc._human_proxy(R.cfg, P0.rec)
+
+    def shares(m, label, kind, ident):
+        n = int(m.sum())
+        if not n:
+            return None
+        d = dict(kind=kind, id=ident, label=label, area_km2=round(n * P0.cell_km2, 1),
+                 pa=round(float((m & pa).sum() / n), 4), ipca_incremental=round(float((m & ip & ~pa).sum() / n), 4),
+                 core=round(float((m & core).sum() / n), 4), core_incremental=round(float((m & core & ~pa & ~ip).sum() / n), 4),
+                 outside_all=round(float((m & ~pa & ~ip & ~core).sum() / n), 4))
+        if ghm is not None:
+            d["mean_ghm90max"] = round(float(np.nanmean(ghm[m])), 4)
+        return d
+    rows = [shares(P0.pu, "EXPECTATION: the whole routable Y2Y frame", "expectation", 0)]
+    nd = P0.nodes
+    for r in nd.itertuples():
+        rows.append(shares(P0.node_id == int(r.node_id), str(getattr(r, "display_name", "") or getattr(r, "label_auto", r.node_id)), "node", int(r.node_id)))
+    tr = R.transform; shape = R.shape
+    for eid, r in P0.links.iterrows():
+        m = rasterize([(P0.bands.loc[eid, "geometry"], 1)], out_shape=shape, transform=tr, fill=0, dtype="uint8").astype(bool) & P0.pu & ~P0.node_land
+        rows.append(shares(m, f"{r['kind']} {eid}", "link", eid))
+    cov = pd.DataFrame([x for x in rows if x]); cov.to_csv(P0.out / "coverage.csv", index=False, encoding="utf-8-sig"); P0.cov = cov
+    ex = cov[cov.kind == "expectation"].iloc[0]; nn = cov[cov.kind == "node"]; lk = cov[cov.kind == "link"]
+    wa = lambda d, c: 100 * (d[c] * d.area_km2).sum() / d.area_km2.sum()
+    print(f"expectation over the routable frame: PAs {100*ex.pa:.1f}% · +IPCAs {100*ex.ipca_incremental:.1f}% · core {100*ex.core:.1f}% · outside all three {100*ex.outside_all:.1f}%")
+    print(f"nodes (area-weighted): PAs {wa(nn,'pa'):.1f}% · +IPCAs {wa(nn,'ipca_incremental'):.1f}% · core {wa(nn,'core'):.1f}% · outside {wa(nn,'outside_all'):.1f}%")
+    strips = lk[lk.label.str.startswith("strip")]
+    print(f"strip bands (area-weighted): PAs {wa(strips,'pa'):.1f}% · +IPCAs {wa(strips,'ipca_incremental'):.1f}% · core {wa(strips,'core'):.1f}% · outside {wa(strips,'outside_all'):.1f}% | "
+          f"strips crossing land outside PAs + IPCAs: {int(((strips.outside_all + strips.core_incremental) > 0).sum())} of {len(strips)}")
+    return cov
+
+
+def accounting_nodes(P0):
+    """§1a item 4: corridor land as a dissolved union; per-class band land dissolved (fronts + strips on the one scale) beside per-link
+    sums; front area on its own line; the D25b identity on per-link sums (MST strips + MST fronts + augmentation = total); branches as
+    links-with-n (strips only, reconciled with branches.csv)."""
+    R = P0.R; tr = R.transform; shape = R.shape; e = P0.links
+    def union(ids):
+        u = np.zeros(shape, bool)
+        for eid in ids:
+            u |= rasterize([(P0.bands.loc[eid, "geometry"], 1)], out_shape=shape, transform=tr, fill=0, dtype="uint8").astype(bool)
+        return u & P0.pu & ~P0.node_land
+    by_class = {}
+    for cls_ in ("securing", "squeezed", "edge", "both"):
+        ids = list(e.index[e.link_class == cls_])
+        by_class[cls_] = dict(n_links=len(ids), n_fronts=int((e.loc[ids, "kind"] == "front").sum()), n_strips=int((e.loc[ids, "kind"] == "strip").sum()),
+                              dissolved_union_km2=round(float(union(ids).sum()) * P0.cell_km2) if ids else 0, per_link_sum_km2=round(float(e.loc[ids, "band_new_km2"].sum())))
+    fronts = list(e.index[e.kind == "front"]); strips = list(e.index[e.kind == "strip"])
+    uf = union(fronts); us = union(strips)
+    mst_strips = e[(e.kind == "strip") & e.in_mst.astype(bool)]; mst_fronts = e[(e.kind == "front") & e.in_mst.astype(bool)]; aug = e[~e.in_mst.astype(bool)]
+    ident = dict(mst_strips_km2=round(float(mst_strips.band_new_km2.sum())), mst_fronts_km2=round(float(mst_fronts.band_new_km2.sum())),
+                 augmentation_km2=round(float(aug.band_new_km2.sum())), total_per_link_sum_km2=round(float(e.band_new_km2.sum())))
+    ident["reconciles"] = abs(ident["mst_strips_km2"] + ident["mst_fronts_km2"] + ident["augmentation_km2"] - ident["total_per_link_sum_km2"]) <= 1
+    nb = e.loc[strips, "n_branches"]
+    out = dict(corridor_land_dissolved_km2=round(float(R.corridor.sum()) * P0.cell_km2),
+               corridor_land_outside_pas_ipcas_km2=round(float((R.corridor & ~P0.masks["pa"] & ~P0.masks["ipca"]).sum()) * P0.cell_km2),
+               corridor_land_outside_pas_ipcas_core_km2=round(float((R.corridor & ~P0.masks["pa"] & ~P0.masks["ipca"] & ~P0.masks["core"]).sum()) * P0.cell_km2),
+               strips=dict(n=len(strips), dissolved_union_km2=round(float(us.sum()) * P0.cell_km2), per_link_sum_km2=round(float(e.loc[strips, "band_new_km2"].sum())),
+                           outside_pas_ipcas_km2=round(float((us & ~P0.masks["pa"] & ~P0.masks["ipca"]).sum()) * P0.cell_km2),
+                           outside_pas_ipcas_core_km2=round(float((us & ~P0.masks["pa"] & ~P0.masks["ipca"] & ~P0.masks["core"]).sum()) * P0.cell_km2)),
+               fronts=dict(n=len(fronts), dissolved_union_km2=round(float(uf.sum()) * P0.cell_km2), per_link_sum_km2=round(float(e.loc[fronts, "band_new_km2"].sum())),
+                           note="front area on its own line; never summed into strip corridor land"),
+               by_class=by_class, d25b_identity=ident,
+               branches=dict(links_by_n={int(k): int(v) for k, v in nb.dropna().value_counts().sort_index().items()}, total=int(nb.fillna(0).sum()),
+                             branches_csv_rows=(int(len(P0.branches)) if P0.branches is not None else None),
+                             reconciles=(P0.branches is None or int(nb.fillna(0).sum()) == int(len(P0.branches)))))
+    (P0.out / "accounting.json").write_text(json.dumps(out, indent=2)); P0.acc = out
+    print(f"accounting: corridor land (all bands, dissolved) {out['corridor_land_dissolved_km2']:,} km² | strips dissolved {out['strips']['dissolved_union_km2']:,} "
+          f"(per-link {out['strips']['per_link_sum_km2']:,}; outside PAs+IPCAs {out['strips']['outside_pas_ipcas_km2']:,}, +core {out['strips']['outside_pas_ipcas_core_km2']:,}) | "
+          f"fronts dissolved {out['fronts']['dissolved_union_km2']:,} (per-link {out['fronts']['per_link_sum_km2']:,}) | D25b: {ident['mst_strips_km2']:,} + {ident['mst_fronts_km2']:,} + "
+          f"{ident['augmentation_km2']:,} = {ident['total_per_link_sum_km2']:,} ({'reconciles' if ident['reconciles'] else 'MISMATCH'}) | branches {out['branches']['links_by_n']} -> "
+          f"{out['branches']['total']} vs branches.csv {out['branches']['branches_csv_rows']}")
+    return out
+
+
+def write_node_product(P0):
+    """postprocess/links_v25.csv (every link with kind, classes, coverage), nodes_v25.csv (the Nodes table inputs), postprocess_summary.json."""
+    e = P0.links.copy()
+    covl = P0.cov[P0.cov.kind == "link"].set_index("id")
+    for c in ("pa", "ipca_incremental", "core", "core_incremental", "outside_all"):
+        e["band_" + c + "_share"] = e.index.map(covl[c])
+    e.to_csv(P0.out / "links_v25.csv", encoding="utf-8-sig")
+    covn = P0.cov[P0.cov.kind == "node"].copy(); covn["id"] = covn["id"].astype(int); covn = covn.set_index("id")
+    nd = P0.nodes.copy()
+    for c, col in (("pa", "pa_share"), ("ipca_incremental", "ipca_added_share"), ("core", "core_share"), ("core_incremental", "core_incremental_share"), ("outside_all", "outside_all_share"), ("mean_ghm90max", "mean_ghm90max")):
+        if c in covn.columns:
+            nd[col] = nd["node_id"].map(covn[c])
+    per = []
+    for nid in nd.node_id:
+        sub = e[(e.i_id == nid) | (e.j_id == nid)]
+        per.append(dict(node_id=nid, n_links=len(sub), n_fronts=int((sub.kind == "front").sum()), n_strips=int((sub.kind == "strip").sum()),
+                        **{f"n_{c}": int((sub.link_class == c).sum()) for c in ("securing", "squeezed", "edge", "both")}))
+    nd = nd.merge(pd.DataFrame(per), on="node_id", how="left")
+    nd.to_csv(P0.out / "nodes_v25.csv", index=False, encoding="utf-8-sig")
+    meta = dict(run=P0.R.run_id, run_git=P0.rec.get("git"), level="node", n_nodes=int(len(nd)), n_links=int(len(e)), n_fronts=int((e.kind == "front").sum()),
+                n_strips=int((e.kind == "strip").sum()), n_front_clusters=int(getattr(P0, "n_clusters", 0)), core_layer=str(CORE_TIF), core_threshold=CORE_THRESHOLD,
+                rule="v2_run001 as routed; fronts classed on the pressure scale with width as the route sense (northern reframe 2026-09-29); complexes parked (spec §10)")
+    (P0.out / "postprocess_summary.json").write_text(json.dumps(meta, indent=2, default=str))
+    P0.nodes_pp = nd
+    print(f"written -> {P0.out}: links_v25.csv ({len(e)}), nodes_v25.csv ({len(nd)}), coverage.csv, accounting.json")
+    return e, nd
+
+
+def attach_nodes(R, out=None):
+    """Hand the NODE-LEVEL product to the package: the reclassified links (fronts on the pressure scale) replace R.edges' link_class;
+    kind / inter_cluster / front_cut columns; the Nodes table with coverage as R.node_table; accounting + coverage; no complexes."""
+    out = pathlib.Path(out) if out else pathlib.Path(R.run_dir) / PP_SUB
+    assert (out / "links_v25.csv").exists(), f"{out} -- run 05_postprocess first"
+    lk = pd.read_csv(out / "links_v25.csv", encoding="utf-8-sig").set_index("edge_id")
+    for c in ("link_class", "kind", "inter_cluster", "front_cut", "front_road", "front_narrow", "crossing_class", "crossing_note", "lcp_has_cost10", "link_class_v2", "cluster_i", "cluster_j"):
+        if c in lk.columns:
+            R.edges[c] = lk[c].reindex(R.edges.index)
+    R.edges["kind"] = R.edges["kind"].fillna("adjacency")
+    nd = pd.read_csv(out / "nodes_v25.csv", encoding="utf-8-sig").fillna({"display_name": ""})
+    R.node_table = nd
+    R.contracted = False; R.complexes = None; R.fronts = None
+    R.postprocess = json.loads((out / "postprocess_summary.json").read_text()) if (out / "postprocess_summary.json").exists() else {}
+    R.accounting = json.loads((out / "accounting.json").read_text()) if (out / "accounting.json").exists() else {}
+    R.coverage = pd.read_csv(out / "coverage.csv", encoding="utf-8-sig") if (out / "coverage.csv").exists() else None
+    R.intra_complex_ids = []
+    R.centrelines = gpd.read_file(R.run_dir / "corridor_edges.gpkg", layer="centrelines").to_crs(R.crs)
+    print(f"attached node-level product: {len(nd)} nodes, {int((R.edges['kind'] == 'front').sum())} fronts + {int((R.edges['kind'] == 'strip').sum())} strips on one pressure scale")
     return R

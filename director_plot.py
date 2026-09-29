@@ -67,7 +67,7 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
         return out
 
     def draw_pa(ax):
-        ax.imshow(PAg, cmap=ListedColormap([PA_COLOR]), interpolation="nearest", zorder=1)
+        ax.imshow(PAg, cmap=ListedColormap([PA_COLOR]), alpha=STYLE.get("pa_alpha", 1.0), interpolation="nearest", zorder=1)   # pa_alpha: the northern maps (0.85); y2y 1.0
 
     def draw_ipca(ax, lw=1.3):
         for _, r in IP.gdf.iterrows():
@@ -102,7 +102,10 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
                 x, y = px0 + 0.05 * (px1 - px0), pyb - 0.04 * (pyb - pyt)
                 ax.plot([x, x + L], [y, y], color="black", lw=2.5, solid_capstyle="butt", zorder=5)
                 ax.text(x + L / 2, y - 6 * PX_PER_KM, f"{km} km", ha="center", fontsize=STYLE["legend_fs"] - 1, zorder=5)
-                xa, y1 = px0 + 0.075 * (px1 - px0), pyb - 0.075 * (pyb - pyt); y0 = y1 - 0.06 * (pyb - pyt)
+                if STYLE.get("north_arrow_beside_bar", False):            # the arrow beside the bar, rising from its baseline (wolverine, 2026-09-29)
+                    xa, y1 = x + L + 0.06 * (px1 - px0), y; y0 = y1 - 0.06 * (pyb - pyt)
+                else:
+                    xa, y1 = px0 + 0.075 * (px1 - px0), pyb - 0.075 * (pyb - pyt); y0 = y1 - 0.06 * (pyb - pyt)
                 ax.annotate("", xy=(xa, y0), xytext=(xa, y1), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
                 ax.text(xa, y0 - 6 * PX_PER_KM, "N", ha="center", va="bottom", fontsize=STYLE["legend_fs"] - 1, fontweight=600, zorder=5)
         dc.corner_note(ax, note)
@@ -460,10 +463,14 @@ STYLE = dict(
     wide_legend_loc="center", wide_legend_y=0.103,   # where the legend box sits under inset B: its `loc` point at (B's centre x, this y)
     wide_legend_between=False,                       # True (the northern package, Ethan 2026-09-28): ignore the two above and centre the box between inset B's bottom
                                                      # edge and the bottom of the ramp block under A, measured at draw time; a box taller than the gap hangs from B
+    wide_legend_fit=False,                           # True (wolverine, Ethan 2026-09-29): with wide_legend_between, shrink the legend's font (its handles, padding and
+    wide_legend_fs_min=9,                            # spacing are in font units, so the whole box scales) until the box fits the gap; never below this size
+    north_arrow_beside_bar=False,                    # windowed frames: the north arrow to the right of the scale bar instead of above it (wolverine, 2026-09-29)
     lat53=False,               # the 53°N graticule line on maps
     titles=True,               # figure / table titles (21 sets False: the slide carries the title)
     export_dpi=200, panel_export_scale=2,   # PNG resolution (21 sets 300: 13.33 in wide -> 4,000 px, a 4K slide); locator panels at 2x their nominal px
     export_pdf=False,          # also write a .pdf twin beside each wide-layout PNG (the northern package sets True: its §3a export rule)
+    pa_alpha=1.0,              # the protected-areas fill's alpha (the northern package sets 0.85 to match its IPCA fill; y2y opaque)
     map_layout="wide",         # Act 1 maps: "wide" = slide-shaped with two zoom insets (clusters 1 and 2) | "tall" = the map alone
     inset_clusters=(1, 2), inset_pad_km=45, inset_min_km=320, inset_pa_names=5, inset_ipca_names=3, inset_declutter=True, inset_fs=11.5, inset_number_fs=18, inset_abbrev=True, inset_abbrev_fs=15,   # inset_ipca_names / inset_declutter: knobs since 2026-09-28 (the y2y values unchanged)
     wide_main_names="abbrev", wide_main_name_fs=15, wide_main_towns=(),      # the Y2Y-wide panel of the wide layout: postal codes only, big
@@ -1080,7 +1087,7 @@ def _fit_window(C, win_px, aspect_hw):
 
 def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None, skip_towns=(), img=None, cmap=None, norm=None, skip_areas=(), post_draw=None):
     px0, px1, pyt, pyb = win
-    ax.imshow(_f_1km(C) if img is None else img, cmap=cmap or C.FCMAP, norm=norm or C.FNORM, interpolation="nearest", zorder=0.5)
+    ax.imshow(_f_1km(C) if img is None else img, cmap=cmap or C.FCMAP, norm=norm or C.FNORM, interpolation="nearest", zorder=0.5, alpha=STYLE.get("_surface_alpha", 1.0))
     ppk = C.PX_PER_KM                                                                 # km -> px on this grid (1 on the 1 km grid)
     dc.draw_basemap(ax, C.G, C.BM, hs=None, water=STYLE["water"], names=False, towns=[t for t in C.BM.towns if t not in skip_towns] if towns else (), window=win, fs_scale=STYLE["inset_fs"] / 8.0)
     hs = dc.read_hillshade_window(C.G, win, scale=max(1, int(round(3 / ppk)))) if STYLE["hillshade"] else None   # ~100 m sampling of the 300 m hillshade
@@ -1123,7 +1130,7 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
     with plt.rc_context(SPEC_RC):
         fig = plt.figure(figsize=(13.33, 7.5))
         ax = fig.add_axes([0.03, 0.04, 0.215, 0.84]); ax.set_anchor("E")      # the frame hugs inset A
-        im_main = ax.imshow(S_["img"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.5)
+        im_main = ax.imshow(S_["img"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.5, alpha=S_.get("alpha", 1.0))   # a surface may carry an alpha (the northern maps: 0.85, so the admin lines show through)
         axes_all, ims = [ax], [im_main]
         C.draw_pa(ax); STYLE["_fs_scale"] = 0.9
         try:
@@ -1141,11 +1148,12 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             else:
                 win, p = _inset_window(C, num, aspect_hw)
             iax = fig.add_axes(rect); STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"]; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"]
+            STYLE["_surface_alpha"] = S_.get("alpha", 1.0)
             try:
                 _draw_inset(C, iax, win, draw, tag, with_ipca_names, codes=STYLE["inset_codes"].get(tag), skip_towns=STYLE["inset_town_skip"].get(tag, ()),
                             img=S_["img"], cmap=S_["cmap"], norm=S_["norm"], post_draw=post_draw)
             finally:
-                STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None)
+                STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE.pop("_surface_alpha", None)
             axes_all.append(iax); ims.append(iax.images[0])                             # the inset's surface image is its first
             px0, px1, pyt, pyb = win                                                   # the window on the frame, tagged
             ax.add_patch(Rectangle((px0, pyt), px1 - px0, pyb - pyt, fill=False, edgecolor="#333333", lw=1.0, zorder=7))
@@ -1161,6 +1169,15 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             r = fig.canvas.get_renderer(); inv = fig.transFigure.inverted()   # the bottom of the ramp block under A (= the page bottom once the figure is trimmed)
             top = rects[-1][1]; bottom = cax.get_tightbbox(r).transformed(inv).y0
             h = leg.get_window_extent(r).transformed(inv).height; pad = 0.012
+            if STYLE.get("wide_legend_fit", False):                          # wolverine (Ethan 2026-09-29): size the items so the box fits the gap
+                fs_ = float(STYLE["wide_legend_fs"]); fs_min = float(STYLE.get("wide_legend_fs_min", 9))
+                while h > (top - bottom) - 2 * pad and fs_ - 0.5 >= fs_min:
+                    fs_ -= 0.5; leg.remove()
+                    leg = fig.legend(handles=handles, loc="center", bbox_to_anchor=(0.635 + 0.335 / 2, 0.5 * (top + bottom)), fontsize=fs_,
+                                     frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.6, handleheight=1.3, borderpad=0.7, labelspacing=0.6,
+                                     handler_map=cluster_handler_map(*handles))
+                    h = leg.get_window_extent(r).transformed(inv).height
+                STYLE["_wide_legend_fs_used"] = fs_                           # read back by the caller (printed for the record)
             y_leg = min(0.5 * (top + bottom), top - pad - h / 2)       # centred in the gap; a legend taller than the gap hangs from B's bottom edge instead
             leg.set_loc("center"); leg.set_bbox_to_anchor((0.635 + 0.335 / 2, y_leg), transform=fig.transFigure)
         if STYLE["titles"]:
@@ -1200,7 +1217,8 @@ def _frames_dpi(W):
 def _wide_ramp(cax, S_, cbar_label=None, end_words=None):
     """The ramp under inset A for a surface dict, drawn on a FRESH `cax` (a colorbar re-shapes the axes it is given, so a
     swapped frame removes the old axes and adds a new one at the same rect rather than clearing it)."""
-    cb = cax.figure.colorbar(ScalarMappable(norm=S_["norm"], cmap=S_["cmap"]), cax=cax, orientation="horizontal", extend=S_["extend"], ticks=S_.get("ticks"))
+    cb = cax.figure.colorbar(ScalarMappable(norm=S_["norm"], cmap=S_["cmap"]), cax=cax, orientation="horizontal", extend=S_["extend"], ticks=S_.get("ticks"),
+                             alpha=S_.get("alpha", 1.0))                                              # the key's swatches at the surface's alpha
     if S_.get("ticklabels") is not None:
         cb.ax.set_xticklabels(S_["ticklabels"])
     cb.set_label(cbar_label or S_["label"] or STYLE["ramp_label_short"], fontsize=STYLE["cbar_fs"], color=TABLE["cap"], labelpad=(26 if end_words else 4))
