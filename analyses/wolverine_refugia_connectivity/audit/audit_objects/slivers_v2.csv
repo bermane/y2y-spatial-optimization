@@ -115,20 +115,20 @@
 12,E085_088,86,89,5.1,1,0,0,False,False,False,near-contiguous,,False
 12,E105_106,106,107,6.6,0,0,0,False,False,False,near-contiguous,,False
 13,E104_107,105,108,0.9,0,0,0,False,False,False,near-contiguous,,False
-20,E110_122,111,123,6.9,2,0,1,True,False,False,near-contiguous,,True
-20,E117_122,118,123,9.6,0,0,1,True,False,False,near-contiguous,,True
-20,E110_121,111,122,10.8,0,0,5,True,False,False,near-contiguous,,True
-20,E114_122,115,123,11.4,5,0,3,True,False,False,near-contiguous,,True
-20,E110_112,111,113,15.3,14,0,2,True,False,False,near-contiguous,,True
-20,E121_122,122,123,20.4,0,0,1,True,False,False,near-contiguous,,True
-20,E112_113,113,114,33.9,20,0,4,True,False,False,within-complex corridor-class link (not near-contiguous),squeezed,True
-20,E110_114,111,115,6.0,11,0,0,False,False,False,near-contiguous,,False
-20,E110_113,111,114,9.9,3,0,0,False,False,False,near-contiguous,,False
-23,E126_128,127,129,6.3,0,0,2,True,False,False,near-contiguous,,True
-23,E124_125,125,126,7.2,1,0,2,True,False,False,near-contiguous,,True
-23,E125_127,126,128,7.5,0,0,1,True,False,False,near-contiguous,,True
-23,E125_128,126,129,8.4,0,0,3,True,False,False,near-contiguous,,True
-23,E123_125,124,126,12.6,1,0,3,True,False,False,near-contiguous,,True
-23,E125_126,126,127,2.7,0,0,0,False,False,False,near-contiguous,,False
-23,E126_127,127,128,8.7,0,0,0,False,False,False,near-contiguous,,False
-23,E128_129,129,130,19.2,0,0,0,False,False,False,near-contiguous,,False
+12,E110_122,111,123,6.9,2,0,1,True,False,False,near-contiguous,,True
+12,E117_122,118,123,9.6,0,0,1,True,False,False,near-contiguous,,True
+12,E110_121,111,122,10.8,0,0,5,True,False,False,near-contiguous,,True
+12,E114_122,115,123,11.4,5,0,3,True,False,False,near-contiguous,,True
+12,E110_112,111,113,15.3,14,0,2,True,False,False,near-contiguous,,True
+12,E121_122,122,123,20.4,0,0,1,True,False,False,near-contiguous,,True
+12,E112_113,113,114,33.9,20,0,4,True,False,False,within-complex corridor-class link (not near-contiguous),squeezed,True
+12,E110_114,111,115,6.0,11,0,0,False,False,False,near-contiguous,,False
+12,E110_113,111,114,9.9,3,0,0,False,False,False,near-contiguous,,False
+22,E126_128,127,129,6.3,0,0,2,True,False,False,near-contiguous,,True
+22,E124_125,125,126,7.2,1,0,2,True,False,False,near-contiguous,,True
+22,E125_127,126,128,7.5,0,0,1,True,False,False,near-contiguous,,True
+22,E125_128,126,129,8.4,0,0,3,True,False,False,near-contiguous,,True
+22,E123_125,124,126,12.6,1,0,3,True,False,False,near-contiguous,,True
+22,E125_126,126,127,2.7,0,0,0,False,False,False,near-contiguous,,False
+22,E126_127,127,128,8.7,0,0,0,False,False,False,near-contiguous,,False
+22,E128_129,129,130,19.2,0,0,0,False,False,False,near-contiguous,,False

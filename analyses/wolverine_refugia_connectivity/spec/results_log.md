@@ -141,7 +141,14 @@ Class counts per legend = R5.3 (0 / 4 / 15 / 21 + 130 adjacent); examples per ac
   the Banff–Yoho land lies inside the Jasper complex, so nothing straddles the break. Top class empty. Last affordable: Sustut ↔ Sustut E
   (p10 0.61), Sustut E ↔ Babine River (0.23), Glacier ↔ Mission Mountains (0.05, two branches), Absaroka Beartooth ↔ Yellowstone (0.32).
   Names: 14 patch display names repeat inside complexes (six 'Refugium (Nááts'Ihch'Oh)') — collapsed under 'Refugia complex (Nahanni)'.
-- **R7.1 The contracted network (PENDING, `v25_run001`):** inter-complex links (MST + backups), links per class, the eight-cell table, D7
+- **R7.1a Pass 1 on the 23 complexes (`v25_run001`, Ethan 2026-09-29, stopped at the second pass by design):** 29 inter-complex
+  links (22 minimum-network + 7 backups), one group; corridor land 29,619 km² (raw swath incl. node land 31,011); GW4 bit-exact on 3
+  sampled edges; G15 current-flow vs shortest-path Spearman 0.683 on the augmented graph (1.000 on the tree); G13 OK on all 29;
+  10 links narrower than half their barrier-free width (Mudzenchoot ↔ Jasper 0.18, Wenaha Tucannon ↔ North Fork John Day 0.29,
+  Wenaha Tucannon ↔ Eagle Cap 0.29, Northern Rockies ↔ Jasper 0.30, Glacier ↔ Mission Mountains 0.31, Mission Mountains ↔
+  Selway-Bitterroot 0.41, Eagle Cap ↔ North Fork John Day 0.46, Lee Metcalf ↔ Selway-Bitterroot 0.47, Glacier ↔ Selway-Bitterroot
+  0.47, Sustut ↔ Omineca 0.50); **second pass: 1 near-contiguous inter-complex link (Jasper ↔ Selway-Bitterroot) → merged (M7.7).**
+- **R7.1 The contracted network (PENDING, `v25_run002`, 22 complexes):** inter-complex links (MST + backups), links per class, the eight-cell table, D7
   irreplaceables as complex pairs (the four v2 corridor-level ones expected to survive, H-W2 informally), the second-pass count, W11,
   corridor land dissolved / outside PAs + IPCAs / outside PAs + IPCAs + core. (R7.0's coverage and accounting were measured on the v2
   patch-to-patch links and are SUPERSEDED by the contracted run's; R7.0's complexes, names and slivers stand.)

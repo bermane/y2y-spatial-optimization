@@ -8,11 +8,17 @@
   "cutoff_detour_km": 4.086885476857423,
   "n_patches": 130,
   "n_adjacent_links": 130,
-  "n_complexes": 23,
+  "n_complexes": 22,
   "n_single_patch": 15,
   "largest_complex_patches": 43,
   "largest_complex_km2": 135778.3,
   "n_slivers": 133,
   "n_slivers_with_feature": 62,
-  "contraction_pass": 1
+  "contraction_pass": 2,
+  "second_pass_merges": [
+    [
+      12,
+      20
+    ]
+  ]
 }

@@ -923,8 +923,15 @@ def figure_m0b(P, template="slide", run_tag=None, spec=M0B_SPEC, corridors=False
 #   empty; each frame is padded and then widened/heightened to its panel's aspect.
 INSET_RECTS = {"A": [0.745, 0.50, 0.25, 0.25],       # figure-fraction [left, bottom, width, height]
                "B": [0.025, 0.115, 0.30, 0.25]}       # A east of the region's edge, B in the SW corner
-INSET_SPEC = {"A": dict(slots=("N2",), title="A · Nahanni's ways south", pad_km=25),                # keyed by example SLOT (2026-09-29): the window
-              "B": dict(slots=("S1",), title="B · Gwillim Lake ↔ Pine Le Moray", pad_km=25)}       # follows whatever options the slot holds on this run
+INSET_SPEC = {"A": dict(slots=("N2",), title="A · Nahanni's ways south", pad_km=25,
+                        # Ethan 2026-09-29: A is FIXED to the run002 window over Dene Kʼéh Kusān, Nahanni and Liard River Corridor (grid pixels on
+                        # the 300 m routing grid, identical across runs -- the y2y fixed-inset rule), so the links between the three stay in view
+                        # whatever the pins hold; remove `window_px` to size it on the slot again
+                        window_px=(1716.0, 2224.0, 2904.0, 3618.0)),
+              "B": dict(slots=("S1",), title="B · Gwillim Lake ↔ Pine Le Moray", pad_km=25,
+                        # Ethan 2026-09-29: B FIXED to its run002 window too (Gwillim Lake ↔ Pine Le Moray), so A and B are both pinned and
+                        # the same-scale rule fits them to one size across runs; remove `window_px` to size it on the slot again
+                        window_px=(1936.0, 2315.0, 5100.0, 5376.0))}
 
 
 def _inset_nums(P, spec):
@@ -944,16 +951,21 @@ def inset_frames(P, fig_w=12, fig_h=17):
     xs, ys = R.template.x.values, R.template.y.values
     out = {}
     for key, spec in INSET_SPEC.items():
-        m = np.zeros(R.shape, bool)
-        for n in _inset_nums(P, spec):
-            if n in opts:
-                m |= opts[n]
-        rr, cc_ = np.nonzero(m)
-        if not len(rr):
-            continue
-        p = spec["pad_km"] * 1e3
-        x0, x1 = xs[cc_.min()] - p, xs[cc_.max()] + p
-        y0, y1 = ys[rr].min() - p, ys[rr].max() + p
+        if spec.get("window_px"):                                     # a fixed window (grid pixels) -> map coordinates
+            px0, px1, pyt, pyb = spec["window_px"]; tr = R.transform
+            x0, x1 = tr.c + px0 * tr.a, tr.c + px1 * tr.a
+            y0, y1 = tr.f + pyb * tr.e, tr.f + pyt * tr.e
+        else:
+            m = np.zeros(R.shape, bool)
+            for n in _inset_nums(P, spec):
+                if n in opts:
+                    m |= opts[n]
+            rr, cc_ = np.nonzero(m)
+            if not len(rr):
+                continue
+            p = spec["pad_km"] * 1e3
+            x0, x1 = xs[cc_.min()] - p, xs[cc_.max()] + p
+            y0, y1 = ys[rr].min() - p, ys[rr].max() + p
         rect = INSET_RECTS[key]
         aspect = (rect[2] * fig_w) / (rect[3] * fig_h)
         w, h = x1 - x0, y1 - y0
@@ -1846,6 +1858,8 @@ def inset_windows(P, mode="interim", same_scale=INSET_SAME_SCALE):
     xs, ys = R.template.x.values, R.template.y.values
     out = {}
     for tag, spec in INSET_SPEC.items():
+        if spec.get("window_px"):                                     # a fixed window (grid pixels), as the y2y package fixes its insets
+            out[tag] = tuple(float(v) for v in spec["window_px"]); continue
         m = np.zeros(R.shape, bool)
         for n in _inset_nums(P, spec):
             if n in opts:

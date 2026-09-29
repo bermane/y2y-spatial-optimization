@@ -275,6 +275,13 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
   northern D25a patch, committed with the tag) while `v2_run001` was classified with the single `near_contiguous` key. The package
   reads `link_class` directly and maps any near-contiguous value onto the mapstyle's tokens (`_norm_class`), so the v2.5 product
   needs no re-classification; the run is not re-run.
+- **M7.7 The D25 second pass FIRED (Ethan's run of 06, 2026-09-29):** on the 23-complex graph one inter-complex link was
+  near-contiguous — Jasper complex ↔ Selway-Bitterroot complex (E011_019: least-cost path 56 cells = 16.8 km against a barrier-free
+  median width of 78 cells = 23 km; no cost-1000 cell on the path). Per the registered rule (run spec v3 §4) the pair was MERGED
+  (`cc.merge_complexes`, pass 2): 22 complexes; the merged 'Refugia complex (Jasper)' = 31 patches / 167,594 km² (centroid 50.8 °N,
+  from Jasper to the Bitterroots — the wide-front case the spec anticipated: recorded, the allowance NOT touched). Audit objects
+  rewritten and renumbered north → south (Glacier is C13 as before; Yellowstone C22); `v25_run001` stays on disk as the pass-1 record
+  (no network products written); the run is `v25_run002` (config `v25.run_id`).
 - **M7.6 Not exercised at build time:** the contracted routing run itself (06 = a solve; first execution = Ethan's), run mode of the
   module and the package on the contracted run (07/08 need that run), the second-pass merge path. Smoked: 05 end to end into scratch
   folders and its audit objects through the engine's contraction loader (23 complexes, GW5, the v2 cache identity reproduced); on the

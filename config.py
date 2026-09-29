@@ -1072,7 +1072,7 @@ CORRIDORS = {
         # notebook 06 as `overrides` on top of the headline variant; the v2 patch run is read only to derive the complexes.
         "v25": {
             "from_run": "v2_run001",                     # the patch-level run the complexes come from
-            "run_id": "v25_run001",                      # pass a new id after a second-pass merge
+            "run_id": "v25_run002",                      # pass 2: v25_run001 = the pass-1 record (the second pass fired: C12 + C20 merged, 2026-09-29)
             "overrides": {
                 "nodes": {
                     "contract": {"rule": "connected components of the near-contiguous (D25) links of the patch-level run",

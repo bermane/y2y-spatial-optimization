@@ -187,6 +187,10 @@ rule; quantitative outcomes live there, methods decisions here);
   through Dene Kʼéh Kusān part 2, with part 3 as the backup), so the interim numbering shifts until EXAMPLE_PICKS is re-signed.
   The interim inset windows are keyed by example SLOT (`INSET_SPEC[...]["slots"]`: A = N2's options, B = S1) instead of option
   numbers, so they follow whatever a slot holds on the run; a `nums` key is still honoured.
+  *Same day, Ethan:* both interim windows are then FIXED to their run002 pixel windows (`INSET_SPEC[...]["window_px"]`: A over
+  Dene Kʼéh Kusān / Nahanni / Liard River Corridor, B over Gwillim Lake ↔ Pine Le Moray) so the links between the three northern
+  areas stay in view whatever the pins hold and A and B share one scale across runs — the y2y fixed-inset rule; drop the key to
+  size a window on its slot again.
 - **M4.11 D25a / D25b (2026-09-28; applied from `spec/05_patch_D25a_near_contiguous.md`; supersedes the provisional build
   noted under M4.9 below):** sub-classes exactly as the patch — barrier (`lcp_max_cost` ≥ 100), roads or cuts (`lcp_max_cost`
   == 10 or ratio < `squeeze_ratio`), open front (otherwise); `near_contiguous_links.csv` with the five per-link columns (gap_km,
