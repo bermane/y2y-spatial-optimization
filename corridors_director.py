@@ -262,6 +262,14 @@ def propose_examples(P, n_south=3, n_north=2):
     return out
 
 
+def _find_edge_quiet(e, pair):
+    """_find_edge without the printout (used to align per-option sides with the options that resolved)."""
+    a, b = pair
+    m = e[(e.label_i.str.contains(a, regex=False) & e.label_j.str.contains(b, regex=False)) |
+          (e.label_i.str.contains(b, regex=False) & e.label_j.str.contains(a, regex=False))]
+    return m.index[0] if len(m) else None
+
+
 def _find_edge(e, pair):
     """The edge for a pinned example pair (two name fragments). Under D22 (2026-09-28: within-name parts are their own routing
     units, labelled 'name [part k]') a pair can match several part-level edges: prefer the MST edge, then the cheapest, and say
@@ -269,7 +277,9 @@ def _find_edge(e, pair):
     a, b = pair
     m = e[(e.label_i.str.contains(a, regex=False) & e.label_j.str.contains(b, regex=False)) |
           (e.label_i.str.contains(b, regex=False) & e.label_j.str.contains(a, regex=False))]
-    assert len(m) >= 1, f"example pair {pair} resolves to no edge"
+    if not len(m):                                                     # a pinned pair that this run's network does not hold: the pin rule fires
+        print(f"  PIN RULE FIRES: example pair {pair} resolves to no edge on this run -- dropped; re-pick with propose_examples and re-sign EXAMPLE_PICKS")
+        return None
     if len(m) > 1:
         order = m.assign(_mst=(m["in_mst"] == True) if "in_mst" in m.columns else False).sort_values(["_mst", "cost"], ascending=[False, True])
         print(f"  example pair {pair}: {len(m)} part-level edges -> {order.index[0]} ({order.iloc[0].label_i} ↔ {order.iloc[0].label_j}; "
@@ -288,14 +298,27 @@ def select_examples(P, n=None, south_of_frac=0.40):
     ex = []                      # N1 (the Dene with/without pair, M4) AXED by Ethan 2026-09-09
     counter = 0
     for pk in EXAMPLE_PICKS:
-        eid = _find_edge(e, pk["pair"])
+        if pk.get("options") == "links":                               # the primary pair is the first option; a missing option is dropped (pin rule)
+            ids = [k for k in (_find_edge(e, q) for q in pk["option_pairs"]) if k is not None]
+            sides = pk.get("side", "nw")
+            if isinstance(sides, list) and len(sides) == len(pk["option_pairs"]):
+                sides = [sd for sd, q in zip(sides, pk["option_pairs"]) if _find_edge_quiet(e, q) is not None]
+            if not ids:
+                print(f"  PIN RULE FIRES: example {pk['slot']} has no resolvable option on this run -- slot dropped")
+                continue
+            eid = ids[0]
+        else:
+            eid = _find_edge(e, pk["pair"])
+            if eid is None:
+                print(f"  PIN RULE FIRES: example {pk['slot']} dropped")
+                continue
+            sides = pk.get("side", "nw")
         x = dict(slot=pk["slot"], act=pk["act"], edge_id=eid, kind="link", title=_pair_title(e.loc[eid]),
-                 side=pk.get("side", "nw"), mark=pk.get("mark", True))
+                 side=sides, mark=pk.get("mark", True))
         if pk.get("options") == "branches":
             k = int(e.loc[eid].get("n_branches", 1) or 1)
             x["options"] = "branches"; x["option_nums"] = list(range(counter + 1, counter + k + 1))
         elif pk.get("options") == "links":
-            ids = [_find_edge(e, q) for q in pk["option_pairs"]]
             x["options"] = "links"; x["option_edges"] = ids
             x["option_nums"] = list(range(counter + 1, counter + len(ids) + 1))
         else:
@@ -900,8 +923,15 @@ def figure_m0b(P, template="slide", run_tag=None, spec=M0B_SPEC, corridors=False
 #   empty; each frame is padded and then widened/heightened to its panel's aspect.
 INSET_RECTS = {"A": [0.745, 0.50, 0.25, 0.25],       # figure-fraction [left, bottom, width, height]
                "B": [0.025, 0.115, 0.30, 0.25]}       # A east of the region's edge, B in the SW corner
-INSET_SPEC = {"A": dict(nums=(1, 2), title="A · options 1–2: Nahanni's ways south", pad_km=25),
-              "B": dict(nums=(3,), title="B · option 3: Gwillim Lake ↔ Pine Le Moray", pad_km=25)}   # the same window as before 2026-09-28 (then numbered option 5)
+INSET_SPEC = {"A": dict(slots=("N2",), title="A · Nahanni's ways south", pad_km=25),                # keyed by example SLOT (2026-09-29): the window
+              "B": dict(slots=("S1",), title="B · Gwillim Lake ↔ Pine Le Moray", pad_km=25)}       # follows whatever options the slot holds on this run
+
+
+def _inset_nums(P, spec):
+    """The option numbers an inset spec covers on this run: its example slots' option_nums (a `nums` key is honoured as before)."""
+    if "nums" in spec:
+        return tuple(spec["nums"])
+    return tuple(n for ex in P.examples if ex["slot"] in spec["slots"] for n in ex["option_nums"])
 
 
 def inset_frames(P, fig_w=12, fig_h=17):
@@ -915,7 +945,7 @@ def inset_frames(P, fig_w=12, fig_h=17):
     out = {}
     for key, spec in INSET_SPEC.items():
         m = np.zeros(R.shape, bool)
-        for n in spec["nums"]:
+        for n in _inset_nums(P, spec):
             if n in opts:
                 m |= opts[n]
         rr, cc_ = np.nonzero(m)
@@ -1817,7 +1847,7 @@ def inset_windows(P, mode="interim", same_scale=INSET_SAME_SCALE):
     out = {}
     for tag, spec in INSET_SPEC.items():
         m = np.zeros(R.shape, bool)
-        for n in spec["nums"]:
+        for n in _inset_nums(P, spec):
             if n in opts:
                 m |= opts[n]
         rr, cc_ = np.nonzero(m)
