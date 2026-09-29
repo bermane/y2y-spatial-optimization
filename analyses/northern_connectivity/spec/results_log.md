@@ -330,6 +330,22 @@ links"); adjacency-only links 37; LM would-remove counts: through-core 8, beyond
 `n_neighbours`: median 4, max 15 (Dene Kʼéh Kusān; Peel Watershed 8, Wədzih Yiné' 8, Tū Łī́dlini 7,
 Omineca 7).
 
+- **R10 note (2026-09-29, D25c):** the near-contiguous counts and the D25b split below are the D25/D25a reading and are SUPERSEDED —
+  under D25c the 17 (run003) / 18 (run002) fronts are corridor land classed on width alone and corridor area includes them; the
+  class counts, the class × geometry table, `front_share`, and the example proposal (N2–N3 by width, R1 = the two-branch link) are
+  re-measured when Ethan re-runs 04 → 06 → 07 (run003) and 04 → 06 (run002). The report-back's questions 1–5 are answered by D25c.
+- **R10 MEASURED (2026-09-29; full report `spec/run003_reportback.md`):** run003 = 48 units, 60 edges (47 tree / 13 backups /
+  15 touching / 0 locked), cutoff 13.44 ≈ 4.03 km (inter-name edges only; 18,187 km²), corridor union 31,103 km². D22 outcome:
+  Dene part 2 → 3 a tree edge (384 km²) + a backup to Nahanni; the pair an OPEN FRONT (11.7 km gap vs 27.9 km front, ratio
+  0.92); Liard RC ↔ Nahanni no longer an edge. G18: only-viable = 1 on both runs (Gwillim ↔ Pine Le Moray 0.40/0.41, alt hard);
+  Wilps ↔ Swan Lake → last affordable (0.95, far); Tatonduk ↔ Fishing Branch and Wędzih ↔ Chase → open fronts. Fronts: run002
+  18 (16 open / 2 roads by ratio), run003 17 (14 / 3, one by cost-10 on the path); no barrier fronts; largest front gaps T’akú
+  ↔ Stikine 30.9 km (front 36.5) and ↔ Edziza 33.3 (38.8); width-not-assessable 1 (Gladys ↔ Spatsizi). G19/G21: floors inert
+  (0 links move). D25b run003: corridor 16,233 + fronts 3,549 + intra 0 + augmentation 15,126 = 34,908 km². Classes run003:
+  1 / 2 / 7 / 18 + 14 / 3. Route-irreplaceable amended 8 (topo 26). D29: affordable 13 / far 3 / both 3 / hard 1. D28 narrowest
+  p10: Carp ↔ PLM 0.05, Gwillim ↔ Monkman 0.07, Tsey Dëk ↔ Tintina 0.07 (a pinch in an options link). D30 run003: 10,048 /
+  10,057 / 16,039 / beyond 836,582 km². Branches: 28 over 27 links, ONE two-branch link (Tsey Dëk ↔ Tintina). Slots proposed:
+  S1 Gwillim ↔ PLM, S2 Wilps ↔ Swan Lake (filled), S3 Gladys ↔ Spatsizi (filled, queried), N2 Tsey Dëk ↔ Tintina, N3 none.
 - **R10 (placeholder, 2026-09-28) — D22 re-run `v2_run003` (within-name part links compete):** units 42 → 48 (Dene
   Kʼéh Kusān 3 parts, Liard River Corridor 3, Nahanni 2, Nááts'ihch'oh 2), cutoff re-calibrated on the inter-name MST only,
   the classification of the former locked links (esp. Dene part 2 ↔ part 3, expected 'securing'), the network / class

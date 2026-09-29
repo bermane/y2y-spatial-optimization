@@ -1078,7 +1078,7 @@ def _fit_window(C, win_px, aspect_hw):
     return (float(cx - w / 2), float(cx + w / 2), float(cy - h / 2), float(cy + h / 2))
 
 
-def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None, skip_towns=(), img=None, cmap=None, norm=None, skip_areas=()):
+def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None, skip_towns=(), img=None, cmap=None, norm=None, skip_areas=(), post_draw=None):
     px0, px1, pyt, pyb = win
     ax.imshow(_f_1km(C) if img is None else img, cmap=cmap or C.FCMAP, norm=norm or C.FNORM, interpolation="nearest", zorder=0.5)
     ppk = C.PX_PER_KM                                                                 # km -> px on this grid (1 on the 1 km grid)
@@ -1105,13 +1105,15 @@ def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None
     ax.plot([x, x + 50 * ppk], [y, y], color="black", lw=2.5, solid_capstyle="butt", zorder=7)
     ax.text(x + 25 * ppk, y - 6 * ppk, "50 km", ha="center", va="bottom", fontsize=STYLE["inset_fs"], zorder=7)
     ax.set_title(title, fontsize=STYLE["map_title_fs"] + 2, color=TABLE["ink"], fontweight=600, pad=6, loc="left")
+    if post_draw is not None:                                              # a second pass once the labels and limits exist (the northern route numbers)
+        post_draw(ax, win)
 
 
 WIDE_RECTS = {2: [(0.27, 0.19, 0.335, 0.66), (0.635, 0.19, 0.335, 0.66)],      # two tall insets (the Y2Y-wide layout)
               1: [(0.30, 0.17, 0.67, 0.70)]}                                   # one landscape inset (a narrow region: the Alberta mirror)
 
 
-def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=False, surface=None, caption=None, keep=False):
+def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=False, surface=None, caption=None, keep=False, post_draw=None):
     """Slide-shaped Act 1 map: the frame at left, zoom insets around STYLE['inset_clusters'] at right, legend + ramp below.
     `surface` (dict: img, cmap, norm, extend, ticks, ticklabels, label) swaps the F ramp for another 1 km layer; default = F.
     `caption` = one line above the insets (the frames' running caption). `keep=True` (method_frames) returns the open figure
@@ -1127,6 +1129,8 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
         try:
             draw(ax); C.finish(ax, "", None, note="", legend_loc="none", names=STYLE["wide_main_names"], towns=STYLE["wide_main_towns"],
                                name_fs=STYLE["wide_main_name_fs"])
+            if post_draw is not None:                                        # after the frame's labels and limits (2026-09-29)
+                post_draw(ax, C.WINDOW if C.WINDOW is not None else (0.0, float(C.G.shape[1]), 0.0, float(C.G.shape[0])))
         finally:
             STYLE.pop("_fs_scale", None)
         rects = WIDE_RECTS[min(len(STYLE["inset_clusters"]), 2)]
@@ -1139,7 +1143,7 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             iax = fig.add_axes(rect); STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"]; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"]
             try:
                 _draw_inset(C, iax, win, draw, tag, with_ipca_names, codes=STYLE["inset_codes"].get(tag), skip_towns=STYLE["inset_town_skip"].get(tag, ()),
-                            img=S_["img"], cmap=S_["cmap"], norm=S_["norm"])
+                            img=S_["img"], cmap=S_["cmap"], norm=S_["norm"], post_draw=post_draw)
             finally:
                 STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None)
             axes_all.append(iax); ims.append(iax.images[0])                             # the inset's surface image is its first

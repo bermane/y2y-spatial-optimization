@@ -52,15 +52,8 @@ CLASS_PALETTE = "cividis"
 CLASS_WORDS = {"securing": "Minimum (options)", "squeezed": "Some (narrowing)", "edge": "A lot (last affordable)",
                "both": "Maximum (only viable connection)"}         # legend heading "Corridor Pressure", four levels (Ethan, 2026-09-11)
 CLASS = {c: (CLASS_PALETTES[CLASS_PALETTE][c], None, None, CLASS_WORDS[c]) for c in CLASS_WORDS}   # key: (fill, outline or None, hatch or None, director string); plain fills, no outline / hatch (Ethan)
-# D25 (2026-09-28): the two NEAR-CONTIGUOUS rows -- neutral by design (not corridor priorities, never a fifth / sixth corridor
-# class): the link's band in a light grey with a diagonal hatch; the barrier variant adds a thin outline. Legend order: the four
-# corridor classes, then these two, then PA / IPCA / lines.
-NEAR_CONTIGUOUS = {   # D25a (spec 06 §3, patch 2026-09-28): three sub-classes, all neutral -- open front: hatch only; roads or cuts: hatch +
-                      # a #8A8A8A 0.6 pt outline; barrier: hatch + a #3A3A3A 0.8 pt outline. Never coloured as corridor priorities.
-    "near_contiguous_open":    dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=None, label="Adjacent areas — open front"),
-    "near_contiguous_roads":   dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=("#8A8A8A", 0.6, "solid"), label="Adjacent areas — front crossed by roads or cuts"),
-    "near_contiguous_barrier": dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=("#3A3A3A", 0.8, "solid"), label="Adjacent areas — barrier between"),
-}
+# D25c (2026-09-29): the adjacent-areas legend rows are RETIRED -- fronts are corridor land drawn in their class colour; the front
+# is a geometry descriptor, optionally outlined on M2 (corridors_director.FRONT_OUTLINE). The former NEAR_CONTIGUOUS tokens are gone.
 CLASS_HEADING = "Corridor Pressure"
 CLASS_ORDER = ["securing", "squeezed", "edge", "both"]          # draw + legend order
 

@@ -42,12 +42,10 @@ CLASS = {
     "both":     ("#d7301f", "Only viable connection — no alternative link or route, and the land is already narrowing"),   # D23 (2026-09-28)
     "edge":     ("#fc8d59", "Last affordable link — alternatives cost far more"),
     "squeezed": ("#7b3294", "Already narrowing — corridor below its natural width"),
-    # D25 / D25a (2026-09-28): near-contiguous links -- neutral grey, drawn UNDER the four corridor classes, never one of them
-    "near_contiguous_open":    ("#D9D9D9", "Adjacent areas — open front"),
-    "near_contiguous_roads":   ("#D9D9D9", "Adjacent areas — front crossed by roads or cuts"),
-    "near_contiguous_barrier": ("#D9D9D9", "Adjacent areas — barrier between"),
 }
-NEAR_CONTIGUOUS_KEYS = ("near_contiguous_open", "near_contiguous_roads", "near_contiguous_barrier")
+# D25c (2026-09-29): the adjacent-areas rows are RETIRED -- a front is corridor land classed on the one pressure scale; the front
+# is a geometry descriptor (`link_geometry`), optionally outlined on M2 (FRONT_OUTLINE), never a class
+FRONT_OUTLINE = ("#8A8A8A", 0.4, (0, (1, 2)))      # colour, pt, dotted
 OPTIONS_COLOR = "#2c7fb8"          # M2: route alternatives, ONE colour, equal weight
 PA_LABEL = "Existing protected areas"
 IPCA_LABEL = ("Proposed Indigenous Protected and Conserved Areas\n"
@@ -73,8 +71,6 @@ def package(R, n_examples=7, south_of_frac=0.40, out=None):
     both, irr, sq = classes[0][1], classes[1][1], classes[2][1]
     cls = pd.Series("securing", index=e.index)
     cls[sq] = "squeezed"; cls[irr] = "edge"; cls[both] = "both"       # disjoint, precedence up
-    if len(classes) >= 6:                                              # D25a (a run classified by classify_links): the three near-contiguous rows
-        cls[classes[3][1]] = "near_contiguous_open"; cls[classes[4][1]] = "near_contiguous_roads"; cls[classes[5][1]] = "near_contiguous_barrier"
     cls[e["is_adjacency"] | (e["cost"] <= 0)] = "adjacency"
     P.cls = cls
     P.owner = np.nan_to_num(R.edge_owner.values, nan=-1).astype(int)
@@ -188,9 +184,13 @@ EXAMPLE_PICKS = [
     #       line: Carp Lake <-> Pine Le Moray, 0.23x its natural width, is the alternative, also inside B);
     #   5-6 = the two links from T'akú Tlatsini to the Mount Edziza / Stikine complex (were 3-4);
     #   7 = Wilps Gwininitxw <-> Swan Lake; 8 = Carp Lake <-> Pine Le Moray (no M3 marker, Ethan).
-    dict(slot="N2", act=1, pair=("Dene K", "Nahanni National"), options="links",
-         option_pairs=[("Dene K", "Nahanni National"), ("Liard River Corridor", "Nahanni National")],
-         side=["sw", "ne"]),
+    # N2 re-pinned on run003 (Ethan 2026-09-29): option 1 = Nahanni <-> Dene Kʼéh Kusān part 2 (the tree edge); option 2 = Nahanni's
+    # second way south, the backup link to part 3 continuing over the part 3 <-> part 2 link -- a COMPOSITE option (a list of pairs
+    # whose bands are unioned). The pre-D22 option 2 (Liard River Corridor <-> Nahanni) is no longer an edge.
+    dict(slot="N2", act=1, pair=("Dene Kʼéh Kusān [part 2]", "Nahanni National"), options="links",
+         option_pairs=[("Dene Kʼéh Kusān [part 2]", "Nahanni National"),
+                       [("Dene Kʼéh Kusān [part 3]", "Nahanni National"), ("Dene Kʼéh Kusān [part 2]", "Dene Kʼéh Kusān [part 3]")]],
+         side=["e", "ne"]),                                              # option 1's disc on the east side of its band (Ethan 2026-09-29)
     dict(slot="S1", act=2, pair=("Gwillim", "Pine Le Moray"), side="nw"),
     dict(slot="S1b", act=2, pair=("Gwillim", "Monkman"), side="ne"),
     dict(slot="N3", act=1, pair=("T’akú", "Mount Edziza"), options="links",
@@ -221,9 +221,10 @@ def propose_examples(P, n_south=3, n_north=2):
              in different jurisdictions.
     Returns a DataFrame (slot, edge_id, pair, class, the ranking columns)."""
     e = P.edges.copy(); e["class"] = [P.cls.get(k, "securing") for k in e.index]
-    for col in ("squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost", "n_branches"):
+    for col in ("squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost", "n_branches", "width_new_km", "link_geometry"):
         if col not in e.columns:
             e[col] = np.nan
+    e = e[e["link_geometry"] != "contact"]                             # D25c: contacts are never examples (table rows only)
     def _rank(d, keys):
         return d.sort_values(keys, ascending=[True, True, False][:len(keys)], na_position="last")
     top = _rank(e[e["class"] == "both"], ["squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost"])
@@ -236,13 +237,18 @@ def propose_examples(P, n_south=3, n_north=2):
     att = lambda k: float(attr.get(k, 0.0)) if isinstance(attr, (dict, pd.Series)) and k in attr else 0.0
     jur = getattr(P, "jur", None)
     njur = lambda k: len(set(jur.get(k, []))) if isinstance(jur, dict) and k in jur else (len(set(jur.loc[k])) if isinstance(jur, pd.Series) and k in jur.index else 0)
-    north = e[(e["class"] != "adjacency") & (e["n_branches"].fillna(0) >= 2)].copy()
-    north["score"] = north["n_branches"].fillna(0) * [att(k) for k in north.index]; north["n_jur"] = [njur(k) for k in north.index]
-    north = north.sort_values(["score", "n_jur"], ascending=[False, False])
+    # N2-N3 (D25c): "room to choose" = corridor land with options ranked by the ACTUAL band width (the room the land offers), ties by
+    # attribution, then the multi-jurisdiction tie-break; fronts are eligible and expected to lead
+    north = e[e["class"] == "securing"].copy()
+    north["att"] = [att(k) for k in north.index]; north["n_jur"] = [njur(k) for k in north.index]
+    north = north.sort_values(["width_new_km", "att", "n_jur"], ascending=[False, False, False], na_position="last")
     for i, k in enumerate(north.index[:n_north]):
-        rows.append(dict(slot=f"N{i+2}", edge_id=k, pair=_pair_title(e.loc[k]), cls=e.loc[k, "class"]))
+        rows.append(dict(slot=f"N{i+2}", edge_id=k, pair=_pair_title(e.loc[k]), cls=f"{e.loc[k, 'class']} ({e.loc[k, 'link_geometry']}, width {e.loc[k, 'width_new_km']:.1f} km)"))
+    two = e[(e["class"] != "adjacency") & (e["n_branches"].fillna(0) >= 2)].sort_values("n_branches", ascending=False)
+    for k in two.index[:1]:                                            # the two-routes example, kept separate from the N slots (D25c)
+        rows.append(dict(slot="R1", edge_id=k, pair=_pair_title(e.loc[k]), cls=f"{e.loc[k, 'class']} -- two routes ({int(e.loc[k, 'n_branches'])} branches)"))
     out = pd.DataFrame(rows)
-    keep = [c for c in ("squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost", "n_branches", "alt_kind") if c in e.columns]
+    keep = [c for c in ("link_geometry", "width_new_km", "squeeze_ratio_obs", "width_ratio_p10", "n_pairs_lost", "n_branches", "alt_kind", "road_crossing") if c in e.columns]
     out = out.join(e[keep], on="edge_id")
     src = "D23 land-aware top class (classify_links)" if "link_class" in P.R.edges.columns else "the RETIRED both-senses flag (run classified before D23)"
     print(f"proposed example slots (spec 06 §2 v1.2.18 -- class-and-width-first; top class = {src}; sign into EXAMPLE_PICKS):")
@@ -255,10 +261,15 @@ def propose_examples(P, n_south=3, n_north=2):
         print("  G18 pin check: pinned example(s) lost the top class under D23 -> the 06 regeneration rule fires: " + "; ".join(moved))
     elif lost:
         print(f"  G18: {len(lost)} link(s) lost the top class under D23, none of them pinned")
-    near = [f"{ex['slot']} {ex['title']} ({k}: {P.cls.get(k)})" for ex in getattr(P, "examples", [])
-            for k in ([ex.get("edge_id")] + list(ex.get("option_edges", []))) if k is not None and str(P.cls.get(k, "")).startswith("near_contiguous")]
-    if near:
-        print("  D25 pin check: pinned example link(s) are now near-contiguous (no corridor to design) -> the pin rule fires: " + "; ".join(dict.fromkeys(near)))
+    geom = P.R.edges["link_geometry"] if "link_geometry" in P.R.edges.columns else None
+    def _flat(ex):
+        out_ = [ex.get("edge_id")]
+        for k in ex.get("option_edges", []) or []:
+            out_ += (k if isinstance(k, list) else [k])
+        return [k for k in out_ if k is not None]
+    contacts = [f"{ex['slot']} {ex['title']} ({k})" for ex in getattr(P, "examples", []) for k in _flat(ex) if geom is not None and geom.get(k) == "contact"]
+    if contacts:
+        print("  D25c pin check: pinned example link(s) are contacts (never examples) -> the pin rule fires: " + "; ".join(dict.fromkeys(contacts)))
     return out
 
 
@@ -299,14 +310,20 @@ def select_examples(P, n=None, south_of_frac=0.40):
     counter = 0
     for pk in EXAMPLE_PICKS:
         if pk.get("options") == "links":                               # the primary pair is the first option; a missing option is dropped (pin rule)
-            ids = [k for k in (_find_edge(e, q) for q in pk["option_pairs"]) if k is not None]
+            def _resolve(q):                                           # a pair -> edge id; a LIST of pairs -> a composite option (list of ids), all must resolve
+                if isinstance(q, list):
+                    ids_ = [_find_edge(e, qq) for qq in q]
+                    return ids_ if all(k is not None for k in ids_) else None
+                return _find_edge(e, q)
+            resolved = [_resolve(q) for q in pk["option_pairs"]]
+            ids = [k for k in resolved if k is not None]
             sides = pk.get("side", "nw")
             if isinstance(sides, list) and len(sides) == len(pk["option_pairs"]):
-                sides = [sd for sd, q in zip(sides, pk["option_pairs"]) if _find_edge_quiet(e, q) is not None]
+                sides = [sd for sd, k in zip(sides, resolved) if k is not None]
             if not ids:
                 print(f"  PIN RULE FIRES: example {pk['slot']} has no resolvable option on this run -- slot dropped")
                 continue
-            eid = ids[0]
+            eid = ids[0][0] if isinstance(ids[0], list) else ids[0]
         else:
             eid = _find_edge(e, pk["pair"])
             if eid is None:
@@ -516,44 +533,37 @@ def _director_base(P, ax, XL, YL, tint=False, province_names=True, cities=True, 
     ax.set_xlim(*XL); ax.set_ylim(*YL); ax.set_aspect("equal"); ax.set_axis_off()
 
 
-def adjacent_sentence(P, prefix=""):
-    """Spec 06 §2 (D25a patch): 'N of the sector's links join areas that are effectively adjacent; corridor design in the north is a
-    question about the remaining M.' Empty on a run classified before D25."""
-    if not any(str(v).startswith("near_contiguous") for v in P.cls.values):
+def front_sentence(P, prefix=""):
+    """Spec 06 §3 (D25c): the front share, said once in a caption -- 'fronts (short gaps between facing areas) hold X% of the
+    corridor band'. Empty on a run without the geometry descriptor."""
+    e = P.R.edges
+    if "link_geometry" not in e.columns:
         return ""
-    n_near = int(P.cls.astype(str).str.startswith("near_contiguous").sum()); n_links = int((P.cls != "adjacency").sum())
-    return f"{prefix}{n_near} of the sector's {n_links} links join areas that are effectively adjacent; corridor design in the north is a question about the remaining {n_links - n_near}"
+    nz = (e["cost"] > 0) & ~e["is_adjacency"]
+    n_front = int((e.loc[nz, "link_geometry"] == "front").sum())
+    acct = (getattr(P.R, "rec", {}) or {}).get("d25c", {})
+    share = acct.get("front_share")
+    return (f"{prefix}{n_front} of {int(nz.sum())} links are fronts (a gap shorter than the corridor's barrier-free width), classed on width alone"
+            + (f"; fronts hold {100 * share:.0f}% of the corridor band" if share is not None else ""))
 
 
-def _paint_near_contiguous(P, ax):
-    """D25: the near-contiguous links' bands in the neutral grey with the mapstyle hatch (contourf carries the hatch; imshow
-    cannot), the barrier variant outlined. Returns the two legend handles (empty list on a run without the class)."""
-    import corridors_mapstyle as ms
-    R = P.R; handles = []
-    for c in NEAR_CONTIGUOUS_KEYS:
-        ids = list(P.cls.index[P.cls == c])
-        if not ids:
-            continue
-        m = np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor
-        if not m.any():
-            continue
-        tok = ms.NEAR_CONTIGUOUS[c]
-        cc._da(R, np.where(m, 1.0, np.nan).astype("float32")).plot.imshow(ax=ax, cmap=ListedColormap([tok["fill"]]), add_colorbar=False)
-        with plt.rc_context({"hatch.color": tok["hatch_color"], "hatch.linewidth": 0.5}):
-            ax.contourf(R.template.x.values, R.template.y.values, m.astype(float), levels=[0.5, 1.5], colors="none", hatches=[tok["hatch"]])
-        if tok["outline"]:
-            ax.contour(R.template.x.values, R.template.y.values, m.astype(float), levels=[0.5], colors=[tok["outline"][0]], linewidths=tok["outline"][1],
-                       linestyles=[tok["outline"][2] if len(tok["outline"]) > 2 else "solid"])
-        handles.append(Patch(facecolor=tok["fill"], hatch=tok["hatch"], edgecolor=(tok["outline"][0] if tok["outline"] else tok["hatch_color"]),
-                             linewidth=(tok["outline"][1] if tok["outline"] else 0.0), linestyle=(tok["outline"][2] if tok["outline"] and len(tok["outline"]) > 2 else "solid"),
-                             label=f"{CLASS[c][1]}  [{len(ids)}]"))
-    return handles
+def _outline_fronts(P, ax):
+    """D25c display choice for M2 (Act 1): a thin dotted outline around the front links' bands -- a descriptor, not a class."""
+    e = P.R.edges
+    if "link_geometry" not in e.columns:
+        return
+    ids = [k for k in e.index[e["link_geometry"] == "front"] if k in P.order]
+    if not ids:
+        return
+    m = np.isin(P.owner, [P.order[k] for k in ids]) & P.R.corridor
+    if m.any():
+        ax.contour(P.R.template.x.values, P.R.template.y.values, m.astype(float), levels=[0.5], colors=[FRONT_OUTLINE[0]],
+                   linewidths=FRONT_OUTLINE[1], linestyles=[FRONT_OUTLINE[2]], zorder=3.6)
 
 
 def _paint_classes(P, ax):
-    """The four corridor classes in the M1 palette (squeezed folded into securing while H8 is open), over the near-contiguous
-    rows (D25, neutral hatch, drawn first). Returns the legend handles in legend order: the four, then the adjacent rows."""
-    nc_handles = _paint_near_contiguous(P, ax)
+    """The four corridor classes in the M1 palette (squeezed folded into securing while H8 is open). Fronts (D25c) are corridor
+    land in their class colour like any link. Returns the legend handles in legend order."""
     handles = []
     for c in ("securing", "squeezed", "edge", "both"):
         ids = list(P.cls.index[P.cls == c])
@@ -565,7 +575,7 @@ def _paint_classes(P, ax):
         _paint(P, ax, ids, col)
         if not (c == "squeezed" and P.h8_open):
             handles.append(Patch(color=col, label=f"{lbl}  [{len(ids)}]"))
-    return handles + nc_handles
+    return handles
 
 
 def _m1_scale(P):
@@ -657,7 +667,7 @@ def map_m1(P, pad=0.07, area_names=14):
     handles += _node_handles()
     fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.01), ncol=2,
                fontsize=9.5, frameon=True)
-    ax.set_title("Where the land still offers choices — and where it does not" + adjacent_sentence(P, prefix="\n"), fontsize=15,
+    ax.set_title("Where the land still offers choices — and where it does not" + front_sentence(P, prefix="\n"), fontsize=15,
                  pad=12)
     fig.savefig(P.fig / "M1_regime.png", dpi=170, bbox_inches="tight"); plt.show()
     return P
@@ -812,18 +822,16 @@ def _pressure_polygons(P):
             continue
         polys = [_shape(g) for g, v in rfeatures.shapes(m.astype("uint8"), mask=m, transform=tr) if v == 1]
         e = R.edges.loc[eid]
-        if c in ms.CLASS:
-            label, hx = ms.CLASS[c][3], ms.CLASS[c][0]
-        else:                                                    # D25 near-contiguous rows: the mapstyle's neutral tokens
-            tok = ms.NEAR_CONTIGUOUS.get(c, {}); label, hx = tok.get("label", c), tok.get("fill", "#D9D9D9")
+        label, hx = (ms.CLASS[c][3], ms.CLASS[c][0]) if c in ms.CLASS else (c, "#D9D9D9")   # four classes (D25c); a legacy key keeps a neutral tone
         nb = e.get("n_branches", np.nan)
         rows.append(dict(edge_id=eid, label_i=e["label_i"], label_j=e["label_j"], pressure=c,
                          pressure_label=label, hex=hx, cost=float(e["cost"]),
+                         link_geometry=str(e.get("link_geometry", "")), road_crossing=bool(e.get("road_crossing", False)),   # D25c descriptors
                          in_mst=bool(e["in_mst"]), irreplaceable=bool(e.get("irreplaceable", False)),
                          route_irreplaceable=bool(e.get("route_irreplaceable", False)),
                          squeezed=bool(e.get("squeezed", False)) if pd.notna(e.get("squeezed", np.nan)) else False,
                          squeeze_ratio=float(e.get("squeeze_ratio_obs", np.nan)),
-                         n_branches=(int(nb) if pd.notna(nb) else -1),         # -1 = no decomposition (near-contiguous, D25)
+                         n_branches=(int(nb) if pd.notna(nb) else -1),         # -1 = no decomposition (front / contact, D25c)
                          band_km2=round(float(m.sum()) * R.cell_km2, 1),
                          geometry=gpd.GeoSeries(polys, crs=R.crs).union_all()))
     return gpd.GeoDataFrame(rows, crs=R.crs)
@@ -1116,7 +1124,7 @@ def map_m2(P, area_names=14, tint=False):
         else:
             # each option = the link's FULL corridor band (its owned land, exactly as M1 draws
             # it), in the order the picks list them (Ethan 2026-09-11)
-            masks = [(P.owner == P.order[k]) & R.corridor for k in ex["option_edges"]]
+            masks = [np.isin(P.owner, [P.order[kk] for kk in (k if isinstance(k, list) else [k])]) & R.corridor for k in ex["option_edges"]]
             cells = [(_median_cell(R, m), m) for m in masks]
             cells = [c for c in cells if c[0] is not None]
         sides = ex.get("side", "nw"); sides = sides if isinstance(sides, list) else [sides] * len(cells)
@@ -1131,6 +1139,7 @@ def map_m2(P, area_names=14, tint=False):
             marks.append((xy, num, side))
     for xy, num, side in marks:
         _number_marker(ax, xy, num, OPTIONS_COLOR, XL, YL, side=side)
+    _outline_fronts(P, ax)                                             # D25c: fronts dotted on the Act 1 map (the room story)
     _director_base(P, ax, XL, YL, tint=tint, area_names=area_names, towns=NORTH_TOWNS)
     nums = [n for _, n, _ in marks]
     handles.append(Patch(color=OPTIONS_COLOR,
@@ -1231,10 +1240,11 @@ def _option_masks(P):
                 out.append((num, f"{ex['title']}\n{sd}", m, OPTIONS_COLOR))
         elif ex.get("options") == "links":
             # each option = the link's FULL corridor band (owned land, as on M1), in the order
-            # the picks list them (Ethan 2026-09-11)
+            # the picks list them (Ethan 2026-09-11); a COMPOSITE option (list of ids) = the union of its links' bands (2026-09-29)
             for num, k in zip(ex["option_nums"], ex["option_edges"]):
-                m = (P.owner == P.order[k]) & R.corridor
-                out.append((num, _pair_title(P.edges.loc[k]), m, OPTIONS_COLOR))
+                ks = k if isinstance(k, list) else [k]
+                m = np.isin(P.owner, [P.order[kk] for kk in ks]) & R.corridor
+                out.append((num, " → ".join(_pair_title(P.edges.loc[kk]) for kk in ks), m, OPTIONS_COLOR))
         elif ex.get("mark", True):
             m = (P.owner == P.order[ex["edge_id"]]) & R.corridor
             out.append((ex["option_nums"][0], ex["title"], m, CLASS[P.cls.get(ex["edge_id"], "securing")][0]))
@@ -1567,6 +1577,13 @@ def profile_pages(P):
 def _profile_words(P, ex, r, c, nb, att, chips, jur):
     a, b = cc._short_node_name(r["label_i"], 26), cc._short_node_name(r["label_j"], 26)
     kind = r.get("alt_kind") if hasattr(r, "get") else None                       # D29: why the alternative failed
+    geom = r.get("link_geometry") if hasattr(r, "get") else None                   # D25c: a front is classed on width alone
+    front_line = ""
+    if geom == "front":
+        ratio = r.get("squeeze_ratio_obs"); room = r.get("width_new_km")
+        front_line = (f" This is a wide front between the areas — about {room:.0f} km of room." if pd.notna(ratio) and ratio >= 0.5 and pd.notna(room)
+                      else (f" The front is cut along its length — at {ratio:.1f}× its natural width." if pd.notna(ratio) else " This link is a front (a gap shorter than the corridor's natural width)."))
+    road_line = " A road crosses the least-cost path: a crossing-structure question, not a corridor one." if bool(r.get("road_crossing", False)) else ""
     alt_sentence = {"far": " The next link is far: the alternative route is much longer over similar ground.",
                     "hard": " The next link crosses hard ground: the alternative is not much longer but runs through costlier land.",
                     "both": " The next link is both far and over hard ground."}.get(kind, "")
@@ -1577,11 +1594,11 @@ def _profile_words(P, ex, r, c, nb, att, chips, jur):
              f"would reconnect the network at a reasonable price (the cheapest alternative costs "
              f"{r['backup_ratio']:.1f}× as much, about {(r['backup_ratio']-1)*r['cost']/(10/3):,.0f} km of "
              f"extra intact-land travel), and within the corridor there is a single physical route. "
-             f"Losing this land leaves neither a plan B route nor a plan B link." + alt_sentence + locked_line)
+             f"Losing this land leaves neither a plan B route nor a plan B link." + alt_sentence + locked_line + front_line + road_line)
     elif c == "edge":
         w = (f"{a} and {b} nearly touch, and the contact zone is the connection. There is no "
              f"affordable substitute link — the cheapest alternative costs {r['backup_ratio']:.1f}× "
-             f"as much. What matters here is the junction itself rather than a swath of corridor." + alt_sentence + locked_line)
+             f"as much. What matters here is the junction itself rather than a swath of corridor." + alt_sentence + locked_line + front_line + road_line)
     elif c == "squeezed":
         hl = ex.get("headline", "")
         w = (f"The corridor between {a} and {b} is {hl or 'narrower than its natural width'}: "
@@ -1915,60 +1932,27 @@ def classes_surface(P):
     n = len(order)
     S_ = dict(img=img, cmap=ListedColormap([ms.CLASS[c][0] for c in order]), norm=BoundaryNorm(np.arange(-0.5, n + 0.5, 1), n),
               extend="neither", ticks=list(range(n)), ticklabels=[_tick(c) for c in order],
-              label=f"{ms.CLASS_HEADING.lower()} — how much the network's connection depends on this land"
-                    + ("; the top class also requires the corridor to be below its barrier-free width" if "link_class" in R.edges.columns else ""),   # D23 clause
+              label=ms.CLASS_HEADING[:1] + ms.CLASS_HEADING[1:].lower(),   # "Corridor pressure" (Ethan 2026-09-29); the explanation lives in the caption, not the key
               end_words=None)
     return S_, counts
 
 
-def _near_contiguous_wide(P, F):
-    """D25 on the wide layout: (draw, handles) for the near-contiguous links -- their bands in the neutral grey with the mapstyle
-    hatch (contourf in pixel space), the barrier variant outlined; nothing when the run has no such link."""
-    import corridors_mapstyle as ms
-    R = P.R; layers = []
-    for c in NEAR_CONTIGUOUS_KEYS:
-        ids = list(P.cls.index[P.cls == c])
-        m = np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor if ids else None
-        if m is not None and m.any():
-            layers.append((c, m, len(ids)))
-    if not layers:
-        return (lambda ax: None), []
-
-    def draw(ax):
-        for c, m, _ in layers:
-            tok = ms.NEAR_CONTIGUOUS[c]
-            ax.imshow(np.where(m, 1.0, np.nan).astype(np.float32), cmap=ListedColormap([tok["fill"]]), interpolation="nearest", zorder=0.85)
-            with plt.rc_context({"hatch.color": tok["hatch_color"], "hatch.linewidth": 0.5}):
-                ax.contourf(m.astype(float), levels=[0.5, 1.5], colors="none", hatches=[tok["hatch"]], zorder=0.86)
-            if tok["outline"]:
-                ax.contour(m.astype(float), levels=[0.5], colors=[tok["outline"][0]], linewidths=tok["outline"][1],
-                           linestyles=[tok["outline"][2] if len(tok["outline"]) > 2 else "solid"], zorder=0.87)
-    handles = [Patch(facecolor=ms.NEAR_CONTIGUOUS[c]["fill"], hatch=ms.NEAR_CONTIGUOUS[c]["hatch"],
-                     edgecolor=(ms.NEAR_CONTIGUOUS[c]["outline"][0] if ms.NEAR_CONTIGUOUS[c]["outline"] else ms.NEAR_CONTIGUOUS[c]["hatch_color"]),
-                     linewidth=(ms.NEAR_CONTIGUOUS[c]["outline"][1] if ms.NEAR_CONTIGUOUS[c]["outline"] else 0.0),
-                     linestyle=(ms.NEAR_CONTIGUOUS[c]["outline"][2] if ms.NEAR_CONTIGUOUS[c]["outline"] and len(ms.NEAR_CONTIGUOUS[c]["outline"]) > 2 else "solid"),
-                     label=CLASS[c][1]) for c, _, _ in layers]
-    return draw, handles
-
-
 def _wide_overlay(F, P=None):
     """The overlay callback for the wide layout: the draft IPCAs as filled nodes (the §3a IPCA fill, opaque like the layout's PA
-    grey so the two node kinds read alike) with their outlines; with `P`, the near-contiguous links' bands first (D25).
-    Called on the frame and on every inset."""
+    grey so the two node kinds read alike) with their outlines. `P` is accepted for signature stability (D25c retired the
+    near-contiguous layers). Called on the frame and on every inset."""
     import director_plot as dp
     import corridors_mapstyle as ms
     a = ms.AREA["ipca"]
     fill = np.full(F.G.shape, np.nan, np.float32); fill[F.IP.mask2d] = 1.0
-    nc_draw, nc_handles = _near_contiguous_wide(P, F) if P is not None else ((lambda ax: None), [])
 
     def draw(ax):
-        nc_draw(ax)
         ax.imshow(fill, cmap=ListedColormap([a["fill"]]), interpolation="nearest", zorder=1.1)
         lw = 0.9 * dp.STYLE.get("_lw_scale", 1.0)
         for _, r in F.IP.gdf.iterrows():
             for ring in F.rings_px(r.geometry):
                 ax.plot(ring[:, 0], ring[:, 1], color=a["edge"], lw=lw, zorder=3.5)
-    handles = [Patch(facecolor=dp.PA_COLOR, label=PA_LABEL), Patch(facecolor=a["fill"], edgecolor=a["edge"], label=IPCA_WIDE_LABEL)] + nc_handles
+    handles = [Patch(facecolor=dp.PA_COLOR, label=PA_LABEL), Patch(facecolor=a["fill"], edgecolor=a["edge"], label=IPCA_WIDE_LABEL)]
     return draw, handles
 
 
@@ -2038,10 +2022,91 @@ def _options_overlay(P, F, nums=OPTIONS_MAP_NUMS):
         ipca_draw(ax)
         for img, col in layers:
             ax.imshow(img, cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)     # under the PA (1) / IPCA (1.1) fills
-        for num, _, xy, side in marks:
-            _number_marker_px(ax, xy, num, colors[num], side)
+    # the numbers are placed by a post-draw pass (outside the band, no leader, clear of labels -- Ethan 2026-09-29)
     handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in colors])]     # swatches in option order
     return draw, handles, marks, colors
+
+
+_DIRS = {"n": (0, -1), "s": (0, 1), "e": (1, 0), "w": (-1, 0),
+         "ne": (0.7071, -0.7071), "nw": (-0.7071, -0.7071), "se": (0.7071, 0.7071), "sw": (-0.7071, 0.7071)}
+
+
+def _option_marker_placer(P, F, marks, colors, fs=None):
+    """Ethan 2026-09-29: the route-option numbers sit OUTSIDE their band, on its edge, with no leader, clear of other labels.
+    Returns post_draw(ax, win) for director_plot: run after a panel's labels and limits exist, it walks from each option's
+    median cell outward (the pinned side first, then the other compass points) to the band's edge plus a margin, and takes the
+    first disc that lies inside the window and overlaps no option band, no PA / IPCA fill, no town and no text already on the
+    axes (measured in display space with the renderer)."""
+    import director_plot as dp
+    from matplotlib.transforms import Bbox
+    R = P.R
+    bands = np.zeros(F.G.shape, bool)
+    for _, m, _, _ in marks:
+        bands |= m
+    blocked = bands | F.G.locked2d | F.IP.mask2d
+    H, W = F.G.shape
+
+    def post(ax, win):
+        fig = ax.figure; r = fig.canvas.get_renderer()
+        fs_ = (fs or dp.STYLE["cluster_number_fs"]) * dp.STYLE.get("_fs_scale", 1.0)
+        # points -> data px on THIS panel
+        ext = ax.get_window_extent(r); data_per_disp = (win[1] - win[0]) / max(ext.width, 1e-6)
+        pt_px = fig.dpi / 72.0
+        rad_disp = 0.85 * fs_ * pt_px                               # disc radius in display px (text + circle pad)
+        rad = rad_disp * data_per_disp                              # ... and in data px
+        margin = rad + 3.0 * data_per_disp * pt_px                  # the disc sits a few points off the band's edge
+        texts = [t.get_window_extent(r) for t in ax.texts if t.get_visible() and t.get_text().strip()]
+        placed = []
+        tw = {n: xy for n, xy in F.BM.towns.items()}
+        towns_px = np.array([dp.dc.xy_to_px(F.G, x, y) for x, y in tw.values()]) if tw else np.zeros((0, 2))
+        for num, m, (mx, my), side in marks:
+            if not (win[0] < mx < win[1] and win[2] < my < win[3]):
+                continue                                            # this option is not in this panel
+            order = [side] + [d for d in ("nw", "ne", "sw", "se", "n", "e", "s", "w") if d != side]
+            chosen = None
+            for d in order:
+                dx, dy = _DIRS[d]
+                x, y = mx, my
+                for _ in range(2000):                                # leave the band along this direction
+                    x += 3 * dx; y += 3 * dy
+                    xi, yi = int(round(x)), int(round(y))
+                    if not (0 <= xi < W and 0 <= yi < H) or not bands[yi, xi]:
+                        break
+                for k in range(0, 6):                                # then step out a little further if needed
+                    cx, cy = x + (margin + k * rad) * dx, y + (margin + k * rad) * dy
+                    if not (win[0] + rad < cx < win[1] - rad and win[2] + rad < cy < win[3] - rad):
+                        break
+                    ok = True
+                    for ox in (-0.8, 0, 0.8):                         # the disc must not sit on any band or node fill
+                        for oy in (-0.8, 0, 0.8):
+                            xi, yi = int(round(cx + ox * rad)), int(round(cy + oy * rad))
+                            if 0 <= xi < W and 0 <= yi < H and blocked[yi, xi]:
+                                ok = False; break
+                        if not ok: break
+                    if ok and len(towns_px) and (np.hypot(towns_px[:, 0] - cx, towns_px[:, 1] - cy) < 2.5 * rad).any():
+                        ok = False
+                    if ok:
+                        c = ax.transData.transform((cx, cy)); bb = Bbox([[c[0] - rad_disp, c[1] - rad_disp], [c[0] + rad_disp, c[1] + rad_disp]])
+                        if any(bb.overlaps(t) for t in texts) or any(bb.overlaps(pb) for pb in placed):
+                            ok = False
+                    if ok:
+                        chosen = (cx, cy, bb); break
+                if chosen:
+                    break
+            if chosen is None:                                       # nothing clear: fall back to the band's edge on the pinned side
+                dx, dy = _DIRS[side]; x, y = mx, my
+                for _ in range(2000):
+                    x += 3 * dx; y += 3 * dy
+                    xi, yi = int(round(x)), int(round(y))
+                    if not (0 <= xi < W and 0 <= yi < H) or not bands[yi, xi]:
+                        break
+                cx, cy = x + margin * dx, y + margin * dy
+                c = ax.transData.transform((cx, cy)); chosen = (cx, cy, Bbox([[c[0] - rad_disp, c[1] - rad_disp], [c[0] + rad_disp, c[1] + rad_disp]]))
+            cx, cy, bb = chosen
+            ax.text(cx, cy, str(num), fontsize=fs_, fontweight=600, ha="center", va="center", zorder=8, clip_on=True,
+                    bbox=dict(boxstyle="circle,pad=0.3", fc="white", ec=colors[num], lw=1.8))
+            placed.append(bb)
+    return post
 
 
 def figure_options_wide(P, path, insets="interim", nums=OPTIONS_MAP_NUMS):
@@ -2058,7 +2123,7 @@ def figure_options_wide(P, path, insets="interim", nums=OPTIONS_MAP_NUMS):
     assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(cd.WIDE_STYLE) first (07's setup cell)"
     dp.STYLE["inset_windows"] = inset_windows(P, insets)
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
-    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S_)
+    dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S_, post_draw=_option_marker_placer(P, F, marks, colors))
     return path
 
 
@@ -2134,7 +2199,8 @@ def option_locators(P, path, nums=OPTIONS_MAP_NUMS, insets="interim", panel_px=N
     import director_plot as dp
     F = director_frame(P)
     S_, _ = classes_surface(P)
-    draw, _, marks, _ = _options_overlay(P, F, nums)
+    draw, _, marks, colors = _options_overlay(P, F, nums)
+    placer = _option_marker_placer(P, F, marks, colors)
     wins = inset_windows(P, insets)
     n_stars = len(nums); ncols = min(4, max(n_stars, 1)); L = dc.STAR_GRID; STYLE = dp.STYLE
     tags = list(wins)                                                         # A, B
@@ -2156,7 +2222,8 @@ def option_locators(P, path, nums=OPTIONS_MAP_NUMS, insets="interim", panel_px=N
         try:
             for ax, tag in zip(axes, tags):
                 win = dp._fit_window(F, wins[tag], 1.0)                       # square, never shrunk: both at the same scale (INSET_SAME_SCALE)
-                dp._draw_inset(F, ax, win, draw, tag, True, towns=STYLE["locator_towns"], codes=None, img=S_["img"], cmap=S_["cmap"], norm=S_["norm"])   # every PA + IPCA node named
+                dp._draw_inset(F, ax, win, draw, tag, True, towns=STYLE["locator_towns"], codes=None, img=S_["img"], cmap=S_["cmap"], norm=S_["norm"],
+                               post_draw=placer)   # every PA + IPCA node named; the option numbers on the band edges
         finally:
             STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE["inset_fs"] = fs0; STYLE["inset_pa_names"] = pa0
         path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)

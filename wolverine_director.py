@@ -71,11 +71,20 @@ STYLE = dict(
     complex_shade_alphas=(0.25, 0.45, 0.65, 0.90),
     pinch_marker=True, bow_valley_lat=51.2, banff_lonlat=(-115.57, 51.18), banff_check_km=60,   # the p10 pinch on each corridor link; the act check
 )
-V25_STYLE = dict(act_breaks_lat=(51.0,), draw_near_contiguous=False, inset_label_slivers=True, pinch_marker=True)   # run spec v3 §1a defaults
+V25_STYLE = dict(act_breaks_lat=(51.0,), draw_near_contiguous=False, inset_label_slivers=True, pinch_marker=True, protected_layers=False)   # run spec v3 §1a defaults
+# FIXED insets at the northern package's scale (Ethan 2026-09-29): every wide map (01-03 + the locators) shares two windows of the
+# northern insets' extent (193 x 214 km after the fit to the inset aspect, measured on north/v2_run003), A centred on the links between
+# the Nahanni complex and the complexes south of it, B on the Missoula / Helena / Salmon / Bozeman centroid.
+INSET_KM = (193.0, 214.0)
+STYLE.update(complex_labels="number",                        # "number" (C12) | "name" (the auto / display names) | "none"
+             inset_km=INSET_KM,
+             inset_specs={"A": dict(links_between=[(1, 2), (2, 6)], title="Nahanni's links south"),          # complex-id pairs; fallback = the complexes' bbox centre
+                          "B": dict(towns=["Missoula", "Helena", "Salmon", "Bozeman"], title="The southern edge")})   # centre = the towns' centroid
 # 06 · 01, the movement-cost map (Ethan 2026-09-29): no PAs / IPCAs, the refugia in a hue with no counterpart in magma (lime green:
 # min dE 22 against the four cost swatches + water under every colour-vision simulation, as the indigo, but not in magma's purple
 # family), a thin outline, plain labels. `cost_map_context=True` restores the PA / IPCA layers.
-STYLE.update(cost_map_context=False, cost_map_refugia_fill="#66A61E", cost_map_refugia_alpha=0.85, cost_map_outline=("#3A5F0B", 0.3),
+STYLE.update(protected_layers=False,                       # PAs / IPCAs on the wide maps (01-03, the locators): OFF (Ethan 2026-09-29) -- the
+             cost_map_refugia_fill="#66A61E", cost_map_refugia_alpha=0.85, cost_map_outline=("#3A5F0B", 0.3),   # protection analysis is a separate product
              cost_map_refugia_label="Core wolverine refugia", cost_map_ramp_label="Cost of moving through the land")
 
 # hand-placed jurisdiction / town labels for the FULL Y2Y frame (lon/lat; Ethan signs)
@@ -96,7 +105,14 @@ ACT_ORDER = ["north", "central", "south"]
 
 
 # ================= package context =================
-NEAR_KEYS = tuple(ms.NEAR_CONTIGUOUS.keys())          # the mapstyle's near-contiguous tokens (D25a: open / roads / barrier)
+# the near-contiguous tokens: the mapstyle's when it carries them (D25a), else this local set -- the northern D25c refactor
+# (2026-09-29) retired them from corridors_mapstyle; under v2.5 they are never drawn (D-W6) and the contracted run has none
+NEAR_TOKENS = getattr(ms, "NEAR_CONTIGUOUS", None) or {
+    "near_contiguous_open":    dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=None, label="Adjacent areas — open front"),
+    "near_contiguous_roads":   dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=("#8A8A8A", 0.6), label="Adjacent areas — front crossed by roads or cuts"),
+    "near_contiguous_barrier": dict(fill="#D9D9D9", hatch="\\\\", hatch_color="#8A8A8A", outline=("#3A3A3A", 0.8), label="Adjacent areas — barrier between"),
+}
+NEAR_KEYS = tuple(NEAR_TOKENS.keys())
 
 
 def _norm_class(c):
@@ -182,13 +198,18 @@ def _complex_table(R):
     share inside existing PAs."""
     g = R.complexes.copy()
     g["node_id"] = g["complex_id"].astype(int)
-    g["short"] = [n.replace("Refugia complex (", "").replace("Refugium (", "").rstrip(")") for n in g["name"]]
-    g["short"] = [cc._short_node_name("X · " + x, 22) for x in g["short"]]
+    mode = STYLE.get("complex_labels", "number")                    # Ethan 2026-09-29: the auto-names (nearest PA) are OFF the outputs until
+    if mode == "name":                                              # real names are chosen; complexes are labelled by NUMBER (C12) meanwhile
+        g["short"] = [cc._short_node_name("X · " + n.replace("Refugia complex (", "").replace("Refugium (", "").rstrip(")"), 22) for n in g["name"]]
+    elif mode == "none":
+        g["short"] = ""
+    else:
+        g["short"] = [f"C{int(c)}" for c in g["node_id"]]
     g["core_km2"] = g["area_km2"]
     g["pa_overlap_frac"] = g["pa_share"] if "pa_share" in g.columns else 0.0
     g["pa_overlap_name"] = ""
     g["name_label"] = [f"Complex · C{c:02d} {n}" for c, n in zip(g["node_id"], g["name"])]
-    for c in ("n_slivers", "n_slivers_with_feature", "ipca_added_share", "core_share", "outside_all_share"):
+    for c in ("n_slivers", "n_slivers_with_feature", "ipca_added_share", "core_share", "outside_all_share", "n_fronts", "n_cut", "n_E_interior"):
         if c not in g.columns:
             g[c] = 0
     return g.sort_values("node_id").reset_index(drop=True)
@@ -455,7 +476,7 @@ def _draw_near_contiguous(P, ax, XL, YL, step):
         m = np.isin(P.owner, [P.order[k] for k in ids if k in P.order]) & R.corridor
         if not m[rs, cs].any():
             continue
-        tok = ms.NEAR_CONTIGUOUS[c]
+        tok = NEAR_TOKENS[c]
         _draw_mask(ax, R, m, tok["fill"], ms.Z["securing"] - 0.2, 1.0, XL, YL, step)
         sub = R.template.isel(y=rs, x=cs); arr = m[rs, cs]
         if step > 1:
@@ -474,7 +495,7 @@ def _near_contiguous_legend(counts):
     for c in NEAR_KEYS:
         if not counts.get(c, 0):
             continue
-        tok = ms.NEAR_CONTIGUOUS[c]
+        tok = NEAR_TOKENS[c]
         rows.append((Patch(facecolor=tok["fill"], hatch=tok["hatch"], edgecolor=(tok["outline"][0] if tok["outline"] else tok["hatch_color"]),
                            linewidth=(tok["outline"][1] if tok["outline"] else 0.0)), f"{tok['label']}  [{counts.get(c, 0)}]"))
     return rows
@@ -1049,11 +1070,12 @@ IPCA_WIDE_LABEL = "Proposed IPCAs / PAs"
 PA_WIDE_LABEL = "Existing protected areas"
 
 
-def director_frame(P, pad_km=None, step=WIDE_FRAME_STEP, pa=True):
+def director_frame(P, pad_km=None, step=WIDE_FRAME_STEP, pa=None):
     """The wolverine run as a director_plot frame (cached on P): G on the routing grid decimated by `step` (pu = routable
     cells, locked2d = the EXISTING PAs as the layout's grey layer), the refugia nodes as the overlay in the IPCA role (their
     short names label the insets), the Y2Y frame + pad as the pixel WINDOW, the y2y town table."""
-    key = (step, bool(pa))
+    pa = bool(STYLE.get("protected_layers", True)) if pa is None else bool(pa)
+    key = (step, pa)
     if getattr(P, "_frames", None) and key in P._frames:
         return P._frames[key]
     import director_plot as dp
@@ -1072,12 +1094,15 @@ def director_frame(P, pad_km=None, step=WIDE_FRAME_STEP, pa=True):
     G.rows, G.cols = np.where(pu)
     nodes = P.nodes[["node_id", "name", "short", "geometry"]].copy()
     nodes["name"] = nodes["short"]                                          # the inset labels (director_plot reads gdf["name"])
-    if getattr(P, "contracted", False) and STYLE.get("inset_label_slivers", True) and "n_slivers" in P.nodes.columns:
-        nodes["name"] = [f"{sh} [{int(a)}]" for sh, a in zip(P.nodes["short"], P.nodes["n_slivers"])]      # [within-complex slivers]
+    if getattr(P, "contracted", False) and STYLE.get("inset_label_slivers", True) and "n_fronts" in P.nodes.columns and getattr(R, "fronts", None) is not None:
+        nodes["name"] = [(f"{sh} [{int(a)}/{int(b)}]" if sh else "") for sh, a, b in zip(P.nodes["short"], P.nodes["n_fronts"], P.nodes["n_cut"])]   # [fronts / cut]
+    elif getattr(P, "contracted", False) and STYLE.get("inset_label_slivers", True) and "n_slivers" in P.nodes.columns:
+        nodes["name"] = [(f"{sh} [{int(a)}]" if sh else "") for sh, a in zip(P.nodes["short"], P.nodes["n_slivers"])]      # [within-complex slivers]
     overlay = SimpleNamespace(gdf=nodes, mask2d=P.node_mask[::s, ::s], label=NODE_WIDE_LABEL)
     (x0, x1), (y0, y1) = ms.sector_frame(R, STYLE["frame_pad_km"] if pad_km is None else pad_km)
     px0, pyb = dc.xy_to_px(G, x0, y0); px1, pyt = dc.xy_to_px(G, x1, y1)
-    F = dp.load_frame(G, overlay=overlay, window=(float(px0), float(px1), float(pyt), float(pyb)), towns=dc.Y2Y_TOWNS)
+    F = dp.load_frame(G, overlay=overlay, window=(float(px0), float(px1), float(pyt), float(pyb)), towns=dc.Y2Y_TOWNS,
+                      pa_min_km2=(None if pa else 1e15))                    # no PA layer -> no named PAs in the insets / locators either
     F.STEP = s
     F.IPCA2D = (P.protected_ipca if getattr(P, "protected_ipca", None) is not None else
                 (getattr(R, "protected_ipca", None) if getattr(R, "protected_ipca", None) is not None else np.zeros(R.shape, bool)))[::s, ::s] & pu
@@ -1106,17 +1131,23 @@ def _near_contiguous_wide(P, F):
 
     def draw(ax):
         for c, m, _ in layers:
-            tok = ms.NEAR_CONTIGUOUS[c]
+            tok = NEAR_TOKENS[c]
             ax.imshow(np.where(m, 1.0, np.nan).astype(np.float32), cmap=ListedColormap([tok["fill"]]), interpolation="nearest", zorder=0.85)
             with plt.rc_context({"hatch.color": tok["hatch_color"], "hatch.linewidth": 0.5}):
                 ax.contourf(m.astype(float), levels=[0.5, 1.5], colors="none", hatches=[tok["hatch"]], zorder=0.86)
             if tok["outline"]:
                 ax.contour(m.astype(float), levels=[0.5], colors=[tok["outline"][0]], linewidths=tok["outline"][1], zorder=0.87)
-    handles = [Patch(facecolor=ms.NEAR_CONTIGUOUS[c]["fill"], hatch=ms.NEAR_CONTIGUOUS[c]["hatch"],
-                     edgecolor=(ms.NEAR_CONTIGUOUS[c]["outline"][0] if ms.NEAR_CONTIGUOUS[c]["outline"] else ms.NEAR_CONTIGUOUS[c]["hatch_color"]),
-                     linewidth=(ms.NEAR_CONTIGUOUS[c]["outline"][1] if ms.NEAR_CONTIGUOUS[c]["outline"] else 0.0),
-                     label=ms.NEAR_CONTIGUOUS[c]["label"]) for c, _, _ in layers]
+    handles = [Patch(facecolor=NEAR_TOKENS[c]["fill"], hatch=NEAR_TOKENS[c]["hatch"],
+                     edgecolor=(NEAR_TOKENS[c]["outline"][0] if NEAR_TOKENS[c]["outline"] else NEAR_TOKENS[c]["hatch_color"]),
+                     linewidth=(NEAR_TOKENS[c]["outline"][1] if NEAR_TOKENS[c]["outline"] else 0.0),
+                     label=NEAR_TOKENS[c]["label"]) for c, _, _ in layers]
     return draw, handles
+
+
+def _base_overlay(F, P):
+    """The overlay every wide map starts from: the W11 layers (PAs grey, IPCAs filled, nodes) when STYLE["protected_layers"], else
+    ONLY the core refugia in the 01 scheme (lime fill, thin outline) -- Ethan 2026-09-29: the protection analysis is a separate product."""
+    return _wide_overlay(F, P) if STYLE.get("protected_layers", True) else _cost_overlay(F, P)
 
 
 def _wide_overlay(F, P=None):
@@ -1185,6 +1216,33 @@ def inset_windows(P, mode="examples", same_scale=True):
         return max(np.ptp(rr), np.ptp(cc_)) * R.cell_km if len(rr) else 0.0
 
     out = {}
+    if mode == "fixed":                                                  # the northern scale, fixed centres (STYLE["inset_specs"])
+        w_km, h_km = STYLE["inset_km"]
+        to_xy = pyproj.Transformer.from_crs("EPSG:4326", R.crs, always_xy=True)
+        cl = getattr(R, "centrelines", None)
+        for tag, spec in STYLE["inset_specs"].items():
+            cx = cy = None
+            if spec.get("links_between") and cl is not None:
+                cid = lambda lab: cc._label_num(lab)
+                pairs = {tuple(sorted(pr)) for pr in spec["links_between"]}
+                sel = cl[[tuple(sorted((cid(a), cid(b)))) in pairs for a, b in zip(cl["label_i"], cl["label_j"])]]
+                if len(sel):
+                    b = sel.total_bounds; cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+                else:                                                    # no such link in this run: the complexes themselves
+                    ids = sorted({c for pr in spec["links_between"] for c in pr})
+                    g = P.nodes[P.nodes.node_id.isin(ids)]
+                    if len(g):
+                        b = g.total_bounds; cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+            if cx is None and spec.get("towns"):
+                pts = [to_xy.transform(dc.Y2Y_TOWNS[t][1], dc.Y2Y_TOWNS[t][0]) for t in spec["towns"] if t in dc.Y2Y_TOWNS]
+                cx, cy = float(np.mean([q[0] for q in pts])), float(np.mean([q[1] for q in pts]))
+            if cx is None and spec.get("center_lonlat"):
+                cx, cy = to_xy.transform(*spec["center_lonlat"])
+            if cx is None:
+                continue
+            px0, pyb = dc.xy_to_px(F.G, cx - w_km * 500, cy - h_km * 500); px1, pyt = dc.xy_to_px(F.G, cx + w_km * 500, cy + h_km * 500)
+            out[tag] = (float(px0), float(px1), float(pyt), float(pyb))
+        return out
     if mode == "examples" and len(P.examples) >= 1:
         ordered = sorted(P.examples, key=lambda x: x["num"])          # 1..k, north -> south
         half = max(1, (len(ordered) + 1) // 2)
@@ -1238,7 +1296,7 @@ def _wide(P, path, surface, insets):
     assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first (05's setup cell)"
     dp.STYLE["inset_windows"] = inset_windows(P, insets)
     S_ = dict(surface); S_["img"] = np.asarray(surface["img"])[::F.STEP, ::F.STEP]      # the frame's decimation
-    draw, handles = _wide_overlay(F, P)
+    draw, handles = _base_overlay(F, P)
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S_)
     return path
@@ -1268,22 +1326,8 @@ def figure_cost_wide(P, path, insets="examples"):
     import director_plot as dp
     S_, shares = cost_surface(P)
     print("movement cost (withheld-terrain surface), share of the routable area: " + " · ".join(f"{c}: {shares[c]:.1f}%" for c in cd.COST_CLASSES))
-    if STYLE.get("cost_map_context", False):
-        return _wide(P, path, S_, insets)
     S_ = dict(S_); S_["label"] = STYLE["cost_map_ramp_label"]
-    F = director_frame(P, pa=False)
-    assert dp.STYLE.get("map_layout") == "wide" and dp.STYLE.get("inset_clusters"), "apply dp.STYLE.update(wd.WIDE_STYLE) first (06's setup cell)"
-    dp.STYLE["inset_windows"] = inset_windows(P, insets)
-    S_["img"] = np.asarray(S_["img"])[::F.STEP, ::F.STEP]
-    draw, handles = _cost_overlay(F, P)
-    path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
-    pa_names = dp.STYLE.get("inset_pa_names")
-    dp.STYLE["inset_pa_names"] = 0                                               # no protected-area names in the insets either
-    try:
-        dp.wide_map(F, path, "", draw, handles, with_ipca_names=True, surface=S_)
-    finally:
-        dp.STYLE["inset_pa_names"] = pa_names
-    return path
+    return _wide(P, path, S_, insets)
 
 
 def figure_choices_wide(P, path, insets="examples"):
@@ -1324,10 +1368,11 @@ def _options_overlay(P, F, nums=None):
     colors = {n: cd.option_color(n) for n, _, _, _ in marks}
     step = F.STEP
     layers = [(np.where(m[::step, ::step], 1.0, np.nan).astype(np.float32), colors[n]) for n, m, _, _ in marks]
-    base_draw, handles = _wide_overlay(F, P)
+    base_draw, handles = _base_overlay(F, P)
+    fr_draw, fr_handles = _front_overlay(F, P); handles = handles + fr_handles
 
     def draw(ax):
-        base_draw(ax)
+        fr_draw(ax); base_draw(ax)
         for img, col in layers:
             ax.imshow(img, cmap=ListedColormap([col]), interpolation="nearest", zorder=0.9)     # under the PA (1) / IPCA (1.05) / node (1.1) fills
         for num, _, xy, side in marks:
@@ -1497,11 +1542,63 @@ def _pinch_points(P):
     return out
 
 
+FRONT_STYLE = dict(open_alpha=0.40, cut_alpha=0.85, cut_outline=("#6E5A00", 0.5),   # open = the Minimum tint merged across the interior;
+                   label_open="Fronts inside a complex, open ({n})",                    # cut = the Some (narrowing) colour + outline
+                   label_cut="Fronts inside a complex, cut: narrow or a road on the path ({n})")
+
+
+def _front_overlay(F, P):
+    """Run spec v3 §8 (revised 2026-09-29): the within-complex fronts drawn as corridors UNDER the inter-complex links -- open fronts as a
+    light tint of the Minimum class colour merged across the complex interior, cut fronts in the Some (narrowing) colour with an outline.
+    The inter-complex class bands are re-drawn above them at full weight. Returns (draw, handles); nothing when the run carries no fronts."""
+    R = P.R; fr = getattr(R, "fronts", None)
+    if fr is None or not len(fr):
+        return (lambda ax: None), []
+    s = F.STEP; shape = R.shape; tr = R.transform
+    layers = []
+    for cls_, colour, alpha in (("open", ms.CLASS["securing"][0], FRONT_STYLE["open_alpha"]), ("cut", ms.CLASS["squeezed"][0], FRONT_STYLE["cut_alpha"])):
+        sub = fr[fr.front_class == cls_]
+        if not len(sub):
+            continue
+        u = rasterize([(g, 1) for g in sub.geometry if g is not None and not g.is_empty], out_shape=shape, transform=tr, fill=0, dtype="uint8").astype(bool)
+        u &= ~P.node_mask                                        # the front land between the patches, never the patches themselves
+        m = u[::s, ::s] & F.G.pu
+        layers.append((cls_, np.where(m, 1.0, np.nan).astype(np.float32), m, colour, alpha, len(sub)))
+    S_, _ = classes_surface(P)
+    inter = np.asarray(S_["img"])[::s, ::s]
+
+    def draw(ax):
+        import director_plot as dp
+        for cls_, img, m, colour, alpha, n in layers:
+            ax.imshow(img, cmap=ListedColormap([colour]), alpha=alpha, interpolation="nearest", zorder=0.7)
+            if cls_ == "cut":
+                ec, lw = FRONT_STYLE["cut_outline"]
+                ax.contour(m.astype(float), levels=[0.5], colors=[ec], linewidths=lw * dp.STYLE.get("_lw_scale", 1.0), zorder=0.75)
+        ax.imshow(inter, cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.95)     # the inter-complex links over the fronts
+    handles = [Patch(facecolor=colour, alpha=alpha, edgecolor=(FRONT_STYLE["cut_outline"][0] if cls_ == "cut" else "none"),
+                     label=FRONT_STYLE["label_open" if cls_ == "open" else "label_cut"].format(n=n)) for cls_, _, _, colour, alpha, n in layers]
+    return draw, handles
+
+
 def _complex_overlay(F, P):
     """The v3 network map's overlay: complexes filled in the refugia tone with an alpha step by their share inside existing
     PAs (protection shading), outlined; the proposed IPCAs filled over corridor land (W11); the p10 pinch marked on every
     corridor link. No near-contiguous bands (D-W6). Returns (draw, handles)."""
     import director_plot as dp
+    pins = _pinch_points(P) if STYLE.get("pinch_marker", True) else []
+    pins_px = [(eid, *dc.xy_to_px(F.G, x, y)) for eid, x, y in pins]
+    fr_draw, fr_handles = _front_overlay(F, P)
+    if not STYLE.get("protected_layers", True):                 # Ethan 2026-09-29: the refugia as on 01, no protection shading, no PAs / IPCAs
+        base_draw, handles = _cost_overlay(F, P)
+        handles = handles + fr_handles
+
+        def draw(ax):
+            fr_draw(ax); base_draw(ax)
+            for eid, px, py in pins_px:
+                ax.plot(px, py, marker="o", ms=4.5 * dp.STYLE.get("_fs_scale", 1.0), mfc="white", mec="black", mew=0.8, ls="none", zorder=3.5, clip_on=True)
+        if pins_px:
+            handles = handles + [Line2D([], [], marker="o", mfc="white", mec="black", mew=0.8, ls="none", ms=6, label="Narrowest tenth of the corridor (pinch)")]
+        return draw, handles
     core, ip = ms.AREA["refugia_core"], ms.AREA["ipca"]
     s = F.STEP; R = P.R
     cid = np.nan_to_num(R.complex_id.values, nan=0).astype(int)[::s, ::s]
@@ -1514,10 +1611,9 @@ def _complex_overlay(F, P):
             layers.append((b, np.where(m, 1.0, np.nan).astype(np.float32)))
     outline = (cid > 0) & F.G.pu
     fill_i = np.full(F.G.shape, np.nan, np.float32); fill_i[F.IPCA2D] = 1.0
-    pins = _pinch_points(P) if STYLE.get("pinch_marker", True) else []
-    pins_px = [(eid, *dc.xy_to_px(F.G, x, y)) for eid, x, y in pins]
 
     def draw(ax):
+        fr_draw(ax)
         for b, img in layers:
             ax.imshow(img, cmap=ListedColormap([core["fill"]]), alpha=STYLE["complex_shade_alphas"][b], interpolation="nearest", zorder=1.0)
         ax.contour(outline.astype(float), levels=[0.5], colors=[ms.NODE["edge"]], linewidths=ms.NODE.get("lw", 0.5) * dp.STYLE.get("_lw_scale", 1.0), zorder=1.02)
@@ -1530,6 +1626,7 @@ def _complex_overlay(F, P):
                Patch(facecolor=ip["fill"], alpha=0.85, edgecolor=ip["edge"], label=IPCA_WIDE_LABEL)]
     handles += [Patch(facecolor=core["fill"], alpha=STYLE["complex_shade_alphas"][b], edgecolor=ms.NODE["edge"], label=f"Refugia complex, {edges_[b]} inside existing PAs")
                 for b in range(nb) if any(bb == b for bb in bins.values())]
+    handles += fr_handles
     if pins_px:
         handles.append(Line2D([], [], marker="o", mfc="white", mec="black", mew=0.8, ls="none", ms=6, label="Narrowest tenth of the corridor (pinch)"))
     return draw, handles
@@ -1563,10 +1660,10 @@ def table_complexes(P):
     df = pd.DataFrame({
         "Complex": g["node_id"], "Name": g["name"], "Patches": g["n_patches"], "Patch ids": g["patch_ids"] if "patch_ids" in g.columns else "",
         "Area (km²)": g["area_km2"].round(0).astype(int),
-        "Inside existing PAs (%)": (100 * g["pa_overlap_frac"]).round(0).astype(int),
-        "Added by proposed IPCAs (%)": (100 * g["ipca_added_share"]).round(0).astype(int) if "ipca_added_share" in g.columns else 0,
-        "In the prioritizr core (%)": (100 * g["core_share"]).round(0).astype(int) if "core_share" in g.columns else np.nan,
-        "Outside PAs, IPCAs and core (%)": (100 * g["outside_all_share"]).round(0).astype(int) if "outside_all_share" in g.columns else np.nan,
+        "Inside existing PAs (%)": (100 * g["pa_overlap_frac"]).round(0).astype("Int64"),
+        "Added by proposed IPCAs (%)": (100 * g["ipca_added_share"]).round(0).astype("Int64") if "ipca_added_share" in g.columns else 0,
+        "In the prioritizr core (%)": (100 * g["core_share"]).round(0).astype("Int64") if "core_share" in g.columns else np.nan,
+        "Outside PAs, IPCAs and core (%)": (100 * g["outside_all_share"]).round(0).astype("Int64") if "outside_all_share" in g.columns else np.nan,
         "Within-complex slivers": g["n_slivers"], "Slivers with a cost-100/1000 feature": g["n_slivers_with_feature"],
         "Act": [_complex_act(P, c) for c in g["node_id"]], "lat": g["lat"].round(3), "lon": g["lon"].round(3)})
     df.to_csv(P.tab / "A_complexes.csv", index=False, encoding="utf-8-sig")
@@ -1594,6 +1691,29 @@ def table_slivers(P):
     n_feat = int(sl["has_feature"].sum())
     print(f"A_slivers: {len(sl)} within-complex slivers, {n_feat} with a cost-100/1000 feature (the within-complex pinch points) -> {P.tab / 'A_slivers.csv'}")
     return sl
+
+
+def table_fronts(P):
+    """The within-complex fronts (run spec v3 §5 revised): one row per front with the drawn class (open / cut) and the table-only
+    four-class reading (interior D7 on v2's front graph, M7.8) -> tables/A_fronts.csv; per complex counts + front area (per-link sums;
+    the dissolved figure is in accounting.json) -> tables/A_fronts_by_complex.csv. Separate from Layer B: the two levels never share counts."""
+    R = P.R; fr = getattr(R, "fronts", None)
+    if fr is None or not len(fr):
+        print("no fronts in the run"); return pd.DataFrame(), pd.DataFrame()
+    f = pd.DataFrame(fr.drop(columns="geometry"))
+    names = P.nodes.set_index("node_id")["short"]
+    f.insert(1, "complex", f["complex_id"].map(names))
+    cols = ["complex_id", "complex", "edge_id", "patch_i", "patch_j", "path_len_km", "front_class", "front_class_d23", "cut", "narrow", "road_on_path",
+            "squeeze_ratio_obs", "E_v2", "E_interior", "bridge", "band_new_km2"]
+    f = f[[c for c in cols if c in f.columns]].sort_values(["complex_id", "front_class", "path_len_km"])
+    f.to_csv(P.tab / "A_fronts.csv", index=False, encoding="utf-8-sig")
+    by = f.groupby("complex_id").agg(fronts=("edge_id", "size"), open=("front_class", lambda x: int((x == "open").sum())), cut=("cut", "sum"),
+                                    narrow=("narrow", "sum"), road_on_path=("road_on_path", "sum"), E_patch_level=("E_v2", "sum"), E_interior_reading=("E_interior", "sum"),
+                                    front_land_per_link_sum_km2=("band_new_km2", lambda x: round(float(x.fillna(0).sum()))))
+    by.insert(0, "complex", by.index.map(names))
+    by.to_csv(P.tab / "A_fronts_by_complex.csv", encoding="utf-8-sig")
+    print(f"A_fronts: {len(f)} fronts ({int((f.front_class == 'open').sum())} open, {int(f.cut.sum())} cut) in {len(by)} complexes -> A_fronts.csv, A_fronts_by_complex.csv")
+    return f, by
 
 
 def table_corridors(P):
@@ -1693,6 +1813,8 @@ def headline(P):
                corridor_land_dissolved_km2=acc.get("corridor_links_dissolved_km2"), corridor_land_outside_pas_ipcas_km2=acc.get("corridor_links_outside_pas_ipcas_km2"),
                corridor_land_outside_pas_ipcas_core_km2=acc.get("corridor_links_outside_pas_ipcas_core_km2"),
                all_bands_v2_km2=acc.get("all_bands_dissolved_km2"), near_contiguous_bands_inside_complexes_km2=acc.get("near_contiguous_bands_inside_complexes_km2"),
+               fronts=(dict(n=int(len(R.fronts)), open=int((R.fronts.front_class == "open").sum()), cut=int(R.fronts.cut.sum()), area=acc.get("front_area"))
+                       if getattr(R, "fronts", None) is not None else None),
                narrowing_by_act={r["act"]: r["narrowing_links"] for r in rows}, last_affordable=last, top_class_empty=bool((P.cls == "both").sum() == 0),
                n_secured_by_pa=int((P.secured_by == "pa").sum()), n_secured_by_ipca=int((P.secured_by == "ipca").sum()),
                cutoff_cost_units=float(R.cutoff), cutoff_detour_km=round(float(R.cutoff) * R.cell_km, 3),

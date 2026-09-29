@@ -1,134 +1,134 @@
-﻿complex_id,edge_id,patch_i,patch_j,path_len_km,path_cells_cost10,path_cells_cost100,path_cells_cost1000,has_feature,crosses_cost_1000,barrier_between,kind,link_class,has_cost100_or_1000
-1,E006_012,7,13,1.8,0,0,1,True,False,False,near-contiguous,,True
-1,E013_014,14,15,1.8,0,0,1,True,False,False,near-contiguous,,True
-1,E004_006,5,7,2.1,0,0,1,True,False,False,near-contiguous,,True
-1,E003_005,4,6,3.3,0,0,1,True,False,False,near-contiguous,,True
-1,E001_002,2,3,3.9,0,0,2,True,False,False,near-contiguous,,True
-1,E015_017,16,18,5.4,0,0,2,True,False,False,near-contiguous,,True
-1,E005_012,6,13,5.7,0,0,1,True,False,False,near-contiguous,,True
-1,E009_015,10,16,5.7,0,0,2,True,False,False,near-contiguous,,True
-1,E000_003,1,4,7.5,0,0,1,True,False,False,near-contiguous,,True
-1,E010_012,11,13,0.9,0,0,0,False,False,False,near-contiguous,,False
-1,E016_018,17,19,0.9,0,0,0,False,False,False,near-contiguous,,False
-1,E013_016,14,17,1.5,0,0,0,False,False,False,near-contiguous,,False
-1,E011_014,12,15,1.8,0,0,0,False,False,False,near-contiguous,,False
-1,E018_019,19,20,1.8,0,0,0,False,False,False,near-contiguous,,False
-1,E011_013,12,14,2.1,0,0,0,False,False,False,near-contiguous,,False
-1,E015_016,16,17,2.1,0,0,0,False,False,False,near-contiguous,,False
-1,E005_007,6,8,2.4,0,0,0,False,False,False,near-contiguous,,False
-1,E002_003,3,4,2.7,0,0,0,False,False,False,near-contiguous,,False
-1,E008_009,9,10,2.7,0,0,0,False,False,False,near-contiguous,,False
-1,E007_008,8,9,3.3,0,0,0,False,False,False,near-contiguous,,False
-1,E000_001,1,2,14.4,1,0,0,False,False,False,near-contiguous,,False
-5,E028_029,29,30,11.7,0,0,1,True,False,False,near-contiguous,,True
-6,E062_066,63,67,1.8,0,0,1,True,False,False,near-contiguous,,True
-6,E026_037,27,38,4.2,0,0,3,True,False,False,near-contiguous,,True
-6,E072_077,73,78,16.8,3,0,1,True,False,False,near-contiguous,,True
-6,E023_037,24,38,1.2,0,0,0,False,False,False,near-contiguous,,False
-6,E037_052,38,53,1.2,0,0,0,False,False,False,near-contiguous,,False
-6,E052_062,53,63,1.2,0,0,0,False,False,False,near-contiguous,,False
-6,E066_070,67,71,1.5,0,0,0,False,False,False,near-contiguous,,False
-6,E070_072,71,73,1.5,0,0,0,False,False,False,near-contiguous,,False
-6,E037_040,38,41,5.4,0,0,0,False,False,False,near-contiguous,,False
-7,E056_057,57,58,2.1,0,0,1,True,False,False,near-contiguous,,True
-7,E045_048,46,49,3.6,0,0,1,True,False,False,near-contiguous,,True
-7,E042_043,43,44,4.5,0,0,3,True,False,False,near-contiguous,,True
-7,E049_054,50,55,5.1,0,0,2,True,False,False,near-contiguous,,True
-7,E050_051,51,52,5.1,0,0,2,True,False,False,near-contiguous,,True
-7,E058_071,59,72,5.1,0,0,2,True,False,False,near-contiguous,,True
-7,E035_043,36,44,5.7,0,0,3,True,False,False,near-contiguous,,True
-7,E065_075,66,76,5.7,0,0,1,True,False,False,near-contiguous,,True
-7,E076_078,77,79,5.7,0,0,1,True,False,False,near-contiguous,,True
-7,E055_058,56,59,6.6,1,0,2,True,False,False,near-contiguous,,True
-7,E059_061,60,62,6.6,0,0,1,True,False,False,near-contiguous,,True
-7,E061_065,62,66,7.2,1,0,2,True,False,False,near-contiguous,,True
-7,E064_071,65,72,7.5,2,0,2,True,False,False,near-contiguous,,True
-7,E065_067,66,68,7.8,1,0,1,True,False,False,near-contiguous,,True
-7,E057_063,58,64,8.4,0,0,5,True,False,False,near-contiguous,,True
-7,E069_076,70,77,8.4,0,0,2,True,False,False,near-contiguous,,True
-7,E027_031,28,32,8.7,0,0,1,True,False,False,near-contiguous,,True
-7,E059_065,60,66,9.0,2,0,4,True,False,False,near-contiguous,,True
-7,E034_046,35,47,12.9,3,1,3,True,False,False,near-contiguous,,True
-7,E024_031,25,32,15.0,0,0,3,True,False,False,near-contiguous,,True
-7,E034_039,35,40,19.2,0,1,5,True,False,False,within-complex corridor-class link (not near-contiguous),securing,True
-7,E036_038,37,39,0.9,0,0,0,False,False,False,near-contiguous,,False
-7,E039_050,40,51,0.9,0,0,0,False,False,False,near-contiguous,,False
-7,E053_061,54,62,0.9,0,0,0,False,False,False,near-contiguous,,False
-7,E031_033,32,34,1.2,0,0,0,False,False,False,near-contiguous,,False
-7,E032_033,33,34,1.2,0,0,0,False,False,False,near-contiguous,,False
-7,E025_027,26,28,1.5,0,0,0,False,False,False,near-contiguous,,False
-7,E031_032,32,33,1.5,0,0,0,False,False,False,near-contiguous,,False
-7,E041_045,42,46,1.5,0,0,0,False,False,False,near-contiguous,,False
-7,E064_068,65,69,1.5,0,0,0,False,False,False,near-contiguous,,False
-7,E038_041,39,42,1.8,0,0,0,False,False,False,near-contiguous,,False
-7,E053_054,54,55,1.8,0,0,0,False,False,False,near-contiguous,,False
-7,E075_076,76,77,2.1,0,0,0,False,False,False,near-contiguous,,False
-7,E033_038,34,39,2.4,0,0,0,False,False,False,near-contiguous,,False
-7,E035_042,36,43,2.4,0,0,0,False,False,False,near-contiguous,,False
-7,E042_044,43,45,2.4,1,0,0,False,False,False,near-contiguous,,False
-7,E043_049,44,50,2.4,0,0,0,False,False,False,near-contiguous,,False
-7,E055_061,56,62,2.4,1,0,0,False,False,False,near-contiguous,,False
-7,E064_067,65,68,2.4,0,0,0,False,False,False,near-contiguous,,False
-7,E046_050,47,51,2.7,0,0,0,False,False,False,near-contiguous,,False
-7,E033_041,34,42,3.0,0,0,0,False,False,False,near-contiguous,,False
-7,E050_056,51,57,3.0,0,0,0,False,False,False,near-contiguous,,False
-7,E053_055,54,56,3.0,0,0,0,False,False,False,near-contiguous,,False
-7,E061_064,62,65,3.0,0,0,0,False,False,False,near-contiguous,,False
-7,E067_068,68,69,3.0,0,0,0,False,False,False,near-contiguous,,False
-7,E069_074,70,75,3.0,0,0,0,False,False,False,near-contiguous,,False
-7,E044_050,45,51,3.3,0,0,0,False,False,False,near-contiguous,,False
-7,E044_051,45,52,3.6,0,0,0,False,False,False,near-contiguous,,False
-7,E056_063,57,64,3.6,0,0,0,False,False,False,near-contiguous,,False
-7,E058_060,59,61,3.6,0,0,0,False,False,False,near-contiguous,,False
-7,E027_032,28,33,4.2,0,0,0,False,False,False,near-contiguous,,False
-7,E049_053,50,54,4.2,0,0,0,False,False,False,near-contiguous,,False
-7,E039_046,40,47,5.4,0,0,0,False,False,False,near-contiguous,,False
-7,E048_049,49,50,5.4,0,0,0,False,False,False,near-contiguous,,False
-7,E042_051,43,52,6.0,1,0,0,False,False,False,near-contiguous,,False
-7,E050_057,51,58,6.6,5,0,0,False,False,False,near-contiguous,,False
-7,E030_034,31,35,7.8,1,0,0,False,False,False,near-contiguous,,False
-7,E024_027,25,28,12.0,0,0,0,False,False,False,near-contiguous,,False
-7,E041_047,42,48,12.9,0,0,0,False,False,False,near-contiguous,,False
-12,E087_089,88,90,1.2,2,0,2,True,False,False,near-contiguous,,True
-12,E088_094,89,95,1.8,2,1,2,True,False,False,near-contiguous,,True
-12,E081_082,82,83,2.4,2,0,1,True,False,False,near-contiguous,,True
-12,E094_096,95,97,2.4,2,0,2,True,False,False,near-contiguous,,True
-12,E088_089,89,90,2.7,4,1,1,True,False,False,near-contiguous,,True
-12,E098_100,99,101,2.7,0,0,3,True,False,False,near-contiguous,,True
-12,E089_091,90,92,3.0,2,0,2,True,False,False,near-contiguous,,True
-12,E089_090,90,91,4.5,4,0,2,True,False,False,near-contiguous,,True
-12,E081_088,82,89,6.9,3,0,3,True,False,False,near-contiguous,,True
-12,E088_093,89,94,7.2,1,0,1,True,False,False,near-contiguous,,True
-12,E103_105,104,106,8.4,4,0,1,True,False,False,near-contiguous,,True
-12,E086_089,87,90,12.6,13,0,9,True,False,False,near-contiguous,,True
-12,E088_100,89,101,14.4,7,0,10,True,False,False,near-contiguous,,True
-12,E101_103,102,104,14.4,7,0,6,True,False,False,near-contiguous,,True
-12,E100_103,101,104,16.8,12,0,4,True,False,False,near-contiguous,,True
-12,E102_105,103,106,32.1,7,0,3,True,False,False,within-complex corridor-class link (not near-contiguous),squeezed,True
-12,E088_095,89,96,1.8,1,0,0,False,False,False,near-contiguous,,False
-12,E088_097,89,98,2.1,0,0,0,False,False,False,near-contiguous,,False
-12,E086_088,87,89,3.0,2,0,0,False,False,False,near-contiguous,,False
-12,E089_092,90,93,3.3,3,0,0,False,False,False,near-contiguous,,False
-12,E084_088,85,89,3.9,2,0,0,False,False,False,near-contiguous,,False
-12,E099_102,100,103,3.9,4,0,0,False,False,False,near-contiguous,,False
-12,E099_101,100,102,4.2,9,0,0,False,False,False,near-contiguous,,False
-12,E085_088,86,89,5.1,1,0,0,False,False,False,near-contiguous,,False
-12,E105_106,106,107,6.6,0,0,0,False,False,False,near-contiguous,,False
-13,E104_107,105,108,0.9,0,0,0,False,False,False,near-contiguous,,False
-12,E110_122,111,123,6.9,2,0,1,True,False,False,near-contiguous,,True
-12,E117_122,118,123,9.6,0,0,1,True,False,False,near-contiguous,,True
-12,E110_121,111,122,10.8,0,0,5,True,False,False,near-contiguous,,True
-12,E114_122,115,123,11.4,5,0,3,True,False,False,near-contiguous,,True
-12,E110_112,111,113,15.3,14,0,2,True,False,False,near-contiguous,,True
-12,E121_122,122,123,20.4,0,0,1,True,False,False,near-contiguous,,True
-12,E112_113,113,114,33.9,20,0,4,True,False,False,within-complex corridor-class link (not near-contiguous),squeezed,True
-12,E110_114,111,115,6.0,11,0,0,False,False,False,near-contiguous,,False
-12,E110_113,111,114,9.9,3,0,0,False,False,False,near-contiguous,,False
-22,E126_128,127,129,6.3,0,0,2,True,False,False,near-contiguous,,True
-22,E124_125,125,126,7.2,1,0,2,True,False,False,near-contiguous,,True
-22,E125_127,126,128,7.5,0,0,1,True,False,False,near-contiguous,,True
-22,E125_128,126,129,8.4,0,0,3,True,False,False,near-contiguous,,True
-22,E123_125,124,126,12.6,1,0,3,True,False,False,near-contiguous,,True
-22,E125_126,126,127,2.7,0,0,0,False,False,False,near-contiguous,,False
-22,E126_127,127,128,8.7,0,0,0,False,False,False,near-contiguous,,False
-22,E128_129,129,130,19.2,0,0,0,False,False,False,near-contiguous,,False
+﻿complex_id,edge_id,patch_i,patch_j,path_len_km,path_cells_cost10,path_cells_cost100,path_cells_cost1000,has_feature,crosses_cost_1000,barrier_between,kind,link_class,cost,edge_irreplaceable,squeeze_ratio_obs,width_ratio_p10,band_new_km2,in_mst,E_v2,narrow,road_on_path,cut,bridge,detour_ratio,E_interior,front_class,front_class_d23,has_cost100_or_1000
+1,E006_012,7,13,1.8,0,0,1,True,False,False,near-contiguous,,5.41421365737915,True,0.8921713441654356,,108.72,True,True,False,False,False,True,inf,True,open,last affordable,True
+1,E013_014,14,15,1.8,0,0,1,True,False,False,near-contiguous,,6.656854152679443,False,0.969758064516129,,86.58,True,False,False,False,False,False,1.9635502761912504,False,open,options,True
+1,E004_006,5,7,2.1,0,0,1,True,False,False,near-contiguous,,8.485280990600586,True,0.9167561761546724,,168.48,True,True,False,False,False,True,inf,True,open,last affordable,True
+1,E003_005,4,6,3.3,0,0,1,True,False,False,near-contiguous,,14.142135620117188,True,0.9545826629406948,,111.6,True,True,False,False,False,True,inf,True,open,last affordable,True
+1,E001_002,2,3,3.9,0,0,2,True,False,False,near-contiguous,,12.414213180541992,False,0.7149094928837916,,100.89,True,False,False,False,False,False,6.630602202647165,True,open,last affordable,True
+1,E015_017,16,18,5.4,0,0,2,True,False,False,near-contiguous,,21.970561981201172,False,0.9095666092095545,,159.57,True,False,False,False,False,True,inf,True,open,last affordable,True
+1,E005_012,6,13,5.7,0,0,1,True,False,False,near-contiguous,,20.071067810058594,False,0.9670389539634976,,121.41,True,False,False,False,False,True,inf,True,open,last affordable,True
+1,E009_015,10,16,5.7,0,0,2,True,False,False,near-contiguous,,21.727922439575195,False,0.715239848017098,,137.34,True,False,False,False,False,True,inf,True,open,last affordable,True
+1,E000_003,1,4,7.5,0,0,1,True,False,False,near-contiguous,,24.414213180541992,False,0.5856423173803527,,83.7,True,False,False,False,False,False,2.8800317560540054,True,open,last affordable,True
+1,E010_012,11,13,0.9,0,0,0,False,False,False,near-contiguous,,2.4142136573791504,True,0.8952727272727272,,110.79,True,True,False,False,False,True,inf,True,open,last affordable,False
+1,E016_018,17,19,0.9,0,0,0,False,False,False,near-contiguous,,2.4142136573791504,True,0.8385650224215246,,50.489999999999995,True,True,False,False,False,True,inf,True,open,last affordable,False
+1,E013_016,14,17,1.5,0,0,0,False,False,False,near-contiguous,,5.242640495300293,True,0.8093427485062467,,134.1,True,True,False,False,False,True,inf,True,open,last affordable,False
+1,E011_014,12,15,1.8,0,0,0,False,False,False,near-contiguous,,5.0,False,0.9782244556113904,,52.559999999999995,True,False,False,False,False,False,2.9455843925476075,True,open,last affordable,False
+1,E018_019,19,20,1.8,0,0,0,False,False,False,near-contiguous,,5.41421365737915,True,0.971316818774446,,67.05,True,True,False,False,False,True,inf,True,open,last affordable,False
+1,E011_013,12,14,2.1,0,0,0,False,False,False,near-contiguous,,8.071067810058594,False,0.9787735118217594,,66.33,False,False,False,False,False,False,1.4442765724446092,False,open,options,False
+1,E015_016,16,17,2.1,0,0,0,False,False,False,near-contiguous,,7.656854152679443,True,0.7932440302853815,,143.01,True,True,False,False,False,True,inf,True,open,last affordable,False
+1,E005_007,6,8,2.4,0,0,0,False,False,False,near-contiguous,,9.071067810058594,False,0.8934669695188779,,135.0,True,False,False,False,False,True,inf,True,open,last affordable,False
+1,E002_003,3,4,2.7,0,0,0,False,False,False,near-contiguous,,10.485280990600586,True,0.9881858407079644,,60.3,True,True,False,False,False,False,8.034371374929579,True,open,last affordable,False
+1,E008_009,9,10,2.7,0,0,0,False,False,False,near-contiguous,,8.0,False,0.7438679778455973,,124.38,True,False,False,False,False,True,inf,True,open,last affordable,False
+1,E007_008,8,9,3.3,0,0,0,False,False,False,near-contiguous,,10.0,False,0.959608652724172,,141.12,True,False,False,False,False,True,inf,True,open,last affordable,False
+1,E000_001,1,2,14.4,1,0,0,False,False,False,near-contiguous,,47.414215087890625,False,0.966,,250.38,False,False,False,True,True,False,0.9978802193388682,False,cut,narrowing,False
+5,E028_029,29,30,11.7,0,0,1,True,False,False,near-contiguous,,38.414215087890625,False,0.9528112449799198,,299.78999999999996,True,False,False,False,False,True,inf,True,open,last affordable,True
+6,E062_066,63,67,1.8,0,0,1,True,False,False,near-contiguous,,5.0,False,0.6290516206482593,,47.16,True,False,False,False,False,True,inf,True,open,last affordable,True
+6,E026_037,27,38,4.2,0,0,3,True,False,False,near-contiguous,,16.727922439575195,False,0.4639178869193582,,55.62,True,False,True,False,True,True,inf,True,cut,only viable,True
+6,E072_077,73,78,16.8,3,0,1,True,False,False,near-contiguous,,70.3259048461914,False,1.0041545893719808,,349.2,True,False,False,True,True,True,inf,True,cut,only viable,True
+6,E023_037,24,38,1.2,0,0,0,False,False,False,near-contiguous,,3.4142136573791504,True,0.9977628635346756,,40.14,True,True,False,False,False,True,inf,True,open,last affordable,False
+6,E037_052,38,53,1.2,0,0,0,False,False,False,near-contiguous,,4.242640495300293,False,1.1307565789473684,,74.25,True,False,False,False,False,True,inf,True,open,last affordable,False
+6,E052_062,53,63,1.2,0,0,0,False,False,False,near-contiguous,,3.4142136573791504,False,0.9053069719042665,,78.3,True,False,False,False,False,True,inf,True,open,last affordable,False
+6,E066_070,67,71,1.5,0,0,0,False,False,False,near-contiguous,,4.0,False,0.8181046676096182,,65.07,True,False,False,False,False,True,inf,True,open,last affordable,False
+6,E070_072,71,73,1.5,0,0,0,False,False,False,near-contiguous,,4.0,False,0.6905444126074499,,65.07,True,False,False,False,False,True,inf,True,open,last affordable,False
+6,E037_040,38,41,5.4,0,0,0,False,False,False,near-contiguous,,17.828426361083984,False,0.9076310927952252,,310.40999999999997,True,False,False,False,False,True,inf,True,open,last affordable,False
+7,E056_057,57,58,2.1,0,0,1,True,False,False,near-contiguous,,6.0,False,0.7572939068100358,,88.74,True,False,False,False,False,False,5.276142438252767,True,open,last affordable,True
+7,E045_048,46,49,3.6,0,0,1,True,False,False,near-contiguous,,11.0,False,0.9165316045380876,,101.79,True,False,False,False,False,True,inf,True,open,last affordable,True
+7,E042_043,43,44,4.5,0,0,3,True,False,False,near-contiguous,,16.899494171142578,False,0.7706161137440759,,146.34,True,False,False,False,False,False,1.8960111744630652,False,open,options,True
+7,E049_054,50,55,5.1,0,0,2,True,False,False,near-contiguous,,19.313709259033203,False,0.9477022498803256,,161.54999999999998,False,False,False,False,False,False,1.275126170927635,False,open,options,True
+7,E050_051,51,52,5.1,0,0,2,True,False,False,near-contiguous,,16.828426361083984,False,1.0171869519466854,,266.21999999999997,False,False,False,False,False,False,1.543255583001679,False,open,options,True
+7,E058_071,59,72,5.1,0,0,2,True,False,False,near-contiguous,,16.0,False,0.9642857142857142,,84.96,True,False,False,False,False,False,4.2008251547813416,True,open,last affordable,True
+7,E035_043,36,44,5.7,0,0,3,True,False,False,near-contiguous,,22.55634880065918,False,0.7759344362745098,,288.71999999999997,False,False,False,False,False,False,1.1697272193703665,False,open,options,True
+7,E065_075,66,76,5.7,0,0,1,True,False,False,near-contiguous,,18.828426361083984,True,0.7704673225579761,,99.99,True,True,False,False,False,True,inf,True,open,last affordable,True
+7,E076_078,77,79,5.7,0,0,1,True,False,False,near-contiguous,,25.04162979125977,True,0.6039991700814358,,132.75,True,True,False,False,False,True,inf,True,open,last affordable,True
+7,E055_058,56,59,6.6,1,0,2,True,False,False,near-contiguous,,22.6568546295166,False,0.3743252829955892,,80.1,True,False,True,True,True,False,2.672760576752523,True,cut,only viable,True
+7,E059_061,60,62,6.6,0,0,1,True,False,False,near-contiguous,,23.485280990600582,False,0.6692704495210021,,89.91,True,False,False,False,False,False,2.3552499701333165,False,open,options,True
+7,E061_065,62,66,7.2,1,0,2,True,False,False,near-contiguous,,25.485280990600582,False,0.490814696485623,,221.22,True,False,True,True,True,False,1.7062900723093082,False,cut,narrowing,True
+7,E064_071,65,72,7.5,2,0,2,True,False,False,near-contiguous,,24.828426361083984,False,0.8166220227322087,,84.6,False,False,False,True,True,False,2.3515294632981507,False,cut,narrowing,True
+7,E065_067,66,68,7.8,1,0,1,True,False,False,near-contiguous,,26.24264144897461,False,0.4582206628377321,,159.93,False,False,True,True,True,False,1.6281867650015238,False,cut,narrowing,True
+7,E057_063,58,64,8.4,0,0,5,True,False,False,near-contiguous,,28.6568546295166,False,0.8798074292904426,,135.09,False,False,False,False,False,False,0.7233146382445408,False,open,options,True
+7,E069_076,70,77,8.4,0,0,2,True,False,False,near-contiguous,,28.6568546295166,True,0.4566422710135285,,103.77,True,True,True,False,True,True,inf,True,cut,only viable,True
+7,E027_031,28,32,8.7,0,0,1,True,False,False,near-contiguous,,29.24264144897461,False,0.7852672123254694,,127.71,False,False,False,False,False,False,0.6096722604853281,False,open,options,True
+7,E059_065,60,66,9.0,2,0,4,True,False,False,near-contiguous,,29.828426361083984,False,0.9815214043732676,,286.83,False,False,False,True,True,False,1.641741384154653,False,cut,narrowing,True
+7,E034_046,35,47,12.9,3,1,3,True,False,False,near-contiguous,,50.698486328125,False,0.7611960602927573,,360.9,True,False,False,True,True,False,1.63596853202154,False,cut,narrowing,True
+7,E024_031,25,32,15.0,0,0,3,True,False,False,near-contiguous,,67.22539520263672,False,0.9481558148287542,,302.31,False,False,False,False,False,False,0.8453416620826257,False,open,options,True
+7,E034_039,35,40,19.2,0,1,5,True,False,False,within-complex corridor-class link (not near-contiguous),securing,70.04163360595703,False,0.8811952048667026,0.3,283.68,False,False,False,False,False,False,0.9080025365184478,False,open,options,True
+7,E036_038,37,39,0.9,0,0,0,False,False,False,near-contiguous,,2.8284270763397217,True,0.9567979669631512,,67.77,True,True,False,False,False,True,inf,True,open,last affordable,False
+7,E039_050,40,51,0.9,0,0,0,False,False,False,near-contiguous,,2.4142136573791504,False,0.7455683003128258,,64.35,True,False,False,False,False,False,13.100504387441925,True,open,last affordable,False
+7,E053_061,54,62,0.9,0,0,0,False,False,False,near-contiguous,,2.8284270763397217,True,0.5454545454545454,,45.36,True,True,False,False,False,False,6.974873650068029,True,open,last affordable,False
+7,E031_033,32,34,1.2,0,0,0,False,False,False,near-contiguous,,3.0,False,0.9455894476504536,,103.23,True,False,False,False,False,False,2.8856181303660073,True,open,last affordable,False
+7,E032_033,33,34,1.2,0,0,0,False,False,False,near-contiguous,,3.8284270763397217,False,0.996519721577726,,77.31,True,False,False,False,False,False,2.044815575341426,False,open,options,False
+7,E025_027,26,28,1.5,0,0,0,False,False,False,near-contiguous,,5.242640495300293,True,0.8857323232323232,,126.27,True,True,False,False,False,True,inf,True,open,last affordable,False
+7,E031_032,32,33,1.5,0,0,0,False,False,False,near-contiguous,,4.828427314758301,False,0.8459119496855347,,24.21,False,False,False,False,False,False,1.414213496694531,False,open,options,False
+7,E041_045,42,46,1.5,0,0,0,False,False,False,near-contiguous,,5.656854152679443,False,0.9398541919805588,,139.23,True,False,False,False,False,True,inf,True,open,last affordable,False
+7,E064_068,65,69,1.5,0,0,0,False,False,False,near-contiguous,,5.656854152679443,False,0.9943074003795066,,47.16,True,False,False,False,False,False,2.901650411610344,True,open,last affordable,False
+7,E038_041,39,42,1.8,0,0,0,False,False,False,near-contiguous,,6.656854152679443,False,0.8745819397993311,,94.14,True,False,False,False,False,False,3.025773981971192,True,open,last affordable,False
+7,E053_054,54,55,1.8,0,0,0,False,False,False,near-contiguous,,6.656854152679443,False,1.0885406493682108,,130.41,True,False,False,False,False,False,5.600884499659215,True,open,last affordable,False
+7,E075_076,76,77,2.1,0,0,0,False,False,False,near-contiguous,,6.0,True,0.9703582076653848,,141.48,True,True,False,False,False,True,inf,True,open,last affordable,False
+7,E033_038,34,39,2.4,0,0,0,False,False,False,near-contiguous,,7.41421365737915,False,0.8075341292054605,,67.86,True,False,False,False,False,False,2.6145424839438687,True,open,last affordable,False
+7,E035_042,36,43,2.4,0,0,0,False,False,False,near-contiguous,,9.485280990600586,False,0.734513996572268,,86.39999999999999,True,False,False,False,False,False,4.159691527420265,True,open,last affordable,False
+7,E042_044,43,45,2.4,1,0,0,False,False,False,near-contiguous,,9.485280990600586,False,0.8313696258536116,,82.98,True,False,False,True,True,False,3.730493187337511,True,cut,only viable,False
+7,E043_049,44,50,2.4,0,0,0,False,False,False,near-contiguous,,9.899495124816896,True,0.9911307679572384,,201.15,True,True,False,False,False,True,inf,True,open,last affordable,False
+7,E055_061,56,62,2.4,1,0,0,False,False,False,near-contiguous,,9.485280990600586,False,0.727145847871598,,35.01,True,False,False,True,True,False,1.3780369379244277,False,cut,narrowing,False
+7,E064_067,65,68,2.4,0,0,0,False,False,False,near-contiguous,,7.0,False,0.993533619456366,,41.67,True,False,False,False,False,False,2.1530096190316335,False,open,options,False
+7,E046_050,47,51,2.7,0,0,0,False,False,False,near-contiguous,,10.485280990600586,False,0.902047679663068,,154.98,True,False,False,False,False,False,2.246611158881976,False,open,options,False
+7,E033_041,34,42,3.0,0,0,0,False,False,False,near-contiguous,,12.727922439575195,False,0.9458655562165378,,143.1,False,False,False,False,False,False,1.1055274634850953,False,open,options,False
+7,E050_056,51,57,3.0,0,0,0,False,False,False,near-contiguous,,9.414213180541992,False,0.9575438596491228,,245.61,True,False,False,False,False,False,3.000000202603085,True,open,last affordable,False
+7,E053_055,54,56,3.0,0,0,0,False,False,False,near-contiguous,,10.242640495300291,False,0.7209166178807392,,77.58,False,False,False,False,False,False,1.2022005529326447,False,open,options,False
+7,E061_064,62,65,3.0,0,0,0,False,False,False,near-contiguous,,10.242640495300291,False,0.994326241134752,,63.09,True,False,False,False,False,False,5.7336701865619295,True,open,last affordable,False
+7,E067_068,68,69,3.0,0,0,0,False,False,False,near-contiguous,,9.414213180541992,False,0.9985994397759104,,128.34,False,False,False,False,False,False,1.3444409968152822,False,open,options,False
+7,E069_074,70,75,3.0,0,0,0,False,False,False,near-contiguous,,12.313708305358888,True,0.8972407231208372,,169.73999999999998,True,True,False,False,False,True,inf,True,open,last affordable,False
+7,E044_050,45,51,3.3,0,0,0,False,False,False,near-contiguous,,14.142135620117188,False,0.9660154187348188,,150.93,True,False,False,False,False,False,2.0263455566836677,False,open,options,False
+7,E044_051,45,52,3.6,0,0,0,False,False,False,near-contiguous,,11.8284273147583,False,0.8613678373382625,,83.88,True,False,False,False,False,False,2.618316125809834,True,open,last affordable,False
+7,E056_063,57,64,3.6,0,0,0,False,False,False,near-contiguous,,14.727922439575195,False,0.8940620782726046,,119.25,True,False,False,False,False,False,2.353139403857169,False,open,options,False
+7,E058_060,59,61,3.6,0,0,0,False,False,False,near-contiguous,,11.0,False,0.9640167364016736,,207.36,True,False,False,False,False,True,inf,True,open,last affordable,False
+7,E027_032,28,33,4.2,0,0,0,False,False,False,near-contiguous,,13.0,False,0.9604878268304756,,89.64,True,False,False,False,False,False,2.62085144336407,True,open,last affordable,False
+7,E049_053,50,54,4.2,0,0,0,False,False,False,near-contiguous,,17.970561981201172,False,0.996354121986789,,97.56,True,False,False,False,False,False,1.4451725794040384,False,open,options,False
+7,E039_046,40,47,5.4,0,0,0,False,False,False,near-contiguous,,21.142135620117188,False,0.96239501942924,,124.38,False,False,False,False,False,False,0.6101320547629822,False,open,options,False
+7,E048_049,49,50,5.4,0,0,0,False,False,False,near-contiguous,,24.04162979125977,False,0.9957507082152977,,189.81,True,False,False,False,False,True,inf,True,open,last affordable,False
+7,E042_051,43,52,6.0,1,0,0,False,False,False,near-contiguous,,23.55634880065918,False,0.6379539048250705,,92.34,False,False,False,True,True,False,0.9047967698951063,False,cut,narrowing,False
+7,E050_057,51,58,6.6,5,0,0,False,False,False,near-contiguous,,22.24264144897461,False,0.8425663488791549,,107.91,False,False,False,True,True,False,0.6930028169497193,False,cut,narrowing,False
+7,E030_034,31,35,7.8,1,0,0,False,False,False,near-contiguous,,32.87005615234375,True,0.8681167055517925,,269.90999999999997,True,True,False,True,True,True,inf,True,cut,only viable,False
+7,E024_027,25,28,12.0,0,0,0,False,False,False,near-contiguous,,39.0,False,0.7877485222998387,,263.88,True,False,False,False,False,False,2.18086724403577,False,open,options,False
+7,E041_047,42,48,12.9,0,0,0,False,False,False,near-contiguous,,42.0,False,0.9760874452062492,,448.11,True,False,False,False,False,True,inf,True,open,last affordable,False
+12,E087_089,88,90,1.2,2,0,2,True,False,False,near-contiguous,,9.77817440032959,True,0.2622494432071269,,70.64999999999999,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E088_094,89,95,1.8,2,1,2,True,False,False,near-contiguous,,5.41421365737915,True,0.0146485896836527,,4.2299999999999995,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E081_082,82,83,2.4,2,0,1,True,False,False,near-contiguous,,8.242640495300293,True,0.3368391131324616,,71.1,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E094_096,95,97,2.4,2,0,2,True,False,False,near-contiguous,,18.6923885345459,True,0.1357711803041274,,23.4,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E088_089,89,90,2.7,4,1,1,True,False,False,near-contiguous,,50.890872955322266,False,0.0064643639584207,,9.36,True,False,True,True,True,False,2.639608797474982,True,cut,only viable,True
+12,E098_100,99,101,2.7,0,0,3,True,False,False,near-contiguous,,10.071067810058594,True,0.0874861572535991,,21.33,True,True,True,False,True,True,inf,True,cut,only viable,True
+12,E089_091,90,92,3.0,2,0,2,True,False,False,near-contiguous,,21.935028076171875,True,0.0550364042882531,,5.76,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E089_090,90,91,4.5,4,0,2,True,False,False,near-contiguous,,26.10660171508789,True,0.3674842822987692,,37.35,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E081_088,82,89,6.9,3,0,3,True,False,False,near-contiguous,,37.420310974121094,False,0.0966946778711484,,35.73,True,False,True,True,True,True,inf,True,cut,only viable,True
+12,E088_093,89,94,7.2,1,0,1,True,False,False,near-contiguous,,25.899494171142575,True,0.2726052876311943,,295.46999999999997,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E103_105,104,106,8.4,4,0,1,True,False,False,near-contiguous,,32.3847770690918,True,0.5000953361552836,,110.16,True,True,False,True,True,False,8.973133320965077,True,cut,only viable,True
+12,E086_089,87,90,12.6,13,0,9,True,False,False,near-contiguous,,124.08935546875,False,0.1173574536294939,,51.66,False,False,True,True,True,False,0.4926571922280481,False,cut,narrowing,True
+12,E088_100,89,101,14.4,7,0,10,True,False,False,near-contiguous,,107.1187973022461,True,0.0370910546785632,,37.35,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E101_103,102,104,14.4,7,0,6,True,False,False,near-contiguous,,81.09797668457031,False,0.1610032666241129,,61.739999999999995,True,False,True,True,True,False,2.982561741780604,True,cut,only viable,True
+12,E100_103,101,104,16.8,12,0,4,True,False,False,near-contiguous,,81.39697265625,True,0.1090944304567966,,66.24,True,True,True,True,True,True,inf,True,cut,only viable,True
+12,E102_105,103,106,32.1,7,0,3,True,False,False,within-complex corridor-class link (not near-contiguous),squeezed,123.8111801147461,False,0.2975656956610307,0.1429181315921647,187.56,False,False,True,True,True,False,1.6086311347687254,False,cut,narrowing,True
+12,E088_095,89,96,1.8,1,0,0,False,False,False,near-contiguous,,5.828427314758301,True,0.3016169154228856,,69.84,True,True,True,True,True,True,inf,True,cut,only viable,False
+12,E088_097,89,98,2.1,0,0,0,False,False,False,near-contiguous,,7.242640495300293,True,0.2042719636355864,,60.21,True,True,True,False,True,True,inf,True,cut,only viable,False
+12,E086_088,87,89,3.0,2,0,0,False,False,False,near-contiguous,,10.242640495300291,False,0.2804347826086957,,58.05,True,False,True,True,True,False,17.083507763877858,True,cut,only viable,False
+12,E089_092,90,93,3.3,3,0,0,False,False,False,near-contiguous,,22.520814895629883,True,0.0920839656044511,,24.03,True,True,True,True,True,True,inf,True,cut,only viable,False
+12,E084_088,85,89,3.9,2,0,0,False,False,False,near-contiguous,,14.899495124816896,True,0.2446017116524029,,57.96,True,True,True,True,True,True,inf,True,cut,only viable,False
+12,E099_102,100,103,3.9,4,0,0,False,False,False,near-contiguous,,34.97056198120117,False,0.3368552759627415,,28.35,True,False,True,True,True,False,8.23570228735259,True,cut,only viable,False
+12,E099_101,100,102,4.2,9,0,0,False,False,False,near-contiguous,,50.71320343017578,False,0.1221290322580645,,23.85,True,False,True,True,True,False,5.3687102654533625,True,cut,only viable,False
+12,E085_088,86,89,5.1,1,0,0,False,False,False,near-contiguous,,21.384777069091797,True,0.347099097672946,,89.46,True,True,True,True,True,True,inf,True,cut,only viable,False
+12,E105_106,106,107,6.6,0,0,0,False,False,False,near-contiguous,,25.970561981201172,True,0.7534321801208127,,117.72,True,True,False,False,False,True,inf,True,open,last affordable,False
+13,E104_107,105,108,0.9,0,0,0,False,False,False,near-contiguous,,2.4142136573791504,True,0.9591295116772824,,162.63,True,True,False,False,False,True,inf,True,open,last affordable,False
+20,E110_122,111,123,6.9,2,0,1,True,False,False,near-contiguous,,24.071067810058594,True,0.6385078909612626,,230.31,True,True,False,True,True,False,4.220139313473699,True,cut,only viable,True
+20,E117_122,118,123,9.6,0,0,1,True,False,False,near-contiguous,,33.89949417114258,True,0.5218843843843843,,133.47,True,True,False,False,False,True,inf,True,open,last affordable,True
+20,E110_121,111,122,10.8,0,0,5,True,False,False,near-contiguous,,37.89949417114258,False,0.6024306768177691,,93.15,True,False,False,False,False,False,2.905708785747537,True,open,last affordable,True
+20,E114_122,115,123,11.4,5,0,3,True,False,False,near-contiguous,,39.071067810058594,False,0.3881343562541163,,248.58,True,False,True,True,True,False,2.216045386920017,False,cut,narrowing,True
+20,E110_112,111,113,15.3,14,0,2,True,False,False,near-contiguous,,58.284271240234375,False,0.4400374593731064,,122.22,True,False,True,True,True,False,3.1206060892453316,True,cut,only viable,True
+20,E121_122,122,123,20.4,0,0,1,True,False,False,near-contiguous,,86.05382537841797,False,0.8995085726766409,,840.15,False,False,False,False,False,False,0.7201372130604109,False,open,options,True
+20,E112_113,113,114,33.9,20,0,4,True,False,False,within-complex corridor-class link (not near-contiguous),squeezed,134.0477294921875,False,0.4860312030270046,0.1770954060118856,317.88,False,False,True,True,True,False,0.7916493169228471,False,cut,narrowing,True
+20,E110_114,111,115,6.0,11,0,0,False,False,False,near-contiguous,,62.51219177246094,False,0.1582200853652553,,19.35,False,False,True,True,True,False,1.010077135832146,False,cut,narrowing,False
+20,E110_113,111,114,9.9,3,0,0,False,False,False,near-contiguous,,47.83452224731445,False,0.2864446938521012,,68.22,True,False,True,True,True,False,4.020778126266744,True,cut,only viable,False
+23,E126_128,127,129,6.3,0,0,2,True,False,False,near-contiguous,,20.414213180541992,False,0.6355726926689407,,81.0,True,False,False,False,False,False,2.018848442113078,False,open,options,True
+23,E124_125,125,126,7.2,1,0,2,True,False,False,near-contiguous,,25.899494171142575,True,0.3262534123443638,,70.56,True,True,True,True,True,True,inf,True,cut,only viable,True
+23,E125_127,126,128,7.5,0,0,1,True,False,False,near-contiguous,,31.45584487915039,False,0.936271186440678,,124.29,False,False,False,False,False,False,1.1839656711934485,False,open,options,True
+23,E125_128,126,129,8.4,0,0,3,True,False,False,near-contiguous,,31.970561981201172,False,0.563593967657925,,156.32999999999998,False,False,False,False,False,False,0.9276300395745513,False,open,options,True
+23,E123_125,124,126,12.6,1,0,3,True,False,False,near-contiguous,,43.48528289794922,False,0.6333649096691251,,235.89,True,False,False,True,True,True,inf,True,cut,only viable,True
+23,E125_126,126,127,2.7,0,0,0,False,False,False,near-contiguous,,9.242640495300291,True,0.4930042016806722,,63.36,True,True,True,False,True,False,5.667728306470411,True,cut,only viable,False
+23,E126_127,127,128,8.7,0,0,0,False,False,False,near-contiguous,,28.0,False,0.8696871310507673,,153.81,True,False,False,False,False,False,1.4535173348018102,False,open,options,False
+23,E128_129,129,130,19.2,0,0,0,False,False,False,near-contiguous,,70.45584106445312,True,0.4753796997417604,,417.06,True,True,True,False,True,True,inf,True,cut,only viable,False

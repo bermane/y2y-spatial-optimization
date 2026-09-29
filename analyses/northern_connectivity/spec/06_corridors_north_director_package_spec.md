@@ -3,6 +3,15 @@
 **Status:** v1.2.17 (2026-09-28) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_tables_and_figures.ipynb`, the record — renamed from `06_director_package` on 2026-09-28 — plus `07_director_outputs.ipynb`, the curated set on the y2y Act 1 wide layout; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
 
 ## Changelog
+- v1.2.22 (2026-09-29) — fronts are corridor land (05 D25c; the patch labels this v1.2.14, a stale number). Adjacent-areas
+  legend rows removed; fronts classed and coloured on the common pressure scale; a `#8A8A8A` 0.4 pt dotted outline marks
+  fronts on M2 (display, `corridors_director.FRONT_OUTLINE`); N-slot rule by width (`width_new_km`, ties attribution then
+  jurisdictions; fronts eligible), the two-branch link a separate "two routes" example (slot R1); contacts excluded from
+  candidacy; corridor-area figures include fronts and the caption gives the front share once (`front_sentence`, M1's title
+  line). Pre-D23 run002 director products frozen in `v2_run002/director_package/_preD23_frozen/` (32 files whose modification
+  time predates the 2026-09-28 18:50 re-classification: 07's eleven director outputs of 16:14 that day, the 06 figures and tables
+  not re-rendered since, the deck outline and the draft deck; README lists them). Files 06 re-rendered afterwards exist only in
+  their post-pin state in the live directory, which is the pinned run's record.
 - v1.2.21 (2026-09-28) — near-contiguous sub-classes (05 D25a) and area accounting (D25b; the patch labels this v1.2.13, a
   stale number). Three adjacent-areas legend rows replace two: "Adjacent areas — open front" (band #D9D9D9, hatch #8A8A8A, no
   outline), "— front crossed by roads or cuts" (same hatch, #8A8A8A 0.6 pt outline), "— barrier between" (same hatch,

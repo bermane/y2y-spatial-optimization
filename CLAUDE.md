@@ -553,6 +553,15 @@ package spec `spec/06_wolverine_director_package_spec.md` v1.1; BINDING living l
   `STYLE['cost_map_*']`)). Contraction engine on main = the branch's (M7.2b); the branch `wolverine-v3` (2da23c2) keeps the
   baseline comparison + glacier surfaces (§6 = next step). Main tagged `v2_run001` (6c79be6). Build-time: 23 complexes (15
   single-patch; Jasper 24 patches / 135,778 km²; Sustut 43 patches), 133 slivers (62 with a cost-100/1000 cell on the path).
+  **2026-09-29 REVISIONS (M7.7/M7.8, R7.1a/R7.2): the D25 second pass fired on 23 complexes (Jasper's Cabinet-Mountains tail ↔
+  Selway-Bitterroot, 17 km across the Clark Fork) → merged → v25_run002 (22 complexes, 28 links) — then Ethan's spec REVISED: NO merge,
+  fronts are corridors on the same pressure scale → merge undone, run = v25_run003 (23 complexes; 06 reports inter-complex fronts,
+  the engine's D25c classes them). Within-complex FRONTS (133) drawn under the inter-complex links (open = Minimum tint, cut = Some
+  colour + outline; `wd._front_overlay`, `FRONT_STYLE`), per-complex table `A_fronts*.csv`, front area its own line; the edge sense
+  on fronts is TABLE-ONLY (patch-level D7 = 43; the ruled interior bridge/detour reading = 91 on v2's chain-like graph → needs the
+  full adjacency graph, next step). Maps: NO PAs/IPCAs on 01–03 (`STYLE['protected_layers']=False`), refugia lime `#66A61E` on all,
+  complexes labelled by NUMBER (`complex_labels`; auto-names off until Ethan names them), fixed insets at the northern scale
+  (193 × 214 km; A = Nahanni's links south, B = Missoula–Helena–Salmon–Bozeman; `inset_specs`).**
 - **RUN = ETHAN, numeric order:** 01 (warps G2/GW1 → `node_patches` → **CHECK STOP 1** → acquisition →
   terrain layers → τ → `derive_variant` GW2 → **CHECK STOP 2** → timing probe) → 02 (run on the VARIANT only;
   G0, CWD ~2–3 h, inherited cutoff, network G3, GW4, G15, W11 status, priority, write_run) → 03 (near-opt G10,
@@ -848,7 +857,15 @@ choices (full rationale + history in project memory `prioritizr-run-design`):
 > (resolve raises on a second). Legend string for the top class updated; `NEAR_CONTIGUOUS` tokens in mapstyle.
 > **D25a/D25b FORMAL PATCH ADOPTED (M4.11):** three near-contiguous sub-classes (open front / roads-or-cuts / barrier, by `lcp_max_cost` and the
 > squeeze ratio), `near_contiguous_links.csv`, D25b accounting (`corridor_area_km2` excl. fronts + `near_contiguous_area_km2` + intra-name + augmentation =
-> total, G23), width floor BEFORE the trigger (zero-new-land bands = width-not-assessable), no recalibration, pin check on N2–N3, `adjacent_sentence` on M1. **First 04 re-run
+> total, G23), width floor BEFORE the trigger (zero-new-land bands = width-not-assessable), no recalibration, pin check on N2–N3, `adjacent_sentence` on M1.
+> **D25c ADOPTED 2026-09-29 (M4.12; SUPERSEDES the near-contiguous class; Ethan's binding principle: nothing unprotected is taken as given):** fronts are
+> corridor land — `link_geometry` (strip / front / contact) is a DESCRIPTOR; every strip and front is classed on the one D23 scale with B1 forced true on
+> fronts (`b1_forced`; no decomposition), contacts (D24 floor) by the edge sense only; `road_crossing` (lcp_max_cost == 10) flagged never classed; corridor
+> area INCLUDES fronts (`front_area_km2` / `front_share` descriptors; identity corridor + intra + augmentation = total; G24 replaces G23; `fronts.csv` +
+> `class_by_geometry.csv`); the adjacent-areas legend rows and mapstyle tokens are GONE; M2 dots fronts (`FRONT_OUTLINE`); `front_sentence` on M1;
+> `propose_examples`: contacts never examples, N2–N3 by `width_new_km`, the two-branch link = slot R1. run002's pre-D23 products frozen in
+> `v2_run002/director_package/_preD23_frozen/` (07's outputs of 09-28 16:14 + the 06 figures not re-rendered since). **Ethan re-runs 04 → 06 → 07 on run003
+> ONLY, then re-pins EXAMPLE_PICKS from the printed proposal; run002 stays as is (historical; not re-run under D25c, disclosed in M4.12).** **First 04 re-run
 > on run002 (accidental, RUN not updated) stopped at G18 → fixed (ratio required only where the width test is reached; zero-new-land bands are
 > near-contiguous); run002's dir is MIXED until 04 completes there. run003: 02 DONE (60 edges, 47 MST, cutoff 13.44 ≈ 4.0 km, 31,103 km²; Dene part 3
 > connected by a tree edge + a backup); 03 not run; then 04 with RUN = v2_run003.** 07 also now has: 03 route options (numbering 1–2

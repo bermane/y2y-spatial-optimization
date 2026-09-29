@@ -180,6 +180,18 @@ rule; quantitative outcomes live there, methods decisions here);
   and the 07 maps (`_near_contiguous_wide`); legend rows after the four. Approximate run002 read (area/length width): ~11 of
   45 links near-contiguous (T’akú Tlatsini ↔ Mount Edziza / Stikine, Dene ↔ Liard River Corridor, Tatonduk ↔ Fishing Branch,
   Wędzih Yiné' ↔ Chase, …), 0 below the width floor, 8 below the length floor (R10, to be measured properly on run003).
+- **M5.24 Option numbers on the band edge (2026-09-29, Ethan; presentation):** on 07 · 03 and the locators the numbered discs
+  sit OUTSIDE their band, on its edge, with no leader, and clear of every other label: a post-draw pass (`director_plot`
+  `post_draw=` on `_wide_map` / `_draw_inset`, run after each panel's labels and limits exist; y2y unaffected, default None)
+  walks from the option's median cell outward — the pinned side first, then the other compass points — to the band's edge plus
+  a few points, and takes the first disc inside the window that overlaps no option band, PA / IPCA fill, town, text label or
+  earlier disc (display-space test with the renderer); a fallback sits on the pinned side's edge. `_option_marker_placer`.
+- **M5.23 N2 re-pinned on run003 + composite options (2026-09-29, Ethan; presentation):** option 1 = Nahanni ↔ Dene Kʼéh
+  Kusān part 2 (the tree edge, pinned explicitly by part label); **option 2 = Nahanni's second way south via part 3** — the
+  backup link Nahanni ↔ part 3 continuing over the part 3 ↔ part 2 link, as ONE option whose band is the union of the two
+  links' bands (`EXAMPLE_PICKS` accepts a list of pairs per option; `_option_masks`, M2 and the pin checks handle the
+  composite). Replaces the pre-D22 option 2 (Liard River Corridor ↔ Nahanni), which is no longer an edge. Numbering 1–8
+  follows the pins; the rest of the slots await the re-pick from `propose_examples` under D25c.
 - **M5.22 Pin rule in code (2026-09-29, presentation):** a pinned example pair that a run's network does not hold no longer
   crashes `package` — `_find_edge` returns None with a printed "PIN RULE FIRES" line, `select_examples` drops the option (or the
   slot when nothing resolves) and renumbers the survivors; 07's setup prints `propose_examples` so the re-pick is in front of
@@ -191,6 +203,24 @@ rule; quantitative outcomes live there, methods decisions here);
   Dene Kʼéh Kusān / Nahanni / Liard River Corridor, B over Gwillim Lake ↔ Pine Le Moray) so the links between the three northern
   areas stay in view whatever the pins hold and A and B share one scale across runs — the y2y fixed-inset rule; drop the key to
   size a window on its slot again.
+- **M4.12 D25c — fronts are corridor land (2026-09-29; applied from `spec/05_patch_D25c_fronts_as_corridors.md`; supersedes
+  the D25 / D25a class and amends D25b):** Ethan's binding principle — nothing that is not protected is taken as given. In
+  `counterfactual_squeeze`: `link_geometry` = contact (D24: width not assessable — width < 8 cells, absent, or path < 10
+  cells), front (path shorter than the barrier-free width), strip (otherwise); `road_crossing` = `lcp_max_cost == 10`,
+  flagged never classed; `near_contiguous` kept as a column (= front) for table continuity. `route_branches` decomposes STRIPS
+  only (fronts: one component by construction, `n_branches` null; contacts: nothing to decompose — disclosed choice). In
+  `classify_links`: contacts by the edge sense only; strips and fronts on D23's eight-cell table with B1 forced true on fronts
+  (`b1_forced`), so the amended route flag on a front is the width condition alone; `link_class` is one of the four corridor
+  classes for every non-zero-cost link. **G24** (G23 retired): one geometry and one class per link, fronts B1-forced and
+  undecomposed, strips decomposed, the class invariant to the road flag, the eight-cell table folded, the 4 × 3 class ×
+  geometry table (`class_by_geometry.csv`), and the amended D25b identity corridor + intra-name + augmentation = total band
+  with `front_area_km2` / `front_share` as descriptors (`fronts.csv` replaces `near_contiguous_links.csv`). Presentation:
+  the adjacent-areas rows retired from `corridors_director.CLASS` and `corridors_mapstyle` (tokens gone); fronts drawn in
+  their class colour; `FRONT_OUTLINE` dotted on M2; `front_sentence` on M1's title; `propose_examples`: contacts never
+  examples, N2–N3 by `width_new_km`, the two-branch link as slot R1, the pin check on contacts. NB04 order unchanged (2b
+  before 4b: the geometry is measured there). Re-run on run003 only (04 → 06 → 07); numbers to R10. **run002 is NOT re-run**
+  (Ethan 2026-09-29): it is the historical record — its pre-D23 products are frozen in `_preD23_frozen/`, its directory
+  otherwise holds the 2026-09-28 D23–D25a re-classification (G18 measured there, R10), and nothing downstream reads it now.
 - **M4.11 D25a / D25b (2026-09-28; applied from `spec/05_patch_D25a_near_contiguous.md`; supersedes the provisional build
   noted under M4.9 below):** sub-classes exactly as the patch — barrier (`lcp_max_cost` ≥ 100), roads or cuts (`lcp_max_cost`
   == 10 or ratio < `squeeze_ratio`), open front (otherwise); `near_contiguous_links.csv` with the five per-link columns (gap_km,

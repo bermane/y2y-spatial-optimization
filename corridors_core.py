@@ -243,7 +243,7 @@ _H7_FILES = ("node_parts.csv", "node_parts.gpkg", "multipart_review.csv")
 # files when present; absent in the north.
 _NODE_FILES = ("node_names.csv",
                # v3 contraction (D-W3): the membership + names + geometry + the v2 sliver table, pinned like the H7 files
-               "complex_membership.csv", "complex_names.csv", "complexes.gpkg", "slivers_v2.csv", "complexes_summary.json")
+               "complex_membership.csv", "complex_names.csv", "complexes.gpkg", "slivers_v2.csv", "complexes_summary.json", "fronts_v2.gpkg")
 
 
 def _review_signed(path):
@@ -2419,14 +2419,14 @@ def route_branches(A):
     bfrac, bcells = float(A.cfg["branch_min_frac"]), int(A.cfg["branch_min_cells"])
     cutoff_b = bm * A.cutoff
     legacy_cells = max(1, int(round(10.0 / A.cell_km2)))          # the retired fixed floor (10 km2), for G21 only
-    # D25 (2026-09-28): near-contiguous links get NO branch decomposition -- the counterfactual step (which measures the
-    # barrier-free width) must therefore run first; notebook 04 orders step 2b before 4b.
-    if "near_contiguous" not in A.edges.columns:
-        raise RuntimeError("route_branches: run cc.counterfactual_squeeze(A) FIRST (D25: near-contiguous links are excluded "
-                           "from the branch decomposition, and D24's floor is measured there) -- notebook 04 step 2b before 4b")
-    eids = [e for e in A.edges.index
-            if A.edges.loc[e, "cost"] > 0 and not A.edges.loc[e, "is_adjacency"] and not bool(A.edges.loc[e, "near_contiguous"])]
-    n_skipped = int(A.edges["near_contiguous"].sum())
+    # D25c (2026-09-29): only STRIPS are decomposed -- a front is one component by construction (its route sense is the width
+    # ratio alone; n_branches written null, B1 forced true in classify_links) and a contact has nothing to decompose. The
+    # counterfactual step (which measures the geometry) must therefore run first; notebook 04 orders step 2b before 4b.
+    if "link_geometry" not in A.edges.columns:
+        raise RuntimeError("route_branches: run cc.counterfactual_squeeze(A) FIRST (D25c: the link geometry -- strip / front / contact -- "
+                           "decides which links are decomposed) -- notebook 04 step 2b before 4b")
+    eids = [e for e in A.edges.index if A.edges.loc[e, "link_geometry"] == "strip"]
+    n_skipped = int(A.edges["link_geometry"].isin(["front", "contact"]).sum())
 
     lab_out = np.zeros(A.shape, "int32")
     lab_pri = np.full(A.shape, np.inf, "float32")     # overlap resolution: lower min_slack wins
@@ -2515,7 +2515,7 @@ def route_branches(A):
     n_multi = int((A.edges.get("n_branches", pd.Series(dtype=float)) > 1).sum())
     n_topo = int((A.edges.get("route_irreplaceable_topo", pd.Series(dtype=bool)) == True).sum())
     print(f"route branches @ {bm:g}x cutoff ({cutoff_b:,.0f}): {len(br)} branches over "
-          f"{len(eids)} edges ({n_skipped} near-contiguous links not decomposed, D25) | {n_topo} one-branch edges (topology), "
+          f"{len(eids)} strips ({n_skipped} fronts / contacts not decomposed, D25c) | {n_topo} one-branch strips (topology), "
           f"{n_multi} with alternatives | {n_dropped} slivers dropped under the relative floor "
           f"(>= {bfrac:g} x band AND >= {bcells} cells, D26)")
     # G21 -- the floor's effect: dropped-fraction distribution, and every link whose branch count differs from the retired fixed floor
@@ -2553,42 +2553,23 @@ def route_branches(A):
 
 
 # ================= the link classes (D23 / D24 / D25) =================
-LINK_CLASS_LABEL = {                       # internal key -> director string (spec 06 §3; D23 top-class string, D25 / D25a rows)
-    "both": "Only viable connection — no alternative link or route, and the land is already narrowing",
+LINK_CLASS_LABEL = {                       # internal key -> director string (spec 06 §3; D23 top-class string). D25c: four classes only --
+    "both": "Only viable connection — no alternative link or route, and the land is already narrowing",   # the adjacent-areas rows are retired
     "edge": "Last affordable link — alternatives cost far more",
     "squeezed": "Already narrowing — corridor below its natural width",
     "securing": "Corridor land with options — route and partners can be chosen",
-    "near_contiguous_open": "Adjacent areas — open front",
-    "near_contiguous_roads": "Adjacent areas — front crossed by roads or cuts",
-    "near_contiguous_barrier": "Adjacent areas — barrier between",
     "adjacency": "touching (zero-cost adjacency; not a link on the map)",
 }
 CORRIDOR_CLASSES = ("securing", "squeezed", "edge", "both")
-NEAR_CLASSES = ("near_contiguous_open", "near_contiguous_roads", "near_contiguous_barrier")
+GEOMETRIES = ("strip", "front", "contact")
 
 
-def _near_subclass(path_max_cost, ratio, rmax):
-    """D25a (spec chat 2026-09-28, PROVISIONAL until the patch lands): the near-contiguous sub-class from the maximum cost class
-    on the least-cost path and the actual band's width ratio (D17, assessable on a near-contiguous link). barrier = a cost >= 100
-    cell on the path; roads = cost 10 on the path OR the front already below the squeeze threshold; open = cost-1 ground and a
-    ratio at or above it (a front with no width to measure counts as open). Nothing new is tuned: the squeeze ratio and the
-    surface's own classes."""
-    mc = float(path_max_cost) if pd.notna(path_max_cost) else 1.0
-    if mc >= 100:
-        return "near_contiguous_barrier"
-    if mc >= 10 or (pd.notna(ratio) and float(ratio) < rmax):
-        return "near_contiguous_roads"
-    return "near_contiguous_open"
-
-
-def _link_class(adj, near_sub, unass, E, B1, S):
-    """The spec 05 §6 precedence, top-down, first match wins (D25 / D25a rows, then the D24 gate, then D23's eight-cell table).
-    `near_sub` = None or one of NEAR_CLASSES."""
+def _link_class(adj, contact, E, B1, S):
+    """The spec 05 §6 precedence under D25c, top-down, first match wins: touching -> not a link; contact -> the edge sense only;
+    strip or front -> D23's eight-cell table (B1 already forced true on a front by the caller)."""
     if adj:
         return "adjacency"
-    if near_sub:
-        return near_sub
-    if unass:
+    if contact:
         return "edge" if E else "securing"
     if E and B1 and S:
         return "both"
@@ -2606,38 +2587,39 @@ def classify_links(A, floors=None, verbose=True):
     (G18) and floor_effect.csv (G19) into the run dir. `floors` = (width_floor_cells, len_floor_cells) override for the G19
     diagnostic only (never written)."""
     e = A.edges
-    need = [c for c in ("near_contiguous", "width_not_assessable", "squeeze_ratio_obs", "n_branches", "edge_irreplaceable") if c not in e.columns]
+    need = [c for c in ("link_geometry", "width_not_assessable", "squeeze_ratio_obs", "n_branches", "edge_irreplaceable") if c not in e.columns]
     if need:
         raise RuntimeError(f"classify_links: missing {need} -- run counterfactual_squeeze then route_branches first")
     rmax = float(A.cfg["squeeze_ratio"])
     wf, lf = floors if floors else (float(A.cfg["width_floor_cells"]), float(A.cfg["len_floor_cells"]))
     nz = (e["cost"] > 0) & (~e["is_adjacency"])
-    near = e["near_contiguous"].astype(bool)
-    narrow_front = e["open_ground_width_med"].isna() | (e["open_ground_width_med"] < wf)
-    if not floors:                                                     # G23 ordering: the width floor precedes the trigger
-        assert not (near & narrow_front).any(), "G23 FAILED: a near-contiguous link sits below the width floor (D24 applies first)"
-    else:                                                              # the diagnostic floors re-derive the trigger the same way
-        near = nz & ~narrow_front & (e["lcp_len_cells"] < e["open_ground_width_med"]).fillna(False)
-    unass = nz & ~near & (narrow_front | (e["lcp_len_cells"] < lf))
+    ogw = e["open_ground_width_med"]
+    unass = nz & (ogw.isna() | (ogw < wf) | (e["lcp_len_cells"] < lf))                  # D24 -> contact
+    front = (nz & ~unass & (e["lcp_len_cells"] < ogw)).fillna(False).astype(bool)          # D25c descriptor
+    if not floors:
+        assert (front == e["link_geometry"].eq("front")).all() and (unass == e["link_geometry"].eq("contact")).all(), \
+            "G24 FAILED: link_geometry disagrees with the D24 floor / front trigger re-derived here"
     E = e["edge_irreplaceable"] == True
-    B1 = e["n_branches"] == 1
+    B1 = (e["n_branches"] == 1) | front                                                    # D25c: B1 forced true on a front (one component by construction)
     S = e["squeeze_ratio_obs"] < rmax
-    subs = [(_near_subclass(e.loc[k, "lcp_max_cost"], e.loc[k, "squeeze_ratio_obs"], rmax) if bool(near[k]) else None) for k in e.index]
-    cls = pd.Series([_link_class(bool(a), n, bool(u), bool(x), bool(y), bool(z))
-                     for a, n, u, x, y, z in zip(e["is_adjacency"], subs, unass, E, B1, S)], index=e.index)
+    cls = pd.Series([_link_class(bool(a), bool(u), bool(x), bool(y), bool(z))
+                     for a, u, x, y, z in zip(e["is_adjacency"], unass, E, B1, S)], index=e.index)
     if floors:                                                     # diagnostic call: return the classes, touch nothing
         return cls
+    near = front                                                   # (name kept for the descriptor lines below)
     e["width_not_assessable"] = unass.astype(bool)
-    e["squeezed"] = (nz & ~near & ~unass & S).astype(bool)
-    e["route_irreplaceable_topo"] = (B1 & nz).astype(bool)
-    e["route_irreplaceable"] = (nz & ~near & ~unass & B1 & S).astype(bool)          # D12 amended: one branch AND narrow
+    e["b1_forced"] = front
+    e["squeezed"] = (nz & ~unass & S).astype(bool)
+    e["route_irreplaceable_topo"] = ((e["n_branches"] == 1) & nz).astype(bool)
+    e["route_irreplaceable"] = (nz & ~unass & B1 & S).astype(bool)                       # D12 amended: one branch (forced on fronts) AND narrow
     e["link_class"] = cls
     e["link_class_label"] = cls.map(LINK_CLASS_LABEL)
     counts = cls[nz].value_counts()
-    # ---- G18: the eight-cell table over E x B1 x S for the links that reach it, before any class raster ----
-    reach = nz & ~near & ~unass
-    tt = (pd.DataFrame({"E": E[reach].astype(int), "B1": B1[reach].astype(int), "S": S[reach].astype(int), "link_class": cls[reach]})
-          .groupby(["E", "B1", "S", "link_class"]).size().rename("n").reset_index().sort_values(["E", "B1", "S"], ascending=False))
+    # ---- G18: the eight-cell table over E x B1 x S for the links that reach it (fronts folded in under B1 = true), before any class raster ----
+    reach = nz & ~unass
+    tt = (pd.DataFrame({"E": E[reach].astype(int), "B1": B1[reach].astype(int), "S": S[reach].astype(int), "link_class": cls[reach],
+                        "geometry": e.loc[reach, "link_geometry"]})
+          .groupby(["E", "B1", "S", "link_class", "geometry"]).size().rename("n").reset_index().sort_values(["E", "B1", "S"], ascending=False))
     tt.to_csv(A.run_dir / "class_truth_table.csv", index=False)
     for k in CORRIDOR_CLASSES:
         assert int(tt.loc[tt.link_class == k, "n"].sum()) + int(((cls == k) & unass).sum()) == int(counts.get(k, 0)), \
@@ -2648,7 +2630,7 @@ def classify_links(A, floors=None, verbose=True):
     missing_ratio = list(e.index[reach & e["squeeze_ratio_obs"].isna()])
     assert not missing_ratio, f"G18 FAILED: squeeze_ratio_obs is null on link(s) that reach the width test: {missing_ratio}"
     no_ratio = e.index[nz & ~reach & e["squeeze_ratio_obs"].isna()]
-    reasons = {k: ("near-contiguous" if bool(near[k]) else ("no counterfactual band" if pd.isna(e.loc[k, "open_ground_width_med"]) else "below the resolution floor")) for k in no_ratio}
+    reasons = {k: ("contact: no counterfactual band" if pd.isna(e.loc[k, "open_ground_width_med"]) else "contact: below the resolution floor") for k in no_ratio}
     old_top = list(e.index[reach & E & B1 & ~S])                                   # only-viable under the retired rule, not now
     A.rec["g18"] = dict(truth_table=tt.to_dict("records"), old_rule_only_viable_now_last_affordable=old_top,
                         n_only_viable=int(counts.get("both", 0)))
@@ -2659,17 +2641,26 @@ def classify_links(A, floors=None, verbose=True):
         c2 = classify_links(A, floors=(wf * mult, lf * mult), verbose=False)
         alt[tag] = int((c2[nz] != cls[nz]).sum())
     moved = max(alt.values()) / max(int(nz.sum()), 1)
-    assert not (near & e["n_branches"].notna()).any(), "G19 FAILED: a near-contiguous link carries a branch decomposition"
-    assert not (near & cls.isin(CORRIDOR_CLASSES)).any(), "G19 FAILED: a near-contiguous link carries a corridor class"
-    assert not (unass & e["squeezed"]).any(), "G19 FAILED: a width-not-assessable link is classed squeezed"
-    # ---- D25a per-link report + the near-contiguous band area as its own line (the deck's corridor figure must not count fronts) ----
-    nc = e.index[near]
+    assert not (front & e["n_branches"].notna()).any(), "G19/G24 FAILED: a front carries a branch decomposition"
+    assert not (unass & e["squeezed"]).any(), "G19 FAILED: a contact (width not assessable) is classed squeezed"
+    # ---- G24 (D25c, one scale): one geometry and one class per link; fronts B1-forced; strips decomposed; the road flag never classes ----
+    assert (e.loc[nz, "link_geometry"].isin(GEOMETRIES)).all() and (cls[nz].isin(CORRIDOR_CLASSES)).all(), "G24 FAILED: a link lacks a geometry or a corridor class"
+    assert cls[unass].isin(["securing", "edge"]).all(), "G24 FAILED: a contact carries a class beyond the edge sense"
+    strips = e["link_geometry"].eq("strip")
+    assert e.loc[strips, "n_branches"].notna().all(), "G24 FAILED: a strip has no branch decomposition"
+    cls_toggled = pd.Series([_link_class(bool(a), bool(u), bool(x), bool(y), bool(z)) for a, u, x, y, z in zip(e["is_adjacency"], unass, E, B1, S)], index=e.index)
+    assert (cls_toggled == cls).all(), "G24 FAILED: the class depends on the road-crossing flag"   # the flag is not an input; asserted for the record
+    xg = pd.crosstab(cls[nz], e.loc[nz, "link_geometry"]).reindex(index=list(CORRIDOR_CLASSES), columns=list(GEOMETRIES), fill_value=0)
+    xg.index.name = "link_class"; xg.columns.name = "link_geometry"
+    xg.to_csv(A.run_dir / "class_by_geometry.csv")
+    # ---- D25c: the front descriptor table (gap, barrier-free width, ratio, lcp_max_cost, road flag, the two areas' sizes) ----
+    nc = e.index[front]
     def _unit_km2(u):
         try:
             return float(np.asarray(A.nodes[int(u)][1]).sum()) * A.cell_km2
         except Exception:
             return np.nan
-    rep_df = pd.DataFrame([dict(edge_id=k, label_i=e.loc[k, "label_i"], label_j=e.loc[k, "label_j"], subclass=cls[k],
+    rep_df = pd.DataFrame([dict(edge_id=k, label_i=e.loc[k, "label_i"], label_j=e.loc[k, "label_j"],
                                 gap_km=float(e.loc[k, "centreline_km"]), open_ground_width_med=float(e.loc[k, "open_ground_width_med"]),
                                 open_ground_width_km=float(e.loc[k, "open_ground_width_med"]) * A.cell_km,
                                 squeeze_ratio_obs=(float(e.loc[k, "squeeze_ratio_obs"]) if pd.notna(e.loc[k, "squeeze_ratio_obs"]) else np.nan),
@@ -2677,25 +2668,25 @@ def classify_links(A, floors=None, verbose=True):
                                 area_i_km2=_unit_km2(e.loc[k, "i"]), area_j_km2=_unit_km2(e.loc[k, "j"]),
                                 edge_irreplaceable=bool(e.loc[k, "edge_irreplaceable"]), band_new_km2=float(e.loc[k, "band_new_km2"]))
                            for k in nc]).sort_values("gap_km") if len(nc) else pd.DataFrame()
-    rep_df.to_csv(A.run_dir / "near_contiguous_links.csv", index=False, encoding="utf-8-sig")
-    # ---- D25b: near-contiguous area is NOT corridor area -- the per-edge band sums partitioned by kind (G23's identity) ----
+    if len(rep_df):
+        rep_df["road_crossing"] = [bool(e.loc[k, "road_crossing"]) for k in rep_df.edge_id]; rep_df["link_class"] = [cls[k] for k in rep_df.edge_id]
+    rep_df.to_csv(A.run_dir / "fronts.csv", index=False, encoding="utf-8-sig")
+    # ---- D25b (amended by D25c): corridor area INCLUDES fronts; front area / share are descriptors; the three-way identity ----
     bn = e["band_new_km2"].fillna(0.0)
     intra = e["edge_class"].eq("intra_name")
     backup = (e["in_mst"] == False) & ~e["is_adjacency"] & ~intra
-    acct = dict(near_contiguous_area_km2=float(bn[near].sum()),
-                intra_name_area_km2=float(bn[intra & ~near].sum()),
-                augmentation_area_km2=float(bn[backup & ~near].sum()),
-                corridor_area_km2=float(bn[nz & ~near & ~intra & ~backup].sum()),
-                total_band_area_km2=float(bn[nz | intra].sum()))
-    A.near_contiguous_km2 = acct["near_contiguous_area_km2"]; A.band_accounting = acct
-    # ---- G23: the front check ----
-    assert e.loc[near, "squeeze_ratio_obs"].notna().all() and e.loc[near, "lcp_max_cost"].notna().all(), \
-        "G23 FAILED: a near-contiguous link lacks squeeze_ratio_obs or lcp_max_cost"
-    assert sum(int((cls == k).sum()) for k in NEAR_CLASSES) == int(near.sum()), "G23 FAILED: sub-class counts do not sum to the near-contiguous count"
-    parts_sum = acct["corridor_area_km2"] + acct["near_contiguous_area_km2"] + acct["intra_name_area_km2"] + acct["augmentation_area_km2"]
+    acct = dict(corridor_area_km2=float(bn[nz & ~intra & ~backup].sum()),
+                intra_name_area_km2=float(bn[intra].sum()),
+                augmentation_area_km2=float(bn[backup].sum()),
+                total_band_area_km2=float(bn[nz | intra].sum()),
+                front_area_km2=float(bn[front].sum()))
+    acct["front_share"] = (acct["front_area_km2"] / acct["total_band_area_km2"]) if acct["total_band_area_km2"] > 0 else 0.0
+    A.band_accounting = acct
+    parts_sum = acct["corridor_area_km2"] + acct["intra_name_area_km2"] + acct["augmentation_area_km2"]
     assert abs(parts_sum - acct["total_band_area_km2"]) <= 1e-6 * max(acct["total_band_area_km2"], 1.0), \
-        f"G23 FAILED: corridor + near-contiguous + intra-name + augmentation ({parts_sum:,.1f}) != total band area ({acct['total_band_area_km2']:,.1f})"
-    A.rec["d25a"] = dict(n_near_contiguous=int(len(nc)), by_subclass={k: int((cls == k).sum()) for k in NEAR_CLASSES}, **acct)
+        f"G24 FAILED: corridor + intra-name + augmentation ({parts_sum:,.1f}) != total band area ({acct['total_band_area_km2']:,.1f})"
+    A.rec["d25c"] = dict(n_by_geometry={g: int((e.loc[nz, "link_geometry"] == g).sum()) for g in GEOMETRIES}, class_by_geometry=xg.to_dict(),
+                         n_road_crossing=int(e.loc[nz, "road_crossing"].sum()), **acct)
     fe = pd.DataFrame([dict(floor="registered", width_floor_cells=wf, len_floor_cells=lf, **{k: int(counts.get(k, 0)) for k in LINK_CLASS_LABEL if k != "adjacency"})]
                       + [dict(floor=tag, width_floor_cells=wf * m, len_floor_cells=lf * m,
                               **{k: int((classify_links(A, floors=(wf * m, lf * m), verbose=False)[nz] == k).sum()) for k in LINK_CLASS_LABEL if k != "adjacency"})
@@ -2705,13 +2696,12 @@ def classify_links(A, floors=None, verbose=True):
                         moved_doubled=alt["doubled"], moved_frac_max=float(moved))
     (A.run_dir / "run_config.json").write_text(json.dumps(A.rec, indent=2, ensure_ascii=False))
     if verbose:
-        print("link classes (D23/D24/D25 precedence; the single source):  " + " · ".join(f"{k} {int(counts.get(k, 0))}" for k in LINK_CLASS_LABEL if k != "adjacency"))
-        sub = A.rec["d25a"]["by_subclass"]
-        print(f"  D25a: {len(nc)} near-contiguous link(s) -> near_contiguous_links.csv (gap, front width, ratio, lcp_max_cost, the two areas' sizes): "
-              f"open front {sub['near_contiguous_open']} · roads or cuts {sub['near_contiguous_roads']} · barrier {sub['near_contiguous_barrier']}")
-        print(f"  G23 OK (D25b accounting, per-edge band sums): corridor {acct['corridor_area_km2']:,.0f} + near-contiguous fronts {acct['near_contiguous_area_km2']:,.0f} "
-              f"+ intra-name {acct['intra_name_area_km2']:,.0f} + augmentation {acct['augmentation_area_km2']:,.0f} = {acct['total_band_area_km2']:,.0f} km²; "
-              f"{len(nc)} of {int(nz.sum())} links join areas that are effectively adjacent -- corridor design is a question about the remaining {int(nz.sum()) - len(nc)}")
+        print("link classes (D23 on one scale, D25c; the single source):  " + " · ".join(f"{k} {int(counts.get(k, 0))}" for k in CORRIDOR_CLASSES))
+        print("  G24 OK -- class x geometry (-> class_by_geometry.csv):\n" + "\n".join("      " + l for l in xg.to_string().splitlines()))
+        print(f"  D25c: {len(nc)} front(s) -> fronts.csv (gap, barrier-free width, ratio, lcp_max_cost, road flag, the two areas' sizes); "
+              f"{int(e.loc[nz, 'road_crossing'].sum())} road crossing(s) flagged (never classed)")
+        print(f"  D25b (amended): corridor {acct['corridor_area_km2']:,.0f} (fronts INCLUDED: {acct['front_area_km2']:,.0f} km² = {100*acct['front_share']:.0f}% of the band) "
+              f"+ intra-name {acct['intra_name_area_km2']:,.0f} + augmentation {acct['augmentation_area_km2']:,.0f} = {acct['total_band_area_km2']:,.0f} km²")
         print(f"  G18 OK: eight-cell table -> class_truth_table.csv; {len(old_top)} link(s) only-viable under the retired rule but not "
               f"now (E and one branch, land NOT narrowing): {old_top or 'none'}" + ("  -> the 06 example-regeneration rule FIRES (post-pin class change)" if old_top else ""))
         if reasons:
@@ -2901,22 +2891,26 @@ def counterfactual_squeeze(A, cache=True, tol=0.02):
     A.edges["lcp_len_cells"] = A.edges["centreline_cells"].astype(float)
     A.edges["lcp_max_cost"] = pd.Series(pmax).reindex(A.edges.index)                       # D25a: the maximum cost class on the least-cost path
     A.edges["crosses_cost_1000"] = pd.Series(x1000).reindex(A.edges.index).fillna(False).astype(bool)
-    # ordering (D25a patch, G23): the WIDTH floor applies before the near-contiguous trigger -- a link whose barrier-free front is
-    # narrower than width_floor_cells (or absent: no counterfactual band, e.g. E017_035 Gladys Lake ↔ Spatsizi on run002) is
-    # width-not-assessable, never near-contiguous. The LENGTH floor applies only off fronts: a short path between two facing
-    # areas IS the near-contiguous case, not a resolution problem.
+    # D25c (2026-09-29, Ethan's principle: nothing unprotected is taken as given): the front trigger is a GEOMETRY DESCRIPTOR, not a
+    # class. link_geometry = "contact" if the width test is not assessable (D24: barrier-free width below width_floor_cells, or
+    # absent, or path shorter than len_floor_cells); "front" if the path is shorter than the barrier-free width (the retired D25
+    # trigger); "strip" otherwise. Fronts and strips are classed on ONE pressure scale (classify_links); contacts by the edge
+    # sense only. `near_contiguous` is kept as a column (= front) for table continuity with the 2026-09-28 runs.
     ogw = A.edges["open_ground_width_med"]
-    narrow_front = ogw.isna() | (ogw < wfloor)
-    A.edges["near_contiguous"] = (nz & ~narrow_front & (A.edges["lcp_len_cells"] < ogw)).fillna(False).astype(bool)
-    A.edges["width_not_assessable"] = (nz & ~A.edges["near_contiguous"] & (narrow_front | (A.edges["lcp_len_cells"] < lfloor))).astype(bool)
-    assessable = eligible & ~A.edges["near_contiguous"] & ~A.edges["width_not_assessable"]
+    A.edges["width_not_assessable"] = (nz & (ogw.isna() | (ogw < wfloor) | (A.edges["lcp_len_cells"] < lfloor))).astype(bool)
+    front = (nz & ~A.edges["width_not_assessable"] & (A.edges["lcp_len_cells"] < ogw)).fillna(False).astype(bool)
+    A.edges["near_contiguous"] = front
+    geom = pd.Series("", index=A.edges.index, dtype=object)
+    geom[nz] = "strip"; geom[front] = "front"; geom[A.edges["width_not_assessable"]] = "contact"
+    A.edges["link_geometry"] = geom
+    A.edges["road_crossing"] = (A.edges["lcp_max_cost"] == 10)                   # flagged, never classed (D25c)
+    assessable = eligible & ~A.edges["width_not_assessable"]
     A.edges["squeezed"] = assessable & (A.edges["squeeze_ratio_obs"] < rmax)      # provisional: classify_links (after the branches) is the record
-    print(f"  D24/D25: {int(A.edges['near_contiguous'].sum())} near-contiguous link(s) (path shorter than the barrier-free width; "
-          f"{int((A.edges['near_contiguous'] & A.edges['crosses_cost_1000']).sum())} with a cost-1000 barrier on the path), "
-          f"{int(A.edges['width_not_assessable'].sum())} width-not-assessable (floors {wfloor:g} cells wide / {lfloor:g} cells long), "
-          f"{int(assessable.sum())} assessable of {int(nz.sum())} non-zero-cost")
+    print(f"  D24/D25c geometry: {int((geom == 'strip').sum())} strips, {int(front.sum())} fronts (path shorter than the barrier-free width; "
+          f"classed on width alone), {int(A.edges['width_not_assessable'].sum())} contacts (width test not assessable: floors {wfloor:g} cells wide / "
+          f"{lfloor:g} cells long; edge sense only) of {int(nz.sum())} non-zero-cost; road crossings flagged on {int(A.edges['road_crossing'].sum())}")
     # ---- D28 (2026-09-28): pinch-aware width -- width_ratio_p10 / p50 = quantiles of the per-position real/counterfactual
-    # cross-section ratio, pinch_pos = the fractional position of the minimum. REPORTED, NOT CLASSED; only for assessable links.
+    # cross-section ratio, pinch_pos = the fractional position of the minimum. REPORTED, NOT CLASSED; strips and fronts (D25c).
     for d in (p10, p50, ppos):
         for eid in [k for k in d if not bool(assessable.get(k, False))]:
             d.pop(eid)
@@ -3411,7 +3405,7 @@ def write_run(A):
                  "alt_cost", "alt_len_km", "alt_mean_res", "alt_kind",                      # D29
                  "width_ratio_p10", "width_ratio_p50", "pinch_pos",                         # D28
                  "open_ground_width_med", "lcp_len_cells", "width_not_assessable",          # D24
-                 "near_contiguous", "lcp_max_cost", "crosses_cost_1000",                    # D25 / D25a
+                 "near_contiguous", "lcp_max_cost", "crosses_cost_1000", "link_geometry", "road_crossing", "b1_forced",   # D25 / D25c
                  "route_irreplaceable_topo", "link_class", "link_class_label",              # D23 / D12 amended
                  "branch_dropped_n", "branch_dropped_max_frac", "n_branches_fixed_floor",   # D26 / G21
                  "n_branches", "route_irreplaceable", "band_new_km2", "band_cf_km2",
@@ -4853,15 +4847,12 @@ def _edge_squeeze(edges, cutoff, cost_per_km_intact=10.0 / 3.0):
 def _routing_classes(R, squeeze_max=0.5):
     """The routing-regime edge classes shared by routing_problem_map and its zoom panel."""
     e = _edge_squeeze(R.edges, R.cutoff)
-    if "link_class" in e.columns:                                   # D23/D24/D25 (2026-09-28): classify_links is the single source
+    if "link_class" in e.columns:                                   # D23 / D25c: classify_links is the single source; four classes only
         lc = e["link_class"]
         return e, [
             (LINK_CLASS_LABEL["both"], e.index[lc == "both"], "#d73027"),
             (LINK_CLASS_LABEL["edge"], e.index[lc == "edge"], "#fc8d59"),
             (LINK_CLASS_LABEL["squeezed"], e.index[lc == "squeezed"], "#dfb515"),
-            (LINK_CLASS_LABEL["near_contiguous_open"], e.index[lc == "near_contiguous_open"], "#D9D9D9"),
-            (LINK_CLASS_LABEL["near_contiguous_roads"], e.index[lc == "near_contiguous_roads"], "#D9D9D9"),
-            (LINK_CLASS_LABEL["near_contiguous_barrier"], e.index[lc == "near_contiguous_barrier"], "#D9D9D9"),
         ]
     ri = e.get("route_irreplaceable", pd.Series(False, index=e.index))
     ei = e["edge_irreplaceable"] if "edge_irreplaceable" in e.columns else e["irreplaceable"]   # D27: the class-eligible flag (runs before it: the raw flag)

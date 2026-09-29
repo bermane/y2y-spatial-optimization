@@ -79,7 +79,7 @@ Expected consequences, to be reported as they land rather than assumed:
 - Node count drops from 130 (or 66) to the number of complexes; link count drops to the inter-complex links, the 40 corridor links of v2 being the upper bound.
 - D7 no-affordable-alternative becomes meaningful: in v2, 43 of 47 were slivers with no alternative because no other node lay between them. The four corridor-level irreplaceables are the expected list.
 - Per-edge centrality is computed once, on the contracted graph, with no intra-complex edges; bridge-backup redundancy is assessed between ecosystems.
-- D25 can still fire between two complexes with wide facing fronts; if it does, the pair is merged and the merge is logged (a second-pass contraction, same rule).
+- No second-pass merge. An inter-complex link that comes back near-contiguous is a front and is classed on the same D23 pressure scale with width as the route sense (northern reframe of 2026-09-29); complexes are fixed from the v2 patch-level adjacency and are a topology device, not a claim that the fronts inside them are secure.
 - Route-branch decomposition (D26, relative floor) applies to corridor links only; near-contiguous edges get no decomposition, as in v2.
 
 The class truth table keeps its eight cells. An empty top class ("only viable connection") is reported as measured: no link is at once isolated, single-route and narrow. Bob Marshall ↔ Mission Mountains (two branches under the relative floor, median width ratio 0.31, tenth-percentile 0.05) is reported as "last affordable" with its p10 ratio alongside and flagged as the G21 boundary case; the decomposition is not reopened to change its class.
@@ -92,7 +92,7 @@ The product is two layers with equal standing. The northern package's premise (n
 
 **Layer B — inter-complex corridors.** The corridor links from section 4 with their class, D29 alternative kind, median and tenth-percentile width ratio, branch count, band land (km², dissolved per link), share of band land outside PAs and IPCAs, W11 already-connected status, and the two complexes' protection shares from Layer A. The headline statistic is the count of corridor links whose band crosses unprotected land (37 of 40 in v2) and the corridor land outside PAs and IPCAs.
 
-**What is not in the product.** Band land for near-contiguous edges (27,060 km² in v2) is inside the complexes and is not corridor land; it is not drawn, not summed into corridor land, and appears only as the complex area it belongs to.
+**What is not in the product.** Nothing unprotected is taken as given. Within-complex fronts are corridors: each is classed from the v2 patch-level outputs on the same D23 table (edge sense from D7; route sense = width ratio alone, since a front has no branches; a front is cut when the least-cost path carries cost 10 or the width ratio is below the squeeze threshold), reported in a per-complex table separate from the inter-complex network so the two levels do not share class counts, and drawn (section 8). Front area is reported on its own line, never summed into inter-complex corridor land.
 
 ## 6. Baseline comparison
 
@@ -132,7 +132,7 @@ The tuning prohibition applies to D25, D31, β, the width-test floors and the ti
 
 **Acts.** Re-cut after contraction. Keep three latitude acts (58.5 / 51 °N) only if the central act carries a message of its own; at 2/4/7 in v2 it read as a transition zone, and two acts is the default. Before choosing, check which act the Banff–Yoho links fall in: the 51°N break sits about 20 km south of the Trans-Canada at Banff, and that corridor is the best-documented wolverine fragmentation in the region, so it must not straddle a presentation seam. Move the break to the Bow Valley if it does, and register the reason.
 
-**Map.** Complexes draw as merged outlines with protection shading; no interior bands. Corridor links draw by class with the tenth-percentile pinch marked on each. Near-contiguous bands are not drawn; the count of within-complex slivers and the number containing a road appear in each complex's label or the legend. Refugia nodes are named as refugia, not as the nearest PA — "Refugium (Sustut)", not "Sustut Park" — so a reader cannot take a node for protected land. Rename in `node_names.csv`; the six Nááts'Ihch'Oh variants collapse under one complex.
+**Map.** Complexes draw as merged outlines with protection shading; no interior bands. Corridor links draw by class with the tenth-percentile pinch marked on each. Within-complex fronts are drawn as corridors: open fronts as a light "options" tint merged across the complex interior; cut fronts in the narrowing colour with an outline; last-affordable and only-viable fronts in their class colours; inter-complex links at full line weight over them. Front counts by class appear per complex in the legend. Refugia nodes are named as refugia, not as the nearest PA — "Refugium (Sustut)", not "Sustut Park" — so a reader cannot take a node for protected land. Rename in `node_names.csv`; the six Nááts'Ihch'Oh variants collapse under one complex.
 
 **Accounting.** Corridor land is a dissolved union (52,572 km² in v2). Per-class band land is reported as a dissolved union per class, or the column is labelled as per-link sums; in v2 the per-class sums (42,312 km² corridor + 27,060 km² near-contiguous) exceeded the union by 16,800 km² and would have been added by a reader. Branch counts are reported as links with n branches, so the total reconciles.
 
@@ -164,7 +164,7 @@ New entries (numbering to follow the register; the northern package's D numbers 
 | D-W3 | Nodes contracted into complexes (connected components of D25) for the whole graph, not centrality only. | D25 fires on 76% of raw edges; raw topology, D7 and centrality are density artefacts. |
 | D-W4 | Two-layer product with complex protection coverage reported alongside corridors. | Refugia are unprotected by definition; the northern premise that nodes are secured does not hold. |
 | D-W5 | Baseline comparison at LCP-centreline level between fixed complex pairs; bands not compared. | Slack on walled paths sets band width by barrier count and confounds the comparison. |
-| D-W6 | Near-contiguous bands not drawn and not counted as corridor land. | They are interior to complexes. |
+| D-W6 | Within-complex fronts classed on the D23 pressure scale (width as route sense), reported and drawn at their own level; front area reported separately from inter-complex corridor land; no second-pass merge of complexes. | Mirrors the northern reframe of 2026-09-29: unprotected ground between adjacent areas is a corridor with room, not a secured block; two reporting levels keep patch-density edge sense from drowning the inter-ecosystem irreplaceables. |
 | D-W7 | Node naming as refugia, not as nearest PA. | Prevents reading nodes as protected land. |
 | D31 (note) | Allowance inherited at 4.09 km; no wolverine-specific allowance derived. | No evidence to derive one from; any movement-based value would merge the network; the calibration clause is recorded as not exercised. |
 

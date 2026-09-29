@@ -282,6 +282,24 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
   from Jasper to the Bitterroots — the wide-front case the spec anticipated: recorded, the allowance NOT touched). Audit objects
   rewritten and renumbered north → south (Glacier is C13 as before; Yellowstone C22); `v25_run001` stays on disk as the pass-1 record
   (no network products written); the run is `v25_run002` (config `v25.run_id`).
+- **M7.8 Fronts as corridors, and the interior D7 reading (spec §1a / §5 / §8 / D-W6 revised by Ethan 2026-09-29, mirroring the northern
+  D25c; chat ruling the same day):** (i) NO second-pass merge — complexes are fixed from the v2 adjacency (23) and an inter-complex link
+  that comes back near-contiguous is a front classed on the same pressure scale (the engine's D25c: one component, width as the route
+  sense). The C12 + C20 merge of M7.7 is UNDONE (audit objects regenerated; `v25_run001` / `v25_run002` remain as the merge-era records;
+  the run is `v25_run003`). The pair was REAL, not a naming artefact: the Jasper complex's southern tail (Cabinet Mountains, Barktable
+  Ridge, 47.8–48.2 °N) faces the Selway-Bitterroot complex's northern patch across ~17 km of the Clark Fork valley; 700 km is the
+  centroid distance of two elongated complexes. (ii) Every within-complex link (the 130 near-contiguous ones + the 3 corridor-class
+  links with both ends in one complex) is a FRONT: route sense = width alone (CUT when the least-cost path carries cost 10 or the width
+  ratio is below 0.5), drawn as corridors under the inter-complex links (open = the Minimum tint merged across the interior; cut = the
+  Some colour with an outline), reported in a per-complex table separate from Layer B, front area on its own line (never summed into
+  inter-complex corridor land). (iii) The edge sense on fronts: the ruling = D7 read on the complex's OWN front graph (the front is a
+  bridge, or the surviving detour costs > β × the front), expected to collapse the 43 patch-level flags to a handful. MEASURED: it fires
+  on 91 of 133 (60 bridges + 31 detours > β), because the front graph available is v2's network — the MST plus seven backups, a chain by
+  construction, so almost every interior link is a bridge. The reading needs the full adjacency graph (fronts on pairs v2 never linked),
+  which is not a same-day change. Per the ruling's fallback, THE DRAFT DRAWS FRONTS ON WIDTH AND ROAD ONLY; both edge readings
+  (`E_v2` patch-level, `E_interior` on v2's graph) are TABLE-ONLY (`A_fronts.csv`, `front_class_d23`), pending the interior D7 reading on
+  the full adjacency graph (next step). Register: D7 at the reported level = the contracted graph for inter-complex links; the interior
+  reading for fronts is defined but not yet computable on the right graph.
 - **M7.6 Not exercised at build time:** the contracted routing run itself (06 = a solve; first execution = Ethan's), run mode of the
   module and the package on the contracted run (07/08 need that run), the second-pass merge path. Smoked: 05 end to end into scratch
   folders and its audit objects through the engine's contraction loader (23 complexes, GW5, the v2 cache identity reproduced); on the

@@ -271,6 +271,58 @@ def slivers(P0):
     return sl
 
 
+# ================= 4b. fronts: the within-complex links as corridors (run spec v3 §1a / §5 revised 2026-09-29; D-W6) =================
+BETA = 2.5                      # D7's ceiling, inherited (the interior reading applies it to the surviving detour)
+SQUEEZE = 0.5                   # D17 / D23's width threshold, inherited
+
+
+def fronts(P0):
+    """Every within-complex link (the near-contiguous ones + the corridor-class links with both ends in one complex) as a FRONT
+    on the pressure scale. Route sense = width alone (a front has no branches): CUT when the least-cost path carries cost 10 or
+    the width ratio is below the squeeze threshold. Edge sense, TWO readings reported: `E_v2` = the patch-level D7 flag (a pairwise
+    question that answers nothing inside a complex) and `E_interior` = D7 read on the complex's own front graph -- the front is a
+    bridge of that graph, or the surviving detour costs more than BETA x the front (the chat's ruling of 2026-09-29). On v2's graph
+    (MST + backups, a chain by construction) the interior reading fires on most fronts, so for the DRAFT the drawn class is width /
+    road only (`front_class`: open | cut); the four-class reading is kept in `front_class_d23` for the table (M7.8). Bands = the
+    v2 per-link band polygons -> fronts_v2.gpkg (audit + postprocess)."""
+    e = P0.edges
+    sl = P0.slivers.copy()
+    sl = sl.merge(e[["cost", "edge_irreplaceable", "squeeze_ratio_obs", "width_ratio_p10", "band_new_km2", "in_mst"]], left_on="edge_id", right_index=True, how="left")
+    sl["E_v2"] = sl["edge_irreplaceable"].fillna(False).astype(bool)
+    sl["narrow"] = sl["squeeze_ratio_obs"] < SQUEEZE
+    sl["road_on_path"] = sl["path_cells_cost10"].fillna(0) > 0
+    sl["cut"] = sl["narrow"] | sl["road_on_path"]
+    rows = {}
+    for cid, grp in sl.groupby("complex_id"):
+        Gc = nx.Graph()
+        for r in grp.itertuples():
+            Gc.add_edge(int(r.patch_i), int(r.patch_j), weight=float(r.cost) if pd.notna(r.cost) else 1.0)
+        bridges = {tuple(sorted(b)) for b in nx.bridges(Gc)}
+        for r in grp.itertuples():
+            a, b = int(r.patch_i), int(r.patch_j); key = tuple(sorted((a, b)))
+            if key in bridges:
+                rows[r.edge_id] = (True, np.inf)
+            else:
+                H = Gc.copy(); H.remove_edge(a, b)
+                rows[r.edge_id] = (False, nx.shortest_path_length(H, a, b, weight="weight") / max(float(r.cost), 1e-9))
+    sl["bridge"] = sl["edge_id"].map(lambda k: rows[k][0]); sl["detour_ratio"] = sl["edge_id"].map(lambda k: rows[k][1])
+    sl["E_interior"] = sl["bridge"] | (sl["detour_ratio"] > BETA)
+    sl["front_class"] = np.where(sl["cut"], "cut", "open")                                   # DRAWN (the draft): width / road only
+    sl["front_class_d23"] = np.select([sl["E_interior"] & sl["cut"], sl["E_interior"], sl["cut"]],
+                                      ["only viable", "last affordable", "narrowing"], "options")   # TABLE: the interior reading (M7.8)
+    P0.fronts = sl
+    g = P0.bands.loc[[k for k in sl["edge_id"] if k in P0.bands.index], ["geometry"]].reset_index()      # index 'edge_id' -> a column
+    g = g.merge(sl[["edge_id", "complex_id", "patch_i", "patch_j", "path_len_km", "front_class", "front_class_d23", "E_v2", "E_interior", "bridge", "cut", "narrow", "road_on_path",
+                    "squeeze_ratio_obs", "band_new_km2"]], on="edge_id", how="left")
+    P0.fronts_gdf = gpd.GeoDataFrame(g, geometry="geometry", crs=P0.R.crs)
+    n = len(sl)
+    print(f"fronts: {n} within-complex links -> drawn {int((sl.front_class == 'open').sum())} open + {int((sl.front_class == 'cut').sum())} cut "
+          f"({int(sl.narrow.sum())} narrow, {int(sl.road_on_path.sum())} with a road on the path) | edge sense: patch-level D7 {int(sl.E_v2.sum())}, "
+          f"interior reading {int(sl.E_interior.sum())} ({int(sl.bridge.sum())} bridges of v2's front graph + {int((~sl.bridge & (sl.detour_ratio > BETA)).sum())} detours > beta) -- table only for the draft (M7.8)")
+    print("  four-class table reading:", sl["front_class_d23"].value_counts().to_dict())
+    return sl
+
+
 # ================= 5. accounting =================
 def accounting(P0):
     """Corridor land as dissolved unions (the run's corridors.tif = every band incl. the near-contiguous ones; the corridor-class
@@ -294,7 +346,21 @@ def accounting(P0):
         uc |= rasterize([(P0.bands.loc[eid, "geometry"], 1)], out_shape=shape, transform=tr, fill=0, dtype="uint8").astype(bool)
     uc &= P0.pu & ~P0.node_land
     P0.corridor_union = uc
-    out = dict(all_bands_dissolved_km2=round(float(R.corridor.sum()) * P0.cell_km2),
+    fr = getattr(P0, "fronts_gdf", None)
+    front_area = None
+    if fr is not None and len(fr):
+        fa = {}
+        for cls_ in ("open", "cut"):
+            sub = fr[fr.front_class == cls_]
+            if not len(sub):
+                fa[cls_] = 0; continue
+            u = np.zeros(shape, bool)
+            for geom in sub.geometry:
+                u |= rasterize([(geom, 1)], out_shape=shape, transform=tr, fill=0, dtype="uint8").astype(bool)
+            fa[cls_] = round(float((u & P0.pu & ~P0.node_land).sum()) * P0.cell_km2)
+        front_area = dict(dissolved_by_class_km2=fa, per_link_sum_km2=round(float(fr["band_new_km2"].fillna(0).sum())),
+                          note="within-complex fronts (v2 bands); reported on its own line, never summed into inter-complex corridor land")
+    out = dict(all_bands_dissolved_km2=round(float(R.corridor.sum()) * P0.cell_km2), front_area=front_area,
                corridor_links_dissolved_km2=round(float(uc.sum()) * P0.cell_km2),
                corridor_links_outside_pas_ipcas_km2=round(float((uc & ~P0.masks["pa"] & ~P0.masks["ipca"]).sum()) * P0.cell_km2),
                corridor_links_outside_pas_ipcas_core_km2=round(float((uc & ~P0.masks["pa"] & ~P0.masks["ipca"] & ~P0.masks["core"]).sum()) * P0.cell_km2),
@@ -372,8 +438,10 @@ def write_audit(P0, audit_dir=None):
     cn.to_csv(names_out, index=False, encoding="utf-8-sig")
     g = P0.cx[["complex_id", "name", "name_auto", "n_patches", "area_km2", "patch_ids", "lat", "lon", "geometry"]]
     g.to_file(audit_dir / "complexes.gpkg", driver="GPKG")
-    sl = P0.slivers.copy(); sl["has_cost100_or_1000"] = sl["has_feature"]
+    sl = (P0.fronts if getattr(P0, "fronts", None) is not None else P0.slivers).copy(); sl["has_cost100_or_1000"] = sl["has_feature"]
     sl.to_csv(audit_dir / "slivers_v2.csv", index=False, encoding="utf-8-sig")
+    if getattr(P0, "fronts_gdf", None) is not None:
+        P0.fronts_gdf.to_file(audit_dir / "fronts_v2.gpkg", driver="GPKG")
     summ = dict(from_run=P0.R.run_id, edges_sha256=cc._sha256(P0.run_dir / "corridor_edges.csv"), node_names_sha256=cc._sha256(P0.run_dir / "node_names.csv"),
                 rule="complexes = connected components of the near-contiguous (D25) links of the patch-level network (MST + beta backups); no cap, no new threshold",
                 node_min_km2=P0.rec["cfg"]["nodes"]["node_min_km2"], cwd_cutoff_abs=P0.rec["cfg"]["cwd_cutoff_abs"], cutoff_detour_km=P0.rec["cfg"].get("cutoff_detour_km"),
@@ -390,6 +458,8 @@ def write(P0):
     summary. The corridor product itself is written in RUN mode (write_run_product) on the contracted run."""
     cx = P0.cx.copy()
     cx.to_file(P0.out / "complexes.gpkg", driver="GPKG")
+    if getattr(P0, "fronts_gdf", None) is not None:
+        P0.fronts_gdf.to_file(P0.out / "fronts_v2.gpkg", driver="GPKG"); P0.fronts.to_csv(P0.out / "fronts.csv", index=False, encoding="utf-8-sig")
     meta = dict(run=P0.R.run_id, run_git=P0.rec.get("git"), n_patches=int(len(P0.nodes)), n_complexes=int(len(cx)),
                 n_near_contiguous=int(len(P0.adjacent)), n_v2_corridor_class_links=int(len(getattr(P0, "links_all", []))),
                 within_complex_corridor_class_links=list(getattr(P0, "intra_links", pd.DataFrame()).index),
@@ -428,6 +498,7 @@ def load_run(run_dir):
     P0.node_land = R.pa_mask | R.anch
     P0.cx = R.complexes.copy()
     P0.nodes = R.node_table
+    P0.fronts_gdf = getattr(R, "fronts", None); P0.fronts = (pd.DataFrame(P0.fronts_gdf.drop(columns="geometry")) if P0.fronts_gdf is not None else None)
     print(f"{R.run_id}: {len(P0.cx)} complexes, {len(c)} inter-complex links between {c['pair'].nunique()} pairs "
           f"({int((mult > 1).sum())} pairs with more than one link; {int(near[nz].sum())} still near-contiguous -- expected 0 after the second pass) | "
           f"cutoff {R.cutoff:.4f} = {R.cutoff * R.cell_km:.2f} km detour")
@@ -461,7 +532,8 @@ def attach(R, out=None):
             names = pd.read_csv(cn, encoding="utf-8-sig").fillna({"display_name": ""}).set_index("complex_id")
             cx["name"] = [str(names.loc[c, "display_name"]).strip() or str(names.loc[c, "name_auto"]) if c in names.index else n for c, n in zip(cx["complex_id"], cx["name"])]
         if (out / "coverage.csv").exists():
-            cov = pd.read_csv(out / "coverage.csv", encoding="utf-8-sig"); cc_ = cov[cov.kind == "complex"].set_index("id")
+            cov = pd.read_csv(out / "coverage.csv", encoding="utf-8-sig")
+            cc_ = cov[cov.kind == "complex"].copy(); cc_["id"] = cc_["id"].astype(int); cc_ = cc_.set_index("id")   # the id column mixes complex numbers and link ids -> text on read
             for c, col in (("pa", "pa_share"), ("ipca_incremental", "ipca_added_share"), ("core", "core_share"), ("core_incremental", "core_incremental_share"), ("outside_all", "outside_all_share")):
                 cx[col] = cx["complex_id"].map(cc_[c])
             R.coverage = cov
@@ -472,6 +544,13 @@ def attach(R, out=None):
         R.postprocess = json.loads((out / "postprocess_summary.json").read_text()) if (out / "postprocess_summary.json").exists() else {}
         R.accounting = json.loads((out / "accounting.json").read_text()) if (out / "accounting.json").exists() else {}
         R.intra_complex_ids = []
+        fp = pathlib.Path(R.run_dir) / "fronts_v2.gpkg"                        # the within-complex fronts (v2 bands + classes), pinned by new_run
+        R.fronts = gpd.read_file(fp).to_crs(R.crs) if fp.exists() else getattr(R, "fronts", None)
+        if R.fronts is not None:
+            per = R.fronts.groupby("complex_id").agg(n_fronts=("edge_id", "size"), n_cut=("cut", "sum"), n_E_interior=("E_interior", "sum"))
+            for c in ("n_fronts", "n_cut", "n_E_interior"):
+                cx[c] = cx["complex_id"].map(per[c]).fillna(0).astype(int)
+            R.complexes = cx; R.complex_table = pd.DataFrame(cx.drop(columns="geometry"))
         print(f"attached (run mode): {len(cx)} complexes, {R.postprocess.get('n_corridor_links', '?')} inter-complex links, coverage {'yes' if (out / 'coverage.csv').exists() else 'NOT YET (run 07)'}")
         return R
     assert (out / "complexes.gpkg").exists(), f"{out} -- run 05_complexes first"

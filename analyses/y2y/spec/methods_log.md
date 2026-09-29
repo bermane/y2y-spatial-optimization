@@ -1358,3 +1358,5 @@ No y2y output changes. Consumer: the northern route options (northern methods_lo
 0.103 = the y2y position, unchanged); the northern package anchors the top edge at 0.165.
 **M4.41 addendum (2026-09-28): `STYLE["wide_legend_between"]`** (default False = unchanged): True centres the wide layout's legend between inset B's
 bottom edge and the ramp block's bottom, measured at draw time (the northern package).
+**M4.41 addendum (2026-09-29): `post_draw=` on `_wide_map` / `_draw_inset`** — an optional callback run per panel after the labels and limits
+exist (default None: y2y unchanged). The northern route-options map places its numbered discs with it.

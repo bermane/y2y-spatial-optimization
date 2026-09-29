@@ -107,3 +107,4 @@ analyses/*/director_package/**
 !analyses/northern_connectivity/audit/audit_objects/node_parts.gpkg
 !analyses/wolverine_refugia_connectivity/audit/audit_objects/node_parts.gpkg
 !analyses/wolverine_refugia_connectivity/audit/audit_objects/complexes.gpkg
+!analyses/wolverine_refugia_connectivity/audit/audit_objects/fronts_v2.gpkg

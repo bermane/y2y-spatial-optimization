@@ -148,7 +148,30 @@ Class counts per legend = R5.3 (0 / 4 / 15 / 21 + 130 adjacent); examples per ac
   Wenaha Tucannon ↔ Eagle Cap 0.29, Northern Rockies ↔ Jasper 0.30, Glacier ↔ Mission Mountains 0.31, Mission Mountains ↔
   Selway-Bitterroot 0.41, Eagle Cap ↔ North Fork John Day 0.46, Lee Metcalf ↔ Selway-Bitterroot 0.47, Glacier ↔ Selway-Bitterroot
   0.47, Sustut ↔ Omineca 0.50); **second pass: 1 near-contiguous inter-complex link (Jasper ↔ Selway-Bitterroot) → merged (M7.7).**
-- **R7.1 The contracted network (PENDING, `v25_run002`, 22 complexes):** inter-complex links (MST + backups), links per class, the eight-cell table, D7
+- **R7.1 The contracted network (`v25_run002`, Ethan 2026-09-29; read off the run record):** 22 complexes; **28 inter-complex links**
+  = 21 minimum-network + 7 backups, one pair per link (no doubled pairs), one connected group; 5 with no affordable alternative (D7),
+  9 route-irreplaceable; classes **only viable 0 · last affordable 5 · narrowing 10 · options 13**; second pass clean (0 near-contiguous).
+  Corridor land **29,440 km² dissolved** (per-link sum 30,429; no near-contiguous bands by construction), **22,603 km² outside PAs +
+  IPCAs, 21,511 km² also outside the prioritizr core**; **27 of 28 links cross land outside PAs + IPCAs**; already connected within
+  protected land: 0 by existing PAs, 1 once the proposed IPCAs are realized. Coverage vs expectation (frame: PAs 13.0 · +IPCAs 11.0 ·
+  core 3.3 · outside 73.0%): complexes PAs 35.4 · +IPCAs 8.1 · core 7.5 · outside 49.7%; corridor bands PAs 12.5 · +IPCAs 10.0 · core
+  4.2 · outside 73.2%. Branches {1: 26 links, 2: 2} = 30 = branches.csv. Bow Valley check: 0 corridor links within 60 km of Banff
+  (two acts at 51 °N stand). Last affordable: Jasper ↔ Eagle Cap (p10 0.11), Sustut E ↔ Babine River (0.23), Lee Metcalf ↔ Yellowstone
+  (0.25), Absaroka Beartooth ↔ Yellowstone (0.32), Sustut E ↔ Sustut (0.61, alternative 'both'). Narrowing (10): Mudzenchoot ↔ Jasper
+  0.05, Glacier ↔ Mission Mountains 0.05, Jasper ↔ Glacier 0.09, Wenaha Tucannon ↔ North Fork John Day 0.09, Northern Rockies ↔
+  Jasper 0.14, Wenaha Tucannon ↔ Eagle Cap 0.14, Jasper ↔ Mission Mountains 0.17, Jasper ↔ Lee Metcalf 0.17, Eagle Cap ↔ North Fork
+  John Day 0.19, Sustut E ↔ Omineca 0.20 (tenth-percentile width ratios). Narrowing by act: north 3, south 7.
+- **R7.2 Fronts (from the v2 record, notebook 05 regenerated 2026-09-29 on the 23 complexes):** 133 within-complex fronts (130
+  near-contiguous + 3 corridor-class links inside one complex); route sense: 36 narrow (width ratio < 0.5), 43 with a road (cost 10)
+  on the path, 4 with cost 100 on the path → **49 cut, 84 open** (drawn). Edge sense (table-only, M7.8): patch-level D7 43; interior
+  reading on v2's front graph 91 (60 bridges + 31 detours > β) → four-class table reading: options 28 · narrowing 14 · last affordable
+  56 · only viable 35 — the chain artefact, not a finding. Front band land (v2 per-link sums): open 9,138 + cut 3,635 + last affordable
+  2,393 + only viable 2,200 km² under the four-class reading; the dissolved open / cut figures are written by 07 (`accounting.json`).
+  Per complex: Nahanni 21 fronts (1 cut), Sustut 59 (12 cut), Jasper 34 (30 cut), Northern Rockies 9 (2), Yellowstone 8 (4), Glacier
+  1, Stikine 1. The C12–C20 contact (M7.8): Cabinet Mountains / Barktable Ridge ↔ Selway-Bitterroot, 16.8–17.4 km paths, both
+  narrowing at patch level.
+- **R7.1 (superseded: `v25_run002` was the merge-era run; `v25_run003` on the 23 complexes PENDING Ethan).**
+- **R7.1b (PENDING Ethan's 07/08 run):** the run-dir tables (A / slivers / B / T1–T4), `headline.json`, the five maps. inter-complex links (MST + backups), links per class, the eight-cell table, D7
   irreplaceables as complex pairs (the four v2 corridor-level ones expected to survive, H-W2 informally), the second-pass count, W11,
   corridor land dissolved / outside PAs + IPCAs / outside PAs + IPCAs + core. (R7.0's coverage and accounting were measured on the v2
   patch-to-patch links and are SUPERSEDED by the contracted run's; R7.0's complexes, names and slivers stand.)
