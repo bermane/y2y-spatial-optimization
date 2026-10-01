@@ -1,0 +1,8 @@
+scenario,levels,jaccard,decision,freq_km2_585,freq_km2_245
+s0,2,0.6167933655839668,POOLED (forced; rule would separate at Jaccard 0.62 < 0.8),2649,2030
+s1,2,0.2646502835538752,POOLED (forced; rule would separate at Jaccard 0.26 < 0.8),4097,1924
+s2,2,0.8698207464002351,POOLED,3349,3014
+s2c,2,0.6104380242311277,POOLED (forced; rule would separate at Jaccard 0.61 < 0.8),1050,678
+s3,2,0.5721533258173619,POOLED (forced; rule would separate at Jaccard 0.57 < 0.8),1650,1139
+s4,2,0.5837708830548926,POOLED (forced; rule would separate at Jaccard 0.58 < 0.8),1999,1319
+s5,2,0.6902011125374412,POOLED (forced; rule would separate at Jaccard 0.69 < 0.8),2237,1713

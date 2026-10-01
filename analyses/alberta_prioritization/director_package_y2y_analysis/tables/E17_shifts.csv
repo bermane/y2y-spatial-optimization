@@ -1,0 +1,7 @@
+block_out,mean_lat,delta_lat,jaccard_vs_s0,basis
+core_habitat,52.49821853637695,0.28862762451171875,0.5283507722969606,"v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+structural_connectivity,52.319332122802734,0.1097412109375,0.5569558500691113,"v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+climate_corridors,52.28889083862305,0.0792999267578125,0.6888386123680241,"v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+carbon,52.11366271972656,-0.09592819213867188,0.8302407460272148,"v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+biodiversity,52.051395416259766,-0.15819549560546875,0.6268008474576271,"v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+efg,52.131046295166016,-0.07854461669921875,0.932715594398231,"v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"

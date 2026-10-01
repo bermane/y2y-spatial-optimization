@@ -609,4 +609,44 @@ of high-value land outside the core and the tiers). Act 2 picks: SE of Jasper 64
 small ones (16–30 km²) from the other leans. 14 renders 01–06 on this basis (the values pair as 02c / 02d, the Act 2 map with windows on
 picks 7 and 8, six design frames); 13 renders 40 record frames.
 
-*Last updated 2026-09-23 (R9.1–R9.7; R9.7 measured zero-solve, Ethan's 12 → 14 re-run reproduces it).*
+**R9.8 THE ALBERTA BALANCED CORE vs THE Y2Y-WIDE BALANCED CORE CLIPPED TO ALBERTA (measured zero-solve 2026-09-30; Alberta side = the
+R9.7 record, parent side = the flagship's `director_package/geotiffs/f_balanced_core.tif` as run by Ethan under package spec v2.1, basis
+balanced, 51,580 km² Y2Y-wide; both at f ≥ 0.70 on the 57,161 km² of allocatable Alberta land; companion to C1's ensemble-core figure in
+R9.4, 1,756 km²).** The Y2Y-wide balanced core holds **2,141 km² inside Alberta (3.75%)** against the Alberta run's **1,456 km² (2.55%)** —
+the whole-corridor solve keeps 1.5× as much Alberta land as the Alberta solve does. **The Alberta core is a subset: 1,402 km² (96%) of it lies
+inside the Y2Y-wide core**, only 54 km² is Alberta-only (largest patch 4 km², around Waterton and W of Grande Cache), while **739 km² of
+the Y2Y-wide core is dropped by the Alberta run** (65% of the clip is shared; Jaccard 0.639; Spearman between the two balanced f surfaces
+0.747). The dropped land is DIFFUSE, not a missing cluster: the largest Y2Y-only patches are 43 km² (54.0 °N, near the BC border W of Grande
+Prairie), 35 (52.7 °N, the Brazeau / Nordegg foothills), 31 and 21 (51.8–52.0 °N, the Clearwater foothills W of Rocky Mountain House) — the
+Y2Y-wide clip has 31 components ≥ 10 km² (largest 618 / 183 / 123 km²) vs the Alberta core's 23 (largest 467 / 83 / 54 km²), i.e. the same
+spine with wider margins and more small satellites. Reading: the Alberta budget (D-AB5, X = 0.1764 of unlocked land) is tighter per unit of
+Alberta value than the corridor-wide 30% budget applied to an extent where Alberta's structural-connectivity spike competes against the
+whole Y2Y — the Y2Y-wide solve spends more on Alberta's foothills because they score high corridor-wide, while the Alberta solve, ranking
+Alberta cells against Alberta cells only, stops at the spike. Nothing here changes the applied core (R9.7).
+
+**R9.9 THE Y2Y-WIDE ANALYSIS WITHIN ALBERTA AS A PACKAGE (`15_tiers_and_clusters_y2y_analysis`, M20.8; measured zero-solve 2026-09-30 on the
+parent's v4 guarded record read on the Alberta PU — Ethan's run of 15 reproduces it cell for cell; 16 renders the outputs; the Alberta run's package = the 12 → 14 re-run of the
+same day, R9.7 reproduced).** **Core:** balanced f ≥ 0.70 → **2,141 km² (3.75% of allocatable land)**; ensemble core 1,756 (100% inside it, Jaccard
+0.820); always 908. **By future the corridor-wide plans disagree far more inside Alberta than the Alberta run's do:** SSP585 core 2,649 km², SSP245 2,030,
+Jaccard **0.617** (the Alberta run: 0.999) — a Y2Y-wide plan's Alberta footprint moves with the future because Alberta competes with the whole corridor.
+**Additions in Alberta are an outcome:** the balanced SSP5-8.5 anchor places 9,351 km² of additions in Alberta (range 3,056–13,685 over the 14
+positions; the Alberta run's level A = 10,083). **Six regional core clusters north → south (20 km linkage):** 1 Upper Smoky Nature-First-zone vicinity
+(Kakwa / Grande Cache) 91 km², f 0.73; 2 SE of Jasper (Central Alberta foothills) **1,693**, 0.85; 3 Don Getty vicinity 52, 0.90; 4 SE of Don Getty 183,
+0.81; 5 S of Don Getty 221, 0.87; 6 SE of Waterton (Crown of the Continent) 111, 0.79. **Act 2 tiers 1,863 km² (3.3%):** climate refugia 615,
+structural connectivity 1,003, carbon 110, two-or-more 135, climate corridors and biodiversity 0; opportunity 52,016 (91.0%); **never 1,141 km² (2.0%)** —
+the Alberta run leaves nothing never-selected. E11 157/182 (the parent's record); biodiversity capture over 714 plans 35.0–54.1% (median 42.2%);
+high-value land 48,480 km² of which 44,476 (92%) is Act 3. T-D7 leads: cluster 2 structural connectivity 3.02×, cluster 1 carbon 3.90× (the
+northern tip is carbon country). Caveat: D on the clip is not normalized — `_diam` divides by the anchor's Alberta discretionary cells while members'
+Alberta footprints vary, so D_guard runs 0.68–1.65 (a record column, not a verdict).
+**THE COMPARISON against the Alberta run (`tables/comparison_*.csv`; R9.8 extended to tiers and clusters):** balanced cores 1,456 vs 2,141 km², shared
+1,402, Jaccard 0.639, Spearman of the two f surfaces 0.747; ensemble cores 1,264 vs 1,756, Jaccard 0.664; always 551 vs 908 (0.569); **scenario tiers
+977 vs 1,863, shared 465, Jaccard 0.196** — the leans land in different places when the whole corridor competes; opportunity 0.950. Cross-tab: 509 km²
+of the Alberta run's scenario tiers are Y2Y-wide CORE, and 1,344 km² of the Alberta run's opportunity land is a Y2Y-wide scenario tier. **Clusters:** the
+Alberta run's core clusters 1–4 sit 88–100% inside the Y2Y-wide core (Waterton 60%, with 26% in a Y2Y-wide scenario tier); of the Y2Y-wide core
+clusters, the big SE-of-Jasper cluster is 57% Alberta core + 26% Alberta scenario tier, the Don Getty trio 54–89% Alberta core, Waterton 78%, and
+**cluster 1 (Upper Smoky vicinity, 91 km²) is 0% Alberta core, 98% Alberta opportunity — the northern tip is core only when the corridor-wide
+objective ranks it**; every Y2Y-wide Act 2 cluster is 0% Alberta core and 83–100% Alberta opportunity. Reading: the two analyses agree on the spine
+(the structural-connectivity spike east of the mountain parks) and disagree on the margins and the leans — the Alberta run stops at the spike, the
+corridor-wide run keeps the foothills margin and the Upper Smoky tip.
+
+*Last updated 2026-09-30 (R9.1–R9.9; R9.7/R9.9 measured zero-solve, Ethan's runs of 12 → 14 and 15 reproduce them; R9.8 a zero-solve comparison).*

@@ -1,0 +1,1126 @@
+{
+ "version": "v4",
+ "manifest": "manifest_v4.csv",
+ "manifest_source": "analyses/y2y/spec/manifest_v4.csv",
+ "runs_source": "analyses/y2y/runs_v4",
+ "package_basis": "Y2Y-wide analysis (the flagship's 14 guarded sweeps) read within the Alberta extent; Alberta denominators for percentiles and ratios",
+ "efg_block": "iucn_efg_v3",
+ "n_efg": 13,
+ "n_efg_y2y": 20,
+ "pick_link_km": 20,
+ "speck_link_km": 10,
+ "core_basis": "balanced",
+ "core_definition": "guarded f of the balanced scenario (S0) averaged over SSP245 and SSP585, >= 0.70; ensemble F = the paper's estimand, appendix",
+ "max_core_clusters": null,
+ "efg_target_rule": "loglinear_window250km",
+ "applied_band_g": 0.05,
+ "applied_band_rule": "the parent's guarded 5% band (the estimand, M4.38); no Alberta flatness fallback (D-AB13 not applied)",
+ "n_formulations": 14,
+ "threshold": 0.7,
+ "floor_g": 0.05,
+ "min_km2": 10,
+ "complex_link_km": 10,
+ "band": "g05",
+ "level": "Y2Y-wide (30% of the whole region; no Alberta level)",
+ "budget_pct_y2y": 0.3,
+ "pa_km2": 27972,
+ "pa_pct_of_extent": 32.85682402828515,
+ "additions_km2": 9351,
+ "additions_km2_by_formulation": {
+  "s0_ssp585_theta5": 9351,
+  "s1_ssp585_theta5": 13685,
+  "s2_ssp585_theta5": 8336,
+  "s2c_ssp585_theta5": 3738,
+  "s3_ssp585_theta5": 10778,
+  "s4_ssp585_theta3": 7287,
+  "s5_ssp585_theta5": 8122,
+  "s0_ssp245_theta5": 7355,
+  "s1_ssp245_theta5": 9101,
+  "s2_ssp245_theta5": 7418,
+  "s2c_ssp245_theta5": 3056,
+  "s3_ssp245_theta5": 8740,
+  "s4_ssp245_theta3": 5790,
+  "s5_ssp245_theta5": 6679
+ },
+ "additions_km2_range": [
+  3056,
+  13685
+ ],
+ "budget_pct": 0.43840813785488586,
+ "additions_basis": "cells of the Y2Y-wide anchor on unprotected Alberta land (s0_ssp585_theta5 = the headline; range over the 14 positions)",
+ "alberta_run_additions_km2": 10083,
+ "unguarded_basis": "unguarded (s0_ssp585_theta5 only)",
+ "by_level": {
+  "585": {
+   "n": 1,
+   "core_km2": 2649,
+   "jaccard_vs_core": 0.7839851024208566,
+   "pct_of_core_inside": 98.31854273703877
+  },
+  "245": {
+   "n": 1,
+   "core_km2": 2030,
+   "jaccard_vs_core": 0.7748936170212766,
+   "pct_of_core_inside": 85.05371321812237
+  },
+  "jaccard_585_245": 0.6167933655839668,
+  "union_km2": 2894,
+  "intersection_km2": 1785
+ },
+ "by_level_ensemble": {
+  "585": {
+   "n": 7,
+   "core_km2": 2125,
+   "pct_of_ensemble_core_inside": 99.03189066059225
+  },
+  "245": {
+   "n": 7,
+   "core_km2": 1534,
+   "pct_of_ensemble_core_inside": 81.6628701594533
+  }
+ },
+ "frequent_km2": {
+  "guarded": 2141,
+  "ensemble": 1756,
+  "unguarded": 77
+ },
+ "always_km2": {
+  "guarded": 908,
+  "ensemble": 444,
+  "unguarded": 37
+ },
+ "ensemble_core_inside_balanced_pct": 100.0,
+ "ever_in_band_pct": {
+  "guarded": 98.00388376690401,
+  "unguarded": 99.99475166634593
+ },
+ "s0_g10_union_pct": 100.0,
+ "ever_in_5pct_band_pct": 98.00388376690401,
+ "ever_in_5pct_band_basis": "guarded",
+ "e11_pairs_in_band": [
+  157,
+  182
+ ],
+ "pooling": [
+  {
+   "scenario": "s0",
+   "levels": 2,
+   "jaccard": 0.6167933655839668,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.62 < 0.8)",
+   "freq_km2_585": 2649,
+   "freq_km2_245": 2030
+  },
+  {
+   "scenario": "s1",
+   "levels": 2,
+   "jaccard": 0.2646502835538752,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.26 < 0.8)",
+   "freq_km2_585": 4097,
+   "freq_km2_245": 1924
+  },
+  {
+   "scenario": "s2",
+   "levels": 2,
+   "jaccard": 0.8698207464002351,
+   "decision": "POOLED",
+   "freq_km2_585": 3349,
+   "freq_km2_245": 3014
+  },
+  {
+   "scenario": "s2c",
+   "levels": 2,
+   "jaccard": 0.6104380242311277,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.61 < 0.8)",
+   "freq_km2_585": 1050,
+   "freq_km2_245": 678
+  },
+  {
+   "scenario": "s3",
+   "levels": 2,
+   "jaccard": 0.5721533258173619,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.57 < 0.8)",
+   "freq_km2_585": 1650,
+   "freq_km2_245": 1139
+  },
+  {
+   "scenario": "s4",
+   "levels": 2,
+   "jaccard": 0.5837708830548926,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.58 < 0.8)",
+   "freq_km2_585": 1999,
+   "freq_km2_245": 1319
+  },
+  {
+   "scenario": "s5",
+   "levels": 2,
+   "jaccard": 0.6902011125374412,
+   "decision": "POOLED (forced; rule would separate at Jaccard 0.69 < 0.8)",
+   "freq_km2_585": 2237,
+   "freq_km2_245": 1713
+  }
+ ],
+ "act2_owner_km2": {
+  "Climate refugia forward": 615,
+  "Structural connectivity forward": 1003,
+  "Climate corridors forward": 0,
+  "Mammal + bird richness forward": 0,
+  "Biomass + soil carbon forward": 110,
+  "2+ scenarios": 135
+ },
+ "tier_area_pct_disc": {
+  "core": 3.745560784450937,
+  "scenario": 3.259215199174262,
+  "opportunity": 90.9991077832788
+ },
+ "protected_baseline": {
+  "pa_km2": 27972,
+  "pa_pct_of_region": 32.85682402828515,
+  "pa_pct_of_budget": 74.94574391126116,
+  "efg_present_in_PAs": 12,
+  "banked_min": 23.91309436373305,
+  "banked_max": 71.4207666042447
+ },
+ "td4": "Natural Regions and Subregions of Alberta (2005), NRNAME / NSRNAME",
+ "biodiversity_plan_capture": {
+  "n_plans": 714,
+  "min": 0.3496992926174629,
+  "max": 0.5414418244896677,
+  "median": 0.421811102390951
+ },
+ "e19": {
+  "core_forced_pct": 0.0,
+  "n_pins": 0,
+  "partition": [
+   {
+    "unit": "core",
+    "km2": 2141,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 96.91732835123774,
+    "other_pct": 3.0826716487622607
+   },
+   {
+    "unit": "scenario tier: Climate refugia forward",
+    "km2": 615,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 99.02439024390245,
+    "other_pct": 0.975609756097561
+   },
+   {
+    "unit": "scenario tier: Structural connectivity forward",
+    "km2": 1003,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 90.82751744765703,
+    "other_pct": 9.172482552342972
+   },
+   {
+    "unit": "scenario tier: Climate corridors forward",
+    "km2": 0,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 0.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "scenario tier: Mammal + bird richness forward",
+    "km2": 0,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 0.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "scenario tier: Biomass + soil carbon forward",
+    "km2": 110,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "opportunity",
+    "km2": 52016,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 41.19501691787143,
+    "other_pct": 58.80498308212857
+   },
+   {
+    "unit": "pick 1: Upper Smoky Nature-First zone vicinity (54.0\u00b0N 119.5\u00b0W)",
+    "km2": 91,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 2: SE of Jasper National Park Of Canada (52.4\u00b0N 116.6\u00b0W)",
+    "km2": 1745,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 99.94269340974212,
+    "other_pct": 0.05730659025787966
+   },
+   {
+    "unit": "pick 3: S of Don Getty Wildland (50.0\u00b0N 114.6\u00b0W)",
+    "km2": 404,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 4: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 111,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 43.24324324324324,
+    "other_pct": 56.75675675675676
+   },
+   {
+    "unit": "pick 5: SE of White Goat (52.2\u00b0N 116.6\u00b0W)",
+    "km2": 577,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 99.30675909878683,
+    "other_pct": 0.6932409012131716
+   },
+   {
+    "unit": "pick 6: NW of Livingstone Range Wildland Provincial Park (49.8\u00b0N 114.6\u00b0W)",
+    "km2": 232,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 97.84482758620689,
+    "other_pct": 2.1551724137931036
+   },
+   {
+    "unit": "pick 7: NE of Banff National Park Of Canada (51.9\u00b0N 115.7\u00b0W)",
+    "km2": 674,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 99.85163204747775,
+    "other_pct": 0.14836795252225518
+   },
+   {
+    "unit": "pick 8: SE of Don Getty Wildland (50.8\u00b0N 114.8\u00b0W)",
+    "km2": 125,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 9: E of White Goat (52.2\u00b0N 116.5\u00b0W)",
+    "km2": 13,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 10: NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
+    "km2": 13,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 11: E of White Goat (52.3\u00b0N 116.5\u00b0W)",
+    "km2": 22,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 12: NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
+    "km2": 20,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 13: NE of White Goat (52.4\u00b0N 116.5\u00b0W)",
+    "km2": 132,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 14: NE of Banff National Park Of Canada (51.8\u00b0N 115.9\u00b0W)",
+    "km2": 95,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 585-1: SE of Jasper National Park Of Canada (52.5\u00b0N 116.6\u00b0W)",
+    "km2": 2137,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 99.95320542817034,
+    "other_pct": 0.04679457182966776
+   },
+   {
+    "unit": "pick 585-2: SE of Don Getty Wildland (50.9\u00b0N 114.9\u00b0W)",
+    "km2": 235,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 585-3: S of Don Getty Wildland (50.1\u00b0N 114.7\u00b0W)",
+    "km2": 196,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 585-4: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 96,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 44.791666666666664,
+    "other_pct": 55.208333333333336
+   },
+   {
+    "unit": "pick 585-5: Upper Smoky SRP planning area vicinity (54.0\u00b0N 119.5\u00b0W)",
+    "km2": 65,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 585-6: Don Getty Wildland vicinity (51.4\u00b0N 115.2\u00b0W)",
+    "km2": 50,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 245-1: SE of Jasper National Park Of Canada (52.4\u00b0N 116.6\u00b0W)",
+    "km2": 1149,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 245-2: W of Bob Creek Wildland (49.9\u00b0N 114.6\u00b0W)",
+    "km2": 332,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 99.09638554216868,
+    "other_pct": 0.9036144578313253
+   },
+   {
+    "unit": "pick 245-3: E of Jasper National Park Of Canada (52.8\u00b0N 117.0\u00b0W)",
+    "km2": 173,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 245-4: SE of Don Getty Wildland (50.9\u00b0N 114.9\u00b0W)",
+    "km2": 111,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   },
+   {
+    "unit": "pick 245-5: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 96,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 44.791666666666664,
+    "other_pct": 55.208333333333336
+   },
+   {
+    "unit": "pick 245-6: Upper Smoky Nature-First zone vicinity (54.0\u00b0N 119.5\u00b0W)",
+    "km2": 96,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
+   }
+  ]
+ },
+ "value": {
+  "top": 0.7,
+  "rare_efg_rule": "rarest-EFG footprint (rare in the extent+250 km window: <= 1% of the window)",
+  "footprint_km2": {
+   "core habitat": 17149,
+   "structural connectivity": 17149,
+   "climate corridors": 17149,
+   "biodiversity": 17215,
+   "carbon": 17149,
+   "naturalness": 17149,
+   "representativeness": 5
+  },
+  "convergence_km2": {
+   "0": 8681,
+   "1": 23181,
+   "2": 15940,
+   "3": 6904,
+   "4": 2232,
+   "5": 223,
+   "6": 0
+  },
+  "high_value_km2": 48480,
+  "gap_km2": 44476,
+  "gap_pct_of_high_value": 91.74092409240924,
+  "value_share_by_tier": {
+   "biodiversity": {
+    "existing PAs": 0.3118090776708329,
+    "core": 0.026197176718473734,
+    "scenario tiers": 0.02235183111986077,
+    "opportunity": 0.6283122593208765,
+    "never": 0.011329655169956172
+   },
+   "carbon": {
+    "existing PAs": 0.4766693048398888,
+    "core": 0.02125994361031499,
+    "scenario tiers": 0.022734488281209705,
+    "opportunity": 0.4766083682936639,
+    "never": 0.0027278949749226684
+   },
+   "climate_corridors": {
+    "existing PAs": 0.35990138090472656,
+    "core": 0.024651971256725056,
+    "scenario tiers": 0.02091918774446342,
+    "opportunity": 0.5820370064525208,
+    "never": 0.012490453641564161
+   },
+   "core_habitat": {
+    "existing PAs": 0.4555600542658712,
+    "core": 0.03396829818224947,
+    "scenario tiers": 0.027352729468140026,
+    "opportunity": 0.47637451485823706,
+    "never": 0.006744403225502191
+   },
+   "structural_connectivity": {
+    "existing PAs": 0.49362050247646116,
+    "core": 0.14070967945532872,
+    "scenario tiers": 0.04523321096662882,
+    "opportunity": 0.31938921399869025,
+    "never": 0.0010473931028910477
+   }
+  },
+  "coverage": [
+   {
+    "theme": "core habitat",
+    "top-value footprint km2": 17149,
+    "% of unprotected land": 30.001224611185947,
+    "% of footprint in core": 11.679981340019825,
+    "% of footprint in scenario tiers": 9.05592162808327,
+    "% of footprint in opportunity": 79.26409703189691,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "structural connectivity",
+    "top-value footprint km2": 17149,
+    "% of unprotected land": 30.001224611185947,
+    "% of footprint in core": 12.408886815557759,
+    "% of footprint in scenario tiers": 8.659397049390636,
+    "% of footprint in opportunity": 78.9317161350516,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "climate corridors",
+    "top-value footprint km2": 17149,
+    "% of unprotected land": 30.001224611185947,
+    "% of footprint in core": 5.242288180068809,
+    "% of footprint in scenario tiers": 3.183859117149688,
+    "% of footprint in opportunity": 90.0518980698583,
+    "% of footprint in never": 1.5219546329232025
+   },
+   {
+    "theme": "biodiversity",
+    "top-value footprint km2": 17215,
+    "% of unprotected land": 30.116687951575376,
+    "% of footprint in core": 5.3093232645948305,
+    "% of footprint in scenario tiers": 4.461225675283183,
+    "% of footprint in opportunity": 90.22945106012199,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "carbon",
+    "top-value footprint km2": 17149,
+    "% of unprotected land": 30.001224611185947,
+    "% of footprint in core": 5.61548778354423,
+    "% of footprint in scenario tiers": 5.347250568546271,
+    "% of footprint in opportunity": 87.09545746107645,
+    "% of footprint in never": 1.9418041868330516
+   },
+   {
+    "theme": "naturalness",
+    "top-value footprint km2": 17149,
+    "% of unprotected land": 30.001224611185947,
+    "% of footprint in core": 9.860633273077147,
+    "% of footprint in scenario tiers": 6.991661321359846,
+    "% of footprint in opportunity": 83.08939296751997,
+    "% of footprint in never": 0.05831243804303458
+   },
+   {
+    "theme": "representativeness",
+    "top-value footprint km2": 5,
+    "% of unprotected land": 0.008747222756774723,
+    "% of footprint in core": 20.0,
+    "% of footprint in scenario tiers": 40.0,
+    "% of footprint in opportunity": 40.0,
+    "% of footprint in never": 0.0
+   },
+   {
+    "theme": "representativeness \u2014 rare-attainable classes (NOT used)",
+    "top-value footprint km2": 19759,
+    "% of unprotected land": 34.56727489022236,
+    "% of footprint in core": 5.425375778126424,
+    "% of footprint in scenario tiers": 4.32208107697758,
+    "% of footprint in opportunity": 85.1409484285642,
+    "% of footprint in never": 5.1115947163317985
+   }
+  ],
+  "crosstab": {
+   "core (F \u2265 0.70)": {
+    "0 of 6 themes": 0,
+    "1 of 6 themes": 66,
+    "2 of 6 themes": 395,
+    "3 of 6 themes": 781,
+    "4 of 6 themes": 786,
+    "5 of 6 themes": 113,
+    "6 of 6 themes": 0
+   },
+   "scenario tier": {
+    "0 of 6 themes": 0,
+    "1 of 6 themes": 102,
+    "2 of 6 themes": 557,
+    "3 of 6 themes": 795,
+    "4 of 6 themes": 375,
+    "5 of 6 themes": 34,
+    "6 of 6 themes": 0
+   },
+   "opportunity": {
+    "0 of 6 themes": 8099,
+    "1 of 6 themes": 22489,
+    "2 of 6 themes": 14953,
+    "3 of 6 themes": 5328,
+    "4 of 6 themes": 1071,
+    "5 of 6 themes": 76,
+    "6 of 6 themes": 0
+   },
+   "never": {
+    "0 of 6 themes": 582,
+    "1 of 6 themes": 524,
+    "2 of 6 themes": 35,
+    "3 of 6 themes": 0,
+    "4 of 6 themes": 0,
+    "5 of 6 themes": 0,
+    "6 of 6 themes": 0
+   }
+  }
+ },
+ "aoi": [
+  {
+   "aoi": "Upper Smoky Nature-First zone",
+   "km2_unlocked": 436,
+   "share_of_unprotected_pct": 0.7627578243907559,
+   "core_inside_km2": 58,
+   "scenario_inside_km2": 93,
+   "opportunity_inside_km2": 285,
+   "mean_F_inside": 0.4851335287094116,
+   "mean_F_unprotected": 0.16728205978870392,
+   "mean_f_s1": 0.5966450572013855,
+   "mean_f_s2": 0.5022711157798767,
+   "mean_f_s2c": 0.3859957158565521,
+   "mean_f_s3": 0.46026715636253357,
+   "mean_f_s4": 0.4448866546154022
+  },
+  {
+   "aoi": "Upper Smoky SRP planning area",
+   "km2_unlocked": 10028,
+   "share_of_unprotected_pct": 17.543429960987385,
+   "core_inside_km2": 70,
+   "scenario_inside_km2": 116,
+   "opportunity_inside_km2": 9808,
+   "mean_F_inside": 0.11567513644695282,
+   "mean_F_unprotected": 0.16728205978870392,
+   "mean_f_s1": 0.11931397020816803,
+   "mean_f_s2": 0.08386421203613281,
+   "mean_f_s2c": 0.061339035630226135,
+   "mean_f_s3": 0.19102591276168823,
+   "mean_f_s4": 0.14286664128303528
+  }
+ ],
+ "tenure_by_tier": [
+  {
+   "tier": "core",
+   "km2": 2141,
+   "crown (Green Area)": 2038,
+   "crown (White Area, notated)": 14,
+   "private presumed (non-ranch)": 2,
+   "private ranchland (OECM track)": 63,
+   "unclassified": 24
+  },
+  {
+   "tier": "value-forward",
+   "km2": 1863,
+   "crown (Green Area)": 1712,
+   "crown (White Area, notated)": 59,
+   "private presumed (non-ranch)": 1,
+   "private ranchland (OECM track)": 78,
+   "unclassified": 13
+  },
+  {
+   "tier": "opportunity",
+   "km2": 52016,
+   "crown (Green Area)": 43902,
+   "crown (White Area, notated)": 1868,
+   "private presumed (non-ranch)": 1542,
+   "private ranchland (OECM track)": 4624,
+   "unclassified": 80
+  },
+  {
+   "tier": "never",
+   "km2": 1141,
+   "crown (Green Area)": 64,
+   "crown (White Area, notated)": 51,
+   "private presumed (non-ranch)": 398,
+   "private ranchland (OECM track)": 628,
+   "unclassified": 0
+  }
+ ],
+ "e17": {
+  "base_lat": 52.209590911865234,
+  "basis": "v4",
+  "shifts": [
+   {
+    "block_out": "core_habitat",
+    "mean_lat": 52.49821853637695,
+    "delta_lat": 0.28862762451171875,
+    "jaccard_vs_s0": 0.5283507722969606,
+    "basis": "v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+   },
+   {
+    "block_out": "structural_connectivity",
+    "mean_lat": 52.319332122802734,
+    "delta_lat": 0.1097412109375,
+    "jaccard_vs_s0": 0.5569558500691113,
+    "basis": "v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+   },
+   {
+    "block_out": "climate_corridors",
+    "mean_lat": 52.28889083862305,
+    "delta_lat": 0.0792999267578125,
+    "jaccard_vs_s0": 0.6888386123680241,
+    "basis": "v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+   },
+   {
+    "block_out": "carbon",
+    "mean_lat": 52.11366271972656,
+    "delta_lat": -0.09592819213867188,
+    "jaccard_vs_s0": 0.8302407460272148,
+    "basis": "v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+   },
+   {
+    "block_out": "biodiversity",
+    "mean_lat": 52.051395416259766,
+    "delta_lat": -0.15819549560546875,
+    "jaccard_vs_s0": 0.6268008474576271,
+    "basis": "v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+   },
+   {
+    "block_out": "efg",
+    "mean_lat": 52.131046295166016,
+    "delta_lat": -0.07854461669921875,
+    "jaccard_vs_s0": 0.932715594398231,
+    "basis": "v4 (the parent's E17-T3 arms, Y2Y-wide S0; latitude of the Alberta cells)"
+   }
+  ]
+ },
+ "vs_alberta_run": {
+  "alberta_run_package": "analyses/alberta_prioritization/director_package",
+  "surfaces": [
+   {
+    "surface": "balanced core (f >= 0.70)",
+    "alberta_run_km2": 1456,
+    "y2y_within_alberta_km2": 2141,
+    "shared_km2": 1402,
+    "pct_of_alberta_core_in_y2y": 96.29120879120879,
+    "pct_of_y2y_core_in_alberta": 65.48341896310136,
+    "jaccard": 0.6387243735763098,
+    "spearman_f_balanced": 0.7472437966604926
+   },
+   {
+    "surface": "ensemble core (F >= 0.70, appendix)",
+    "alberta_run_km2": 1264,
+    "y2y_within_alberta_km2": 1756,
+    "shared_km2": 1205,
+    "pct_of_alberta_core_in_y2y": 95.33227848101265,
+    "pct_of_y2y_core_in_alberta": 68.62186788154897,
+    "jaccard": 0.6639118457300276,
+    "spearman_f_balanced": NaN
+   },
+   {
+    "surface": "always (balanced f >= 0.95)",
+    "alberta_run_km2": 551,
+    "y2y_within_alberta_km2": 908,
+    "shared_km2": 529,
+    "pct_of_alberta_core_in_y2y": 96.00725952813067,
+    "pct_of_y2y_core_in_alberta": 58.25991189427313,
+    "jaccard": 0.5688172043010753,
+    "spearman_f_balanced": NaN
+   },
+   {
+    "surface": "Act 2 scenario tiers (union)",
+    "alberta_run_km2": 977,
+    "y2y_within_alberta_km2": 1863,
+    "shared_km2": 465,
+    "pct_of_alberta_core_in_y2y": 47.59467758444217,
+    "pct_of_y2y_core_in_alberta": 24.9597423510467,
+    "jaccard": 0.1957894736842105,
+    "spearman_f_balanced": NaN
+   },
+   {
+    "surface": "Act 3 opportunity",
+    "alberta_run_km2": 54728,
+    "y2y_within_alberta_km2": 52016,
+    "shared_km2": 52013,
+    "pct_of_alberta_core_in_y2y": 95.03910247039906,
+    "pct_of_y2y_core_in_alberta": 99.99423254383267,
+    "jaccard": 0.9503389304050721,
+    "spearman_f_balanced": NaN
+   }
+  ],
+  "clusters": [
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 1 (Act 1)",
+    "name": "SE of Jasper National Park Of Canada (52.4\u00b0N 116.6\u00b0W)",
+    "km2": 719,
+    "mean_f_own": 0.8404919505119324,
+    "pct_in_other_core": 96.10570236439499,
+    "pct_in_other_scenario_tier": 2.364394993045897,
+    "pct_in_other_opportunity": 1.5299026425591098,
+    "mean_f_other": 0.9411218762397766
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 2 (Act 1)",
+    "name": "NE of Banff National Park Of Canada (51.7\u00b0N 115.6\u00b0W)",
+    "km2": 336,
+    "mean_f_own": 0.8108077049255371,
+    "pct_in_other_core": 91.66666666666667,
+    "pct_in_other_scenario_tier": 2.0833333333333335,
+    "pct_in_other_opportunity": 6.25,
+    "mean_f_other": 0.8984593749046326
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 3 (Act 1)",
+    "name": "SE of Don Getty Wildland (50.9\u00b0N 114.9\u00b0W)",
+    "km2": 146,
+    "mean_f_own": 0.8092264533042908,
+    "pct_in_other_core": 88.35616438356165,
+    "pct_in_other_scenario_tier": 4.794520547945205,
+    "pct_in_other_opportunity": 6.8493150684931505,
+    "mean_f_other": 0.8495836853981018
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 4 (Act 1)",
+    "name": "S of Don Getty Wildland (50.4\u00b0N 114.7\u00b0W)",
+    "km2": 66,
+    "mean_f_own": 0.8778966069221497,
+    "pct_in_other_core": 100.0,
+    "pct_in_other_scenario_tier": 0.0,
+    "pct_in_other_opportunity": 0.0,
+    "mean_f_other": 0.9587047696113586
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 5 (Act 1)",
+    "name": "SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 147,
+    "mean_f_own": 0.8061224222183228,
+    "pct_in_other_core": 59.863945578231295,
+    "pct_in_other_scenario_tier": 25.85034013605442,
+    "pct_in_other_opportunity": 14.285714285714286,
+    "mean_f_other": 0.7307589650154114
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 6 (Act 2)",
+    "name": "NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
+    "km2": 16,
+    "mean_f_own": 0.29534316062927246,
+    "pct_in_other_core": 18.75,
+    "pct_in_other_scenario_tier": 12.5,
+    "pct_in_other_opportunity": 68.75,
+    "mean_f_other": 0.4491421580314636
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 7 (Act 2)",
+    "name": "SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 17,
+    "mean_f_own": 0.5224913954734802,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 52.94117647058823,
+    "pct_in_other_opportunity": 47.05882352941177,
+    "mean_f_other": 0.4094579219818115
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 8 (Act 2)",
+    "name": "SE of Jasper National Park Of Canada (52.5\u00b0N 116.6\u00b0W)",
+    "km2": 643,
+    "mean_f_own": 0.5371573567390442,
+    "pct_in_other_core": 58.475894245723175,
+    "pct_in_other_scenario_tier": 26.905132192846033,
+    "pct_in_other_opportunity": 14.618973561430794,
+    "mean_f_other": 0.6959106922149658
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 9 (Act 2)",
+    "name": "SE of Don Getty Wildland (50.8\u00b0N 114.8\u00b0W)",
+    "km2": 122,
+    "mean_f_own": 0.5300546288490295,
+    "pct_in_other_core": 20.491803278688526,
+    "pct_in_other_scenario_tier": 53.278688524590166,
+    "pct_in_other_opportunity": 26.229508196721312,
+    "mean_f_other": 0.5877531170845032
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 10 (Act 2)",
+    "name": "NE of White Goat (52.4\u00b0N 116.6\u00b0W)",
+    "km2": 26,
+    "mean_f_own": 0.46380093693733215,
+    "pct_in_other_core": 53.84615384615385,
+    "pct_in_other_scenario_tier": 30.76923076923077,
+    "pct_in_other_opportunity": 15.384615384615385,
+    "mean_f_other": 0.6994720697402954
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 11 (Act 2)",
+    "name": "SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 18,
+    "mean_f_own": 0.5206972360610962,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 50.0,
+    "pct_in_other_opportunity": 50.0,
+    "mean_f_other": 0.4068627655506134
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 12 (Act 2)",
+    "name": "NE of White Goat (52.4\u00b0N 116.6\u00b0W)",
+    "km2": 30,
+    "mean_f_own": 0.4856209456920624,
+    "pct_in_other_core": 60.0,
+    "pct_in_other_scenario_tier": 26.666666666666668,
+    "pct_in_other_opportunity": 13.333333333333334,
+    "mean_f_other": 0.7117646336555481
+   },
+   {
+    "package": "Alberta run",
+    "cluster": "Cluster 13 (Act 2)",
+    "name": "SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 18,
+    "mean_f_own": 0.5206972360610962,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 50.0,
+    "pct_in_other_opportunity": 50.0,
+    "mean_f_other": 0.4068627655506134
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 1 (Act 1)",
+    "name": "Upper Smoky Nature-First zone vicinity (54.0\u00b0N 119.5\u00b0W)",
+    "km2": 91,
+    "mean_f_own": 0.7310925126075745,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 2.197802197802198,
+    "pct_in_other_opportunity": 97.8021978021978,
+    "mean_f_other": 0.3641456663608551
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 2 (Act 1)",
+    "name": "SE of Jasper National Park Of Canada (52.4\u00b0N 116.6\u00b0W)",
+    "km2": 1745,
+    "mean_f_own": 0.8546715974807739,
+    "pct_in_other_core": 57.70773638968481,
+    "pct_in_other_scenario_tier": 25.673352435530084,
+    "pct_in_other_opportunity": 16.6189111747851,
+    "mean_f_other": 0.7207708358764648
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 3 (Act 1)",
+    "name": "S of Don Getty Wildland (50.0\u00b0N 114.6\u00b0W)",
+    "km2": 404,
+    "mean_f_own": 0.8438652753829956,
+    "pct_in_other_core": 60.396039603960396,
+    "pct_in_other_scenario_tier": 19.801980198019802,
+    "pct_in_other_opportunity": 19.801980198019802,
+    "mean_f_other": 0.720903754234314
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 4 (Act 1)",
+    "name": "SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 111,
+    "mean_f_own": 0.7879350781440735,
+    "pct_in_other_core": 78.37837837837837,
+    "pct_in_other_scenario_tier": 9.90990990990991,
+    "pct_in_other_opportunity": 11.711711711711711,
+    "mean_f_other": 0.8517046570777893
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 5 (Act 2)",
+    "name": "SE of White Goat (52.2\u00b0N 116.6\u00b0W)",
+    "km2": 577,
+    "mean_f_own": 0.5112481713294983,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 0.6932409012131716,
+    "pct_in_other_opportunity": 99.30675909878683,
+    "mean_f_other": 0.1884663850069046
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 6 (Act 2)",
+    "name": "NW of Livingstone Range Wildland Provincial Park (49.8\u00b0N 114.6\u00b0W)",
+    "km2": 232,
+    "mean_f_own": 0.5601757764816284,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 0.0,
+    "pct_in_other_opportunity": 100.0,
+    "mean_f_other": 0.19895200431346893
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 7 (Act 2)",
+    "name": "NE of Banff National Park Of Canada (51.9\u00b0N 115.7\u00b0W)",
+    "km2": 674,
+    "mean_f_own": 0.5776313543319702,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 16.468842729970326,
+    "pct_in_other_opportunity": 83.53115727002967,
+    "mean_f_other": 0.4274015426635742
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 8 (Act 2)",
+    "name": "SE of Don Getty Wildland (50.8\u00b0N 114.8\u00b0W)",
+    "km2": 125,
+    "mean_f_own": 0.5341960191726685,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 43.2,
+    "pct_in_other_opportunity": 56.8,
+    "mean_f_other": 0.47647061944007874
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 9 (Act 2)",
+    "name": "E of White Goat (52.2\u00b0N 116.5\u00b0W)",
+    "km2": 13,
+    "mean_f_own": 0.506033182144165,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 0.0,
+    "pct_in_other_opportunity": 100.0,
+    "mean_f_other": 0.18401208519935608
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 10 (Act 2)",
+    "name": "NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
+    "km2": 13,
+    "mean_f_own": 0.3740572929382324,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 0.0,
+    "pct_in_other_opportunity": 100.0,
+    "mean_f_other": 0.2171945720911026
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 11 (Act 2)",
+    "name": "E of White Goat (52.3\u00b0N 116.5\u00b0W)",
+    "km2": 22,
+    "mean_f_own": 0.5352049469947815,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 9.090909090909092,
+    "pct_in_other_opportunity": 90.9090909090909,
+    "mean_f_other": 0.2593582570552826
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 12 (Act 2)",
+    "name": "NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
+    "km2": 20,
+    "mean_f_own": 0.40294116735458374,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 5.0,
+    "pct_in_other_opportunity": 95.0,
+    "mean_f_other": 0.2539215683937073
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 13 (Act 2)",
+    "name": "NE of White Goat (52.4\u00b0N 116.5\u00b0W)",
+    "km2": 132,
+    "mean_f_own": 0.46977123618125916,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 2.272727272727273,
+    "pct_in_other_opportunity": 97.72727272727273,
+    "mean_f_other": 0.15938800573349
+   },
+   {
+    "package": "Y2Y-wide within Alberta",
+    "cluster": "Cluster 14 (Act 2)",
+    "name": "NE of Banff National Park Of Canada (51.8\u00b0N 115.9\u00b0W)",
+    "km2": 95,
+    "mean_f_own": 0.48379772901535034,
+    "pct_in_other_core": 0.0,
+    "pct_in_other_scenario_tier": 3.1578947368421053,
+    "pct_in_other_opportunity": 96.84210526315789,
+    "mean_f_other": 0.2532508075237274
+   }
+  ],
+  "tiers_crosstab_km2": {
+   "core": {
+    "core": 1402,
+    "scenario tiers": 509,
+    "opportunity": 230,
+    "never": 0
+   },
+   "scenario tiers": {
+    "core": 54,
+    "scenario tiers": 465,
+    "opportunity": 1344,
+    "never": 0
+   },
+   "opportunity": {
+    "core": 0,
+    "scenario tiers": 3,
+    "opportunity": 52013,
+    "never": 0
+   },
+   "never": {
+    "core": 0,
+    "scenario tiers": 0,
+    "opportunity": 1141,
+    "never": 0
+   }
+  }
+ },
+ "forms": [
+  "s0_ssp585_theta5",
+  "s1_ssp585_theta5",
+  "s2_ssp585_theta5",
+  "s2c_ssp585_theta5",
+  "s3_ssp585_theta5",
+  "s4_ssp585_theta3",
+  "s5_ssp585_theta5",
+  "s0_ssp245_theta5",
+  "s1_ssp245_theta5",
+  "s2_ssp245_theta5",
+  "s2c_ssp245_theta5",
+  "s3_ssp245_theta5",
+  "s4_ssp245_theta3",
+  "s5_ssp245_theta5"
+ ],
+ "pool_keys": [
+  "s0",
+  "s1",
+  "s2",
+  "s2c",
+  "s3",
+  "s4",
+  "s5"
+ ],
+ "ranchland_pool_km2": 5393,
+ "crown_share_of_unprotected_pct": 86.9613897587516
+}

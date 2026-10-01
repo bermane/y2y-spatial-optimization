@@ -668,7 +668,96 @@ parent. The pre-v2.1 file names of the values pair are removed on the first run.
 package redirected to the scratchpad (see R9.7 for the balanced-core numbers this produced); Ethan re-runs 12 → 13 → 14 for the record
 (the run archives the ensemble-core package to `_superseded_v4_ensemble_core/`).
 
-*Last updated 2026-09-23 (M20).*
+**M20.7 The director outputs = the EXACT set of the parent's 21 (Ethan, 2026-09-30: "the exact same outputs, figures, maps, tables (no
+video). same style, same size").** 14 now renders 01 / 01b objectives tables, 02a / 02b the Act 1 core maps on the balanced scenario's f
+with TWO insets on core clusters 1 and 2 (north → south, the parent's layout; the one-inset form of M18.6 is one edit away), 03 / 03b
+stars + locators, 04 consequences, 05 the Act 2 map — and nothing else: the values-convergence pair (M18.7) leaves the presentation set
+(one commented call; 13 keeps the record copies), the method timelapse is not an Alberta output (no video; the record call in 13 is
+commented too). Absorbed the parent's post-23rd consequences-table changes (M4.40 addenda): **named reference columns** — on Alberta
+Banff National Park (existing PA, whole footprint) and the Upper Smoky Nature-First zone (the IPCA analogue, whole footprint on the PU) as
+act "reference" with `pct_protected`; the three aggregates (existing PAs; the Nature-First zone's and the SRP planning area's unprotected
+parts) stay as act "reference_aggregate"; **the "Bear coexistence programs*" row** (`bear_programs_mean` / `bear_units_overlapped` on T-D1
+and T-D7: the cell-weighted mean `n_groups` over the census divisions an area overlaps, NA excluded — the 2026-09-16 rule; the
+communities layer covers Alberta's divisions); the ratios on raw current (`director_core.RATIO_SOURCE`, automatic on the shared grid); the
+reference columns unfilled and the Area row filled (style knobs, automatic). Verified zero-solve: 12 re-run headless into the scratchpad
+on the v4 record (no plotting; the outputs notebooks are Ethan's to render).
+
+*Last updated 2026-09-30 (M20.7).*
+
+**M20.8 `15_tiers_and_clusters_y2y_analysis` + `16_director_outputs_y2y_analysis` — the same director package built from the Y2Y-WIDE analysis within the
+Alberta extent (Ethan 2026-09-30: "builds the same director package but builds it from the y2y wide results within the alberta region"; split into
+two notebooks the same day at his request, so the figures can be tweaked in 16 without recomputing 15). Zero solves. 15 = 12's cells with ONE source swap: the plans are the flagship's 14 guarded sweeps (`analyses/y2y/runs_v4/`, `manifest_v4.csv`,
+`scenarios_v4.json`) read on the Alberta PU through the parent's own reader (`director_core.load_guarded(G_alberta, MAN_parent)` — the two
+analyses share one grid with identical cell IDs, M2.2, so a Y2Y-wide plan restricts to Alberta by masking); the package basis, thresholds and
+display rules are 12's (balanced core f ≥ 0.70 averaged over the two futures, ensemble F beside it, 10 km² clusters / 10 km complexes / 20 km
+regional picks, the region words, the named reference columns and the bear row). What changes by construction, each disclosed in the
+notebook's header table and `summary.json` (`package_basis`, `runs_source`, `additions_basis`): (i) NO Alberta budget level — the Y2Y-wide
+plans select 30% of the whole region and Alberta gets whatever the corridor-wide optimum places there (`additions_km2` = the reference
+anchor's cells on unprotected Alberta land, with the range over the 14 positions; an outcome, not a budget); (ii) the band is the parent's
+guarded 5% (the estimand) — D-AB13 is a rule of the Alberta RUN and is not applied; the unguarded band on the parent's reference cell only;
+(iii) percentiles, "×" ratios and the value top-30% maps keep ALBERTA's allocatable land as the denominator (a cluster is scored against the
+land the Alberta program can act on, whichever analysis found it) so the two decks read side by side — the parent's own deck scores
+Y2Y-wide; (iv) representativeness keeps the Alberta rule for the value vote (13 classes present, rare in the Alberta + 250 km window) while
+the objectives table states the block the plans were solved under (20 classes, Y2Y + 250 km targets); (v) E11 is carried from the parent's
+record (a property of the formulations' objectives Y2Y-wide, not of the clip); E19 forced cells and the E17-T3 arms are the parent's, read on
+the Alberta PU; (vi) T-D3 / T-D5 captures are the Y2Y-wide anchors' share of ALBERTA's totals inside Alberta (`T1_*_within_alberta.csv`;
+S0_target = the Y2Y-wide amount, indicative only); (vii) the v3.1-survival cell is replaced by THE COMPARISON against the Alberta run's
+package (`tables/comparison_vs_alberta_run.csv`, `comparison_clusters.csv`, `comparison_tiers_crosstab.csv`; `summary["vs_alberta_run"]`) —
+core / ensemble-core / always / scenario-tier / opportunity areas, shared land, Jaccard, Spearman of the two balanced f surfaces, and each
+deck cluster's share inside the other analysis's core and tiers (R9.9). 16 = 14's cells verbatim on this package (`dp.load(pkg=…,
+manifest=dc.MANIFEST)`), the same five outputs and style; the objectives table's words say "the Y2Y-wide analysis in Alberta". Outputs →
+`director_package_y2y_analysis/` (+ `director_outputs/`); `director_package/` (the Alberta run) and the parent's package are never touched.
+Generated from 12 + 14 by anchored replacements (drift in either fails the build loudly); 15 smoke-run headless into the scratchpad
+(zero-solve, no plotting); 16 is Ethan's to render. Not a methods change to either analysis — a second READING of the registered
+Y2Y-wide result on the Alberta frame, the applied answer to the zoom-in question (spec §7, C1) in the package's own terms.
+
+**M20.9 Alberta map conventions (Ethan 2026-09-30, on the 14 outputs; display only, in 13 / 14 / 16 through the shared assets).** (a) "BC" on the
+frame: the automatic code placer found no open land for it (BC's part of the Alberta frame lies inside the Y2Y region), so the frame pins it —
+`director_plot.STYLE["main_codes"]` = the same force / inside / at kwargs the insets take, Alberta `at={"BC": (-118.18, 51.11)}` (open BC land
+west of the strip, clear of the inset boxes and the scale bar; Y2Y default `{}`). (b) Inset windows fitted to the strip: `STYLE["inset_fit_pu"]`
+(Y2Y False; Alberta True) widens a cluster inset's window to the PU strip's full width over its rows plus the pad and centres it there, never
+shrinking, aspect re-fitted about the centre — inset A goes from a 171 km window centred on the cluster to ~280 km spanning the whole strip; the
+locators and the Act 2 windows follow (same helper). (c) Reference towns: `director_core.ALBERTA_TOWNS` (21 Alberta / east-BC towns, kept OUT of
+`Y2Y_TOWNS` so the Y2Y-wide insets do not move), passed as `dp.load(..., towns={**Y2Y_TOWNS, **ALBERTA_TOWNS})` (new default-preserving kwarg);
+the frame draws seven (`wide_main_towns`), the insets every gazetteer town inside their window, dots + names. (d) Bug fixed: the parent's
+`inset_town_skip` default ({"B": ("Jasper", "Banff")}) leaked into the Alberta package and hid Banff on inset B — 13 / 14 / 16 now set it `{}`.
+(e) Protected areas drawn whole: `STYLE["pa_fill_all"]` (Y2Y False; Alberta True) rasterizes the PA polygons onto the grid for the grey fill, so
+every PA cell shows as protected whether or not it is a planning unit (Ethan: "they should still show as protected areas") — the holes were the
+icefields and bare alpine inside Jasper / Banff (no irrecoverable-carbon data, hence outside the PU, R1.1) and the BC parks beyond the PU edge inside
+the Alberta frame: 18,308 PA cells outside the PU in the frame against 27,972 locked. Display only; the lock-in and every number are unchanged.
+(f) THE CONTEXT SURFACE (Ethan: "we can still draw the whole allocation of the y2y analysis in the maps, but remaining ab only as our area of focus.
+It's weird to be fully blank in BC"): `dp.load(context=<a package's geotiffs dir>)` reads that package's core surface (`f_balanced_core.tif` on the
+balanced basis) and Act 2 tiers (`act_tiers_guarded.tif` + `act2_owner.tif`) on the full grid and draws them BEYOND the focus PU at
+`STYLE["context_alpha"]` (0.45) under the focus surface, on the Act 1 maps, both insets, the locators and the Act 2 map (same class scheme), with
+a legend entry (`context_label`); never-selected context land stays basemap. The focus outline (`focus_outline`) first traced the raw PU edge — 428
+non-PU holes (icefields) inside the parks drew as dark lines — then the extent polygon (`dp.load(focus=)`), and is OFF in 16 at Ethan's ruling
+("remove the tracing of the PU mask"); the knob stays. 16 passes the Y2Y-wide
+package — the analysis this package is cut from — so BC shows the same result at lower weight while Alberta stays the frame's subject.
+(g) Light borders between protected areas: `STYLE["pa_borders"]` = (colour, lw, alpha) lines along the PA polygon edges (dissolved by name) over the
+grey fill; Alberta ("white", 0.4, 0.75). (h) Field removed from the gazetteer (Ethan). (i) 2026-09-30, later: the Y2Y-wide design changes of the same afternoon (cluster numbers as rimmed discs placed
+clear of labels, no leader line; the Act 2 legend centred between the insets and the page bottom and shrunk to fit; the overlay legend split per outline)
+live in the shared `director_plot` and reach 16 unchanged; 16's own legend overrides were removed so both decks use the same defaults; PA outline
+= 21's ("white", 0.4, 0.75). `pa_fill_all` default is now True for every package (Ethan's
+edit of the shared default, 2026-09-30).
+No package numbers change.
+
+**M20.10 Hand-merged deck picks in the Y2Y-wide-within-Alberta package (Ethan 2026-09-30: "combine cluster 2 and 3, combine cluster 4 and 5").**
+15 gains `MERGE_CORE_PICKS` (pairs of regional-cluster numbers on the north → south numbering before any merge; default [(2, 3), (4, 5)] for this
+package, [] = none), applied after the regional grouping and speck absorption and before numbering: the merged row takes the larger member's
+name and anchor, combines area / mean f / lat / lon area-weighted exactly as `dc.group_picks`, records the members as "[…]+[…]", and the
+survivors are renumbered north → south. Why by hand: the pairs lie 18 km (2–3) and 11 km (4–5) apart edge to edge, but the next gap (3–4) is
+33 km, so any single-linkage distance that joins them chains 2-3-4-5 into one cluster. Presentation only: the register, T-D7 and the stars
+follow the merged picks; the tier surfaces and every area total are unchanged. The Alberta run's 12 has no merge (its five clusters stand).
+
+**M20.11 Region words (Ethan 2026-09-30: "Alberta Rockies (Banff–Jasper) doesn't make sense for 3, since it is well south of Jasper and Banff").**
+The communities lookup (`analyses/communities/spec/region_lookup.csv`) names Division No. 15 — the mountain-parks strip from Crowsnest Pass to
+Jasper, 49–54 °N — with one word; its qualifier "(Banff–Jasper)" misnamed the Kananaskis / Highwood clusters. The lookup word is now
+"Alberta Rockies" (the qualifier dropped; every package reading the lookup follows on its next run, the parent included), and 15 gains
+`CLUSTER_REGION_OVERRIDES` (keyed by act + final cluster number, applied to `region_label` in T-D1, hence the star / locator / table titles) —
+the lookup's own VET note asked for a per-cluster word inside Division 15. Proposed, for Ethan to vet: cluster 3 (the merged Don Getty pair)
+= "Kananaskis / Highwood". Cluster 2: the census word (Division No. 9, 82% of its cells) says "Central Alberta foothills", but Alberta's Natural Regions (2005) put 93% of it in the Rocky
+Mountain natural region (subalpine 1,306 / alpine 276 / montane 46 km²) against 117 km² of Upper Foothills — the front ranges east of the park
+boundary (Bighorn backcountry, White Goat, Siffleur, Kootenay Plains) — so its word is "Alberta Rockies" (Ethan 2026-09-30: Rockies, not foothills; no qualifier). The region word is presentation; nothing measured changes.
 
 ### M20 — PENDING RE-PIN: parent package spec v2.1 / study plan v0.20.1 (2026-09-23)
 The parent redefined the director-facing core as the BALANCED scenario's guarded frequent tier (f_S0 averaged over the two climate

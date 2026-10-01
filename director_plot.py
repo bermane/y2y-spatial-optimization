@@ -33,6 +33,12 @@ BAND_BOUNDS = [-0.001, 0.05, 0.30, 0.70, 0.95, 1.001]
 BAND_NAMES = ["never (<5% of plans)", "rare (5–30%)", "conditional (30–70%)", "frequent (70–95%)", "always (≥95%)"]
 
 
+def _border_kw():
+    """draw_admin kwargs for the international border from STYLE['border_style'] = (colour, lw, dash) or None (= draw_admin's defaults: #4a4a4a, 1.0, solid)."""
+    b = STYLE.get("border_style")
+    return dict(border_color=b[0], border_lw=b[1], border_dash=b[2]) if b else {}
+
+
 def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=None):
     """The drawing state for ANY director_core-style grid G, with no package files -- split out of load() on 2026-09-28 so a
     package on another grid (the northern corridors at 300 m: `corridors_director.director_frame`) draws on the same wide layout
@@ -42,7 +48,7 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
     outputs are unchanged to the pixel. `towns` = {name: (lat, lon)} for the basemap (default director_core.Y2Y_TOWNS);
     `note` = the corner note finish() writes by default."""
     IP = overlay or dc.ipca_layer(G)
-    IP_LABEL = getattr(IP, "label", "IPCA proposals (not locked in)")
+    IP_LABEL = getattr(IP, "label", "Proposed IPCAs (not locked in)")      # legend wording (Ethan 2026-09-30)
     BM = dc.basemap_layer(G, towns=towns)
     PAN = dc.pa_layer(G, STYLE["pa_layer_min_km2"] if pa_min_km2 is None else pa_min_km2)   # named PAs for the inset / locator labels (display only)
     ADMIN = dc.admin_layer(G)
@@ -56,6 +62,12 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
 
     halo = [pe.withStroke(linewidth=2.5, foreground="white")]
     PAg = np.full(G.shape, np.nan, np.float32); PAg[G.locked2d] = 1.0
+    PA_GDF = gpd.read_file(config.PA_VECTOR).to_crs(G.crs) if STYLE.get("pa_fill_all", False) else None
+    if STYLE.get("pa_fill_all", False):                          # every protected-area cell grey, planning unit or not (Ethan 2026-09-30: "they should still show as
+        from rasterio import features as _rf                      # protected areas") -- the icefields inside Jasper / Banff (no carbon data, so not PU) and the parks
+        _foot = _rf.rasterize(((g, 1) for g in PA_GDF.geometry), out_shape=G.shape, transform=G.transform,   # beyond the PU edge
+                              fill=0, dtype="uint8").astype(bool)
+        PAg[_foot] = 1.0
 
     def rings_px(geom):
         polys = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
@@ -66,14 +78,91 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
             out.append(np.c_[px, py])
         return out
 
+    PAB = dc.pa_layer(G, 0) if STYLE.get("pa_borders") else None            # every PA, dissolved by name: the light borders between adjoining parks
+
     def draw_pa(ax):
         ax.imshow(PAg, cmap=ListedColormap([PA_COLOR]), alpha=STYLE.get("pa_alpha", 1.0), interpolation="nearest", zorder=1)   # pa_alpha: the northern maps (0.85); y2y 1.0
+        if PAB is not None:
+            col, lw, al = STYLE["pa_borders"]
+            for g in PAB.geometry:
+                for ring in rings_px(g):
+                    ax.plot(ring[:, 0], ring[:, 1], color=col, lw=lw * STYLE.get("_lw_scale", 1.0), alpha=al, zorder=1.05, solid_capstyle="round")
 
     def draw_ipca(ax, lw=1.3):
         for _, r in IP.gdf.iterrows():
             ls = r["ls"] if "ls" in IP.gdf.columns and r["ls"] is not None else "-"     # an overlay may carry its own linestyle per polygon
             for ring in rings_px(r.geometry):
                 ax.plot(ring[:, 0], ring[:, 1], color=IPCA_COLOR, lw=lw, ls=ls, zorder=3.5)
+
+    def place_cluster_numbers(ax, win=None):
+        """The cluster numbers as the northern route options draw theirs (Ethan 2026-09-30): a white disc rimmed in the cluster's
+        colour, the number inside, no leader line, sitting just OUTSIDE the cluster's convex hull at the hull-edge point nearest to
+        actual cluster cells -- so it never covers the cluster, not even a gap between its fragments, yet stays adjacent to it --
+        clear of every text already on the axes, of the other discs and of the towns. Runs after a panel's labels and limits exist
+        (finish / _draw_inset)."""
+        marks = getattr(ax, "_cluster_marks", [])
+        if not marks:
+            return
+        from matplotlib.transforms import Bbox
+        from scipy import ndimage as _ndi
+        fig = ax.figure; r = fig.canvas.get_renderer()
+        if win is None:
+            x0, x1 = sorted(ax.get_xlim()); y0, y1 = sorted(ax.get_ylim()); win = (x0, x1, y0, y1)
+        H, W = G.shape
+        wx0, wx1 = int(max(np.floor(win[0]), 0)), int(min(np.ceil(win[1]), W)); wy0, wy1 = int(max(np.floor(win[2]), 0)), int(min(np.ceil(win[3]), H))
+        if wx1 - wx0 < 4 or wy1 - wy0 < 4:
+            return
+        sl = (slice(wy0, wy1), slice(wx0, wx1))                                  # every distance field on the panel's window only
+        blocked = np.zeros((wy1 - wy0, wx1 - wx0), bool)
+        for _, _, env, _, _ in marks:
+            blocked |= env[sl]
+        clear = _ndi.distance_transform_edt(~blocked) if blocked.any() else np.full(blocked.shape, np.inf)   # distance to the nearest envelope cell
+        texts = [t.get_window_extent(r) for t in ax.texts if t.get_visible() and t.get_text().strip()]
+        towns_px = np.array([dc.xy_to_px(G, x, y) for x, y in BM.towns.values()]) if getattr(BM, "towns", None) else np.zeros((0, 2))
+        ext = ax.get_window_extent(r); data_per_disp = (win[1] - win[0]) / max(ext.width, 1e-6); pt_px = fig.dpi / 72.0
+        placed = []
+        for num, raw, env, col, fs_ in marks:
+            if not raw[sl].any():
+                continue                                                         # this cluster is not in this panel
+            rad_disp = 0.85 * fs_ * pt_px; rad = rad_disp * data_per_disp; margin = rad + 3.0 * data_per_disp * pt_px
+            d_env = _ndi.distance_transform_edt(~env[sl])                         # distance outside this cluster's hull
+            lab_, n_ = _ndi.label(raw[sl], structure=np.ones((3, 3)))              # its MAIN BODY (largest fragment in this panel), not an outlier speck
+            body = (lab_ == (np.bincount(lab_.ravel())[1:].argmax() + 1)) if n_ > 1 else raw[sl]
+            d_raw = _ndi.distance_transform_edt(~body)                             # distance to the main body
+            chosen = None; best = None                                           # rings of growing radius: the disc never sits on a name while a clear spot exists further out (Ethan 2026-09-30)
+            for k, mult in enumerate(STYLE.get("cluster_number_rings", (1.0, 1.6, 2.4, 3.5, 5.0, 7.0))):
+                m_ = margin * mult
+                ring = (d_env >= m_) & (d_env <= m_ + 2.5)
+                ys, xs = np.nonzero(ring)
+                if not len(xs):
+                    continue
+                order = np.argsort(d_raw[ys, xs], kind="stable")                 # nearest to the real cluster first
+                step = max(1, len(order) // 3000)
+                for j in order[::step]:
+                    cx, cy = float(xs[j] + wx0), float(ys[j] + wy0)
+                    if not (win[0] + rad < cx < win[1] - rad and win[2] + rad < cy < win[3] - rad):
+                        continue
+                    if clear[ys[j], xs[j]] < rad + STYLE.get("cluster_number_gap_px", 1.5):    # the whole disc clear of every cluster's hull
+                        continue
+                    if len(towns_px) and (np.hypot(towns_px[:, 0] - cx, towns_px[:, 1] - cy) < 2.5 * rad).any():
+                        continue
+                    c = ax.transData.transform((cx, cy)); bb = Bbox([[c[0] - rad_disp, c[1] - rad_disp], [c[0] + rad_disp, c[1] + rad_disp]])
+                    n_over = sum(bb.overlaps(t) for t in texts) + sum(bb.overlaps(pb) for pb in placed)
+                    if n_over == 0:
+                        chosen = (cx, cy, bb); break
+                    if k == 0 and (best is None or n_over < best[0]):
+                        best = (n_over, cx, cy, bb)                              # the least-covered spot on the innermost ring, the last resort
+                if chosen is not None:
+                    break
+            if chosen is None and best is not None:                              # nothing clear on any ring: the innermost spot covering the fewest labels
+                chosen = best[1:]
+            if chosen is None:
+                continue
+            cx, cy, bb = chosen
+            ax.text(cx, cy, num, fontsize=fs_, fontweight=600, ha="center", va="center", zorder=8, clip_on=True, color=TABLE["ink"],
+                    bbox=dict(boxstyle="circle,pad=0.3", fc="white", ec=col, lw=STYLE.get("cluster_number_rim_lw", 1.8)))
+            placed.append(bb)
+        ax._cluster_marks = []
 
     def finish(ax, title, handles, note=note, legend_loc="upper right", scale=True, names=None, towns=None, name_fs=None):
         names_ = STYLE["province_names"] if names is None else names
@@ -86,8 +175,8 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
                             towns=STYLE["towns"] if towns is None else towns, fs_scale=STYLE.get("_fs_scale", 1.0), window=WINDOW, avoid_sw=scale)
             if names_:
                 dc.label_jurisdictions_window(ax, G, BM, WINDOW, fs=(name_fs or STYLE["wide_main_name_fs"]) * STYLE.get("_fs_scale", 1.0),
-                                              avoid_sw=scale, skip=STYLE["main_skip_codes"])
-        dc.draw_admin(ax, G, ADMIN)                                   # coast, admin lines, border
+                                              avoid_sw=scale, skip=STYLE["main_skip_codes"], **STYLE.get("main_codes", {}))   # main_codes: force / inside / at, as the insets' codes (Alberta: BC pinned)
+        dc.draw_admin(ax, G, ADMIN, **_border_kw())                   # coast, admin lines, border (border_style: the international border's colour / lw / dash)
         if STYLE["lat53"]:
             dc.graticule(ax, G, lats=(53,), lons=(), emph_lat=53)     # the 53°N line (E17 tie-in) -- off by default (Ethan 2026-09-14)
         if WINDOW is None:
@@ -96,19 +185,48 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
             ax.set_xlim(WINDOW[0], WINDOW[1]); ax.set_ylim(WINDOW[3], WINDOW[2])
         if scale:                                                     # scale bar + north arrow, south-west corner (ocean)
             if WINDOW is None:
-                dc.scalebar(ax, G, loc=(0.05, 0.04), fs=STYLE["legend_fs"] - 1); dc.north_arrow(ax, G, loc=(0.075, 0.075), fs=STYLE["legend_fs"] - 1)
+                if STYLE.get("frame_north_arrow_beside_bar", True):       # the arrow LEFT of the bar, rising from its baseline (Ethan 2026-09-30, the Y2Y frame)
+                    W_, H_ = G.shape[1], G.shape[0]; gap = STYLE.get("frame_north_arrow_gap", 0.05) * W_
+                    xa = 0.05 * W_; y1 = (1 - 0.04) * H_; y0 = y1 - 70 * PX_PER_KM
+                    dc.scalebar(ax, G, loc=(0.05 + gap / W_, 0.04), fs=STYLE["legend_fs"] - 1)      # the bar shifted right to make room
+                    ax.annotate("", xy=(xa, y0), xytext=(xa, y1), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
+                    ax.annotate("N", xy=(xa, y0), xytext=(0, dc.SCALEBAR_GAP_PT), textcoords="offset points", ha="center", va="bottom", fontsize=STYLE["legend_fs"] - 1, fontweight=600, zorder=5)
+                else:
+                    dc.scalebar(ax, G, loc=(0.05, 0.04), fs=STYLE["legend_fs"] - 1); dc.north_arrow(ax, G, loc=(0.075, 0.075), fs=STYLE["legend_fs"] - 1)
             else:                                                     # the same corner of the WINDOW, in pixel units (km x PX_PER_KM)
                 px0, px1, pyt, pyb = WINDOW; km = STYLE["window_scale_km"]; L = km * PX_PER_KM     # lengths / offsets = km x px_per_km
                 x, y = px0 + 0.05 * (px1 - px0), pyb - 0.04 * (pyb - pyt)
+                _left = STYLE.get("window_north_arrow_left", False)                 # the Y2Y frame's construction (Ethan 2026-09-30): the arrow LEFT of the bar on its baseline, N above the tip
+                if _left:
+                    xa_left = x; x = x + STYLE.get("frame_north_arrow_gap", 0.05) * (px1 - px0)   # the bar shifted right to make room, as on the Y2Y frame
+                if STYLE.get("scalebar_box", False):                        # an opaque white backing under the bar + label, so nothing shows through it (Alberta, Ethan 2026-09-30)
+                    _fs = STYLE["legend_fs"] - 1; _pt = (px1 - px0) / max(ax.get_window_extent(ax.figure.canvas.get_renderer()).width, 1e-6) * ax.figure.dpi / 72.0   # data px per pt
+                    _h = 6 * PX_PER_KM + 1.35 * _fs * _pt; _pad = 5 * PX_PER_KM
+                    ax.add_patch(Rectangle((x - _pad, y - _h - _pad), L + 2 * _pad, _h + 2 * _pad + 2, facecolor="white", edgecolor="none", alpha=1.0, zorder=4.9))
                 ax.plot([x, x + L], [y, y], color="black", lw=2.5, solid_capstyle="butt", zorder=5)
-                ax.text(x + L / 2, y - 6 * PX_PER_KM, f"{km} km", ha="center", fontsize=STYLE["legend_fs"] - 1, zorder=5)
-                if STYLE.get("north_arrow_beside_bar", False):            # the arrow beside the bar, rising from its baseline (wolverine, 2026-09-29)
+                ax.annotate(f"{km} km", xy=(x + L / 2, y), xytext=(0, dc.SCALEBAR_GAP_PT), textcoords="offset points", ha="center", va="bottom", fontsize=STYLE["legend_fs"] - 1, zorder=5)
+                if _left:
+                    _pt = (px1 - px0) / max(ax.get_window_extent(ax.figure.canvas.get_renderer()).width, 1e-6) * ax.figure.dpi / 72.0   # data px per pt
+                    _Lpx = (STYLE.get("north_arrow_pt") or 11) * _pt                  # the Y2Y frame's 70 km arrow is ~11 pt
+                    ax.annotate("", xy=(xa_left, y - _Lpx), xytext=(xa_left, y), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
+                    ax.annotate("N", xy=(xa_left, y - _Lpx), xytext=(0, dc.SCALEBAR_GAP_PT), textcoords="offset points", ha="center", va="bottom", fontsize=STYLE["legend_fs"] - 1, fontweight=600, zorder=5)
+                    xa = None
+                elif STYLE.get("north_arrow_beside_bar", False):          # the arrow beside the bar, rising from its baseline (wolverine, 2026-09-29)
                     xa, y1 = x + L + 0.06 * (px1 - px0), y; y0 = y1 - 0.06 * (pyb - pyt)
                 else:
                     xa, y1 = px0 + 0.075 * (px1 - px0), pyb - 0.075 * (pyb - pyt); y0 = y1 - 0.06 * (pyb - pyt)
-                ax.annotate("", xy=(xa, y0), xytext=(xa, y1), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
-                ax.text(xa, y0 - 6 * PX_PER_KM, "N", ha="center", va="bottom", fontsize=STYLE["legend_fs"] - 1, fontweight=600, zorder=5)
+                if _left:
+                    pass                                                  # drawn above
+                elif STYLE.get("north_arrow_pt"):                         # a fixed arrow length in POINTS (the Y2Y-wide frame's 70 km arrow is ~11 pt), so every frame's arrow matches (Alberta, 2026-09-30)
+                    _L = STYLE["north_arrow_pt"]
+                    ax.annotate("", xy=(xa, y1 - 0.0), xytext=(0, -_L), textcoords="offset points", arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
+                    ax.annotate("N", xy=(xa, y1), xytext=(0, -_L - 3), textcoords="offset points", ha="center", va="top", fontsize=STYLE["legend_fs"] - 1, fontweight=600, zorder=5)
+                else:
+                    ax.annotate("", xy=(xa, y0), xytext=(xa, y1), arrowprops=dict(arrowstyle="-|>", color="black", lw=1.4, mutation_scale=14), zorder=5)
+                    ax.text(xa, y0 - 6 * PX_PER_KM, "N", ha="center", va="bottom", fontsize=STYLE["legend_fs"] - 1, fontweight=600, zorder=5)
         dc.corner_note(ax, note)
+        if not STYLE.get("_defer_numbers", False):                    # _wide_map places the frame's discs itself, after the inset tags exist
+            place_cluster_numbers(ax)                                 # the cluster discs, once every label is on the axes
         ax.set_title(title, fontsize=11.5)
         ax.set_xticks([]); ax.set_yticks([])
         for sp in ax.spines.values():
@@ -124,6 +242,11 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
             ax.legend(handles=handles, loc="upper right", bbox_to_anchor=(1.0, 1.0), **lkw)
 
     IPCA_HANDLE = Patch(facecolor="none", edgecolor=IPCA_COLOR, label=IP_LABEL)
+    if "legend" in getattr(IP, "gdf", pd.DataFrame()).columns:                    # one entry per overlay polygon (its own linestyle + words): the Upper Smoky pair (Ethan 2026-09-30)
+        IPCA_HANDLES = [Patch(facecolor="none", edgecolor=IPCA_COLOR, ls=(r["ls"] if "ls" in IP.gdf.columns and r["ls"] is not None else "-"), label=str(r["legend"]))
+                        for _, r in IP.gdf.iterrows() if str(r["legend"])]
+    else:
+        IPCA_HANDLES = [IPCA_HANDLE]
     BASE_HANDLES = [Patch(facecolor=PA_COLOR, label="Protected areas (locked in)"),
                     Patch(facecolor="none", edgecolor=CL_COLOR, label="numbered = deck picks")]      # ("never selected" dropped, Ethan 2026-09-14)
 
@@ -132,12 +255,16 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
     return SimpleNamespace(**ns)
 
 
-def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=None, window=None, hex_grid=True):
+def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=None, window=None, hex_grid=True, towns=None, context=None, focus=None):
     """Load the package products written by 19 and build the drawing helpers over them.
     Defaults = the Y2Y-wide package. Another package on the same 1 km grid (the Alberta mirror, 2026-09-15) passes its own
     `grid` (a director_core-style G), `manifest` (path), `overlay` (SimpleNamespace(gdf, mask2d, label) in the IPCA role;
     a `ls` column on the gdf sets each polygon's linestyle), a pixel `window` (x0, x1, y_top, y_bottom) that every
-    frame-level map is clipped to, and hex_grid=False to skip the 250 km2 lattice it does not use."""
+    frame-level map is clipped to, hex_grid=False to skip the 250 km2 lattice it does not use, and `towns` = its own gazetteer
+    {name: (lat, lon)} for the basemap (default director_core.Y2Y_TOWNS; the Alberta package adds director_core.ALBERTA_TOWNS).
+    `context` = another package's geotiffs dir on the same grid (the Y2Y-wide package for the Alberta maps, Ethan 2026-09-30): its core
+    surface and Act 2 tiers are drawn BEYOND this package's PU at STYLE['context_alpha'], the PU outlined as the area of focus;
+    `focus` = the 2-D mask to outline (default: the PU with its enclosed holes filled -- the raw PU would trace every icefield inside a park)."""
     PKG = pkg or (dc.PKG / "_smoke" if allow_partial else dc.PKG)
     GEO, TAB, FIGD = PKG / "geotiffs", PKG / "tables", PKG / "figures"
     assert (PKG / "summary.json").exists(), "run 19_tiers_and_clusters first"
@@ -190,11 +317,38 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
     # the frame -- basemap, hillshade, admin lines, named PAs, the overlay, the window and the closures over them -- is
     # load_frame's (shared with packages on other grids, 2026-09-28); its members are re-bound here so `globals().update(vars(C))`
     # exposes the same names as always
-    _frame = load_frame(G, overlay=overlay, window=window, note=N_NOTE)
+    _frame = load_frame(G, overlay=overlay, window=window, note=N_NOTE, towns=towns)
+    CTX_F = CTX_TIERS = CTX_OWNER = None; CONTEXT_HANDLE = None
+    if context is not None:                                                        # the whole allocation of the context analysis, outside this PU only
+        _cg = pathlib.Path(context)
+        with rasterio.open(_cg / ("f_balanced_core.tif" if CORE_BASIS == "balanced" else "F_guarded.tif")) as _s:
+            CTX_F = _s.read(1).astype(np.float32)
+        with rasterio.open(_cg / "act_tiers_guarded.tif") as _s:
+            CTX_TIERS = _s.read(1)
+        with rasterio.open(_cg / "act2_owner.tif") as _s:
+            CTX_OWNER = _s.read(1)
+        CTX_F[G.pu] = np.nan; CTX_F[CTX_F <= 0] = np.nan                            # the focus PU draws itself; never-selected context land stays basemap
+        if STYLE.get("context_label"):                                              # None = no legend entry for the context surface (Ethan 2026-09-30)
+            CONTEXT_HANDLE = Patch(facecolor=plt.get_cmap("viridis")(0.45), alpha=STYLE["context_alpha"], label=STYLE["context_label"])
+
+    if CTX_F is not None:
+        from scipy import ndimage as _ndi
+        FOCUS = np.asarray(focus, dtype=bool) if focus is not None else _ndi.binary_fill_holes(G.pu)   # the outer boundary only: no outline around the non-PU holes (icefields)
+    else:
+        FOCUS = None
+
+    def draw_focus(ax):
+        """The focus region's outline when a context surface is drawn around it (FOCUS: the extent polygon, or the hole-filled PU)."""
+        if FOCUS is None or not STYLE.get("focus_outline"):
+            return
+        col, lw = STYLE["focus_outline"]
+        ax.contour(FOCUS.astype(np.uint8), levels=[0.5], colors=[col], linewidths=lw * STYLE.get("_lw_scale", 1.0), zorder=3.3)
+
     IP, IP_LABEL, BM, HS, HS_EXTENT, PAN, ADMIN, WINDOW, PX_PER_KM = (_frame.IP, _frame.IP_LABEL, _frame.BM, _frame.HS, _frame.HS_EXTENT, _frame.PAN,
                                                                      _frame.ADMIN, _frame.WINDOW, _frame.PX_PER_KM)
     halo, PAg, rings_px, draw_pa, draw_ipca, finish = _frame.halo, _frame.PAg, _frame.rings_px, _frame.draw_pa, _frame.draw_ipca, _frame.finish
-    IPCA_HANDLE, BASE_HANDLES = _frame.IPCA_HANDLE, _frame.BASE_HANDLES
+    place_cluster_numbers = _frame.place_cluster_numbers
+    IPCA_HANDLE, IPCA_HANDLES, BASE_HANDLES = _frame.IPCA_HANDLE, _frame.IPCA_HANDLES, _frame.BASE_HANDLES
 
     def draw_hex(ax, hm, cmap, norm, alpha=1.0):
         ok = hm[np.isfinite(hm.value)]
@@ -218,11 +372,16 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
             col = STYLE["cluster_colors"].get(int(num), color) if picked else color
             for ring in rings_px(r.geometry):
                 ax.plot(ring[:, 0], ring[:, 1], color=col, lw=lw, zorder=4, path_effects=ring_halo)
-            if int(r.cid) in numbers and numbers[int(r.cid)][1]:
-                c = r.geometry.centroid
-                cx, cy = dc.xy_to_px(G, c.x, c.y)
-                ax.annotate(numbers[int(r.cid)][0], xy=(cx, cy), xytext=(cx + 30 * PX_PER_KM, cy - 30 * PX_PER_KM), fontsize=fs, fontweight=600, clip_on=True,
-                            color=col, path_effects=halo, zorder=6, arrowprops=dict(arrowstyle="-", color=col, lw=0.6))
+            if int(r.cid) in numbers and numbers[int(r.cid)][1]:            # the number: a rimmed disc placed AFTER the labels exist (place_cluster_numbers)
+                cids = [c for c, (n, _) in numbers.items() if n == num]
+                from rasterio import features as _rf
+                mask = _rf.rasterize(((gg, 1) for gg in g[g.cid.isin(cids)].geometry), out_shape=G.shape, transform=G.transform, fill=0, dtype="uint8").astype(bool)
+                # the cluster's ENVELOPE = its convex hull (Ethan 2026-09-30: a disc in a gap between fragments still "covers the cluster");
+                # the disc goes just outside the hull, at the hull-edge point NEAREST to actual cluster cells (place_cluster_numbers)
+                hull = g[g.cid.isin(cids)].geometry.unary_union.convex_hull
+                env = _rf.rasterize([(hull, 1)], out_shape=G.shape, transform=G.transform, fill=0, dtype="uint8").astype(bool) | mask
+                ax._cluster_marks = getattr(ax, "_cluster_marks", []) + [(str(num), mask, env, col, fs)]
+
 
     def picks_for(act, key=None):
         """{member cid: (number, is_anchor)} for every component of every pick; the number is drawn once, at the anchor."""
@@ -407,6 +566,8 @@ STYLE = dict(
     star_tight=False,          # full canvas (not cropped) so the cluster locators below align panel-for-panel
     locator_fs_scale=1.5, locator_pa_names=2, locator_towns=False, locator_panel_in=4.6,   # the locator windows: 4.6 in squares on the star centres, type scaled up, two park names, no towns
     locator_codes={1: dict(force=["AK"]), 2: dict(skip=["WA"]), 3: dict(skip=["WA"])},   # per-window code edits (Ethan 2026-09-15): AK on the coast of 1; no WA on 2 and 3
+    locator_town_skip={},      # {cluster number: (town, ...)} left off that locator window (the towns themselves come from the gazetteer inside the window)
+    locator_own_number_only=False,   # True = a locator panel numbers only its own cluster; the other clusters keep their outlines (Alberta 2026-09-30)
     # the Act 1 wide-map inset REGIONS are fixed (Ethan 2026-09-21): the v3.1 windows -- A = the Sacred Headwaters / Stikine window, B = the
     # Purcells / Kootenays window -- in grid pixels (the 1 km grid is identical across manifest versions), re-fitted to the inset aspect;
     # set to None to size the windows on STYLE["inset_clusters"] again
@@ -437,7 +598,7 @@ STYLE = dict(
     # Alternative C on the v4 structural-connectivity tier around Ddhaw Ghro (64°N, v4 pick 7): (144.0, 580.0, 154.4, 808.6)
     # C spans BOTH northern tiers (Ethan 2026-09-21): the carbon-forward land east of Fishing Branch and the structural-connectivity tier
     # around Ddhaw Ghro (v4 picks 13 + 7, 45 km pad); the earlier v3.1 C (Fishing Branch alone) was (229.0, 549.0, -49.6, 430.6)
-    scenario_inset_windows={"A": (124.9, 492.1, 959.0, 1510.0), "B": (699.2, 1047.8, 1916.0, 2439.0), "C": (144.0, 580.0, 76.4, 730.6)},
+    scenario_inset_windows={"A": (124.9, 492.1, 959.0, 1510.0), "B": (699.2, 1047.8, 1916.0, 2439.0), "C": (144.0, 580.0, 36.4, 690.6)},
     scenario_inset_area_skip={"C": ("Nahanni National Park Reserve Of Canada",)},   # its label sits on C's clipped south-east corner over Nááts'įhch'oh's
     scenario_inset_codes={"A": dict(force=["AK"], skip=["WA"]), "B": dict(skip=["WA"])},
     scenario_inset_town_skip={"A": ("Iskut", "Telegraph Creek"), "B": ("Jasper", "Banff")},
@@ -454,6 +615,7 @@ STYLE = dict(
     values_table="spec",      # the objectives-table rendering: "spec" (the table spec, 2026-09-14) | "poster" | "digest" | "plain"
     conseq_cmap="RdBu", conseq_tint=0.55, conseq_scale_rows="clusters",   # consequences: red (lowest) -> blue (highest) over the CLUSTER columns; the reference columns stay unfilled (Ethan 2026-09-23); "all" = the 2026-09-21 rule
     conseq_fill_area=True,                                              # the Area row takes the same low -> high ramp (Ethan 2026-09-23)
+    conseq_bear_row=True,                                               # "Bear coexistence programs*" row (Ethan 2026-09-30): a count, not a ratio -- starred, explained in the note
     conseq_mode="row",         # "row" = each row's lowest -> highest (Laura, 2026-09-21); "hinge" = centred on 1.0x (the 2026-09-14 rule)
     conseq_tail_row=False,     # the soil-carbon-tail concentration row under carbon (package spec v1.14): off (Ethan 2026-09-21)
     conseq_flat_ratio=1.10,    # "row" mode: a row whose max/min ratio is below this is a tie at display precision -> neutral fill, not a stretched ramp
@@ -465,16 +627,34 @@ STYLE = dict(
                                                      # edge and the bottom of the ramp block under A, measured at draw time; a box taller than the gap hangs from B
     wide_legend_fit=False,                           # True (wolverine, Ethan 2026-09-29): with wide_legend_between, shrink the legend's font (its handles, padding and
     wide_legend_fs_min=9,                            # spacing are in font units, so the whole box scales) until the box fits the gap; never below this size
+    frame_north_arrow_beside_bar=True, frame_north_arrow_gap=0.05,   # the Y2Y frame: N arrow to the right of the 250 km bar on its baseline (Ethan 2026-09-30); gap in frame widths
     north_arrow_beside_bar=False,                    # windowed frames: the north arrow to the right of the scale bar instead of above it (wolverine, 2026-09-29)
     lat53=False,               # the 53°N graticule line on maps
     titles=True,               # figure / table titles (21 sets False: the slide carries the title)
     export_dpi=200, panel_export_scale=2,   # PNG resolution (21 sets 300: 13.33 in wide -> 4,000 px, a 4K slide); locator panels at 2x their nominal px
     export_pdf=False,          # also write a .pdf twin beside each wide-layout PNG (the northern package sets True: its §3a export rule)
     pa_alpha=1.0,              # the protected-areas fill's alpha (the northern package sets 0.85 to match its IPCA fill; y2y opaque)
+    pa_fill_all=True,          # the grey PA fill covers EVERY protected-area cell, planning unit or not (rasterized from the PA polygons; Ethan 2026-09-30, every package); False = locked PU cells only
+    border_style=None,         # the international border: (colour, lw, dash) | None = draw_admin's defaults (#4a4a4a, 1.0 pt, solid); the Alberta frame draws it like the admin lines
+    scalebar_box=False,        # a WINDOWED frame's scale bar on an opaque white backing (Alberta 2026-09-30)
+    north_arrow_pt=None,       # a WINDOWED frame's north arrow at a fixed length in points (11 = the Y2Y-wide frame's arrow); None = 6% of the window height
+    window_north_arrow_left=False,   # a WINDOWED frame: the Y2Y frame's construction -- the arrow LEFT of the bar on its baseline, N above the tip, the bar shifted right (Alberta 2026-09-30)
+    pa_borders=("white", 0.3, 0.75),   # (colour, lw, alpha) = hairlines along the PA polygon edges (dissolved by name) over the grey fill, so Banff / Jasper / Yoho / Kootenay read apart (Ethan 2026-09-30); None = off
+    context_alpha=0.45,        # the context package's surface beyond the focus PU (dp.load(context=...)): its alpha
+    context_label="Y2Y-wide result beyond Alberta (context)",   # its legend entry; None = none (16, Ethan 2026-09-30)
+    inset_shift_km={},         # {tag: (east km, north km)}: nudge a wide-map inset after the same-scale fit (Alberta B up 20 km, 2026-09-30); {} = none
+    inset_same_scale=True, locator_same_scale=True,   # the Act 1 insets A/B, and the four locators, each set at ONE scale (the largest window's; Ethan 2026-09-30)
+    wide_common_crop=True,     # every wide map (Act 1, Act 2, the frames) exports on one page box: the frame's left edge + inset top, full width, page bottom (Ethan 2026-09-30)
+    scenario_legend_between=True,   # Act 2 map: the legend box centred between the inset boxes' bottom edge and the page bottom (Ethan 2026-09-30); False = scenario_legend_y
+    scenario_insets_as_act1=False,  # True = the Act 2 map's windows are the Act 1 map's panels A / B (same regions, re-fitted to the Act 2 aspect) (Alberta 2026-09-30)
+    wide_legend_floor="ramp",  # wide_legend_between's floor: "ramp" = the ramp block under inset A (north) | "frame" = the frame's bottom edge (Alberta)
+    focus_outline=("#333333", 0.6),   # the focus PU's outline when a context surface is drawn; None = off
     map_layout="wide",         # Act 1 maps: "wide" = slide-shaped with two zoom insets (clusters 1 and 2) | "tall" = the map alone
     inset_clusters=(1, 2), inset_pad_km=45, inset_min_km=320, inset_pa_names=5, inset_ipca_names=3, inset_declutter=True, inset_fs=11.5, inset_number_fs=18, inset_abbrev=True, inset_abbrev_fs=15,   # inset_ipca_names / inset_declutter: knobs since 2026-09-28 (the y2y values unchanged)
     wide_main_names="abbrev", wide_main_name_fs=15, wide_main_towns=(),      # the Y2Y-wide panel of the wide layout: postal codes only, big
     main_skip_codes=("CA",),  # jurisdictions never labelled on the Y2Y-wide frame (California is a sliver)
+    main_codes={},             # a WINDOWED frame's jurisdiction codes: label_jurisdictions_window kwargs (force / inside / at); the Alberta frame pins BC (2026-09-30)
+    inset_fit_pu=False,        # cluster insets: widen the window to the PU strip's full width over its rows (+ pad) and centre it there, so the whole strip fits (Alberta, 2026-09-30)
     pa_layer_min_km2=300, window_scale_km=100,                            # named-PA floor for insets/locators (read at load); the scale bar on a WINDOWED frame
     hillshade=True, water=True, province_names=True,                     # the basemap (corridors_mapstyle tokens, display only)
     towns=("Dawson City", "Whitehorse", "Watson Lake", "Fort Nelson", "Fort St. John", "Prince George", "Smithers", "Jasper",
@@ -512,7 +692,7 @@ def core_map_hex250(C, path, title=None, with_ipca_on_a=True):
             C.draw_ipca(ax)
         if panel == "b":
             C.draw_clusters(ax, "act1", C.picks_for("Act 1"), fs=STYLE["cluster_number_fs"], lw=STYLE["cluster_lw"])
-        C.finish(ax, "(a) mean F per ~250 km² hex over unprotected land, with declared IPCA proposals" if panel == "a"
+        C.finish(ax, "(a) mean F per ~250 km² hex over unprotected land, with proposed IPCAs" if panel == "a"
                  else "(b) with the core clusters (F ≥ 0.70 at 1 km); numbered north → south",
                  C.BASE_HANDLES if panel == "b" else C.BASE_HANDLES[:2] + [C.IPCA_HANDLE], note=C.N_NOTE if panel == "b" else "")
     cax = fig.add_axes([0.30, 0.055, 0.40, 0.014])
@@ -558,14 +738,20 @@ def cluster_locators(C, path, act="Act 1", layer="act1", panel_px=None):
             cy = 1 - (r_ + 0.5) / nrows
             axes.append(fig.add_axes([cx - pw / 2, cy - ph / 2, pw, ph]))
         axes = np.array(axes)
-        draw = lambda ax: C.draw_clusters(ax, layer, C.picks_for(act), fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"])
+        _all = C.picks_for(act)
+        def draw_for(num):                                           # locator_own_number_only: every cluster outlined, only THIS panel's cluster numbered (Ethan 2026-09-30)
+            nums_ = {cid: (n, a and (not STYLE.get("locator_own_number_only", False) or str(n) == str(num))) for cid, (n, a) in _all.items()}
+            return lambda ax: C.draw_clusters(ax, layer, nums_, fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"])
         sc = STYLE["locator_fs_scale"]
         STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"] * sc; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"] * sc
         fs0, pa0 = STYLE["inset_fs"], STYLE["inset_pa_names"]; STYLE["inset_fs"] = fs0 * sc; STYLE["inset_pa_names"] = STYLE["locator_pa_names"]
         try:
-            for ax, num in zip(axes, nums):
-                win, _ = _inset_window(C, num, aspect_hw=1.0)
-                _draw_inset(C, ax, win, draw, "", with_ipca_names=False, towns=STYLE["locator_towns"], codes=STYLE["locator_codes"].get(num))
+            wins = [_inset_window(C, num, aspect_hw=1.0)[0] for num in nums]
+            if STYLE.get("locator_same_scale", True):                              # the four locators at one scale (Ethan 2026-09-30)
+                wins = _equalize_windows(wins)
+            for ax, num, win in zip(axes, nums, wins):
+                _draw_inset(C, ax, win, draw_for(num), "", with_ipca_names=False, towns=STYLE["locator_towns"], codes=STYLE["locator_codes"].get(num),
+                            skip_towns=STYLE.get("locator_town_skip", {}).get(num, ()))       # per-window town skips (Alberta 16, 2026-09-30); default none
         finally:
             STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE["inset_fs"] = fs0; STYLE["inset_pa_names"] = pa0
         fig.savefig(path, dpi=STYLE["export_dpi"])
@@ -972,6 +1158,10 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
     stub = ["Area (km²)"] + [cap(a) for a in dc.STAR_AXES]
     cells = [[f"{v:,.0f}" for v in body.area_km2]]
     cells += [[ratio_fmt(v) for v in body[f"ratio_{a}"]] for a in dc.STAR_AXES]
+    bear = STYLE.get("conseq_bear_row", True) and "bear_programs_mean" in body
+    if bear:                                                             # a count (mean groups recorded in the overlapped units), not a ratio
+        stub.append("Bear coexistence programs*")
+        cells.append([("—" if pd.isna(v) else f"{v:.1f}") for v in body.bear_programs_mean.astype(float)])
     # package spec v1.14 reading guard: a high carbon ratio can mean uniformly carbon-rich or ordinary-with-a-hotspot, so the
     # concentration reading (share of the area inside the soil-carbon theta-tail, T-D1's driver attribution) sits beside it
     tail_col = "driver_m_soc theta-tail"
@@ -992,6 +1182,8 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
     filled = [(axis_rows[a], np.log(body[f"ratio_{a}"].astype(float).values)) for a in dc.STAR_AXES]
     if STYLE.get("conseq_fill_area", True):                               # the Area row on the same ramp (log area, lowest -> highest)
         filled.insert(0, (stub.index("Area (km²)"), np.log(body.area_km2.astype(float).values)))
+    if bear:                                                             # the count row on the same low -> high ramp (linear; NaN unfilled)
+        filled.append((stub.index("Bear coexistence programs*"), body.bear_programs_mean.astype(float).values))
     for r, x in filled:
         lo, hi = np.nanmin(x[scope]), np.nanmax(x[scope])
         flat = (hi - lo) < np.log(STYLE.get("conseq_flat_ratio", 1.10))   # every value in the row rounds to the same figure: a tie, not a ramp
@@ -1004,6 +1196,8 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
                 t = 0.5
             else:                                                  # row min -> row max
                 t = (v - lo) / (hi - lo) if hi > lo else 0.5
+            if np.isnan(v):
+                continue
             fills[r][j] = tuple(mat * (1 - tint) + np.array(cmap(float(np.clip(t, 0, 1)))[:3]) * tint)
     spec_table_png(path, stub, cols, cells, label=label, title=title if STYLE["titles"] else None, groups=groups, numeric=numeric, fills=fills,
                    units="Ratios: mean value inside the area ÷ mean over allocatable (unprotected) land · 1.0× = the average allocatable cell",
@@ -1011,6 +1205,9 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
                                    "classes present per cell; naturalness = 1 − human modification. "
                                    + (("Colour runs red → blue across each row from its lowest value to its highest" + (" over the cluster columns" if not all_cols else "") + "; a row whose values all round to the same figure is left neutral.") if STYLE.get("conseq_mode", "row") == "row"
                                       else "Colour runs across each row with 1.0× as the hinge and each side scaled to the row's own extreme.")),
+                          *([("*", "Bear coexistence programs: not a ratio — the mean number of active bear coexistence groups recorded in the census divisions / "
+                                     "counties the area overlaps (Y2Y Communities & Conservation, July 2026), cell-weighted; divisions with no recorded group are left out; "
+                                     "— = none recorded in any overlapped division.")] if bear else []),
                           ("Source", source or SOURCE_NOTE)])
 
 
@@ -1051,7 +1248,9 @@ def _single_map(C, path, title, draw, handles, cbar_label=None, surface=None):
         fig, ax = plt.subplots(figsize=(8.2, 11.5))
         fig.subplots_adjust(left=0.02, right=0.98, top=0.89, bottom=0.085)
         ax.imshow(S_["img"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.5)
-        C.draw_pa(ax); draw(ax)
+        if S_.get("ctx") is not None:
+            ax.imshow(S_["ctx"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.45, alpha=STYLE["context_alpha"]); handles = list(handles) + ([C.CONTEXT_HANDLE] if C.CONTEXT_HANDLE is not None else [])
+        C.draw_pa(ax); getattr(C, "draw_focus", lambda _a: None)(ax); draw(ax)
         C.finish(ax, "", handles, note="", legend_loc="outside")
         cax = fig.add_axes([0.20, 0.048, 0.60, 0.013])
         cb = fig.colorbar(ScalarMappable(norm=S_["norm"], cmap=S_["cmap"]), cax=cax, orientation="horizontal", extend=S_["extend"], ticks=S_.get("ticks"))
@@ -1074,7 +1273,51 @@ def _inset_window(C, number, aspect_hw, act="Act 1"):
     if h / w < aspect_hw: h = w * aspect_hw
     else: w = h / aspect_hw
     px0, pyb = dc.xy_to_px(C.G, cx - w / 2, cy - h / 2); px1, pyt = dc.xy_to_px(C.G, cx + w / 2, cy + h / 2)
+    if STYLE.get("inset_fit_pu", False):                        # the whole PU strip over the window's rows fits, centred (a narrow region: Alberta)
+        r0, r1 = max(int(pyt), 0), min(int(np.ceil(pyb)), C.G.shape[0]); cols = np.where(C.G.pu[r0:r1].any(axis=0))[0]
+        if cols.size:
+            pad_px = STYLE["inset_pad_km"] * C.PX_PER_KM; c_lo, c_hi = cols.min() - pad_px, cols.max() + 1 + pad_px
+            wpx = max(px1 - px0, c_hi - c_lo); cxp = 0.5 * (c_lo + c_hi); hpx = max(pyb - pyt, wpx * aspect_hw)   # never shrunk; the aspect re-fitted about the centre
+            wpx = hpx / aspect_hw; cyp = 0.5 * (pyt + pyb)
+            px0, px1, pyt, pyb = cxp - wpx / 2, cxp + wpx / 2, cyp - hpx / 2, cyp + hpx / 2
     return (float(px0), float(px1), float(pyt), float(pyb)), p
+
+
+def _common_crop(fig, tight=None):
+    """ONE export box for every wide-layout map (Ethan 2026-09-30: the Act 1 and Act 2 left-hand frames must be the same): the
+    tight box's left and top (the frame's left edge and the inset titles, identical on both layouts) with the page's full width
+    and bottom, so a three-inset Act 2 map and a two-inset Act 1 map crop to the same page and the frame lands at the same size."""
+    from matplotlib.transforms import Bbox
+    tb = tight if tight is not None else fig.get_tightbbox(fig.canvas.get_renderer()).padded(0.1)
+    if not STYLE.get("wide_common_crop", True):
+        return tb
+    return Bbox.from_extents(tb.x0, 0.0, fig.get_figwidth(), tb.y1)
+
+
+def _equalize_windows(wins):
+    """Every window at ONE scale (Ethan 2026-09-30): the largest width and height among them, each re-centred on its own centre
+    (the panels share an aspect, so the largest of both keeps it)."""
+    if len(wins) < 2:
+        return list(wins)
+    w = max(x1 - x0 for x0, x1, _, _ in wins); h = max(yb - yt for _, _, yt, yb in wins)
+    return [((x0 + x1) / 2 - w / 2, (x0 + x1) / 2 + w / 2, (yt + yb) / 2 - h / 2, (yt + yb) / 2 + h / 2) for x0, x1, yt, yb in wins]
+
+
+def _act1_windows(C, aspect_hw):
+    """The Act 1 insets' windows (A, B ...): sized on STYLE['inset_clusters'] or fixed by STYLE['inset_windows'], then one scale
+    (inset_same_scale) and the hand nudge (inset_shift_km). The Act 2 map reuses them when scenario_insets_as_act1 is on."""
+    wins = []
+    for num, tag in zip(STYLE["inset_clusters"], "ABCDEF"):                     # windows sized on the clusters, titled A, B ... (Ethan)
+        if STYLE.get("inset_windows") and tag in STYLE["inset_windows"]:       # fixed regions (Ethan 2026-09-21: keep the v3.1 windows across versions)
+            wins.append(_fit_window(C, STYLE["inset_windows"][tag], aspect_hw))
+        else:
+            wins.append(_inset_window(C, num, aspect_hw)[0])
+    if STYLE.get("inset_same_scale", True):                                   # panels A and B at one scale (Ethan 2026-09-30)
+        wins = _equalize_windows(wins)
+    if STYLE.get("inset_shift_km"):                                           # a hand nudge per inset, (east km, north km), after the fit (Alberta B, Ethan 2026-09-30)
+        wins = [(x0 + dx * C.PX_PER_KM, x1 + dx * C.PX_PER_KM, yt - dy * C.PX_PER_KM, yb - dy * C.PX_PER_KM)
+                for (x0, x1, yt, yb), (dx, dy) in zip(wins, (STYLE["inset_shift_km"].get(tag, (0, 0)) for tag in "ABCDEF"))]
+    return wins
 
 
 def _fit_window(C, win_px, aspect_hw):
@@ -1085,16 +1328,19 @@ def _fit_window(C, win_px, aspect_hw):
     return (float(cx - w / 2), float(cx + w / 2), float(cy - h / 2), float(cy + h / 2))
 
 
-def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None, skip_towns=(), img=None, cmap=None, norm=None, skip_areas=(), post_draw=None):
+def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None, skip_towns=(), img=None, cmap=None, norm=None, skip_areas=(), post_draw=None, ctx=None):
     px0, px1, pyt, pyb = win
     ax.imshow(_f_1km(C) if img is None else img, cmap=cmap or C.FCMAP, norm=norm or C.FNORM, interpolation="nearest", zorder=0.5, alpha=STYLE.get("_surface_alpha", 1.0))
+    ctx = getattr(C, "CTX_F", None) if (ctx is None and img is None) else ctx     # the context surface beyond the focus PU (the f default follows the F surface)
+    if ctx is not None:
+        ax.imshow(ctx, cmap=cmap or C.FCMAP, norm=norm or C.FNORM, interpolation="nearest", zorder=0.45, alpha=STYLE["context_alpha"])
     ppk = C.PX_PER_KM                                                                 # km -> px on this grid (1 on the 1 km grid)
     dc.draw_basemap(ax, C.G, C.BM, hs=None, water=STYLE["water"], names=False, towns=[t for t in C.BM.towns if t not in skip_towns] if towns else (), window=win, fs_scale=STYLE["inset_fs"] / 8.0)
     hs = dc.read_hillshade_window(C.G, win, scale=max(1, int(round(3 / ppk)))) if STYLE["hillshade"] else None   # ~100 m sampling of the 300 m hillshade
     if hs is not None:
         rgba = np.zeros(hs.shape + (4,), np.float32); rgba[..., 3] = dc.BASEMAP["hillshade_alpha"] * (1.0 - hs.astype(np.float32) / 255.0)
         ax.imshow(rgba, extent=[px0, px1, pyb, pyt], interpolation="bilinear", zorder=0.6)
-    C.draw_pa(ax); draw(ax); dc.draw_admin(ax, C.G, C.ADMIN)
+    C.draw_pa(ax); getattr(C, "draw_focus", lambda _a: None)(ax); draw(ax); dc.draw_admin(ax, C.G, C.ADMIN, **_border_kw())
     fs = STYLE["inset_fs"]; taken = []
     if STYLE["inset_abbrev"]:                                     # jurisdiction codes first; the area names keep clear of them
         taken = dc.label_jurisdictions_window(ax, C.G, C.BM, win, fs=STYLE["inset_abbrev_fs"] * (fs / 11.5), **(codes or {}))
@@ -1110,10 +1356,11 @@ def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None
     # 50 km scale bar, south-west corner (km x px_per_km)
     x, y = px0 + 0.05 * (px1 - px0), pyb - 0.05 * (pyb - pyt)
     ax.plot([x, x + 50 * ppk], [y, y], color="black", lw=2.5, solid_capstyle="butt", zorder=7)
-    ax.text(x + 25 * ppk, y - 6 * ppk, "50 km", ha="center", va="bottom", fontsize=STYLE["inset_fs"], zorder=7)
+    ax.annotate("50 km", xy=(x + 25 * ppk, y), xytext=(0, dc.SCALEBAR_GAP_PT), textcoords="offset points", ha="center", va="bottom", fontsize=STYLE["inset_fs"], zorder=7)   # same gap as the frame's bar
     ax.set_title(title, fontsize=STYLE["map_title_fs"] + 2, color=TABLE["ink"], fontweight=600, pad=6, loc="left")
     if post_draw is not None:                                              # a second pass once the labels and limits exist (the northern route numbers)
         post_draw(ax, win)
+    C.place_cluster_numbers(ax, win)                                       # the cluster discs (no-op unless draw registered any)
 
 
 WIDE_RECTS = {2: [(0.27, 0.19, 0.335, 0.66), (0.635, 0.19, 0.335, 0.66)],      # two tall insets (the Y2Y-wide layout)
@@ -1132,26 +1379,25 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
         ax = fig.add_axes([0.03, 0.04, 0.215, 0.84]); ax.set_anchor("E")      # the frame hugs inset A
         im_main = ax.imshow(S_["img"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.5, alpha=S_.get("alpha", 1.0))   # a surface may carry an alpha (the northern maps: 0.85, so the admin lines show through)
         axes_all, ims = [ax], [im_main]
-        C.draw_pa(ax); STYLE["_fs_scale"] = 0.9
+        if S_.get("ctx") is not None:                                                  # the context analysis beyond the focus PU, muted, under the focus surface
+            ax.imshow(S_["ctx"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.45, alpha=STYLE["context_alpha"]); handles = list(handles) + ([C.CONTEXT_HANDLE] if C.CONTEXT_HANDLE is not None else [])
+        C.draw_pa(ax); getattr(C, "draw_focus", lambda _a: None)(ax); STYLE["_fs_scale"] = 0.9; STYLE["_defer_numbers"] = True
         try:
             draw(ax); C.finish(ax, "", None, note="", legend_loc="none", names=STYLE["wide_main_names"], towns=STYLE["wide_main_towns"],
                                name_fs=STYLE["wide_main_name_fs"])
             if post_draw is not None:                                        # after the frame's labels and limits (2026-09-29)
                 post_draw(ax, C.WINDOW if C.WINDOW is not None else (0.0, float(C.G.shape[1]), 0.0, float(C.G.shape[0])))
         finally:
-            STYLE.pop("_fs_scale", None)
+            STYLE.pop("_fs_scale", None); STYLE.pop("_defer_numbers", None)
         rects = WIDE_RECTS[min(len(STYLE["inset_clusters"]), 2)]
         aspect_hw = (rects[0][3] * 7.5) / (rects[0][2] * 13.33)
-        for (num, rect, tag) in zip(STYLE["inset_clusters"], rects, "ABCDEF"):   # windows sized on the clusters, titled A, B ... (Ethan)
-            if STYLE.get("inset_windows") and tag in STYLE["inset_windows"]:       # fixed regions (Ethan 2026-09-21: keep the v3.1 windows across versions)
-                win = _fit_window(C, STYLE["inset_windows"][tag], aspect_hw)
-            else:
-                win, p = _inset_window(C, num, aspect_hw)
+        wins = _act1_windows(C, aspect_hw)
+        for (num, rect, tag, win) in zip(STYLE["inset_clusters"], rects, "ABCDEF", wins):
             iax = fig.add_axes(rect); STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"]; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"]
             STYLE["_surface_alpha"] = S_.get("alpha", 1.0)
             try:
                 _draw_inset(C, iax, win, draw, tag, with_ipca_names, codes=STYLE["inset_codes"].get(tag), skip_towns=STYLE["inset_town_skip"].get(tag, ()),
-                            img=S_["img"], cmap=S_["cmap"], norm=S_["norm"], post_draw=post_draw)
+                            img=S_["img"], cmap=S_["cmap"], norm=S_["norm"], post_draw=post_draw, ctx=S_.get("ctx"))
             finally:
                 STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE.pop("_surface_alpha", None)
             axes_all.append(iax); ims.append(iax.images[0])                             # the inset's surface image is its first
@@ -1159,6 +1405,7 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             ax.add_patch(Rectangle((px0, pyt), px1 - px0, pyb - pyt, fill=False, edgecolor="#333333", lw=1.0, zorder=7))
             ax.text(px0 + 8 * C.PX_PER_KM, pyt + 8 * C.PX_PER_KM, tag, fontsize=8, fontweight=600, color="white", ha="left", va="top", zorder=8,
                     bbox=dict(boxstyle="square,pad=0.15", facecolor="#333333", edgecolor="none"))
+        C.place_cluster_numbers(ax, C.WINDOW)                                                  # the frame's discs, now that the inset tags (A / B) are on the axes too
         cax_rect = [0.27 + 0.015, 0.12, 0.335 - 0.03, 0.04]                                     # inset A's full width; bar + ticks + caption centred in the strip below it
         cax = fig.add_axes(cax_rect)
         _wide_ramp(cax, S_, cbar_label, end_words=(STYLE.get("ramp_end_labels") if surface is None else S_.get("end_words")))
@@ -1168,6 +1415,8 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
         if STYLE.get("wide_legend_between", False):                      # the northern package (Ethan 2026-09-28): centre the box between inset B's bottom edge and
             r = fig.canvas.get_renderer(); inv = fig.transFigure.inverted()   # the bottom of the ramp block under A (= the page bottom once the figure is trimmed)
             top = rects[-1][1]; bottom = cax.get_tightbbox(r).transformed(inv).y0
+            if STYLE.get("wide_legend_floor", "ramp") == "frame":                  # the FRAME's bottom edge as the floor (Alberta, Ethan 2026-09-30); "ramp" = the ramp block's (north)
+                bottom = min(bottom, ax.get_position().y0)
             h = leg.get_window_extent(r).transformed(inv).height; pad = 0.012
             if STYLE.get("wide_legend_fit", False):                          # wolverine (Ethan 2026-09-29): size the items so the box fits the gap
                 fs_ = float(STYLE["wide_legend_fs"]); fs_min = float(STYLE.get("wide_legend_fs_min", 9))
@@ -1191,7 +1440,7 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
                 cap.set_visible(False)
             cax.remove(); cax = fig.add_axes(cax_rect)                          # measure with the Act 1 maps' own F ramp (its end-words row sets the bottom edge)
             _wide_ramp(cax, _f_surface(C), None, end_words=STYLE.get("ramp_end_labels"))
-            crop = fig.get_tightbbox(fig.canvas.get_renderer()).padded(0.1)
+            crop = _common_crop(fig)                                         # = the Act 1 maps' export box
             cax.remove(); cax = fig.add_axes(cax_rect)                          # then put this frame's own ramp back
             _wide_ramp(cax, S_, cbar_label, end_words=S_.get("end_words"))
             if cap is not None:
@@ -1202,7 +1451,8 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             return W
         if STYLE.get("export_pdf"):                                                       # a vector twin beside the PNG (the northern package's §3a export rule)
             fig.savefig(pathlib.Path(path).with_suffix(".pdf"), bbox_inches="tight")
-        fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches="tight"); plt.show()
+        STYLE["_act1_crop"] = _common_crop(fig)                                             # the box every wide map is saved with (frame left + inset top, full width + page bottom)
+        fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches=STYLE["_act1_crop"]); plt.show()
 
 
 wide_map = _wide_map     # the public name: corridors_director draws the northern package's curated maps through it (2026-09-28)
@@ -1251,7 +1501,8 @@ def _act1_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
 # ---- surfaces the Act 1 layout can carry: F (the default) and the values-convergence count ------------------------------
 def _f_surface(C):
     ticks = np.arange(0, 0.71, 0.1); ticks[0] = C.FNORM.vmin                                  # the norm starts a hair above 0 (0 = never, grey); label it 0.0
-    return dict(img=_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, extend="both", ticks=ticks, ticklabels=[f"{t:.1f}" for t in np.arange(0, 0.71, 0.1)], label=ramp_label(C))
+    return dict(img=_f_1km(C), cmap=C.FCMAP, norm=C.FNORM, extend="both", ticks=ticks, ticklabels=[f"{t:.1f}" for t in np.arange(0, 0.71, 0.1)], label=ramp_label(C),
+                ctx=getattr(C, "CTX_F", None))
 
 
 def ramp_label(C):
@@ -1291,7 +1542,7 @@ def values_map(C, path, title=None, with_clusters=False):
                         f"{high:,} km² of unprotected land is top-30% for at least one theme")
     else:
         draw = lambda ax: C.draw_ipca(ax)
-        handles = C.BASE_HANDLES[:1] + [C.IPCA_HANDLE]
+        handles = C.BASE_HANDLES[:1] + C.IPCA_HANDLES
         ttl = title or (f"Act 1 — where the values converge: number of themes (of {len(dc.VALUE_THEMES)}) rating the cell top-30%\n"
                         f"{high:,} km² of unprotected land is top-30% for at least one theme")
     _act1_map(C, path, ttl, draw=draw, handles=handles, with_ipca_names=not with_clusters, surface=S_)
@@ -1343,11 +1594,11 @@ def core_map_F(C, path, title=None, basis=None):
     if basis is not None:
         _act1_map(C, path, title or f"{'Appendix' if basis.key == 'ensemble' else 'Act 1'} — {basis.label}: frequency over unprotected land, with the declared IPCA proposals\n"
                                     f"frequent = {core_km2:,} km² at ≥ 0.70",
-                  draw=lambda ax: C.draw_ipca(ax), handles=C.BASE_HANDLES[:1] + [C.IPCA_HANDLE], with_ipca_names=True, surface=_basis_surface(C, basis))
+                  draw=lambda ax: C.draw_ipca(ax), handles=C.BASE_HANDLES[:1] + C.IPCA_HANDLES, with_ipca_names=True, surface=_basis_surface(C, basis))
         return
     _act1_map(C, path, title or (f"{core_sentence(C)}\n"
                                  f"core = {core_km2:,} km² (F ≥ 0.70) · no value theme left more than 5% behind"),
-              draw=lambda ax: C.draw_ipca(ax), handles=C.BASE_HANDLES[:1] + [C.IPCA_HANDLE], with_ipca_names=True)
+              draw=lambda ax: C.draw_ipca(ax), handles=C.BASE_HANDLES[:1] + C.IPCA_HANDLES, with_ipca_names=True)
 
 
 def core_map_clusters(C, path, title=None, basis=None):
@@ -1605,6 +1856,13 @@ def scenario_map(C, path, title=None):
     for i, sid in enumerate(dc.ACT2_SCENARIOS, 1):
         cls[(T == 2) & (OWN == i)] = 1 + i
     cls[(T == 2) & (OWN == dc.MULTI_OWNER)] = NS + 2; cls[T == 3] = NS + 3; cls[~G.pu] = np.nan
+    cls_ctx = None
+    if getattr(C, "CTX_TIERS", None) is not None:                               # the context analysis's tiers beyond the focus PU (same codes: 19 / 12 cell 3)
+        Tc, Oc = C.CTX_TIERS, C.CTX_OWNER; cls_ctx = np.full(G.shape, np.nan, np.float32)
+        cls_ctx[Tc == 1] = 1
+        for i, sid in enumerate(dc.ACT2_SCENARIOS, 1):
+            cls_ctx[(Tc == 2) & (Oc == i)] = 1 + i
+        cls_ctx[(Tc == 2) & (Oc == dc.MULTI_OWNER)] = NS + 2; cls_ctx[Tc == 3] = NS + 3; cls_ctx[G.pu] = np.nan
     cmap = ListedColormap([STYLE["never_color"], STYLE["opportunity_color"]] + [SC[sid] for sid in dc.ACT2_SCENARIOS] + [STYLE["scenario_multi_color"], "#ffd93b"])
     norm = BoundaryNorm(np.arange(-0.5, NS + 4.5, 1), NS + 4)
     nd = G.n_disc; own = S["act2_owner_km2"]; core = S["frequent_km2"]["guarded"]; opp = int(((T == 1) & G.pu).sum())
@@ -1618,34 +1876,64 @@ def scenario_map(C, path, title=None):
     handles += [Patch(facecolor=STYLE["scenario_multi_color"], label=f"Two or more · {own['2+ scenarios']:,} km² · {pct(own['2+ scenarios'])}")]
     if STYLE["show_opportunity"]:
         handles.append(Patch(facecolor=STYLE["opportunity_color"], label=f"In at least one near-optimal plan · {opp:,} km² · {pct(opp)}"))
-    handles += [Patch(facecolor=PA_COLOR, label="Protected areas (locked in)"), C.IPCA_HANDLE]
+    handles += [Patch(facecolor=PA_COLOR, label="Protected areas (locked in)")] + C.IPCA_HANDLES + ([C.CONTEXT_HANDLE] if (cls_ctx is not None and C.CONTEXT_HANDLE is not None) else [])
     with plt.rc_context(SPEC_RC):
         fig = plt.figure(figsize=(13.33, 7.5))
         ax = fig.add_axes([0.03, 0.04, 0.215, 0.84]); ax.set_anchor("E")
         ax.imshow(cls, cmap=cmap, norm=norm, interpolation="nearest", zorder=0.5)
-        C.draw_pa(ax); C.draw_ipca(ax); STYLE["_fs_scale"] = 0.9
+        if cls_ctx is not None:
+            ax.imshow(cls_ctx, cmap=cmap, norm=norm, interpolation="nearest", zorder=0.45, alpha=STYLE["context_alpha"])
+        C.draw_pa(ax); getattr(C, "draw_focus", lambda _a: None)(ax); C.draw_ipca(ax); STYLE["_fs_scale"] = 0.9
         try:
             C.finish(ax, "", None, note="", legend_loc="none", names=STYLE["wide_main_names"], towns=STYLE["wide_main_towns"], name_fs=STYLE["wide_main_name_fs"])
         finally:
             STYLE.pop("_fs_scale", None)
-        n = len(STYLE["scenario_insets"]); gap = 0.02; x0, x1 = 0.27, 0.985; w = (x1 - x0 - gap * (n - 1)) / n
+        as_act1 = bool(STYLE.get("scenario_insets_as_act1", False)) and len(STYLE["inset_clusters"]) > 0   # the Act 1 panels A / B on the Act 2 map (Ethan 2026-09-30)
+        keys = STYLE["inset_clusters"] if as_act1 else STYLE["scenario_insets"]
+        n = len(keys); gap = 0.02; x0, x1 = 0.27, 0.985; w = (x1 - x0 - gap * (n - 1)) / n
         rects = [(x0 + i * (w + gap), 0.25, w, 0.60) for i in range(n)]
+        if as_act1:                                                                # the Act 1 maps' own panel rectangles (and their footprint for the export crop)
+            rects = list(WIDE_RECTS[min(n, 2)]); x0, x1 = rects[0][0], rects[-1][0] + rects[-1][2]
         aspect_hw = (rects[0][3] * 7.5) / (rects[0][2] * 13.33)
-        for num, rect, tag in zip(STYLE["scenario_insets"], rects, "ABCDEF"):
-            if STYLE.get("scenario_inset_windows") and tag in STYLE["scenario_inset_windows"]:   # fixed regions (Ethan 2026-09-21), as on the Act 1 maps
-                win = _fit_window(C, STYLE["scenario_inset_windows"][tag], aspect_hw)
-            else:
-                win, p = _inset_window(C, num, aspect_hw, act="Act 2")
+        if as_act1:
+            _r1 = WIDE_RECTS[min(len(STYLE["inset_clusters"]), 2)][0]; _a1 = (_r1[3] * 7.5) / (_r1[2] * 13.33)
+            wins = [_fit_window(C, wn, aspect_hw) for wn in _act1_windows(C, _a1)]      # the Act 1 windows, re-fitted to these panels' aspect about the same centres
+        else:
+            wins = []
+            for num, tag in zip(keys, "ABCDEF"):
+                if STYLE.get("scenario_inset_windows") and tag in STYLE["scenario_inset_windows"]:   # fixed regions (Ethan 2026-09-21), as on the Act 1 maps
+                    wins.append(_fit_window(C, STYLE["scenario_inset_windows"][tag], aspect_hw))
+                else:
+                    wins.append(_inset_window(C, num, aspect_hw, act="Act 2")[0])
+            if STYLE.get("inset_same_scale", True):                               # every inset of a panel set at ONE scale and size (Ethan 2026-10-01)
+                wins = _equalize_windows(wins)
+        for num, rect, tag, win in zip(keys, rects, "ABCDEF", wins):
             iax = fig.add_axes(rect)
             _draw_inset(C, iax, win, lambda ax_: C.draw_ipca(ax_), tag, with_ipca_names=True, codes=STYLE["scenario_inset_codes"].get(tag),
                         skip_towns=STYLE["scenario_inset_town_skip"].get(tag, ()), img=cls, cmap=cmap, norm=norm,
-                        skip_areas=STYLE.get("scenario_inset_area_skip", {}).get(tag, ()))
+                        skip_areas=STYLE.get("scenario_inset_area_skip", {}).get(tag, ()), ctx=cls_ctx)
             px0, px1, pyt, pyb = win
             ax.add_patch(Rectangle((px0, pyt), px1 - px0, pyb - pyt, fill=False, edgecolor="#333333", lw=1.0, zorder=7))
             ax.text(px0 + 8 * C.PX_PER_KM, pyt + 8 * C.PX_PER_KM, tag, fontsize=8, fontweight=600, color="white", ha="left", va="top", zorder=8,
                     bbox=dict(boxstyle="square,pad=0.15", facecolor="#333333", edgecolor="none"))
-        fig.legend(handles=handles, loc="center", bbox_to_anchor=((x0 + x1) / 2, 0.115), ncol=2, fontsize=STYLE["scenario_legend_fs"],
-                   frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.2, handleheight=1.2, borderpad=0.7, labelspacing=0.55, columnspacing=1.6)
+        y_leg2 = (0.5 * (rects[0][1] + 0.04) if (STYLE.get("scenario_legend_between", True) or STYLE.get("wide_legend_between", False))   # centred between the insets' bottom edge and the
+                  else STYLE.get("scenario_legend_y", 0.115))                                                                          # page bottom (= the frame's bottom, 0.04; Ethan 2026-09-30)
+        # the box must FIT the gap between the insets' bottom edge and the page bottom (Ethan 2026-09-30): shrink the type and tighten the
+        # spacing step by step until it does, then centre it in the gap
+        gap_top, gap_bot = rects[0][1], 0.04; fs_ = STYLE["scenario_legend_fs"]; tight = STYLE.get("scenario_legend_between", True)
+        kw = dict(handlelength=2.2, handleheight=1.2, borderpad=0.7, labelspacing=0.55, columnspacing=1.6)
+        if tight:
+            kw = dict(handlelength=1.8, handleheight=1.0, borderpad=0.45, labelspacing=0.3, columnspacing=1.2)
+        for _ in range(12):
+            leg = fig.legend(handles=handles, loc="center", bbox_to_anchor=((x0 + x1) / 2, y_leg2), ncol=2, fontsize=fs_,
+                             frameon=True, framealpha=0.92, edgecolor="#9a9a9a", **kw)
+            if not tight:
+                break
+            h_frac = leg.get_window_extent(fig.canvas.get_renderer()).height / fig.bbox.height
+            if h_frac <= (gap_top - gap_bot) - 0.02 or fs_ <= 9:
+                break
+            leg.remove(); fs_ -= 1
         if STYLE["titles"]:
             fig.suptitle(title or "Act 2 — what each value-forward position adds to the core", fontsize=STYLE["map_suptitle_fs"], y=0.995, color=TABLE["ink"], fontweight=600)
-        fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches="tight"); plt.show()
+        _crop = _common_crop(fig)                                   # the same export box as the Act 1 maps, so the left-hand frame lands at the same size and place (Ethan 2026-09-30)
+        fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches=_crop); plt.show()

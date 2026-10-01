@@ -3,8 +3,11 @@
  "manifest": "manifest_v4.csv",
  "efg_block": "iucn_efg_v3",
  "n_efg": 13,
- "pick_link_km": 30,
+ "pick_link_km": 20,
  "speck_link_km": 10,
+ "core_basis": "balanced",
+ "core_definition": "guarded f of the balanced scenario (S0) averaged over SSP245 and SSP585, >= 0.70; ensemble F = the paper's estimand, appendix",
+ "max_core_clusters": null,
  "efg_target_rule": "loglinear_window250km_alberta_extent",
  "applied_band_g": 0.05,
  "applied_band_rule": "D-AB13: guarded 5% unless the 5% guarded frequent tier < 100 km2, then 2% (D-AB10)",
@@ -22,29 +25,44 @@
  "unguarded_basis": "unguarded (s0_ssp585_theta5 only)",
  "by_level": {
   "585": {
+   "n": 1,
+   "core_km2": 1457,
+   "jaccard_vs_core": 0.9993136582017845,
+   "pct_of_core_inside": 100.0
+  },
+  "245": {
+   "n": 1,
+   "core_km2": 1456,
+   "jaccard_vs_core": 1.0,
+   "pct_of_core_inside": 100.0
+  },
+  "jaccard_585_245": 0.9993136582017845,
+  "union_km2": 1457,
+  "intersection_km2": 1456
+ },
+ "by_level_ensemble": {
+  "585": {
    "n": 7,
    "core_km2": 1286,
-   "jaccard_vs_12": 0.9813519813519813,
-   "pct_of_12_inside": 99.92088607594937
+   "pct_of_ensemble_core_inside": 99.92088607594937
   },
   "245": {
    "n": 7,
    "core_km2": 1257,
-   "jaccard_vs_12": 0.9928853754940712,
-   "pct_of_12_inside": 99.36708860759494
-  },
-  "jaccard_585_245": 0.9743788819875776,
-  "union_km2": 1288,
-  "intersection_km2": 1255
+   "pct_of_ensemble_core_inside": 99.36708860759494
+  }
  },
  "frequent_km2": {
-  "guarded": 1264,
+  "guarded": 1456,
+  "ensemble": 1264,
   "unguarded": 0
  },
  "always_km2": {
-  "guarded": 367,
+  "guarded": 551,
+  "ensemble": 367,
   "unguarded": 0
  },
+ "ensemble_core_inside_balanced_pct": 100.0,
  "ever_in_band_pct": {
   "guarded": 100.0,
   "unguarded": 100.0
@@ -115,16 +133,16 @@
   }
  ],
  "act2_owner_km2": {
-  "Core-habitat-forward": 0,
-  "Structural-connectivity-forward": 1163,
-  "Climate-corridors-forward": 0,
-  "Biodiversity-forward": 0,
-  "Carbon-forward": 0,
-  "2+ scenarios": 6
+  "Climate refugia forward": 0,
+  "Structural connectivity forward": 976,
+  "Climate corridors forward": 0,
+  "Mammal + bird richness forward": 0,
+  "Biomass + soil carbon forward": 0,
+  "2+ scenarios": 1
  },
  "tier_area_pct_disc": {
-  "core": 2.2112979129126504,
-  "scenario": 2.0451006805339307,
+  "core": 2.5471912667727996,
+  "scenario": 1.709207326673781,
   "opportunity": 95.74360140655342
  },
  "protected_baseline": {
@@ -148,41 +166,41 @@
   "partition": [
    {
     "unit": "core",
-    "km2": 1264,
+    "km2": 1456,
     "forced_pct": 0.0,
-    "multi_claim_pct": 94.06645569620254,
-    "other_pct": 5.9335443037974684
+    "multi_claim_pct": 93.81868131868131,
+    "other_pct": 6.181318681318682
    },
    {
-    "unit": "scenario tier: Core-habitat-forward",
+    "unit": "scenario tier: Climate refugia forward",
     "km2": 0,
     "forced_pct": 0.0,
     "multi_claim_pct": 0.0,
     "other_pct": 0.0
    },
    {
-    "unit": "scenario tier: Structural-connectivity-forward",
-    "km2": 1163,
+    "unit": "scenario tier: Structural connectivity forward",
+    "km2": 976,
     "forced_pct": 0.0,
-    "multi_claim_pct": 94.1530524505589,
-    "other_pct": 5.846947549441101
+    "multi_claim_pct": 94.56967213114754,
+    "other_pct": 5.430327868852459
    },
    {
-    "unit": "scenario tier: Climate-corridors-forward",
+    "unit": "scenario tier: Climate corridors forward",
     "km2": 0,
     "forced_pct": 0.0,
     "multi_claim_pct": 0.0,
     "other_pct": 0.0
    },
    {
-    "unit": "scenario tier: Biodiversity-forward",
+    "unit": "scenario tier: Mammal + bird richness forward",
     "km2": 0,
     "forced_pct": 0.0,
     "multi_claim_pct": 0.0,
     "other_pct": 0.0
    },
    {
-    "unit": "scenario tier: Carbon-forward",
+    "unit": "scenario tier: Biomass + soil carbon forward",
     "km2": 0,
     "forced_pct": 0.0,
     "multi_claim_pct": 0.0,
@@ -197,168 +215,175 @@
    },
    {
     "unit": "pick 1: SE of Jasper National Park Of Canada (52.4\u00b0N 116.6\u00b0W)",
-    "km2": 643,
+    "km2": 719,
     "forced_pct": 0.0,
-    "multi_claim_pct": 100.0,
-    "other_pct": 0.0
+    "multi_claim_pct": 99.86091794158554,
+    "other_pct": 0.13908205841446453
    },
    {
-    "unit": "pick 2: NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
-    "km2": 328,
+    "unit": "pick 2: NE of Banff National Park Of Canada (51.7\u00b0N 115.6\u00b0W)",
+    "km2": 336,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
     "unit": "pick 3: SE of Don Getty Wildland (50.9\u00b0N 114.9\u00b0W)",
-    "km2": 231,
+    "km2": 146,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 4: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
-    "km2": 122,
+    "unit": "pick 4: S of Don Getty Wildland (50.4\u00b0N 114.7\u00b0W)",
+    "km2": 66,
     "forced_pct": 0.0,
-    "multi_claim_pct": 43.442622950819676,
-    "other_pct": 56.557377049180324
+    "multi_claim_pct": 100.0,
+    "other_pct": 0.0
    },
    {
-    "unit": "pick 5: NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
+    "unit": "pick 5: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 147,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 43.53741496598639,
+    "other_pct": 56.46258503401361
+   },
+   {
+    "unit": "pick 6: NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
     "km2": 16,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 6: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
-    "km2": 20,
+    "unit": "pick 7: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 17,
     "forced_pct": 0.0,
-    "multi_claim_pct": 80.0,
-    "other_pct": 20.0
+    "multi_claim_pct": 88.23529411764706,
+    "other_pct": 11.764705882352942
    },
    {
-    "unit": "pick 7: SE of Jasper National Park Of Canada (52.5\u00b0N 116.6\u00b0W)",
-    "km2": 753,
+    "unit": "pick 8: SE of Jasper National Park Of Canada (52.5\u00b0N 116.6\u00b0W)",
+    "km2": 643,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 8: SE of Don Getty Wildland (50.8\u00b0N 114.8\u00b0W)",
-    "km2": 142,
+    "unit": "pick 9: SE of Don Getty Wildland (50.8\u00b0N 114.8\u00b0W)",
+    "km2": 122,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 9: NE of White Goat (52.4\u00b0N 116.6\u00b0W)",
-    "km2": 28,
+    "unit": "pick 10: NE of White Goat (52.4\u00b0N 116.6\u00b0W)",
+    "km2": 26,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 10: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
-    "km2": 21,
+    "unit": "pick 11: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 18,
     "forced_pct": 0.0,
-    "multi_claim_pct": 80.95238095238095,
-    "other_pct": 19.047619047619047
+    "multi_claim_pct": 88.88888888888889,
+    "other_pct": 11.11111111111111
    },
    {
-    "unit": "pick 11: NE of White Goat (52.4\u00b0N 116.6\u00b0W)",
-    "km2": 35,
+    "unit": "pick 12: NE of White Goat (52.4\u00b0N 116.6\u00b0W)",
+    "km2": 30,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 12: NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
-    "km2": 27,
+    "unit": "pick 13: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 18,
     "forced_pct": 0.0,
-    "multi_claim_pct": 100.0,
-    "other_pct": 0.0
+    "multi_claim_pct": 88.88888888888889,
+    "other_pct": 11.11111111111111
    },
    {
     "unit": "pick 585-1: SE of Jasper National Park Of Canada (52.4\u00b0N 116.6\u00b0W)",
-    "km2": 486,
+    "km2": 548,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 585-2: NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
-    "km2": 224,
+    "unit": "pick 585-2: NE of Banff National Park Of Canada (51.7\u00b0N 115.6\u00b0W)",
+    "km2": 255,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 585-3: E of Jasper National Park Of Canada (52.8\u00b0N 117.0\u00b0W)",
-    "km2": 140,
+    "unit": "pick 585-3: SE of Whitehorse Wildland (52.9\u00b0N 117.2\u00b0W)",
+    "km2": 147,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 585-4: SE of Don Getty Wildland (50.9\u00b0N 114.9\u00b0W)",
-    "km2": 108,
+    "unit": "pick 585-4: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
+    "km2": 133,
+    "forced_pct": 0.0,
+    "multi_claim_pct": 43.609022556390975,
+    "other_pct": 56.390977443609025
+   },
+   {
+    "unit": "pick 585-5: SE of Don Getty Wildland (50.9\u00b0N 114.9\u00b0W)",
+    "km2": 118,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
-   },
-   {
-    "unit": "pick 585-5: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
-    "km2": 105,
-    "forced_pct": 0.0,
-    "multi_claim_pct": 43.80952380952381,
-    "other_pct": 56.19047619047619
    },
    {
     "unit": "pick 585-6: S of Don Getty Wildland (50.4\u00b0N 114.7\u00b0W)",
-    "km2": 52,
+    "km2": 55,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
     "unit": "pick 245-1: SE of Jasper National Park Of Canada (52.4\u00b0N 116.6\u00b0W)",
-    "km2": 482,
+    "km2": 548,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 245-2: NE of Banff National Park Of Canada (51.8\u00b0N 115.7\u00b0W)",
-    "km2": 214,
+    "unit": "pick 245-2: NE of Banff National Park Of Canada (51.7\u00b0N 115.6\u00b0W)",
+    "km2": 255,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
-    "unit": "pick 245-3: E of Jasper National Park Of Canada (52.8\u00b0N 117.0\u00b0W)",
-    "km2": 139,
+    "unit": "pick 245-3: SE of Whitehorse Wildland (52.9\u00b0N 117.2\u00b0W)",
+    "km2": 147,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
     "unit": "pick 245-4: SE of Waterton Lakes National Park Of Canada (49.0\u00b0N 113.6\u00b0W)",
-    "km2": 103,
+    "km2": 133,
     "forced_pct": 0.0,
-    "multi_claim_pct": 44.66019417475728,
-    "other_pct": 55.33980582524272
+    "multi_claim_pct": 43.609022556390975,
+    "other_pct": 56.390977443609025
    },
    {
     "unit": "pick 245-5: SE of Don Getty Wildland (50.9\u00b0N 114.9\u00b0W)",
-    "km2": 99,
+    "km2": 118,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
    },
    {
     "unit": "pick 245-6: S of Don Getty Wildland (50.4\u00b0N 114.7\u00b0W)",
-    "km2": 52,
+    "km2": 55,
     "forced_pct": 0.0,
     "multi_claim_pct": 100.0,
     "other_pct": 0.0
@@ -392,36 +417,36 @@
   "value_share_by_tier": {
    "biodiversity": {
     "existing PAs": 0.3118090776708329,
-    "core": 0.01548303215787505,
-    "scenario tiers": 0.014434424350545875,
+    "core": 0.017866143791725558,
+    "scenario tiers": 0.012051312716695371,
     "opportunity": 0.6582734658207462,
     "never": 0.0
    },
    "carbon": {
     "existing PAs": 0.4766693048398888,
-    "core": 0.011866767341056107,
-    "scenario tiers": 0.009520656400968445,
+    "core": 0.013398216552894625,
+    "scenario tiers": 0.007989207189129925,
     "opportunity": 0.5019432714180867,
     "never": 0.0
    },
    "climate_corridors": {
     "existing PAs": 0.35990138090472656,
-    "core": 0.014367159022156068,
-    "scenario tiers": 0.013032492368384383,
+    "core": 0.01650060711255875,
+    "scenario tiers": 0.0108990442779817,
     "opportunity": 0.612698967704733,
     "never": 0.0
    },
    "core_habitat": {
     "existing PAs": 0.4555600542658712,
-    "core": 0.019048773946379216,
-    "scenario tiers": 0.015943218343986064,
+    "core": 0.021750805289251662,
+    "scenario tiers": 0.01324118700111362,
     "opportunity": 0.5094479534437635,
     "never": 0.0
    },
    "structural_connectivity": {
     "existing PAs": 0.49362050247646116,
-    "core": 0.10812998196574979,
-    "scenario tiers": 0.04700576469870816,
+    "core": 0.11713849717534819,
+    "scenario tiers": 0.037997249489109756,
     "opportunity": 0.3512437508590809,
     "never": 0.0
    }
@@ -431,8 +456,8 @@
     "theme": "core habitat",
     "top-value footprint km2": 17149,
     "% of unprotected land": 30.001224611185947,
-    "% of footprint in core": 6.4726806227768385,
-    "% of footprint in scenario tiers": 5.428887981806519,
+    "% of footprint in core": 7.382354656248178,
+    "% of footprint in scenario tiers": 4.51921394833518,
     "% of footprint in opportunity": 88.09843139541664,
     "% of footprint in never": 0.0
    },
@@ -440,8 +465,8 @@
     "theme": "structural connectivity",
     "top-value footprint km2": 17149,
     "% of unprotected land": 30.001224611185947,
-    "% of footprint in core": 7.370692168639571,
-    "% of footprint in scenario tiers": 6.816724007230742,
+    "% of footprint in core": 8.490290979065835,
+    "% of footprint in scenario tiers": 5.697125196804478,
     "% of footprint in opportunity": 85.81258382412969,
     "% of footprint in never": 0.0
    },
@@ -449,8 +474,8 @@
     "theme": "climate corridors",
     "top-value footprint km2": 17149,
     "% of unprotected land": 30.001224611185947,
-    "% of footprint in core": 2.938946877368943,
-    "% of footprint in scenario tiers": 1.9418041868330516,
+    "% of footprint in core": 3.2654965304099366,
+    "% of footprint in scenario tiers": 1.6152545337920579,
     "% of footprint in opportunity": 95.11924893579801,
     "% of footprint in never": 0.0
    },
@@ -458,8 +483,8 @@
     "theme": "biodiversity",
     "top-value footprint km2": 17215,
     "% of unprotected land": 30.116687951575376,
-    "% of footprint in core": 3.2471681672959627,
-    "% of footprint in scenario tiers": 3.3807725820505374,
+    "% of footprint in core": 3.7815858263142608,
+    "% of footprint in scenario tiers": 2.8463549230322394,
     "% of footprint in opportunity": 93.37205925065349,
     "% of footprint in never": 0.0
    },
@@ -467,8 +492,8 @@
     "theme": "carbon",
     "top-value footprint km2": 17149,
     "% of unprotected land": 30.001224611185947,
-    "% of footprint in core": 3.1022217038894397,
-    "% of footprint in scenario tiers": 2.32666627791708,
+    "% of footprint in core": 3.44043384453904,
+    "% of footprint in scenario tiers": 1.988454137267479,
     "% of footprint in opportunity": 94.57111201819347,
     "% of footprint in never": 0.0
    },
@@ -476,8 +501,8 @@
     "theme": "naturalness",
     "top-value footprint km2": 17149,
     "% of unprotected land": 30.001224611185947,
-    "% of footprint in core": 5.510525395066768,
-    "% of footprint in scenario tiers": 4.455070266487842,
+    "% of footprint in core": 6.321068283864949,
+    "% of footprint in scenario tiers": 3.6445273776896614,
     "% of footprint in opportunity": 90.03440433844538,
     "% of footprint in never": 0.0
    },
@@ -494,8 +519,8 @@
     "theme": "representativeness \u2014 rare-attainable classes (NOT used)",
     "top-value footprint km2": 19759,
     "% of unprotected land": 34.56727489022236,
-    "% of footprint in core": 3.0770787995343896,
-    "% of footprint in scenario tiers": 2.393845842400931,
+    "% of footprint in core": 3.50220152841743,
+    "% of footprint in scenario tiers": 1.9687231135178906,
     "% of footprint in opportunity": 94.52907535806467,
     "% of footprint in never": 0.0
    }
@@ -503,20 +528,20 @@
   "crosstab": {
    "core (F \u2265 0.70)": {
     "0 of 6 themes": 0,
-    "1 of 6 themes": 75,
-    "2 of 6 themes": 256,
-    "3 of 6 themes": 420,
-    "4 of 6 themes": 443,
-    "5 of 6 themes": 70,
+    "1 of 6 themes": 90,
+    "2 of 6 themes": 310,
+    "3 of 6 themes": 487,
+    "4 of 6 themes": 493,
+    "5 of 6 themes": 76,
     "6 of 6 themes": 0
    },
    "scenario tier": {
     "0 of 6 themes": 0,
-    "1 of 6 themes": 68,
-    "2 of 6 themes": 317,
-    "3 of 6 themes": 456,
-    "4 of 6 themes": 296,
-    "5 of 6 themes": 32,
+    "1 of 6 themes": 53,
+    "2 of 6 themes": 263,
+    "3 of 6 themes": 389,
+    "4 of 6 themes": 246,
+    "5 of 6 themes": 26,
     "6 of 6 themes": 0
    },
    "opportunity": {
@@ -574,20 +599,20 @@
  "tenure_by_tier": [
   {
    "tier": "core",
-   "km2": 1264,
-   "crown (Green Area)": 1156,
-   "crown (White Area, notated)": 16,
+   "km2": 1456,
+   "crown (Green Area)": 1331,
+   "crown (White Area, notated)": 23,
    "private presumed (non-ranch)": 3,
-   "private ranchland (OECM track)": 73,
+   "private ranchland (OECM track)": 83,
    "unclassified": 16
   },
   {
    "tier": "value-forward",
-   "km2": 1169,
-   "crown (Green Area)": 1056,
-   "crown (White Area, notated)": 46,
+   "km2": 977,
+   "crown (Green Area)": 881,
+   "crown (White Area, notated)": 39,
    "private presumed (non-ranch)": 1,
-   "private ranchland (OECM track)": 59,
+   "private ranchland (OECM track)": 49,
    "unclassified": 7
   },
   {
@@ -659,7 +684,7 @@
  },
  "v31_cluster_survival": {
   "prior_core_km2": 31,
-  "v4_core_km2": 1264,
+  "v4_core_km2": 1456,
   "picks": [
    {
     "prior_pick": "Cluster 1 (v3.1, Act 1)",
@@ -667,13 +692,15 @@
     "km2": 23,
     "pct_in_v4_core": 100.0,
     "pct_in_any_v4_core_cluster": 100.0,
-    "mean_F_v4": 0.9982948303222656,
+    "pct_in_v4_ensemble_core": 100.0,
+    "mean_f_v4_balanced": 1.0,
     "pct_frequent_v4": 100.0,
-    "pct_in_v4_tier_Core-habitat-forward": 0.0,
-    "pct_in_v4_tier_Structural-connectivity-forward": 0.0,
-    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
-    "pct_in_v4_tier_Biodiversity-forward": 0.0,
-    "pct_in_v4_tier_Carbon-forward": 0.0,
+    "mean_F_v4_ensemble": 0.9982948303222656,
+    "pct_in_v4_tier_Climate refugia forward": 0.0,
+    "pct_in_v4_tier_Structural connectivity forward": 0.0,
+    "pct_in_v4_tier_Climate corridors forward": 0.0,
+    "pct_in_v4_tier_Mammal + bird richness forward": 0.0,
+    "pct_in_v4_tier_Biomass + soil carbon forward": 0.0,
     "pct_in_v4_tier_2plus": 0.0,
     "pct_opportunity_v4": 0.0,
     "pct_never_v4": 0.0
@@ -684,13 +711,15 @@
     "km2": 39,
     "pct_in_v4_core": 0.0,
     "pct_in_any_v4_core_cluster": 0.0,
-    "mean_F_v4": 0.36953243613243103,
+    "pct_in_v4_ensemble_core": 0.0,
+    "mean_f_v4_balanced": 0.37003523111343384,
     "pct_frequent_v4": 0.0,
-    "pct_in_v4_tier_Core-habitat-forward": 0.0,
-    "pct_in_v4_tier_Structural-connectivity-forward": 0.0,
-    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
-    "pct_in_v4_tier_Biodiversity-forward": 0.0,
-    "pct_in_v4_tier_Carbon-forward": 0.0,
+    "mean_F_v4_ensemble": 0.36953243613243103,
+    "pct_in_v4_tier_Climate refugia forward": 0.0,
+    "pct_in_v4_tier_Structural connectivity forward": 0.0,
+    "pct_in_v4_tier_Climate corridors forward": 0.0,
+    "pct_in_v4_tier_Mammal + bird richness forward": 0.0,
+    "pct_in_v4_tier_Biomass + soil carbon forward": 0.0,
     "pct_in_v4_tier_2plus": 0.0,
     "pct_opportunity_v4": 100.0,
     "pct_never_v4": 0.0
@@ -699,15 +728,17 @@
     "prior_pick": "Cluster 3 (v3.1, Act 2)",
     "prior_name": "S of White Goat (52.1\u00b0N 116.7\u00b0W)",
     "km2": 64,
-    "pct_in_v4_core": 31.25,
-    "pct_in_any_v4_core_cluster": 35.9375,
-    "mean_F_v4": 0.48750436305999756,
-    "pct_frequent_v4": 31.25,
-    "pct_in_v4_tier_Core-habitat-forward": 0.0,
-    "pct_in_v4_tier_Structural-connectivity-forward": 10.9375,
-    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
-    "pct_in_v4_tier_Biodiversity-forward": 0.0,
-    "pct_in_v4_tier_Carbon-forward": 0.0,
+    "pct_in_v4_core": 32.8125,
+    "pct_in_any_v4_core_cluster": 37.5,
+    "pct_in_v4_ensemble_core": 31.25,
+    "mean_f_v4_balanced": 0.49785542488098145,
+    "pct_frequent_v4": 32.8125,
+    "mean_F_v4_ensemble": 0.48750436305999756,
+    "pct_in_v4_tier_Climate refugia forward": 0.0,
+    "pct_in_v4_tier_Structural connectivity forward": 9.375,
+    "pct_in_v4_tier_Climate corridors forward": 0.0,
+    "pct_in_v4_tier_Mammal + bird richness forward": 0.0,
+    "pct_in_v4_tier_Biomass + soil carbon forward": 0.0,
     "pct_in_v4_tier_2plus": 0.0,
     "pct_opportunity_v4": 57.8125,
     "pct_never_v4": 0.0
@@ -718,13 +749,15 @@
     "km2": 21,
     "pct_in_v4_core": 100.0,
     "pct_in_any_v4_core_cluster": 100.0,
-    "mean_F_v4": 0.9935307502746582,
+    "pct_in_v4_ensemble_core": 100.0,
+    "mean_f_v4_balanced": 1.0,
     "pct_frequent_v4": 100.0,
-    "pct_in_v4_tier_Core-habitat-forward": 0.0,
-    "pct_in_v4_tier_Structural-connectivity-forward": 0.0,
-    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
-    "pct_in_v4_tier_Biodiversity-forward": 0.0,
-    "pct_in_v4_tier_Carbon-forward": 0.0,
+    "mean_F_v4_ensemble": 0.9935307502746582,
+    "pct_in_v4_tier_Climate refugia forward": 0.0,
+    "pct_in_v4_tier_Structural connectivity forward": 0.0,
+    "pct_in_v4_tier_Climate corridors forward": 0.0,
+    "pct_in_v4_tier_Mammal + bird richness forward": 0.0,
+    "pct_in_v4_tier_Biomass + soil carbon forward": 0.0,
     "pct_in_v4_tier_2plus": 0.0,
     "pct_opportunity_v4": 0.0,
     "pct_never_v4": 0.0
@@ -735,13 +768,15 @@
     "km2": 63,
     "pct_in_v4_core": 98.41269841269842,
     "pct_in_any_v4_core_cluster": 100.0,
-    "mean_F_v4": 0.9909965991973877,
+    "pct_in_v4_ensemble_core": 98.41269841269842,
+    "mean_f_v4_balanced": 0.9950202703475952,
     "pct_frequent_v4": 98.4126984126984,
-    "pct_in_v4_tier_Core-habitat-forward": 0.0,
-    "pct_in_v4_tier_Structural-connectivity-forward": 1.5873015873015872,
-    "pct_in_v4_tier_Climate-corridors-forward": 0.0,
-    "pct_in_v4_tier_Biodiversity-forward": 0.0,
-    "pct_in_v4_tier_Carbon-forward": 0.0,
+    "mean_F_v4_ensemble": 0.9909965991973877,
+    "pct_in_v4_tier_Climate refugia forward": 0.0,
+    "pct_in_v4_tier_Structural connectivity forward": 1.5873015873015872,
+    "pct_in_v4_tier_Climate corridors forward": 0.0,
+    "pct_in_v4_tier_Mammal + bird richness forward": 0.0,
+    "pct_in_v4_tier_Biomass + soil carbon forward": 0.0,
     "pct_in_v4_tier_2plus": 0.0,
     "pct_opportunity_v4": 0.0,
     "pct_never_v4": 0.0

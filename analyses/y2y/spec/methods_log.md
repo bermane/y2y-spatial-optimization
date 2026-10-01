@@ -1360,3 +1360,49 @@ No y2y output changes. Consumer: the northern route options (northern methods_lo
 bottom edge and the ramp block's bottom, measured at draw time (the northern package).
 **M4.41 addendum (2026-09-29): `post_draw=` on `_wide_map` / `_draw_inset`** — an optional callback run per panel after the labels and limits
 exist (default None: y2y unchanged). The northern route-options map places its numbered discs with it.
+**M4.40 addendum (Ethan, 2026-09-30): consequences tables gain a "Bear coexistence programs*" row.** T-D1 / T-D7 carry
+`bear_programs_mean` = the cell-weighted mean of `n_groups` (the communities layer, July 2026) over the census divisions / counties an
+area overlaps, NA units excluded (never recoded to 0 — the 2026-09-16 rule) and `bear_units_overlapped`; the row is a COUNT, starred and
+explained under the table, on the same per-row low → high ramp (NaN cells unfilled, shown "—"). The known label defects of that layer
+(4 name-copied counts in the ID/WY corner) are inherited and disclosed in the communities report-back.
+**M4.40 addendum (Ethan, 2026-09-30): every protected-area cell draws grey, planning unit or not** (`STYLE["pa_fill_all"]` default True: the
+fill is rasterized from the PA polygons, so the icefields inside Jasper / Banff and PA land beyond the PU edge show as protected; display
+only — the locked set in the optimization is unchanged).
+**M4.40 addendum (Ethan, 2026-09-30): hairlines between adjoining protected areas ON for the Y2Y package** — `STYLE["pa_borders"]` =
+(colour, width, alpha) = ("white", 0.3 pt, 0.75), set in 21 cell 1; the lines follow the PA polygons dissolved by name over the grey fill so
+Banff, Jasper, Yoho and Kootenay read as separate parks; display only.
+**M4.40 addendum (Ethan, 2026-09-30): cluster numbers drawn as the northern route options draw theirs** — a white disc rimmed in the
+cluster's colour with the number inside, placed just outside the cluster on its edge, no leader line, clear of every text label, town and
+other disc (`director_plot.place_cluster_numbers`, run after each panel's labels exist; sides tried in `STYLE["cluster_number_sides"]`
+order, rim width `cluster_number_rim_lw`); display only. Replaces the arrowed number of 2026-09-14.
+**M4.40 addendum (Ethan, 2026-09-30): disc placement hugs the cluster** — the walk starts on the nearest cluster cell (a fragmented
+cluster's centroid can fall off it) and the nearest clear spot wins (every side at the edge before any side further out); cluster 2's
+locator disc moved from the far north-east to the cluster's south-east edge.
+**M4.40 addendum (Ethan, 2026-09-30): the Act 2 map's legend box is centred between the inset boxes' bottom edge and the page bottom**
+(`STYLE["scenario_legend_between"]`, default True; the page bottom on the tight-cropped slide is the frame's bottom edge).
+**M4.40 addendum (Ethan, 2026-09-30): the cluster discs never cover a cluster** — a disc is accepted only where the distance to the nearest
+cell of ANY numbered cluster is at least its radius plus a gap (`cluster_number_gap_px`, 1.5 km), measured on a distance transform of the
+cluster masks. **The Act 2 legend fits its gap:** tighter spacing, and the type shrinks a point at a time (16 → down to 9) until the box
+sits between the insets' bottom edge and the page bottom without touching either.
+**M4.40 addendum (Ethan, 2026-09-30): disc placement, final rule** — the disc sits just outside the cluster's CONVEX HULL (so never in a
+gap or bay between fragments), at the hull-edge point nearest to the cluster's main body (largest fragment in the panel), the first such
+point clear of the other clusters' hulls, every text label, the towns and the other discs; per panel, distance fields on the panel window.
+Supersedes the directional walk and the closing-based envelope tried the same day.
+**M4.40 addendum (Ethan, 2026-09-30): one scale per panel set** — the Act 1 insets A and B, and the four cluster locators, each take the
+largest window's width and height re-centred on their own centres (`_equalize_windows`; `STYLE["inset_same_scale"]`,
+`STYLE["locator_same_scale"]`), so the 50 km bar is the same length in every panel of a set. The locator set is sized by the
+Kootenays / Columbia Mountains window, so the small Yukon cluster now appears small.
+**M4.40 addendum (Ethan, 2026-09-30): scale-bar labels sit the same distance above the line on every panel** — the gap is a fixed
+3 points (`director_core.SCALEBAR_GAP_PT`, offset-points annotation) on the frame's 250 km bar, the windowed frames and the insets' 50 km
+bar, instead of a distance in grid cells that shrank with the panel's extent.
+**M4.40 addendum (Ethan, 2026-09-30): on the Y2Y frame the north arrow sits LEFT of the 250 km bar** on its baseline (the bar shifted right), "N" above the tip
+(`STYLE["frame_north_arrow_beside_bar"]`, gap `frame_north_arrow_gap`); the windowed frames keep their own knob. Legend wording "Proposed
+IPCAs (not locked in)" on every map (record titles reworded to match).
+**M4.40 addendum (Ethan, 2026-09-30): the Act 1 and Act 2 maps export on ONE page box** (`_common_crop`; `STYLE["wide_common_crop"]`): the
+frame's left edge and the inset titles' top from the tight box, the page's full width and bottom — so the two-inset Act 1 map and the
+three-inset Act 2 map have identical page dimensions and the left-hand Y2Y frame lands at the same size and position on both (checked:
+identical PNG sizes, protected-area pixels coincide); the timelapse frames use the same box.
+**M4.40 addendum (Ethan, 2026-10-01): every inset of a panel set at one scale and size, panel-wide** — the Act 2 map's A / B / C now share
+inset C's window size (`_equalize_windows`, the same rule as the Act 1 pair and the locators); window C moved 40 km north
+(`scenario_inset_windows["C"]` rows 36–691). The timelapse re-rendered with the 2026-09-30 design (all-cell PA fill + white park borders,
+one inset scale, scale-bar gap, arrow beside the bar, "Proposed IPCAs", the shared export box → 1920 × 1021 frames).

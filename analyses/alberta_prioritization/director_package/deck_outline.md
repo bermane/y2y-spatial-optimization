@@ -11,7 +11,7 @@ _generated from analyses/alberta_prioritization/director_package; VERSION v4; n 
 - Every plan keeps every value theme within 5% of its best; the maps use the 5% band (D-AB13: guarded 5% unless the 5% guarded frequent tier < 100 km2, then 2% (D-AB10))
 - The spine of the story: VALUE (where a theme is rich) is not IRREPLACEABILITY (where near-optimal plans cannot do without it)
 
-> Context. Methods: AB spec v0.6 mirror of the Y2Y-wide study plan v0.20 (manifest v4); results_log R1-R9.
+> Context. Methods: AB spec v0.6.1 mirror of the Y2Y-wide study plan v0.20.1 (manifest v4; package spec v2.1, the balanced core); results_log R1-R9.
 
 ## Slide 2 - How to read the maps
 
@@ -53,7 +53,7 @@ figure: `act0_value_convergence_1km.png`
 
 figure: `act1_core_1km.png`
 
-- Of everything in Act 0, these areas recur in near-optimal plans no matter whose values prevail: 1,264 km2 = 2.2% of unprotected land (F >= 0.70 across all 14 positions)
+- Of everything in Act 0, this is the balanced position's core - land in at least 70% of its near-optimal plans: 1,456 km2 = 2.5% of unprotected land (f >= 0.70, both refugia futures averaged; the cross-position ensemble core, 1,264 km2, is in the appendix)
 - No value theme left more than 5% behind in any plan
 - Numbered = the largest core clusters (full register in the appendix)
 
@@ -61,17 +61,17 @@ figure: `act1_core_1km.png`
 
 figure: `act1_core_ssp585_1km.png`
 
-- 7 positions at SSP585: core 1,286 km2
-- 100% of the 14-position core lies inside it
-- The 14-position core = what survives BOTH refugia futures
+- The balanced position at SSP585: core 1,457 km2
+- 100% of the balanced core lies inside it
+- The balanced core averages the two refugia futures
 
 ## Slide 8 - Act 1 core under the low-emissions refugia future
 
 figure: `act1_core_ssp245_1km.png`
 
-- 7 positions at SSP245: core 1,257 km2
-- 99% of the 14-position core lies inside it
-- The 14-position core = what survives BOTH refugia futures
+- The balanced position at SSP245: core 1,456 km2
+- 100% of the balanced core lies inside it
+- The balanced core averages the two refugia futures
 
 ## Slide 9 - Where the promise depends on the climate future
 
@@ -94,7 +94,7 @@ figure: `td7_consequences_core.png`
 - Each measure = the cluster's mean value / the mean over Alberta's allocatable land (1.0x = the average unprotected cell)
 - Reference columns: existing protected areas; the Upper Smoky Nature-First zone and planning area (unprotected parts) - alignment, not assignment
 
-## Slide 12 - Act 2 - Core-habitat-forward: value vs irreplaceability
+## Slide 12 - Act 2 - Climate refugia forward: value vs irreplaceability
 
 figure: `act2_s1_1km.png`
 
@@ -102,15 +102,15 @@ figure: `act2_s1_1km.png`
 - Frequent tier 941 km2; own land (outside the core and the other scenarios' tiers) 0 km2
 - Orange = the Upper Smoky Nature-First zone and planning area - overlap is independent convergence, not assignment
 
-## Slide 13 - Act 2 - Structural-connectivity-forward: value vs irreplaceability
+## Slide 13 - Act 2 - Structural connectivity forward: value vs irreplaceability
 
 figure: `act2_s2_1km.png`
 
 - Left: where the theme's value is (Act 0). Right: what becomes irreplaceable when this value leads - its frequent tier, clusters outside the core numbered
-- Frequent tier 2,433 km2; own land (outside the core and the other scenarios' tiers) 1,163 km2
+- Frequent tier 2,433 km2; own land (outside the core and the other scenarios' tiers) 976 km2
 - Orange = the Upper Smoky Nature-First zone and planning area - overlap is independent convergence, not assignment
 
-## Slide 14 - Act 2 - Climate-corridors-forward: value vs irreplaceability
+## Slide 14 - Act 2 - Climate corridors forward: value vs irreplaceability
 
 figure: `act2_s2c_1km.png`
 
@@ -118,7 +118,7 @@ figure: `act2_s2c_1km.png`
 - Frequent tier 420 km2; own land (outside the core and the other scenarios' tiers) 0 km2
 - Orange = the Upper Smoky Nature-First zone and planning area - overlap is independent convergence, not assignment
 
-## Slide 15 - Act 2 - Biodiversity-forward: value vs irreplaceability
+## Slide 15 - Act 2 - Mammal + bird richness forward: value vs irreplaceability
 
 figure: `act2_s3_1km.png`
 
@@ -127,7 +127,7 @@ figure: `act2_s3_1km.png`
 - Orange = the Upper Smoky Nature-First zone and planning area - overlap is independent convergence, not assignment
 - almost no land of its own; every near-optimal plan holds 43–44% of AOH richness whichever value leads - the finding IS the product: the value map (left) is where to work
 
-## Slide 16 - Act 2 - Carbon-forward: value vs irreplaceability
+## Slide 16 - Act 2 - Biomass + soil carbon forward: value vs irreplaceability
 
 figure: `act2_s4_1km.png`
 
@@ -212,7 +212,7 @@ figure: `summary_tiers_1km.png`
 
 figure: `td2_bands.png`
 
-- Core: recurs under every value position (commit)
+- Core: what the balanced position needs in every good plan (commit)
 - Scenario tiers: join the core if that value leads (choose)
 - Opportunity: defensible wherever feasibility is positive (enable)
 - Next: cluster names (Tim), 'west of Grande Cache' from the value-forward surfaces, licensed tenure data if the OECM split must be parcel-true
@@ -227,6 +227,7 @@ figure: `td_e19_partition.png`
 
 ## Appendix
 - `act1_F_histogram.png`, `act1_core_1km_tiers.png` (five-tier analytic surface), `act1_core_ssp585_1km.png` / `act1_core_ssp245_1km.png`; `values_table.png` + `tables/T-D0_values.csv`
+- `appendix_act1_ensemble_F_1km.png` + `td2_bands_ensemble_appendix.png` (the paper's ensemble F beside the balanced core), `method_frames/` (the timelapse, record budget)
 - `td1_picks.png` + `tables/T-D1_cluster_register.csv` (full register, incl. % adequacy-forced), `tables/cluster_sensitivity.csv` (0.60/0.80; min size 10 km2)
 - `td6_value_coverage.png` + `tables/T-D6_value_coverage.csv` / `T-D6b_value_share_by_tier.csv`, `tables/hinge_crosstab.csv`, `td7_consequences_*.png` + `tables/T-D7_consequences.csv`, `td_e19_partition.png` + `tables/E19_partition.csv`
 - `td2_acts.png`, `td3_scenarios.png`, `td5_protected_baseline.png`, `td5b_enrichment_by_scenario.png`, `td4_natural_subregions.png`, `t_aoi_alignment.png`, `t_tenure_by_tier.png`, `tables/pooling_check.csv`, 1 km GeoTIFFs in `geotiffs/` (incl. `value_top30_*.tif`, `value_convergence.tif`, `value_gap.tif`)

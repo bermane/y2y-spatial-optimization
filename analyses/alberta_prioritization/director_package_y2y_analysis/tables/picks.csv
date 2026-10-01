@@ -1,0 +1,27 @@
+number,act,key,cid,cids,n_components,name,km2,meanF,lat,lon,members,region,region_label
+1,Act 1,core,6,6;14;9,3,Upper Smoky Nature-First zone vicinity (54.0°N 119.5°W),91.0,0.7310924497279492,53.982909851316194,-119.45695550604368,5+cx7+1specks,Upper Smoky,Upper Smoky
+2,Act 1,core,30,30;64;52;58;26;25;20;48;22;59;66;54;39;28;60;56;57;70;46;41;67;38;68;69;23;40;63;42;37;44;65;61;47;43;71;72,36,SE of Jasper National Park Of Canada (52.4°N 116.6°W),1745.0,0.8546716180776798,52.25421790737957,-116.33298775727333,[1+cx8+21specks]+[6+1specks],Alberta Rockies,Alberta Rockies
+3,Act 1,core,94,79;84;82;85;78;80;83;94;90;93;96;92;97;87;91;95;100,17,S of Don Getty Wildland (50.0°N 114.6°W),404.0,0.843865276231329,50.461086602901396,-114.75673928352955,[3+4specks]+[2+8specks],Kananaskis / Highwood,Kananaskis / Highwood
+4,Act 1,core,115,115;121;120;118;113;114;119;117;116,9,SE of Waterton Lakes National Park Of Canada (49.0°N 113.6°W),111.0,0.787935001792403,49.032873274207525,-113.50452108249887,4+6specks,Crown of the Continent,Crown of the Continent
+5,Act 2,s1,16,16;29;19,3,SE of White Goat (52.2°N 116.6°W),577.0,0.8099207598478955,52.19987121822484,-116.38297528486518,7,Central Alberta foothills,Central Alberta foothills
+6,Act 2,s1,59,59;60,2,NW of Livingstone Range Wildland Provincial Park (49.8°N 114.6°W),232.0,0.8128261746155732,49.915982259547675,-114.60812929524656,8,Alberta Rockies,Alberta Rockies
+7,Act 2,s2,88,54;88;84;48,4,NE of Banff National Park Of Canada (51.9°N 115.7°W),674.0,0.8673454968932609,52.19506517372919,-116.18301429999147,9,Central Alberta foothills,Central Alberta foothills
+8,Act 2,s2,110,110,1,SE of Don Getty Wildland (50.8°N 114.8°W),125.0,0.8596974428645457,50.83458313762173,-114.84402063920908,10,Alberta Rockies,Alberta Rockies
+9,Act 2,s2c,19,19,1,E of White Goat (52.2°N 116.5°W),13.0,0.818121703252906,52.34094603808431,-116.49469262464825,11,Central Alberta foothills,Central Alberta foothills
+10,Act 2,s2c,40,40,1,NE of Banff National Park Of Canada (51.8°N 115.7°W),13.0,0.7825836286167888,51.77076865517266,-115.69468233465103,12,Central Alberta foothills,Central Alberta foothills
+11,Act 2,s3,23,23,1,E of White Goat (52.3°N 116.5°W),22.0,0.8234738231493981,52.43121854451962,-116.5544214212719,13,Central Alberta foothills,Central Alberta foothills
+12,Act 2,s3,48,48,1,NE of Banff National Park Of Canada (51.8°N 115.7°W),20.0,0.747041169923168,51.75275483754304,-115.66049884565072,14,Central Alberta foothills,Central Alberta foothills
+13,Act 2,s4,29,29,1,NE of White Goat (52.4°N 116.5°W),132.0,0.8142930212741996,52.43323968949685,-116.55074688144941,15,Central Alberta foothills,Central Alberta foothills
+14,Act 2,s4,71,65;75;71;77,4,NE of Banff National Park Of Canada (51.8°N 115.9°W),95.0,0.7797397180157941,51.82846333985603,-115.70423628267228,16,Central Alberta foothills,Central Alberta foothills
+585-1,Act 1 (585),core_585,31,31;58;52;28;24;25;42;54,8,SE of Jasper National Park Of Canada (52.5°N 116.6°W),2137.0,0.8581665776213252,52.285210035254416,-116.35858584895149,585-1,Central Alberta foothills,Central Alberta foothills
+585-2,Act 1 (585),core_585,71,71;75,2,SE of Don Getty Wildland (50.9°N 114.9°W),235.0,0.8083437719243638,50.83940030225882,-114.84892425027238,585-2,Alberta Rockies,Alberta Rockies
+585-3,Act 1 (585),core_585,88,88;82;89,3,S of Don Getty Wildland (50.1°N 114.7°W),196.0,0.8835534277010937,50.186101707642344,-114.67763038987879,585-3,Alberta Rockies,Alberta Rockies
+585-4,Act 1 (585),core_585,106,106;112;111,3,SE of Waterton Lakes National Park Of Canada (49.0°N 113.6°W),96.0,0.7806372616517668,49.02601005565024,-113.50153795194343,585-4,Crown of the Continent,Crown of the Continent
+585-5,Act 1 (585),core_585,6,6,1,Upper Smoky SRP planning area vicinity (54.0°N 119.5°W),65.0,0.7897436022758484,54.04007748467584,-119.46618600908438,585-5,Kakwa / Grande Cache,Kakwa / Grande Cache
+585-6,Act 1 (585),core_585,62,62,1,Don Getty Wildland vicinity (51.4°N 115.2°W),50.0,0.8968627506494522,51.44137527720132,-115.23141682999147,585-6,Alberta Rockies,Alberta Rockies
+245-1,Act 1 (245),core_245,35,35;67;58;53;49;55;60;68;63;54,10,SE of Jasper National Park Of Canada (52.4°N 116.6°W),1149.0,0.8425911778504689,52.197943874552344,-116.26069943926059,245-1,Central Alberta foothills,Central Alberta foothills
+245-2,Act 1 (245),core_245,99,99;95;107,3,W of Bob Creek Wildland (49.9°N 114.6°W),332.0,0.8397117977939457,50.002429221238806,-114.63628987270022,245-2,Alberta Rockies,Alberta Rockies
+245-3,Act 1 (245),core_245,30,30;29;24;26,4,E of Jasper National Park Of Canada (52.8°N 117.0°W),173.0,0.9084211772232387,52.89920814113828,-117.22274231394178,245-3,Central Alberta foothills,Central Alberta foothills
+245-4,Act 1 (245),core_245,83,83;89;81,3,SE of Don Getty Wildland (50.9°N 114.9°W),111.0,0.7996820442311399,50.835707484268866,-114.85802469899154,245-4,Alberta Rockies,Alberta Rockies
+245-5,Act 1 (245),core_245,116,116;122;121,3,SE of Waterton Lakes National Park Of Canada (49.0°N 113.6°W),96.0,0.7773692876799032,49.02601005565024,-113.50153795194343,245-5,Crown of the Continent,Crown of the Continent
+245-6,Act 1 (245),core_245,11,11,1,Upper Smoky Nature-First zone vicinity (54.0°N 119.5°W),96.0,0.7281454410403967,54.046558489228495,-119.5060284749364,245-6,Kakwa / Grande Cache,Kakwa / Grande Cache

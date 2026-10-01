@@ -520,12 +520,16 @@ def graticule(ax, G, lats=(45, 50, 53, 55, 60, 65), lons=(-130, -125, -120, -115
     ax.set_xlim(0, W); ax.set_ylim(H, 0)
 
 
+SCALEBAR_GAP_PT = 3.0      # scale-bar label gap above the line, in points -- identical on the frame and the insets (Ethan 2026-09-30)
+
+
 def scalebar(ax, G, km=250, loc=(0.70, 0.94), fs=8):     # loc = (x from left, y from bottom) as axes fractions
     H, W = G.shape
     px_per_km = 1000 / abs(G.transform.a)
     x0, y0 = loc[0] * W, (1 - loc[1]) * H
     ax.plot([x0, x0 + km * px_per_km], [y0, y0], color="black", lw=2.5, solid_capstyle="butt", zorder=5)
-    ax.text(x0 + km * px_per_km / 2, y0 - 12 * px_per_km, f"{km} km", ha="center", fontsize=fs, zorder=5)   # offsets are km x px_per_km (= px on the 1 km grid)
+    ax.annotate(f"{km} km", xy=(x0 + km * px_per_km / 2, y0), xytext=(0, SCALEBAR_GAP_PT), textcoords="offset points",   # the label a fixed number of POINTS
+                ha="center", va="bottom", fontsize=fs, zorder=5)                                                          # above the line, the same on every panel (Ethan 2026-09-30)
 
 
 def corner_note(ax, text, loc="lower right"):
@@ -1055,7 +1059,7 @@ def _lines_px(G, geom):
 
 
 def draw_admin(ax, G, A, color="#7A7A7A", lw=0.6, coast_color="#9CB3C0", coast_lw=0.3,
-               border_color="#4a4a4a", border_lw=1.0, labels=False, fs=7, dash=(4, 2)):
+               border_color="#4a4a4a", border_lw=1.0, labels=False, fs=7, dash=(4, 2), border_dash=None):
     """Coast, admin-1 lines (dashed) and the shared border in the corridors_mapstyle BASE tokens (2026-09-14; postal
     labels off by default -- draw_basemap places full province names on open land)."""
     import matplotlib.patheffects as _pe
@@ -1067,7 +1071,7 @@ def draw_admin(ax, G, A, color="#7A7A7A", lw=0.6, coast_color="#9CB3C0", coast_l
             ax.plot(ln[:, 0], ln[:, 1], color=color, lw=lw, ls=(0, dash) if dash else "-", zorder=0.32)
     if A.border is not None:
         for ln in _lines_px(G, A.border):
-            ax.plot(ln[:, 0], ln[:, 1], color=border_color, lw=border_lw, zorder=0.35)
+            ax.plot(ln[:, 0], ln[:, 1], color=border_color, lw=border_lw, ls=(0, border_dash) if border_dash else "-", zorder=0.35)   # border_dash: the Alberta frame draws it like the admin lines
     if labels:
         for _, r in A.labels.iterrows():
             px, py = xy_to_px(G, r.pt.x, r.pt.y)
@@ -1096,6 +1100,14 @@ Y2Y_TOWNS = {                                   # name: (lat, lon); the director
     # Tahltan territory / Highway 37 (inset A, Ethan 2026-09-15)
     "Iskut": (57.84, -129.98), "Dease Lake": (58.44, -130.01), "Telegraph Creek": (57.90, -131.16), "Stewart": (55.94, -129.99),
     "Hazelton": (55.26, -127.67),
+}
+ALBERTA_TOWNS = {                               # the Alberta package's reference towns (Ethan 2026-09-30: "additional towns to the insets for reference");
+    "Grande Prairie": (55.17, -118.80), "Valleyview": (55.07, -117.28), "Fox Creek": (54.40, -116.80), "Whitecourt": (54.14, -115.68),   # kept OUT of Y2Y_TOWNS so the
+    "Grande Cache": (53.88, -119.13), "Edson": (53.58, -116.44), "Hinton": (53.41, -117.57), "Drayton Valley": (53.22, -114.98),      # Y2Y-wide insets do not change
+    "Nordegg": (52.47, -116.08), "Rocky Mountain House": (52.37, -114.92), "Sundre": (51.80, -114.64), "Lake Louise": (51.43, -116.18),
+    "Golden": (51.30, -116.96), "Cochrane": (51.19, -114.47), "Canmore": (51.09, -115.36),                                   # Field removed (Ethan 2026-09-30)
+    "Kananaskis Village": (50.92, -115.15), "Longview": (50.53, -114.23), "Blairmore": (49.60, -114.44), "Pincher Creek": (49.49, -113.95),
+    "Waterton Park": (49.05, -113.91),
 }
 POSTAL_DISPLAY = {"NT": "NWT"}                   # display form of a postal code where the common usage differs (Ethan 2026-09-15)
 PROVINCE_LABEL = {"British Columbia": "BRITISH\nCOLUMBIA", "Northwest Territories": "NORTHWEST\nTERRITORIES",
