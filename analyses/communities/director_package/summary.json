@@ -1,0 +1,70 @@
+{
+ "built": "2026-10-02",
+ "package_version": "v4",
+ "core_basis": "balanced",
+ "near_km": 20,
+ "buffers_km": [
+  2,
+  10,
+  20
+ ],
+ "buffer_basis": "grizzly: 2 km zone of influence (Thompson et al. 2025; Whittington et al. 2022); 10 km female / 20 km male 2nd-order home range (Graham & Stenhouse 2014)",
+ "communities_in_y2y": 218,
+ "communities_with_program": 85,
+ "within_near_km": 151,
+ "no_program_within_near_km": 77,
+ "in_core": 2,
+ "in_core_no_program": 2,
+ "min_pop": 1000,
+ "with_program_within_near_km": 74,
+ "suspect_divisions_counted_as_none": 4,
+ "by_buffer": {
+  "in the core": {
+   "communities": 2,
+   "no_program": 2
+  },
+  "\u2264 10 km": {
+   "communities": 84,
+   "no_program": 44
+  },
+  "\u2264 20 km": {
+   "communities": 65,
+   "no_program": 31
+  }
+ },
+ "units_recorded": 26,
+ "units_none": 82,
+ "groups_as_shipped": 53,
+ "programs_on_record": 47,
+ "places_source": "GeoNames cities500 (population \u2265 500)",
+ "by_cluster": [
+  {
+   "nearest_cluster": "1",
+   "region": "Yukon",
+   "communities": 0,
+   "no_program": 0,
+   "with_program": 0
+  },
+  {
+   "nearest_cluster": "2",
+   "region": "Stikine",
+   "communities": 1,
+   "no_program": 1,
+   "with_program": 0
+  },
+  {
+   "nearest_cluster": "3",
+   "region": "Kootenays / Columbia Mountains",
+   "communities": 57,
+   "no_program": 16,
+   "with_program": 41
+  },
+  {
+   "nearest_cluster": "4",
+   "region": "Central Idaho / Salmon\u2013Bitterroot",
+   "communities": 93,
+   "no_program": 60,
+   "with_program": 33
+  }
+ ]
+}

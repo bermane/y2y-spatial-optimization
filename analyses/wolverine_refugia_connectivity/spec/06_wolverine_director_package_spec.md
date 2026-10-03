@@ -4,7 +4,10 @@
 the two near-contiguous rows, class-and-width-first examples, detour-distance captions, the D28/D29 columns) mirrored; Ethan
 re-runs 03 → 04 → 05. v1.0 BUILT 2026-09-28 (`wolverine_director.py` + `04_tables_and_figures.ipynb` / `05_director_outputs.ipynb`).
 
-**Changelog.** v1.1 (2026-09-28) — classes read `link_class` (analysis spec W12): the package refuses a run classified before
+**Changelog.** v1.2.5 (2026-10-02, Ethan) — Candara everywhere (M7.22). v1.2.4 (2026-10-02, Ethan) — full-page map export, "Option N" headers, "Proposed conservation areas" wording (M7.19–M7.20). v1.2.3 (2026-10-01, Ethan) — 06 · 06 consequences table on the y2y package spec v2.2 rule (representation quotient, standout
+group, bear coexistence rows; M7.18; the y2y step-back — bear mean count, standout off — inherited the same day). v1.2.2 (2026-10-01, Ethan) — route-option outlines thinner (`option_lw` 0.8 / `option_halo` 0.8 pt; M7.17). v1.2.1 (2026-10-01, Ethan) — PNG 300 dpi only, no PDF twin, record and curated outputs alike (M7.16). v1.2 (2026-10-01, Ethan) — the package lives at `analyses/wolverine_refugia_connectivity/director_package/` in the y2y /
+Alberta folder structure (`geotiffs/` = the GIS export, was `gis/`; `tables/`; `figures/`; `director_outputs/`; `summary.json` names the
+run; one run per package, another run's contents → `_superseded_<run>/`; `wd.PKG_DIR`, `package(out=)` overrides; M7.15). v1.1 (2026-09-28) — classes read `link_class` (analysis spec W12): the package refuses a run classified before
 D23 (`P.classified`); the near-contiguous links (D25) are drawn in the neutral grey with the mapstyle hatch UNDER the four
 corridor classes on every map (TALL, act crops, the wide layout), the barrier variant outlined, two legend rows with counts
 after the four classes (`ms.NEAR_CONTIGUOUS`); examples are class-and-width-first (below); tables gain Geometry (adjacent /
@@ -13,7 +16,7 @@ that mentions the band states it as detour distance (D31) and the geometric clas
 counts and the detour distance. Pressure strings = `cc.LINK_CLASS_LABEL` (the northern words). Subordinate to `wolverine_refugia_connectivity_spec.md`. Mirrors the northern package spec
 (`analyses/northern_connectivity/spec/06_corridors_north_director_package_spec.md` v1.2.16) — the §3a
 cartographic contract (`corridors_mapstyle.py`: one style module, Okabe–Ito class palette, 55% area fills,
-greyscale + one-blue basemap with the Copernicus hillshade, Noto Sans, one legend per figure, PDF + PNG at 300 dpi
+greyscale + one-blue basemap with the Copernicus hillshade, Noto Sans, one legend per figure, PNG at 300 dpi (PDF twin retired 2026-10-01)
 named `<fig_id>_<run_tag>`, the 8-item render QA before any figure ships) applies unchanged. Zero new solves.
 
 ## 1. What differs from the north
@@ -62,12 +65,12 @@ named `<fig_id>_<run_tag>`, the 8-item render QA before any figure ships) applie
 | GIS | `export_gis` — corridor_pressure, refugia, nodes, examples gpkg + style.json | — | — |
 | QA | `qa_report` — the §3a.3 checklist per figure → `qa_checklist.csv` | — | — |
 
-Record = `04_tables_and_figures.ipynb` → `<run>/director_package/` — **slimmed 2026-09-28 (Ethan): tables + GIS + the link-class record
+Record = `04_tables_and_figures.ipynb` → `analyses/wolverine_refugia_connectivity/director_package/` (`<run>/director_package/` until 2026-10-01, v1.2) — **slimmed 2026-09-28 (Ethan): tables + GIS + the link-class record
 only, minutes.** W0–W4 and the engine record maps are never shared, so 04 no longer renders them (the functions stay; one commented cell
 draws a figure on demand); the §3a.3 QA checklist therefore has nothing to check by default. 05 reads the run directly and does not depend
 on 04 (the northern `06_tables_and_figures` mirror in role, not in volume). **Curated = `08_director_outputs.ipynb`** (05 → 06 → 08 as v2.5 grew: complexes, the routing run, the product; 2026-09-29) (the northern `07_director_outputs`
 mirror, 2026-09-28): the same first two maps as the north, drawn through `director_plot.wide_map` (the y2y Act 1 wide layout:
-the Y2Y frame at left, insets A / B at right, the key under A, the legend under B; PNG 300 dpi + PDF) via
+the Y2Y frame at left, insets A / B at right, the key under A, the legend under B; PNG 300 dpi; PDF twin retired 2026-10-01) via
 `wd.director_frame` (a 600 m decimated frame — one 300 dpi pixel of the frame panel is ~1.5 km; existing PAs = the layout's
 grey layer; the refugia nodes = the overlay in the IPCA role, filled in the core tone, outlined, named in the insets; the
 proposed IPCAs = a second fill over the corridor land, so what is already satisfied reads as such — W11 overlay mode):

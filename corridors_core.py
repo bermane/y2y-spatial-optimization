@@ -671,7 +671,7 @@ def _raster_nodes(cfg, cost_path, names_path=None, verbose=True):
         big = pas[pas.km2 >= nc["context_pa_min_km2"]]
         ctx = rasterize([(g, 1) for g in big.geometry], out_shape=shape, transform=transform,
                         fill=0, dtype="uint8").astype(bool) & pu
-    # W11: protected land (existing PAs + proposed IPCAs/PAs, taken as given) -- a STATUS layer
+    # W11: protected land (existing PAs + proposed conservation areas/PAs, taken as given) -- a STATUS layer
     protected_pa = protected_ipca = None
     pc = nc.get("protected")
     if pc:
@@ -2060,7 +2060,7 @@ def secured_status(A, frac=None, verbose=True):
     pa = A.protected_pa if getattr(A, "protected_pa", None) is not None else prot
     ipca = A.protected_ipca if getattr(A, "protected_ipca", None) is not None else np.zeros(A.shape, bool)
     inside_pa = A.node_union | pa                      # existing PAs only
-    inside_all = inside_pa | ipca                      # + proposed IPCAs (taken as given)
+    inside_all = inside_pa | ipca                      # + proposed conservation areas (taken as given)
     cp, cpa, cpi, bp, bpa, bpi, bu, by = {}, {}, {}, {}, {}, {}, {}, {}
     for eid in A.edges.index:
         e = A.edges.loc[eid]
@@ -2084,7 +2084,7 @@ def secured_status(A, frac=None, verbose=True):
         bpa[eid] = (n_pa / n_new) if n_new else np.nan
         bpi[eid] = (n_ip / n_new) if n_new else np.nan
         bu[eid] = (n_new - n_pa - n_ip) * A.cell_km2
-        # which layer satisfies the link: existing PAs alone, or only once the proposed IPCAs are real
+        # which layer satisfies the link: existing PAs alone, or only once the proposed conservation areas are real
         by[eid] = ("pa" if np.isfinite(f_pa) and f_pa >= frac else
                    ("ipca" if np.isfinite(f_all) and f_all >= frac else ""))
     A.edges["centreline_protected_frac"] = pd.Series(cp)
@@ -2104,8 +2104,8 @@ def secured_status(A, frac=None, verbose=True):
         tot, unp = int(A.corridor.sum()) * A.cell_km2, int(A.corridor_unprotected.sum()) * A.cell_km2
         in_pa = int((A.corridor & pa).sum()) * A.cell_km2; in_ip = int((A.corridor & ipca & ~pa).sum()) * A.cell_km2
         print(f"protection status (W11, centreline >= {frac:g} inside nodes + protected land): of {n_sep} separated links, "
-              f"{n_pa_} already connected within EXISTING PAs, {n_ip_} more only once the proposed IPCAs are realized")
-        print(f"  corridor land {tot:,.0f} km²: inside existing PAs {in_pa:,.0f}, inside proposed IPCAs (not PAs) {in_ip:,.0f}, "
+              f"{n_pa_} already connected within EXISTING PAs, {n_ip_} more only once the proposed conservation areas are realized")
+        print(f"  corridor land {tot:,.0f} km²: inside existing PAs {in_pa:,.0f}, inside proposed conservation areas (not PAs) {in_ip:,.0f}, "
               f"UNPROTECTED {unp:,.0f} km²")
     return A
 
@@ -3550,7 +3550,7 @@ def map(A):
         _da(A, np.where(A.priority > 0, A.priority, np.nan).astype("float32")).plot.imshow(
             ax=ax3, cmap="viridis", add_colorbar=True,
             cbar_kwargs=dict(label="linkage priority (edge centrality × band quality)", shrink=0.5))
-        # both node sets for context: existing PAs (grey) + proposed IPCAs (teal), same as panel 1
+        # both node sets for context: existing PAs (grey) + proposed conservation areas (teal), same as panel 1
         for layer, col in [(pa_mask, PA_COLOR), (anch, ANCHOR_COLOR)]:
             _da(A, np.where(layer, 1.0, np.nan).astype("float32")).plot.imshow(
                 ax=ax3, cmap=ListedColormap([col]), add_colorbar=False)
@@ -3586,10 +3586,10 @@ def _nodes_cfg(A):
 
 
 def _node_legend(A):
-    """(pa label, anchor label) for figure legends: the north's 'existing PAs' / 'proposed IPCAs'
+    """(pa label, anchor label) for figure legends: the north's 'existing PAs' / 'proposed conservation areas'
     unless the analysis config names its node kinds differently (wolverine: refugia patches)."""
     lg = _nodes_cfg(A).get("legend", {})
-    return lg.get("pa", "existing PAs"), lg.get("anchor", "proposed IPCAs")
+    return lg.get("pa", "existing PAs"), lg.get("anchor", "proposed conservation areas")
 
 
 def _is_anchor_label(A, label):
@@ -3630,7 +3630,7 @@ def _nodes_overlay(A, ax, XL, YL, pa_mask, anch, legend=False,
 
 
 # On the near-optimality figures the data colormaps (viridis_r ramp; green tier fills) swallow
-# the house teal, so proposed IPCAs get burnt orange there -- absent from both palettes.
+# the house teal, so proposed conservation areas get burnt orange there -- absent from both palettes.
 NEAR_OPT_ANCHOR_COLOR = "#d95f02"
 
 
@@ -3726,7 +3726,7 @@ def compare(A, other, pad=0.05, label_a=None, label_b=None):
         Patch(color=ONLY_A_COLOR, label=f"{label_a} only ({(a & ~b).sum()*A.cell_km2:,.0f} km²)"),
         Patch(color=ONLY_B_COLOR, label=f"{label_b} only ({(~a & b).sum()*A.cell_km2:,.0f} km²)"),
         Patch(color=PA_COLOR, label="existing PAs"),
-        Patch(color=ANCHOR_COLOR, label="proposed IPCAs")],
+        Patch(color=ANCHOR_COLOR, label="proposed conservation areas")],
         loc="lower left", fontsize=9, frameon=True)
     axd.set_title(f"Difference — Jaccard {j:.3f}", fontsize=11)
 
@@ -3927,7 +3927,7 @@ def gate_g5(A, redefined=G5_REDEFINED, tol=0.02):
     asserted). Reads A.profile["table"] (corridor_profile) and the frozen v1 profile."""
     old = pd.read_csv(config.RESULTS_DIR / "corridors_north" / "_v1_frozen" / "corridor_profile.csv")
     new = A.profile["table"]
-    for area in ("proposed IPCAs", "existing PAs"):
+    for area in ("proposed conservation areas", "existing PAs"):
         o = old[old.area == area].iloc[0]; n = new[new.area == area].iloc[0]
         cols = [c for c in new.columns if c.endswith("| richness") and c in old.columns]
         inv = [c for c in cols if not any(k in c for k in redefined)]
@@ -4200,7 +4200,7 @@ def _adjacency_map(A):
     ax.legend(handles=[plt.Line2D([0], [0], color="#2c7fb8", lw=0.8, label=f"neighbour link (cost-allocation adjacency; {n_adj} pairs)"),
                        plt.Line2D([0], [0], color="0.35", lw=1.2, ls="--", label="backbone backup link"),
                        plt.Line2D([0], [0], color="0.15", lw=1.8, label="backbone MST link"),
-                       Patch(color=PA_COLOR, label="existing PAs"), Patch(color=ANCHOR_COLOR, label="proposed IPCAs")],
+                       Patch(color=PA_COLOR, label="existing PAs"), Patch(color=ANCHOR_COLOR, label="proposed conservation areas")],
               loc="lower left", fontsize=9, frameon=True)
     ax.set_title(f"{A.region_label} — neighbour universe (D21) vs the minimum network + backups ({n_bb} links)\n"
                  "lines join area centres; the difference between the two graphs is the choice space", fontsize=12)
@@ -4245,7 +4245,7 @@ def corridor_profile(A, n_groups=10):
     else:
         A.groups = None
         areas = [("corridor (new land)", corr & ~nodes, CORRIDOR_COLOR)]
-    areas += [("proposed IPCAs", anch, ANCHOR_COLOR), ("existing PAs", pa_mask, PA_COLOR)]
+    areas += [("proposed conservation areas", anch, ANCHOR_COLOR), ("existing PAs", pa_mask, PA_COLOR)]
 
     # star titles use the compact segment names (the full ones collide); the map legend and the
     # CSV carry the full "X <-> Y" naming.
@@ -4466,7 +4466,7 @@ def priority_links_map(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35):
     _draw_basemap(R, ax, XL, YL)
     handles += [Patch(color="#c9d2d6", label="other corridor land (securing regime)"),
                 Patch(color=PA_COLOR, label="existing PAs"),
-                Patch(color=ANCHOR_COLOR, label="proposed IPCAs"),
+                Patch(color=ANCHOR_COLOR, label="proposed conservation areas"),
                 plt.Line2D([0], [0], color="0.15", lw=1.0, ls=(0, (6, 3)), label="provincial border")]
     ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.16, 0.5),
               fontsize=8.5, frameon=True)
@@ -4488,7 +4488,7 @@ def priority_link_stars(R, squeeze_max=0.5, south_of_frac=0.40, include_referenc
     Link land = the cells each link OWNS on the priority surface (edge_owner partition -- the
     same attribution the routing-problem maps use, so no double counting between overlapping
     bands). Numbering matches the zoom/board figures (north -> south). Reference rows for
-    proposed IPCAs and existing PAs are appended for the gap-analysis read.
+    proposed conservation areas and existing PAs are appended for the gap-analysis read.
     Writes priority_links_stars_{richness,contribution,efficiency}.png + a
     priority_links_profile.csv row per link (corridor_profile.csv format)."""
     e, classes, owner, order, links, XL, YL = _zoom_links(R, squeeze_max, south_of_frac, 35)
@@ -4503,7 +4503,7 @@ def priority_link_stars(R, squeeze_max=0.5, south_of_frac=0.40, include_referenc
                 f"{_short_node_name(r['label_j'], 14)}")
         areas.append((name, m, rc.CLUSTER_CMAP((n - 1) % 10)))
     if include_reference:
-        areas += [("proposed IPCAs", R.anch, ANCHOR_COLOR), ("existing PAs", R.pa_mask, PA_COLOR)]
+        areas += [("proposed conservation areas", R.anch, ANCHOR_COLOR), ("existing PAs", R.pa_mask, PA_COLOR)]
 
     print("  crossing masks 300 m -> 1 km for profiling:")
     audit = {}
@@ -4682,7 +4682,7 @@ def label_named_areas(R, ax, top_n=12, overrides=None, fontsize=9, XL=None, YL=N
 def near_opt_map_board(R, pad=0.05,
                        title="Keeping the North Connected",
                        subtitle="Searching for low-cost movement corridors between protected "
-                                "areas and proposed IPCAs",
+                                "areas and proposed conservation areas",
                        footnote="Based on landscape structure (human footprint and natural "
                                 "barriers), not tracked animal movement. Yellowstone to Yukon "
                                 "— northern BC & Yukon analysis.",
@@ -4706,7 +4706,7 @@ def near_opt_map_board(R, pad=0.05,
     _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch, legend=False,
                    anchor_color=NEAR_OPT_ANCHOR_COLOR)
     ax.legend(handles=[Patch(color=PA_COLOR, label="existing protected areas"),
-                       Patch(color=NEAR_OPT_ANCHOR_COLOR, label="proposed IPCAs")],
+                       Patch(color=NEAR_OPT_ANCHOR_COLOR, label="proposed conservation areas")],
               loc="lower left", fontsize=11, frameon=True)
 
     if label_top_n:
@@ -4737,7 +4737,7 @@ def near_opt_tiers_map(R, pad=0.05):
                        Patch(color=colors[2], label=f"occasional — slack ≤ cutoff = {c1:,.1f} (the band; {km2[3]:,.0f} km²)"),
                        Patch(color=colors[3], label=f"routable land beyond the band"),
                        Patch(color=PA_COLOR, label="existing PAs"),
-                       Patch(color=NEAR_OPT_ANCHOR_COLOR, label="proposed IPCAs")],
+                       Patch(color=NEAR_OPT_ANCHOR_COLOR, label="proposed conservation areas")],
               loc="lower left", fontsize=9, frameon=True)
     ax.set_title(f"{R.region_label} — near-optimality tiers (fixed slack breaks in cost units, D30; "
                  f"the cutoff = about {R.cutoff * R.cell_km:.1f} km of extra travel on open ground)", fontsize=12)
@@ -4772,7 +4772,7 @@ def attribution_map(R, pad=0.05, core=None):
                 plt.Line2D([0], [0], color="#00d0ff", lw=1.5,
                            label=f"robust core (attribution ≥ {core:g})"),
                 Patch(color=PA_COLOR, label="existing PAs"),
-                Patch(color=ANCHOR_COLOR, label="proposed IPCAs")],
+                Patch(color=ANCHOR_COLOR, label="proposed conservation areas")],
                 loc="lower left", fontsize=9, frameon=True)
         ax.set_title(title, fontsize=11)
     fig.suptitle(f"{R.region_label} — ensemble ATTRIBUTION (which assumption a cell depends on;"
@@ -4812,7 +4812,7 @@ def branches_map(R, pad=0.05):
                                                 f"({r.area_km2:,.0f} km², slack {r.min_slack:.1f})"))
     _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch)
     handles += [Patch(color=PA_COLOR, label="existing PAs"),
-                Patch(color=ANCHOR_COLOR, label="proposed IPCAs")]
+                Patch(color=ANCHOR_COLOR, label="proposed conservation areas")]
     ax.legend(handles=handles, loc="lower left", fontsize=8.5, frameon=True)
     ax.set_title(f"{R.region_label} — route branches (D12): {len(br)} branches; "
                  f"alternatives exist on {multi.edge_id.nunique()} links only", fontsize=12)
@@ -5026,7 +5026,7 @@ def routing_problem_cost_overlay(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=
                                         f"{_short_node_name(r['label_j'], 16)}"))
     _draw_basemap(R, ax, XL, YL)
     handles += [Patch(color=PA_COLOR, label="existing PAs"),
-                Patch(color=ANCHOR_COLOR, label="proposed IPCAs"),
+                Patch(color=ANCHOR_COLOR, label="proposed conservation areas"),
                 plt.Line2D([0], [0], color="0.15", lw=1.0, ls=(0, (6, 3)), label="provincial border")]
     ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.16, 0.5),
               fontsize=8.5, frameon=True)
@@ -5103,7 +5103,7 @@ def routing_problem_zoom(R, squeeze_max=0.5, south_of_frac=0.40, pad_km=35):
                                         f"{_short_node_name(r['label_j'], 16)} — "
                                         + ", ".join(stats)))
     handles += [Patch(color=PA_COLOR, label="existing PAs"),
-                Patch(color=ANCHOR_COLOR, label="proposed IPCAs")]
+                Patch(color=ANCHOR_COLOR, label="proposed conservation areas")]
     ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.01, 0.5),
               fontsize=8.5, frameon=True)
     ax.set_title(f"{R.region_label} — the routing-problem cluster (southern window; "
@@ -5140,7 +5140,7 @@ def routing_problem_map(R, squeeze_max=0.5, pad=0.05):
         handles.append(Patch(color=col, label=f"{lbl}  [{len(ks)} links]"))
     _nodes_overlay(R, ax, XL, YL, R.pa_mask, R.anch)
     handles += [Patch(color=PA_COLOR, label="existing PAs"),
-                Patch(color=ANCHOR_COLOR, label="proposed IPCAs")]
+                Patch(color=ANCHOR_COLOR, label="proposed conservation areas")]
     ax.legend(handles=handles, loc="lower left", fontsize=9, frameon=True)
     ax.set_title(f"{R.region_label} — where connectivity is a ROUTING problem\n"
                  f"(everywhere grey, the landscape still offers alternatives — a securing "
@@ -5207,7 +5207,7 @@ def corridor_group_map(A, pad=0.05):
         seg_handles.append(Patch(color=s["color"],
                                  label=f"{s['name'][:52]} ({s['cells']*A.cell_km2:,.0f} km²{parts})"))
     ax.legend(handles=[Patch(color=PA_COLOR, label="existing PAs"),
-                       Patch(color=ANCHOR_COLOR, label="proposed IPCAs")] + seg_handles,
+                       Patch(color=ANCHOR_COLOR, label="proposed conservation areas")] + seg_handles,
               loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=9, frameon=True)
     ax.set_title(f"{A.region_label} — corridor segments (numbered north → south)")
     fig.savefig(A.fig_dir / "corridors_segments_map.png", dpi=150, bbox_inches="tight")

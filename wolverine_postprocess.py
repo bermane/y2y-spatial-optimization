@@ -6,7 +6,7 @@ TWO MODES over one set of functions.
   only use: they are not reported), and writes the AUDIT OBJECTS the engine's contraction loader reads (`complex_membership.csv`,
   `complex_names.csv`, `complexes.gpkg`, `slivers_v2.csv`, `complexes_summary.json`, git-tracked) plus `postprocess/` copies.
   Run mode (notebook 07, `load_run`): reads the CONTRACTED run (`v25_run001`, routed between the complex unions by notebook 06)
-  and computes the product on ITS inter-complex links: the coverage columns (existing PAs / proposed IPCAs incremental / the
+  and computes the product on ITS inter-complex links: the coverage columns (existing PAs / proposed conservation areas incremental / the
   prioritizr balanced core on allocatable land) with an area-expectation row, the band-land accounting (dissolved unions beside
   per-link sums; branches as links-with-n) -> `<run>/postprocess/`; `attach(R)` hands it to the package (`wolverine_director`).
 No baseline run, no glacier sensitivities (run spec v3 §6 = the next step).

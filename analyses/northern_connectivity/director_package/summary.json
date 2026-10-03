@@ -1,0 +1,28 @@
+{
+  "analysis": "northern_connectivity",
+  "run": "v2_run003",
+  "run_dir": "output_data/corridors_north/v2_run003",
+  "run_git": {
+    "sha": "9003dfd00ca1d787615fce6584204b68aac02cb5",
+    "dirty": true
+  },
+  "cutoff": 13.441030964255333,
+  "cutoff_detour_km": 4.0323092892766,
+  "n_links": 60,
+  "n_adjacency": 15,
+  "classes": {
+    "both": 1,
+    "edge": 6,
+    "squeezed": 7,
+    "securing": 31
+  },
+  "link_geometry": {
+    "strip": 27,
+    "front": 10,
+    "contact": 8
+  },
+  "corridor_km2": 18563.039999999997,
+  "h8_open": false,
+  "layout": "analyses/northern_connectivity/director_package/{geotiffs,tables,figures,director_outputs} (y2y convention, 2026-10-01)",
+  "built": "2026-10-03 09:36"
+}

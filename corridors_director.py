@@ -9,7 +9,7 @@ T1/T2, a draft .pptx via `director_core.build_deck`).
 
 Story: Act 1, the north -- room to choose (securing regime; axis C = the sensitivity on the
 IPCAs-as-given assumption). Act 2, the southern edge -- options are closing (both-senses
-irreplaceable / edge-irreplaceable / squeezed). Guardrail: proposed IPCAs are taken as given,
+irreplaceable / edge-irreplaceable / squeezed). Guardrail: proposed conservation areas are taken as given,
 visually and tabularly separable from existing PAs, never readable as a new priority.
 """
 import json
@@ -32,6 +32,12 @@ import results_core as rc
 from corridors_core import PA_COLOR, ANCHOR_COLOR
 
 PKG_SUB = "director_package"
+# 2026-10-01 (Ethan): the package lives beside the notebooks, in the y2y / Alberta folder structure --
+# analyses/northern_connectivity/director_package/{geotiffs, tables, figures, director_outputs} + summary.json
+# (the tracked index naming the run it was built from) + deck_outline.md -- not inside the gitignored run dir.
+# `package(..., out=)` still overrides. One package at a time: building from a different run than the one
+# summary.json records moves the old package to `_superseded_<run>/` first (the y2y convention).
+PKG_DIR = config.PROJECT_DIR / "analyses" / "northern_connectivity" / PKG_SUB
 
 # ---- director vocabulary (06 §3) -------------------------------------------------------------
 # Class colours: securing light blue-grey, both-senses red, edge-irreplaceable orange, and
@@ -55,14 +61,61 @@ SOUTH_NAME = "the southern edge of the sector"   # decision (e): placeholder, di
 CLAIM = "In the north we choose corridors; in the south they are chosen for us."
 
 
+def _supersede_other_run(out, run_id):
+    """y2y convention: a package folder holds ONE run. If `out` was built from another run (its
+    summary.json says so), move its contents to `_superseded_<that run>/` before writing."""
+    out = pathlib.Path(out); sj = out / "summary.json"
+    if not sj.exists():
+        return
+    try:
+        prev = json.loads(sj.read_text()).get("run")
+    except Exception:
+        return
+    if prev in (None, run_id):
+        return
+    dst = out / f"_superseded_{prev}"
+    if dst.exists():
+        return
+    dst.mkdir()
+    for child in list(out.iterdir()):
+        if child.name.startswith("_superseded_"):
+            continue
+        child.rename(dst / child.name)
+    print(f"package held {prev}; moved to {dst.relative_to(config.PROJECT_DIR)}")
+
+
+def write_summary(P):
+    """The package's tracked index (gitignore keeps summary.json + deck_outline.md): which run it was
+    built from and the headline counts, so a commit still says what the package contained."""
+    R, e = P.R, P.edges
+    git = R.rec.get("git", {})
+    cls = P.cls[~P.cls.isin(["adjacency"])]
+    s = dict(
+        analysis="northern_connectivity", run=R.run_id, run_dir=str(R.run_dir.relative_to(config.PROJECT_DIR)),
+        run_git=git if isinstance(git, (str, dict)) else str(git),
+        cutoff=R.cutoff, cutoff_detour_km=R.cfg.get("cutoff_detour_km"),
+        n_links=int(len(e)), n_adjacency=int(P.cls.eq("adjacency").sum()),
+        classes={k: int((cls == k).sum()) for k in ("both", "edge", "squeezed", "securing")},
+        link_geometry=({str(k): int(v) for k, v in e["link_geometry"].value_counts().items()}
+                       if "link_geometry" in e.columns else None),
+        corridor_km2=R.summary.get("corridor_area_km2", R.summary.get("corridor_km2")),
+        h8_open=bool(P.h8_open),
+        layout="analyses/northern_connectivity/director_package/{geotiffs,tables,figures,director_outputs} (y2y convention, 2026-10-01)",
+        built=pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
+    )
+    (P.out / "summary.json").write_text(json.dumps(s, indent=2, ensure_ascii=False, default=str))
+    return s
+
+
 # ================= package context =================
 def package(R, n_examples=7, south_of_frac=0.40, out=None):
     """Assemble everything the deck needs from a loaded run: disjoint classes (D7/D12/D17),
     axis-C attribution over PROPOSAL drops, endpoint classes, jurisdictions, and the example
     selection. Returns a namespace P; every renderer takes P."""
-    P = SimpleNamespace(R=R, out=pathlib.Path(out) if out else R.run_dir / PKG_SUB)
-    P.fig, P.tab = P.out / "figures", P.out / "tables"
-    for d in (P.fig, P.tab):
+    P = SimpleNamespace(R=R, out=pathlib.Path(out) if out else PKG_DIR)
+    _supersede_other_run(P.out, R.run_id)
+    P.fig, P.tab, P.gis = P.out / "figures", P.out / "tables", P.out / "geotiffs"
+    for d in (P.fig, P.tab, P.gis):
         d.mkdir(parents=True, exist_ok=True)
 
     e, classes = cc._routing_classes(R)
@@ -86,6 +139,11 @@ def package(R, n_examples=7, south_of_frac=0.40, out=None):
     print(f"director package: classes -> both {n.get('both',0)} · edge {n.get('edge',0)} · "
           f"squeezed {n.get('squeezed',0)} · securing {n.get('securing',0)} | "
           f"{len(P.examples)} examples | H8 {'OPEN -- squeezed class withheld from deck' if P.h8_open else 'closed'}")
+    write_summary(P)                                                 # the tracked index: which run this package holds
+    try:
+        print(f"package -> {P.out.relative_to(config.PROJECT_DIR)}  (run {R.run_id})")
+    except ValueError:
+        print(f"package -> {P.out}  (run {R.run_id})")
     return P
 
 
@@ -755,7 +813,7 @@ def export_gis(P, out=None):
     from rasterio import features as rfeatures
     from shapely.geometry import shape as _shape
     R = P.R
-    out = pathlib.Path(out) if out else P.out / "gis"; out.mkdir(parents=True, exist_ok=True)
+    out = pathlib.Path(out) if out else P.gis; out.mkdir(parents=True, exist_ok=True)      # geotiffs/ (was gis/ until 2026-10-01)
     tr = R.template.rio.transform()
     # 1. corridor pressure: owner partition -> one multipolygon per link, class attached
     pressure = _pressure_polygons(P)
@@ -796,7 +854,7 @@ def export_gis(P, out=None):
                      lakes=[str(ms.BASEMAP_DIR / f) for f in ("ne_10m_lakes.shp", "ne_10m_lakes_north_america.shp")],
                      rivers=[str(ms.BASEMAP_DIR / f) for f in ("ne_10m_rivers_lake_centerlines.shp", "ne_10m_rivers_north_america.shp")],
                      y2y_boundary=str(config.CORRIDOR_REF)),
-        fonts="Noto Sans (input_data/basemap/fonts)", type=ms.TYPE,
+        fonts=f"{ms.font_in_use()} (system; DejaVu Sans fallback)", type=ms.TYPE,
     )
     (out / "style.json").write_text(json.dumps(style, indent=2, ensure_ascii=False))
     print(f"GIS export -> {out}: corridor_pressure.gpkg ({len(rows)} links), areas.gpkg ({len(names)}), "
@@ -1019,7 +1077,7 @@ def add_insets(P, fig, ax_main, draw, area_names=6, scale_km=50):
 
 def map_cost(P, pad=0.07, area_names=14, corridors=False, halo_cells=6, insets=True):
     """The movement-cost surface (magma ramp, log colour, four ordinal classes) with existing
-    PAs + proposed IPCAs hard-coloured -- the 'what the land is made of' companion to M1, same
+    PAs + proposed conservation areas hard-coloured -- the 'what the land is made of' companion to M1, same
     basemap and legend placement; class shares in the subtitle. `corridors=False` -> M0 (no
     corridors); `corridors=True` -> M0b, the four-class network HARD-COLOURED on top of the
     ramp with a thin WHITE HALO (`halo_cells` x 300 m) under every swath so the classes read
@@ -1252,7 +1310,7 @@ def _option_masks(P):
 
 
 def star_options(P, reference="y2y", ncols=4):
-    """Star plots for the numbered options (1-6) + the proposed IPCAs and the existing PAs as
+    """Star plots for the numbered options (1-6) + the proposed conservation areas and the existing PAs as
     wholes, on the Y2Y-WIDE DIRECTOR CONSTRUCTION (`director_core.block_percentiles` ->
     `plot_star_grid`): each axis = the option's mean PERCENTILE of a theme, per-cell percentiles
     ranked over the discretionary (unprotected) landscape, themes = the y2y package's six block
@@ -1268,7 +1326,7 @@ def star_options(P, reference="y2y", ncols=4):
         assert win.shape == G.shape, "audit grid != hand-off grid"
         G = SimpleNamespace(**{**vars(G), "disc": G.disc & win[G.pu]})
     B = dc.block_percentiles(G)
-    items = _option_masks(P) + [("IPCA", "Proposed IPCAs (as a whole)", R.anch, ANCHOR_COLOR),
+    items = _option_masks(P) + [("IPCA", "Proposed conservation areas (as a whole)", R.anch, ANCHOR_COLOR),
                                 ("PA", "Existing protected areas (as a whole)", R.pa_mask, PA_COLOR)]
     profiles, rows = [], []
     for num, title, m, col in items:
@@ -1324,7 +1382,7 @@ def _option_profiles(P):
     """Per option: raw values, % of Y2Y totals, cover weights (fractional 300 m -> 1 km, M6.5)."""
     R = P.R
     Pst = cc._profile_stacks(R)
-    items = _option_masks(P) + [("IPCA", "Proposed IPCAs (as a whole)", R.anch, ANCHOR_COLOR),
+    items = _option_masks(P) + [("IPCA", "Proposed conservation areas (as a whole)", R.anch, ANCHOR_COLOR),
                                 ("PA", "Existing protected areas (as a whole)", R.pa_mask, PA_COLOR)]
     out = []
     efg_count = (np.nan_to_num(Pst.efg_raw, nan=0.0) > 0).sum(axis=0).astype("float64")   # groups per cell
@@ -1346,7 +1404,7 @@ def _option_profiles(P):
 
 
 def table_options(P, kind="density"):
-    """The ALTERNATIVES TABLES for the numbered options (1-6) + the proposed IPCAs and the
+    """The ALTERNATIVES TABLES for the numbered options (1-6) + the proposed conservation areas and the
     existing PAs as wholes, in the y2y-wide consequences-table format (results_core.RAW_SPEC
     units; fractional cover weights, M6.5), rows grouped by theme, one column per option.
       kind="density"  -> what the land is LIKE: per-cell means, carbon as t C / ha, ecosystem
@@ -1716,7 +1774,7 @@ def build_deck(P, path=None):
                       "Sequencing can follow relationships, jurisdiction and the pace of IPCA realisation."]),
     ]
     slides.append(dict(title="What each option delivers", image=F / "S1_star_options.png",
-                       bullets=["One star per numbered option, plus the proposed IPCAs and the "
+                       bullets=["One star per numbered option, plus the proposed conservation areas and the "
                                 "existing protected areas as wholes.",
                                 "Each axis = the average percentile of that value across the option's "
                                 "land, ranked against unprotected land Y2Y-wide; the dashed ring is "
@@ -1775,12 +1833,14 @@ WIDE_STYLE = dict(
     wide_main_towns=(), wide_main_names="abbrev",                    # the frame panel: postal codes only, no towns (as on the y2y Act 1 panel)
     pa_layer_min_km2=300, window_scale_km=100,                       # the y2y values; the scale bar on the (windowed) frame
     inset_pa_names=99, inset_ipca_names=99, inset_declutter=False, locator_pa_names=99,   # Ethan 2026-09-28: EVERY PA and IPCA node named in the insets + locators (F.PAN = the network's PA nodes)
-    hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=True,   # 21's export settings + the §3a PDF twin
+    hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=False,  # 21's export settings; PNG only (Ethan 2026-10-01: no PDF twin)
+    option_lw=0.8, option_halo=0.8,                # route-option outlines on 03 / the 04b locators, pt on the frame (Ethan 2026-10-01: thinner; was 1.44 / +1.4)
+    conseq_rep_mark="",                            # 05: row headers as before the y2y v2.2 marks (Ethan 2026-10-01) -- "Representativeness" plain; the note is labelled "Note"
     wide_legend_between=True,                                        # the legend box centred between inset B's bottom edge and the bottom of the page (Ethan 2026-09-28)
     pa_alpha=0.85,                                                   # existing PAs at the same alpha as the IPCA fill (Ethan 2026-09-29)
     surface_alpha=0.85,                                              # the cost / pressure surface at 85% so the provincial boundaries show through (Ethan 2026-09-29)
 )
-IPCA_WIDE_LABEL = "Proposed IPCAs"                     # the §3a jurisdictions row (v1.2.15); no parenthetical (Ethan 2026-09-28: it widened the legend past inset B)
+IPCA_WIDE_LABEL = "Proposed conservation areas"                     # the §3a jurisdictions row (v1.2.15); no parenthetical (Ethan 2026-09-28: it widened the legend past inset B)
 COST_CLASSES = (1, 10, 100, 1000)
 COST_TICK_WORDS = {1: "intact\nland", 10: "roads\nand cuts", 100: "converted\nland", 1000: "water, ice,\nsettlement"}   # ms.COST_LABELS re-wrapped to <= 11 chars a line: four ticks share a ~4 in bar at 14 pt
 
@@ -2026,9 +2086,11 @@ def _options_overlay(P, F, nums=OPTIONS_MAP_NUMS):
         ipca_draw(ax)
         # Ethan 2026-09-29: the options are OUTLINED in their colour (a ring with a thin white halo, as the y2y cluster outlines), so
         # the corridor-pressure fill of the band shows through; drawn above the node fills
-        lw = dp.STYLE["cluster_lw"] * 1.6 * dp.STYLE.get("_lw_scale", 1.0)
+        # Ethan 2026-10-01: thinner -- `option_lw` pt on the frame (was cluster_lw × 1.6 = 1.44 pt), halo `option_halo` pt wider (was +1.4);
+        # the inset scale (`_lw_scale`) still applies on insets / locators
+        lw = dp.STYLE.get("option_lw", 0.8) * dp.STYLE.get("_lw_scale", 1.0)
         for m, col in layers:
-            ax.contour(m, levels=[0.5], colors=["white"], linewidths=lw + 1.4, zorder=3.55)
+            ax.contour(m, levels=[0.5], colors=["white"], linewidths=lw + dp.STYLE.get("option_halo", 0.8), zorder=3.55)
             ax.contour(m, levels=[0.5], colors=[col], linewidths=lw, zorder=3.6)
     # the numbers are placed by a post-draw pass (outside the band, no leader, clear of labels -- Ethan 2026-09-29)
     handles = handles + [dp.cluster_handle("Route options", colors=[colors[n] for n in colors])]     # swatches in option order
@@ -2163,21 +2225,33 @@ def option_profiles_y2y(P, nums=OPTIONS_MAP_NUMS):
     from rasterio.features import rasterize as _rasterize
     R = P.R
     G = dc.grid(); B = dc.block_percentiles(G); VR = dc.ValueRatios(G, B)
+    COEX = dc.coexistence_layer(G)                                        # the bear-coexistence row (package spec v2.2); None -> empty cells
     items = [("option", n, t, m) for n, t, m, _ in _option_masks(P) if n in nums]
     parts = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs)
     for frag, name in CONSEQ_REFERENCE_NODES:
         sel = parts[parts["name_label"].astype(str).str.contains(frag, regex=False)]
         assert len(sel), f"reference node {frag!r} not in node_parts"
         m = _rasterize(((g, 1) for g in sel.geometry), out_shape=R.shape, transform=R.transform, fill=0, dtype="uint8").astype(bool)
-        items.append(("reference", "", name, m))
+        kind = "reference_ipca" if sel["name_label"].astype(str).str.startswith("IPCA").any() else "reference_pa"
+        items.append((kind, "", name, m))
     rows = []
     for kind, num, name, m in items:
         w1 = cc._to_audit_frac(R, m)[G.pu]
         assert w1.sum() > 0, f"{kind} {num or name}: no 1 km cover"
         pct = {ax: float((w1 * B.axes[ax]).sum() / w1.sum()) for ax in dc.STAR_AXES}
-        rat = VR.of(None, weights=w1)
-        rows.append(dict(kind=kind, number=str(num), name=name.replace("\n", " — "), area_km2=int(m.sum()) * R.cell_km2,
-                         **{f"pct_{a}": v for a, v in pct.items()}, **{f"ratio_{a}": v for a, v in rat.items()}))
+        # consequences ratios = the y2y rule, package spec v2.2 (M4.42; built here 2026-10-01): representativeness = the mean representation
+        # quotient. A LOCKED reference (the park) on on-extent footprints + total land (basis "extent", footnoted); an option band or an
+        # IPCA on its UNPROTECTED part with the allocatable basis, like the y2y clusters; every other row on the whole footprint.
+        basis = "extent" if kind == "reference_pa" else "allocatable"
+        w_rep = w1 if basis == "extent" else w1 * G.disc
+        rat = VR.of(None, weights=w1, basis=basis)
+        if basis == "allocatable":
+            rat["representativeness"] = VR.of(None, weights=w_rep, basis=basis)["representativeness"] if w_rep.sum() > 0 else np.nan
+        extras = dc.rep_extras(VR, basis, weights=(w_rep if w_rep.sum() > 0 else w1))
+        bear = dc.bear_programs(COEX, G, weights1d=w1)
+        rows.append(dict(kind=("reference" if kind.startswith("reference") else kind), number=str(num), name=name.replace("\n", " — "),
+                         area_km2=int(m.sum()) * R.cell_km2, pct_protected=100.0 * float((w1 * G.locked).sum() / w1.sum()),
+                         **{f"pct_{a}": v for a, v in pct.items()}, **{f"ratio_{a}": v for a, v in rat.items()}, **extras, **bear))
     df = pd.DataFrame(rows)
     cache[key] = df; P._y2y_profiles = cache
     return df
@@ -2190,7 +2264,7 @@ def option_stars(P, path, nums=OPTIONS_MAP_NUMS):
     import director_core as dc
     import director_plot as dp
     df = option_profiles_y2y(P, nums)
-    prof = [dict(title=f"Option {int(r.number)}\n({r['name']})\n{r.area_km2:,.0f} km²", values={a: float(r[f"pct_{a}"]) for a in dc.STAR_AXES},
+    prof = [dict(title=("Option " + str(int(r.number)) + (f"\n{r.area_km2:,.0f} km²" if dp.STYLE.get("option_star_area", True) else "")), values={a: float(r[f"pct_{a}"]) for a in dc.STAR_AXES},
                  color=option_color(int(r.number))) for _, r in df[df.kind == "option"].iterrows()]
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     dp.star_grid(prof, path, "Route options — value profile (percentile vs the allocatable landscape)")
@@ -2230,7 +2304,7 @@ def option_locators(P, path, nums=OPTIONS_MAP_NUMS, insets="interim", panel_px=N
         try:
             for ax, tag in zip(axes, tags):
                 win = dp._fit_window(F, wins[tag], 1.0)                       # square, never shrunk: both at the same scale (INSET_SAME_SCALE)
-                dp._draw_inset(F, ax, win, draw, tag, True, towns=STYLE["locator_towns"], codes=None, img=S_["img"], cmap=S_["cmap"], norm=S_["norm"],
+                dp._draw_inset(F, ax, win, draw, "", True, towns=STYLE["locator_towns"], codes=None, img=S_["img"], cmap=S_["cmap"], norm=S_["norm"],      # no A / B title: the y2y locators carry none (Ethan 2026-10-03)
                                post_draw=placer)   # every PA + IPCA node named; the option numbers on the band edges
         finally:
             STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE["inset_fs"] = fs0; STYLE["inset_pa_names"] = pa0
@@ -2257,6 +2331,6 @@ def option_consequences(P, path, nums=OPTIONS_MAP_NUMS):
     P.tab.mkdir(parents=True, exist_ok=True); df.to_csv(P.tab / "route_option_consequences.csv", index=False, encoding="utf-8-sig")
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     dp.consequences_table(F, rows, path, "ROUTE OPTIONS  ·  CONSEQUENCES", "What the route options hold", ref=ref,
-                          col_label=lambda r, wrap=18: f"Option {int(r.number)}\n({textwrap.fill(str(r.name), wrap)})", group_label="Route options",
+                          col_label=lambda r, wrap=18: f"Option {int(r.number)}", group_label="Route options", unit_word="option",      # the link name dropped (Ethan 2026-10-02)
                           source=f"Y2Y northern corridors ({P.R.run_id}, least-cost network); values on the Y2Y director construction (manifest {__import__('director_core').VP.version} layers).")
     return df

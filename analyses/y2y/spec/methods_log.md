@@ -1398,6 +1398,15 @@ bar, instead of a distance in grid cells that shrank with the panel's extent.
 **M4.40 addendum (Ethan, 2026-09-30): on the Y2Y frame the north arrow sits LEFT of the 250 km bar** on its baseline (the bar shifted right), "N" above the tip
 (`STYLE["frame_north_arrow_beside_bar"]`, gap `frame_north_arrow_gap`); the windowed frames keep their own knob. Legend wording "Proposed
 IPCAs (not locked in)" on every map (record titles reworded to match).
+**M4.40 addendum (Ethan, 2026-10-02, later): the drawn block is CENTRED on the page before saving** (`director_plot._fit_page`,
+`STYLE["wide_fit_page"]`): with the full-page export the layout's block (insets from 19% to 85% of the page, the key at 12%) left a blank band
+at the top while a two-line key caption ran off the bottom. The export now measures the tight box and lifts every axes, figure text and
+figure legend by one offset so the block sits centred with ≥ 0.1 in above and below (a block taller than the page pins to the bottom pad);
+nothing is re-laid out horizontally and the frame keeps its size on every map. Toy-verified (block 0.09–6.60 in → 0.50–7.00 in; 3999 × 2250 px).
+**M4.40 addendum (Ethan, 2026-10-02): every wide map exports the FULL slide canvas** — 13.33 × 7.5 in, 4000 × 2250 px at 300 dpi
+(`STYLE["wide_export_page"] = "full"`, the default; `_common_crop` returns the page box). Trigger: the 09-30 trimmed box (3783 × 2011 px on
+the y2y maps, 3909 × 2011 on the northern) read as cropped in the deck. The one-box goal stands (the full page is one box); "common" keeps
+the 09-30 behaviour. Method-timelapse frames now land at a true 1920 × 1080. Shared asset, so every package's wide maps follow.
 **M4.40 addendum (Ethan, 2026-09-30): the Act 1 and Act 2 maps export on ONE page box** (`_common_crop`; `STYLE["wide_common_crop"]`): the
 frame's left edge and the inset titles' top from the tight box, the page's full width and bottom — so the two-inset Act 1 map and the
 three-inset Act 2 map have identical page dimensions and the left-hand Y2Y frame lands at the same size and position on both (checked:
@@ -1406,3 +1415,71 @@ identical PNG sizes, protected-area pixels coincide); the timelapse frames use t
 inset C's window size (`_equalize_windows`, the same rule as the Act 1 pair and the locators); window C moved 40 km north
 (`scenario_inset_windows["C"]` rows 36–691). The timelapse re-rendered with the 2026-09-30 design (all-cell PA fill + white park borders,
 one inset scale, scale-bar gap, arrow beside the bar, "Proposed IPCAs", the shared export box → 1920 × 1021 frames).
+**M4.40 addendum (Ethan, 2026-10-01): the timelapse runs at half speed** — `STYLE["frames_fps"]` 4 → 2 plans per second; the 100 balanced
+plans now play over 50 s (re-encoded from the existing frames; two-pass at 2,944 kb/s to stay under the 20 MB cap → 18.7 MB).
+**M4.40 addendum (Ethan, 2026-10-01): the timelapse's plans are sea green** (`frames_plan_color` = #5BA699, the wolverine package's tone;
+was the Act 2 core yellow, which had too little lightness contrast on the light basemap). Yellow now means one thing only — the core
+(≥ 0.70) on the frequency maps that follow the clip; a single plan's land reads as distinct from recurrent land. Re-rendered + re-encoded.
+**M4.40 addendum (Ethan, 2026-10-01): the objectives tables carry NATURE-FOCUSED COMMUNITIES** (per the objectives-hierarchy diagram): sub-
+objective "Coexistence with wildlife", measure "Bear coexistence programs" (active local and regional groups per census division or
+county; a bear-friendliness score is a candidate), source Y2Y Communities & Conservation (July 2026), entering the analysis as a reference
+statistic only (the consequences tables' starred row), between CONNECT and ADDRESS CLIMATE CHANGE; "NOT IN THIS ANALYSIS" is now Water ·
+Cost. Both `values_rows`/`values_metrics` (the spec table) and `VALUES_SIMPLE`.
+
+
+### M4.42 — Representativeness in the consequences tables = the mean representation quotient (package spec v2.2, Ethan 2026-10-01; built the same day)
+**Decision.** The representativeness row's per-cell value is Σ over the 20 curated EFG rasters present in the cell (any value > 0) of
+1 ÷ that class's footprint in cells on allocatable land; the ratio is the area mean ÷ the allocatable mean, as for every row. Algebraically
+this is the MEAN over the 20 groups of the representation quotient (the area's share of the group's unprotected extent ÷ the area's share of
+unprotected land) — a 2× means the area holds, on average, twice its land share of each group's unprotected extent. The v2.1 statistic
+(ecosystem classes present per cell) rewarded mosaics, not rarity, and did not describe what the formulation valued (rarity-scaled
+targets). **Standout group** = a second row: the single group with the highest quotient, "name (N×)". **Reference rows:** locked areas
+(Banff; the all-PAs aggregate) use on-extent footprints and total land for both quantities — "unprotected extent" is undefined for a park —
+and carry a † footnote; an IPCA's unprotected part uses the allocatable basis like the clusters (Dene Kʼéh Kusān's representativeness is
+computed on its unprotected cells; its other rows stay on the whole footprint, as before). **Register (T-D1 / T-D7):** `rep_basis`,
+`ratio_representativeness_flatcount` (the v2.1 statistic, kept), `standout_group`, `standout_quotient`, and every group's quotient under
+both footprints (`rq_alloc_<stem>`, `rq_extent_<stem>`) for the paper. Zero solves; zonal computation on `aligned_stack_v4/iucn_efg_v3/`
+(`director_core.ValueRatios` — `of(basis=)`, `quotients`, `standout`, `flat_count_ratio`; class names from `spec/v3/efg_curation_v3.csv`,
+merged stems joined). Star-plot axes are unchanged (percentile of the flat count, R10.7) — only the consequences row changed.
+
+**M4.42 addendum (package spec v2.2, Ethan 2026-10-01): the bear-coexistence row = "N groups (P%)".** N = distinct active groups recorded
+across the census divisions / counties the area overlaps; the shipped file carries only a count per division, so "distinct" is implemented
+as ONE count per MappingUnit string — the four Yellowstone-corner namesake pairs whose counts were copied by name (communities 01 QA,
+`name_collision`) collapse to a single count, which is the deduplication the spec asks for; groups genuinely spanning two differently named
+divisions cannot be detected from this file (disclosed; the C&C tracking rows would resolve it). P = the share of the area's cells in
+divisions with any record (the rest is unrecorded, not zero). "none recorded (0%)" where no overlapped division has a record. The row is
+text and uncoloured. T-D1 / T-D7 carry `bear_groups_n`, `bear_recorded_pct`, `bear_suspect_units` (the overlapped divisions flagged in the
+QA), beside the v2.1 `bear_programs_mean`. Note text per the spec.
+**M4.42 addendum (Ethan, 2026-10-01, later): the bear cell lists every overlapped POLYGON separately** — "N (P%)" per polygon with a record
+(its own count, its own share of the area's cells; largest overlap first; no name-based dedup — the copied-namesake question stays the
+T-D1 flag `bear_suspect_units`); register columns `bear_by_division` (the cell text) and `bear_by_division_named` (polygon name + fid).
+The per-area totals `bear_groups_n` / `bear_recorded_pct` are kept beside.
+**M4.42 addendum (Ethan, 2026-10-01, later still): the bear cell lists number and share only** ("3 (40%)  1 (25%)  …", no division
+names) and omits polygons holding under 1% of the area (`BEAR_MIN_SHARE_PCT` in 19; the note says so); the named list stays in T-D1.
+**M4.42 addendum (Ethan, 2026-10-01): consequences-table notes** — the representativeness row is marked "+" with its own note (definition +
+standout), the locked-reference mark is now ‡, the bear row keeps "*", and the Source line is off (`STYLE["conseq_source_note"]`); bear
+entries comma-separated, "none recorded" without a percentage.
+**M4.42 addendum (Ethan, 2026-10-01): the general "Note" line under the consequences tables is off** (`STYLE["conseq_general_note"]`); the
+"+" (representativeness) and "*" (bear coexistence) notes remain.
+**M4.42 addendum (2026-10-01, shared helpers, no y2y change):** the corridor packages' route-option tables adopt this rule through
+`director_core.rep_extras` (basis, flat-count ratio, standout, `rq_*` columns) and `director_core.bear_programs` (the 19 semantics,
+cover-weighted for 300 m masks), and `ValueRatios.quotients / standout / flat_count_ratio` accept `weights=`; 19 keeps its own
+`bear_programs` / `_rep_cols` (identical semantics) until its next revision. Northern M5.30, wolverine M7.18.
+**M4.42 addendum (Ethan, 2026-10-01): deck tables step back** — the bear row shows the cell-weighted MEAN count again (`STYLE["conseq_bear_mode"]`
+= "mean"; the per-polygon "N (P%)" list stays one switch away and in T-D1) and the standout-group row is OFF (`conseq_standout_row`; the
+quotients and standout stay in the register). The v2.2 representativeness quotient is KEPT as the row's statistic.
+**M4.42 addendum (Ethan, 2026-10-01): the bear row sits BEFORE Carbon** (the objectives hierarchy's order: Nature-focused Communities precedes
+Address climate change), right-set and on the row ramp (`conseq_bear_fill`; "none recorded" cells unfilled); note text per Ethan: "Mean
+number of bear coexistence programs recorded for the census division or county each cluster cell falls in (divisions with none recorded
+excluded). Not used in the model."
+**M4.40 addendum (Ethan, 2026-10-02): timelapse frames = the Act 1 maps' pixel size** (`STYLE["frames_match_maps"]`: the frames export at the
+maps' dpi on the shared page box → 3999 × 2250 like `02a`/`02b`; the video encodes at 3998 × 2250 (even dimensions), still under the 20 MB
+cap by two-pass).
+**M4.40 addendum (Ethan, 2026-10-02): CANDARA is the package typeface** (`director_plot.TABLE_FONT` = ["Candara", "DejaVu Sans"]; was Cronos Pro;
+every table, map, star plot and frame draws through it; Candara's 700 face serves the 600-weight headings); star-plot type 20/20/16 →
+23/23/18 pt (axis words / titles / ticks) with the grid's panel height 5.2 → 5.6 in and top margin 0.68 → 0.63 so the larger titles are not
+clipped; the locators follow the same geometry. Legend wording "Proposed conservation areas (not locked in)" on every Y2Y map (was
+"Proposed IPCAs"; the Dene Kʼéh Kusān column header keeps "(proposed IPCA)"; the northern / wolverine packages keep their own labels).
+**M4.42 addendum (Ethan, 2026-10-02): consequences fills = ColorBrewer BrBG** (brown = lowest in the row, teal = highest, over the cluster
+columns; `STYLE["conseq_cmap"]`, was RdBu) **with a colour key under the table** (`conseq_ramp_key`; `spec_table_png(ramp=)` draws a bar with
+"lowest in row" / "highest in row" and the caption "colour = rank within each row across the clusters").

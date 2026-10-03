@@ -48,7 +48,7 @@ def load_frame(G, *, overlay=None, window=None, note="", towns=None, pa_min_km2=
     outputs are unchanged to the pixel. `towns` = {name: (lat, lon)} for the basemap (default director_core.Y2Y_TOWNS);
     `note` = the corner note finish() writes by default."""
     IP = overlay or dc.ipca_layer(G)
-    IP_LABEL = getattr(IP, "label", "Proposed IPCAs (not locked in)")      # legend wording (Ethan 2026-09-30)
+    IP_LABEL = getattr(IP, "label", "Proposed conservation areas (not locked in)")      # legend wording (Ethan 2026-10-02; was "Proposed IPCAs")
     BM = dc.basemap_layer(G, towns=towns)
     PAN = dc.pa_layer(G, STYLE["pa_layer_min_km2"] if pa_min_km2 is None else pa_min_km2)   # named PAs for the inset / locator labels (display only)
     ADMIN = dc.admin_layer(G)
@@ -372,7 +372,7 @@ def load(pkg=None, allow_partial=False, *, grid=None, manifest=None, overlay=Non
             col = STYLE["cluster_colors"].get(int(num), color) if picked else color
             for ring in rings_px(r.geometry):
                 ax.plot(ring[:, 0], ring[:, 1], color=col, lw=lw, zorder=4, path_effects=ring_halo)
-            if int(r.cid) in numbers and numbers[int(r.cid)][1]:            # the number: a rimmed disc placed AFTER the labels exist (place_cluster_numbers)
+            if int(r.cid) in numbers and numbers[int(r.cid)][1] and STYLE.get("_only_number") in (None, str(num)):   # the number: a rimmed disc placed AFTER the labels exist (place_cluster_numbers); _only_number = one inset's own cluster
                 cids = [c for c, (n, _) in numbers.items() if n == num]
                 from rasterio import features as _rf
                 mask = _rf.rasterize(((gg, 1) for gg in g[g.cid.isin(cids)].geometry), out_shape=G.shape, transform=G.transform, fill=0, dtype="uint8").astype(bool)
@@ -517,12 +517,15 @@ def values_rows(C):
        [("CONNECT — wildlife corridors connect core habitats", "Quality of connectivity", "Climate corridors: current-flow centrality", "Carroll et al. 2018",
          "Connectivity theme: 25% (balanced); the two layers weighted equally"),
         ("", "Quality of connectivity", "Habitat connectivity: transboundary omnidirectional current density", "Pither et al. 2023 / O'Brien et al. (transboundary extension)", "")]),
+     ("NATURE-FOCUSED COMMUNITIES", "Coexistence with wildlife", "Bear coexistence programs: active local and regional groups per census division or county (a bear-friendliness score is a candidate measure)",
+      "Y2Y Communities & Conservation, coexistence group tracking (July 2026)",
+      "Not a model input: reported beside each cluster as a reference statistic (the consequences tables' starred row)"),
      ("ADDRESS CLIMATE CHANGE — keep carbon out of the air", "Carbon", "Irrecoverable carbon in biomass", "Berman & McDowell, irrecoverable carbon",
       f"Carbon theme: {BLOCK_SHARE} (balanced); the two pools split 74 / 26 by mass"),
      ("", "Carbon", "Irrecoverable carbon in mineral soil", "Berman & McDowell, irrecoverable carbon",
       f"Security target: {100*t0[MS]:.0f}% of the regional total ({100*t4[MS]:.0f}% in the carbon-forward position)"),
-     ("NOT IN THIS ANALYSIS", "Communities · Water · Cost", "Bear-smart communities; water; dollars", "—",
-      "Communities and water were not flushed out in the objectives hierarchy; the 30% area budget stands in for cost"),
+     ("NOT IN THIS ANALYSIS", "Water · Cost", "Water; dollars", "—",
+      "Not flushed out for this analysis; the 30% area budget stands in for cost"),
     ]
 
 VALUES_COLUMNS = ["fundamental_objective", "sub_objective", "performance_measure", "source", "in_the_analysis"]
@@ -562,21 +565,24 @@ STYLE = dict(
                                                                               # into viridis (dE 14); orange clears dE 18 vs the others under every deficiency and 60 vs the ramp)
     core_color="#2b4f7d",      # star fill/line for core clusters
     scenario_color="#a50f2d",  # star fill/line for scenario clusters
-    star_fs_axis=20, star_fs_title=20, star_fs_tick=16, star_fs_suptitle=15, star_lw=2.6, star_title=False, star_footnote=False, star_label_pad=1,   # Ethan 2026-09-15: big type, labels tight to the ring
+    star_fs_axis=23, star_fs_title=23, star_fs_tick=18, star_fs_suptitle=15, star_lw=2.6, star_title=False, star_footnote=False, star_label_pad=1,   # Ethan 2026-09-15: big type, labels tight to the ring
     star_tight=False,          # full canvas (not cropped) so the cluster locators below align panel-for-panel
     locator_fs_scale=1.5, locator_pa_names=2, locator_towns=False, locator_panel_in=4.6,   # the locator windows: 4.6 in squares on the star centres, type scaled up, two park names, no towns
     locator_codes={1: dict(force=["AK"]), 2: dict(skip=["WA"]), 3: dict(skip=["WA"])},   # per-window code edits (Ethan 2026-09-15): AK on the coast of 1; no WA on 2 and 3
     locator_town_skip={},      # {cluster number: (town, ...)} left off that locator window (the towns themselves come from the gazetteer inside the window)
     locator_own_number_only=False,   # True = a locator panel numbers only its own cluster; the other clusters keep their outlines (Alberta 2026-09-30)
+    inset_own_number_only=False,     # True = a wide-map inset (A / B) numbers only its own cluster; the other clusters keep their outlines (Alberta 2026-10-01)
     # the Act 1 wide-map inset REGIONS are fixed (Ethan 2026-09-21): the v3.1 windows -- A = the Sacred Headwaters / Stikine window, B = the
     # Purcells / Kootenays window -- in grid pixels (the 1 km grid is identical across manifest versions), re-fitted to the inset aspect;
     # set to None to size the windows on STYLE["inset_clusters"] again
     inset_windows={"A": (174.6, 647.4, 990.0, 1514.0), "B": (570.9, 1103.1, 1826.0, 2416.0)},   # A moved 150 px east (Ethan 2026-09-21): Y2Y land 55% -> 85% of the window, Stewart + the AK border kept at its edge
     # ---- "the optimization behind the map": frames for a timelapse (Ethan 2026-09-21; method_frames) ----
     frames_reference_members=50, frames_sample_per_cell=10,   # every member of the reference cell; a fixed-seed sample of the other 13
-    frames_fps=4, frames_hold_s=2.5, frames_seed=0,           # members per second; hold on each surface frame (values, anchor, f, F, core)
+    frames_fps=2, frames_hold_s=2.5, frames_seed=0,           # members per second (4 -> 2, half speed, Ethan 2026-10-01); hold on each surface frame
+    frames_match_maps=True,    # frames at the Act 1 maps' export dpi + page box = identical pixel size (Ethan 2026-10-02); False = frames_width_px wide
     frames_width_px=1920,                                     # frame width; the dpi is derived (13.33 x 7.5 in -> 1920 x 1080, an even HD size H.264 accepts); saved WITHOUT tight bbox so every frame is the same size
-    frames_plan_color="#ffd93b", frames_value_color="#7b3294", frames_caption_fs=13,   # plan colour for the balanced scenario (and s5): the Act 2 CORE yellow (Ethan 2026-09-21);
+    frames_plan_color="#5BA699",   # sea green (Ethan 2026-10-01: yellow had too little contrast on the light basemap; yellow stays the core on the next map); was #ffd93b
+    frames_value_color="#7b3294", frames_caption_fs=13,   # plan colour for the balanced scenario (and s5): the Act 2 CORE yellow (Ethan 2026-09-21);
                                                                                       # the theme-forward scenarios take their Act 2 colour from scenario_colors
     frames_climate_words={"ssp585": "SSP5-8.5 future", "ssp245": "SSP2-4.5 future"},
     frames_caption=False,      # no title line on the frames, as on the Act 1 panels (Ethan 2026-09-21); the key label under inset A names the scenario + plan instead
@@ -613,8 +619,13 @@ STYLE = dict(
                                                           # rejected because it sits beside "irrecoverable carbon" on the same slides
     cluster_region_labels="region",   # "Cluster N (Region)" wherever a cluster is named (package spec v1.12 decision e): "region" = the region word, "full" = "Sub-region(s), Region", False = "Cluster N"
     values_table="spec",      # the objectives-table rendering: "spec" (the table spec, 2026-09-14) | "poster" | "digest" | "plain"
-    conseq_cmap="RdBu", conseq_tint=0.55, conseq_scale_rows="clusters",   # consequences: red (lowest) -> blue (highest) over the CLUSTER columns; the reference columns stay unfilled (Ethan 2026-09-23); "all" = the 2026-09-21 rule
+    conseq_cmap="BrBG", conseq_tint=0.55, conseq_scale_rows="clusters",   # consequences: ColorBrewer BrBG, brown (lowest) -> teal (highest) over the CLUSTER columns (Ethan 2026-10-02; RdBu 09-21 -> 10-02); the reference columns stay unfilled; "all" = the 2026-09-21 rule
+    conseq_ramp_key=True,                                                 # a small colour key under the table (Ethan 2026-10-02)
     conseq_fill_area=True,                                              # the Area row takes the same low -> high ramp (Ethan 2026-09-23)
+    conseq_bear_mode="mean", conseq_standout_row=False,   # bear row = the mean count (Ethan 2026-10-01; "divisions" = per-polygon "N (P%)"); standout group row off
+    conseq_rep_mark="†",       # the representativeness row's note mark; the locked-reference mark is ‡ and the bear row's *
+    conseq_general_note=False, # the general "Note" line (block weights, colour rule) under the consequences tables: off (Ethan 2026-10-01); the + and * notes stay
+    conseq_source_note=False,  # the Source line under the consequences tables: off (Ethan 2026-10-01)
     conseq_bear_row=True,                                               # "Bear coexistence programs*" row (Ethan 2026-09-30): a count, not a ratio -- starred, explained in the note
     conseq_mode="row",         # "row" = each row's lowest -> highest (Laura, 2026-09-21); "hinge" = centred on 1.0x (the 2026-09-14 rule)
     conseq_tail_row=False,     # the soil-carbon-tail concentration row under carbon (package spec v1.14): off (Ethan 2026-09-21)
@@ -632,7 +643,7 @@ STYLE = dict(
     lat53=False,               # the 53°N graticule line on maps
     titles=True,               # figure / table titles (21 sets False: the slide carries the title)
     export_dpi=200, panel_export_scale=2,   # PNG resolution (21 sets 300: 13.33 in wide -> 4,000 px, a 4K slide); locator panels at 2x their nominal px
-    export_pdf=False,          # also write a .pdf twin beside each wide-layout PNG (the northern package sets True: its §3a export rule)
+    export_pdf=False,          # also write a .pdf twin beside each wide-layout PNG (every package False since 2026-10-01, Ethan: PNG only)
     pa_alpha=1.0,              # the protected-areas fill's alpha (the northern package sets 0.85 to match its IPCA fill; y2y opaque)
     pa_fill_all=True,          # the grey PA fill covers EVERY protected-area cell, planning unit or not (rasterized from the PA polygons; Ethan 2026-09-30, every package); False = locked PU cells only
     border_style=None,         # the international border: (colour, lw, dash) | None = draw_admin's defaults (#4a4a4a, 1.0 pt, solid); the Alberta frame draws it like the admin lines
@@ -644,9 +655,17 @@ STYLE = dict(
     context_label="Y2Y-wide result beyond Alberta (context)",   # its legend entry; None = none (16, Ethan 2026-09-30)
     inset_shift_km={},         # {tag: (east km, north km)}: nudge a wide-map inset after the same-scale fit (Alberta B up 20 km, 2026-09-30); {} = none
     inset_same_scale=True, locator_same_scale=True,   # the Act 1 insets A/B, and the four locators, each set at ONE scale (the largest window's; Ethan 2026-09-30)
-    wide_common_crop=True,     # every wide map (Act 1, Act 2, the frames) exports on one page box: the frame's left edge + inset top, full width, page bottom (Ethan 2026-09-30)
+    frame_rect=None, frame_anchor="E",   # the wide maps' left-hand frame box [x, y, w, h] (None = [0.03, 0.04, 0.215, 0.84]) and its anchor; Alberta narrows the box so a wider window scales down instead of growing west (2026-10-01)
+    wide_fit_page=True,        # before saving, lift the drawn block so it is centred on the page (Ethan 2026-10-02: insets high, key caption off the bottom)
+    wide_export_page="full",   # every wide map exports the FULL slide canvas (13.33 x 7.5 in; Ethan 2026-10-02, "exporting cropped"); "common" = the 2026-09-30 trimmed box below
+    wide_common_crop=True,     # ("common" only) one page box: the frame's left edge + inset top, full width, page bottom (Ethan 2026-09-30)
     scenario_legend_between=True,   # Act 2 map: the legend box centred between the inset boxes' bottom edge and the page bottom (Ethan 2026-09-30); False = scenario_legend_y
     scenario_insets_as_act1=False,  # True = the Act 2 map's windows are the Act 1 map's panels A / B (same regions, re-fitted to the Act 2 aspect) (Alberta 2026-09-30)
+    scenario_panels_as_act1=False,  # with scenario_insets_as_act1: True = the Act 2 insets at the Act 1 panels' rectangles too, so the boxes drawn on the frame are identical (the legend gap is then Act 1's) (Alberta 2026-10-01)
+    scenario_legend_fit=False, scenario_legend_floor=0.04, scenario_legend_ncols=(2, 3),   # True = the Act 2 legend at the LARGEST size that fits the gap (width + height) over these column counts, down to the floor (figure fraction) (Alberta 2026-09-30)
+    wide_legend_page_floor=0.015,   # with wide_legend_floor="page": the floor as a figure fraction above the page bottom
+    wide_legend_labelspacing=0.6,   # vertical gap between the wide legend's entries (font units)
+    wide_legend_handlelength=2.6,   # the wide legend's handle box width (font units); a wider box lets one entry carry several markers side by side (communities 2026-10-02)
     wide_legend_floor="ramp",  # wide_legend_between's floor: "ramp" = the ramp block under inset A (north) | "frame" = the frame's bottom edge (Alberta)
     focus_outline=("#333333", 0.6),   # the focus PU's outline when a context surface is drawn; None = off
     map_layout="wide",         # Act 1 maps: "wide" = slide-shaped with two zoom insets (clusters 1 and 2) | "tall" = the map alone
@@ -692,7 +711,7 @@ def core_map_hex250(C, path, title=None, with_ipca_on_a=True):
             C.draw_ipca(ax)
         if panel == "b":
             C.draw_clusters(ax, "act1", C.picks_for("Act 1"), fs=STYLE["cluster_number_fs"], lw=STYLE["cluster_lw"])
-        C.finish(ax, "(a) mean F per ~250 km² hex over unprotected land, with proposed IPCAs" if panel == "a"
+        C.finish(ax, "(a) mean F per ~250 km² hex over unprotected land, with proposed conservation areas" if panel == "a"
                  else "(b) with the core clusters (F ≥ 0.70 at 1 km); numbered north → south",
                  C.BASE_HANDLES if panel == "b" else C.BASE_HANDLES[:2] + [C.IPCA_HANDLE], note=C.N_NOTE if panel == "b" else "")
     cax = fig.add_axes([0.30, 0.055, 0.40, 0.014])
@@ -794,7 +813,8 @@ def values_metrics(C):
     b = 0.20 if dc.VP.version == "v4" else 0.25                                                    # the balanced block share
     conn = ["20% of the objective", "20% of the objective"] if dc.VP.version == "v4" else ["12.5% of the objective", "12.5% of the objective"]
     return ["30% of the region", f"{100*b:.0f}% of the objective", "baseline weight · not a driver", f"{100*b/2:g}% of the objective", f"{100*b/2:g}% of the objective",
-            tgt, *conn, f"{100*b*0.258:.1f}% of the objective",
+            tgt, *conn, "reference statistic · not a driver",                                           # communities (2026-10-01)
+            f"{100*b*0.258:.1f}% of the objective",
             f"{100*b*0.742:.1f}% · target {100*t0[MS]:.0f}% ({100*t4[MS]:.0f}%)", "—"]
 
 
@@ -819,7 +839,7 @@ def values_table_poster(C, path, title="Y2Y Objectives Hierarchy"):
     BG, MAT, INK, CAP, MUT, ACC = "#211E1B", "#F6F2E9", "#F2EDE3", "#CDC7BB", "#B1ABA0", "#C79152"
     PINK, PCAP, PMUT = "#29261F", "#403B31", "#6C6557"                      # Paper tokens: text on the mat card
     RULE_D, RULE_L, FRAME = (1, 1, 1, 0.13), (0, 0, 0, 0.12), (0, 0, 0, 0.18)
-    FONT = ["Cronos Pro", "DejaVu Sans"]                                    # fallback carries the thin space / arrow
+    FONT = TABLE_FONT                                                       # the package font (Candara since 2026-10-02); the fallback carries the thin space / arrow
     rows = values_rows(C); metrics = values_metrics(C)
     colw = [2.6, 4.2, 2.9, 3.9]; chars = [22, 46, 30, 42]                  # fundamental | sub-objective+metric+measure | source | how
     body = [[r[0], r[2], r[3], r[4]] for r in rows]
@@ -959,7 +979,7 @@ logging.getLogger("matplotlib.font_manager").addFilter(_WeightFallbackFilter())
 
 TABLE = dict(bg="#211E1B", mat="#F6F2E9", ink="#29261F", cap="#403B31", mut="#6C6557", accent="#8A5F27",   # accent darkened for the mat
              rule=(0, 0, 0, 0.10), frame=(0, 0, 0, 0.18))
-TABLE_FONT = ["Cronos Pro", "DejaVu Sans"]                  # (Jost, the spec fallback, is not installed) DejaVu carries the thin space / × / − that Cronos lacks
+TABLE_FONT = ["Candara", "DejaVu Sans"]                     # Candara everywhere (Ethan 2026-10-02; was Cronos Pro); DejaVu carries any glyph Candara lacks
 _PX = 1 / 96                                                 # one CSS px in inches (1 px hairline = 0.75 pt)
 _MEASURE = Figure(dpi=100); FigureCanvasAgg(_MEASURE)        # off-pyplot scratch canvas for text measurement
 STYLE.setdefault("table_base_px", 16)
@@ -995,12 +1015,13 @@ def _wrap_to(s, width_in, pt, weight=400):
 _CELL_STYLES = dict(head=("ink", 600), metric=("accent", 600), body=("cap", 400), fine=("mut", 400), num=("accent", 600))
 
 
-def spec_table_png(path, stub, cols, cells, *, label=None, title=None, units=None, notes=(), groups=None, numeric=None,
-                   fills=None, col_w=None, stub_w=None, stub_head="", base_px=None, dpi=None, stub_sep=False):
+def spec_table_png(path, stub, cols, cells, *, label=None, title=None, units=None, notes=(), groups=None, numeric=None, head_ha=None,
+                   fills=None, col_w=None, stub_w=None, stub_head="", base_px=None, dpi=None, stub_sep=False, ramp=None):
     """Render one table to the spec. stub: row labels; cols: header strings (may contain \\n); cells[i][j]: str or runs;
     numeric[i][j] (bool) -> right-aligned accent 600; fills[i][j] -> cell background (None = mat); groups: list of
     (label, j0, j1) column groups drawn as a spanner row + frame separators; col_w / stub_w in inches override the
-    measured (uniform) data-column width and the 1.5× stub."""
+    measured (uniform) data-column width and the 1.5× stub. `ramp` = dict(colors=[...], lo=, hi=, label=) draws a small colour-key
+    bar (the fills' ramp, lowest -> highest) under the table, right-aligned beside the notes."""
     B = base_px or STYLE["table_base_px"]; u = B * _PX; pt = B * 0.75
     f_body, f_label, f_title, f_note = 0.87 * pt, 0.80 * pt, 1.70 * pt, 0.80 * pt
     pad_v, pad_h, card_pv, card_ph, gap, page = 0.67 * u, 0.47 * u, 1.2 * u, 1.5 * u, 0.67 * u, 3.0 * u
@@ -1028,6 +1049,8 @@ def spec_table_png(path, stub, cols, cells, *, label=None, title=None, units=Non
     note_lines = [(k, _wrap_to(v, Wc_inner - _text_w(k + "  ", f_note, 600), f_note)) for k, v in notes]
     h_top = (lh(f_label) + gap if label else 0) + (lh(f_title) + 0.25 * u if title else 0) + (lh(f_body) + gap if units else 0)
     h_notes = (gap + sum(len(v.split("\n")) * lh(f_note) + 0.15 * u for _, v in note_lines)) if note_lines else 0
+    if ramp:                                                             # its own strip above the notes: bar + end words + caption
+        h_notes += gap + 3.0 * lh(f_note)
     Hc = card_pv * 2 + h_top + Ht + h_notes; Wc = Wc_inner + 2 * card_ph
     fig = plt.figure(figsize=(Wc + 2 * page, Hc + 2 * page), facecolor=T["bg"])
     ax = fig.add_axes([0, 0, 1, 1]); ax.set_xlim(0, Wc + 2 * page); ax.set_ylim(0, Hc + 2 * page); ax.axis("off")
@@ -1056,7 +1079,7 @@ def spec_table_png(path, stub, cols, cells, *, label=None, title=None, units=Non
     yh = y - h_head / 2
     ax.text(tx + pad_h, yh, stub_head, color=T["ink"], fontproperties=_fp(f_body, 600), ha="left", va="center")
     for j, h in enumerate(cols):
-        right = all(numeric[i][j] for i in range(n)) if n else False
+        right = (head_ha == "right") if head_ha else (all(numeric[i][j] for i in range(n)) if n else False)   # head_ha pins the column heads' alignment
         ax.text(tx + xs[j + 2] - pad_h if right else tx + xs[j + 1] + pad_h, yh, h, color=T["ink"], fontproperties=_fp(f_body, 600),
                 ha="right" if right else "left", va="center", linespacing=1.28)
     y -= h_head; ax.plot([tx, tx + Wt], [y, y], **hair)                            # header underline, full width
@@ -1083,6 +1106,19 @@ def spec_table_png(path, stub, cols, cells, *, label=None, title=None, units=Non
     if groups:                                                                     # frame separators at group boundaries only
         for _, j0, _ in groups[1:]:
             xg = tx + xs[j0 + 1]; ax.plot([xg, xg], [top, y], **hair)
+    # ---- ramp key (the fills' colour scale) ----
+    if ramp:
+        y -= gap
+        bw, bh = 1.6 * col_w[0], 0.9 * lh(f_note)                        # the bar spans ~1.6 data columns; a note-line tall
+        bx = tx + xs[1]                                                  # starts under the first data column
+        nsw = len(ramp["colors"]); sw = bw / nsw
+        for i, c in enumerate(ramp["colors"]):
+            ax.add_patch(Rectangle((bx + i * sw, y - bh), sw, bh, facecolor=c, edgecolor="none"))
+        ax.add_patch(Rectangle((bx, y - bh), bw, bh, facecolor="none", edgecolor=T["hair"] if "hair" in T else "#bbbbbb", lw=0.5))
+        ax.text(bx, y - bh - 0.1 * lh(f_note), ramp.get("lo", "lowest"), color=T["mut"], fontproperties=_fp(f_note), ha="left", va="top")
+        ax.text(bx + bw, y - bh - 0.1 * lh(f_note), ramp.get("hi", "highest"), color=T["mut"], fontproperties=_fp(f_note), ha="right", va="top")
+        ax.text(bx + bw + 0.6 * u, y - bh / 2, ramp.get("label", ""), color=T["mut"], fontproperties=_fp(f_note), ha="left", va="center")
+        y -= bh + 1.8 * lh(f_note)
     # ---- notes ----
     if note_lines:
         y -= gap
@@ -1121,7 +1157,7 @@ def cluster_handler_map(*handles):
 
 
 SOURCE_NOTE = f"Y2Y spatial decision tool, frequency ensemble on manifest {dc.VP.version} (in review)."
-REF_LABELS = {"Existing protected areas": "Existing\nprotected areas", "Proposed IPCAs (unprotected part)": "Proposed IPCAs\n(unprotected)",
+REF_LABELS = {"Existing protected areas": "Existing\nprotected areas", "Proposed IPCAs (unprotected part)": "Proposed conservation\nareas (unprotected)",
               "Banff National Park": "Banff\nNational Park", "Dene Kʼéh Kusān": "Dene Kʼéh Kusān\n(proposed IPCA)"}   # reference-column header text (other names wrap)
 
 # maps and star plots share the spec's type: Cronos Pro, weights 400/600, ink titles, cap text, mut fine print
@@ -1130,14 +1166,15 @@ SPEC_RC = {"font.family": TABLE_FONT, "font.weight": 400, "text.color": TABLE["c
            "ytick.color": TABLE["cap"], "legend.labelcolor": TABLE["cap"], "axes.edgecolor": TABLE["cap"]}
 
 
-def consequences_table(C, rows, path, label, title, ref=None, col_label=None, group_label="Core clusters", source=None):
+def consequences_table(C, rows, path, label, title, ref=None, col_label=None, group_label="Core clusters", source=None, unit_word="cluster"):
     """The consequences table to the spec, TRANSPOSED: one row per measure (area, the value ratios), one column
     per cluster, then the reference columns (named example areas -- Banff National Park, Dene Kʼéh Kusān -- or, by STYLE, the two
     aggregates: existing protected areas; the proposed IPCAs' unprotected part). Ratio rows
     are tinted red → green across the row (STYLE['conseq_*']); clusters group by leading scenario where they differ.
     `ref` = the reference rows (name, area_km2, ratio_<axis>) from outside instead of C.TD7; `col_label(r, wrap=)` = the column
     header per row instead of cluster_label; `group_label` = the spanner over the non-reference columns; `source` = the source
-    note (default SOURCE_NOTE) -- the northern package's route options use all four (corridors_director.option_consequences)."""
+    note (default SOURCE_NOTE); `unit_word` = the noun in the bear note ("each cluster cell" / "each option cell") -- the corridor
+    packages' route options use all five (corridors_director.option_consequences)."""
     if ref is None:
         want = "reference" if STYLE.get("conseq_reference", "named") == "named" else "reference_aggregate"   # named example areas (Ethan 2026-09-23) or the two aggregates
         ref = C.TD7[C.TD7.act.eq(want)]
@@ -1155,13 +1192,35 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
         groups = [(group_label, 0, nclu - 1)]
     groups.append(("Reference", nclu, nclu + len(ref) - 1))
     cap = lambda a: (lambda w: w[0].upper() + w[1:])(axis_label(a))
-    stub = ["Area (km²)"] + [cap(a) for a in dc.STAR_AXES]
+    REP_MARK = STYLE.get("conseq_rep_mark", "†")                         # the representativeness row's note mark (a dagger, superscript-style; Ethan 2026-10-01)
+    stub = ["Area (km²)"] + [cap(a) + (REP_MARK if a == "representativeness" else "") for a in dc.STAR_AXES]
     cells = [[f"{v:,.0f}" for v in body.area_km2]]
     cells += [[ratio_fmt(v) for v in body[f"ratio_{a}"]] for a in dc.STAR_AXES]
-    bear = STYLE.get("conseq_bear_row", True) and "bear_programs_mean" in body
-    if bear:                                                             # a count (mean groups recorded in the overlapped units), not a ratio
-        stub.append("Bear coexistence programs*")
-        cells.append([("—" if pd.isna(v) else f"{v:.1f}") for v in body.bear_programs_mean.astype(float)])
+    ext_rows = body.get("rep_basis", pd.Series([""] * len(body))).astype(str).eq("extent").values if "rep_basis" in body else np.zeros(len(body), bool)
+    if ext_rows.any():                                                   # spec v2.2: a locked reference (Banff) on on-extent footprints + total land, footnoted
+        r_rep = stub.index(cap("representativeness") + REP_MARK)
+        cells[r_rep] = [c + ("‡" if e else "") for c, e in zip(cells[r_rep], ext_rows)]
+    standout = STYLE.get("conseq_standout_row", False) and "standout_group" in body     # off (Ethan 2026-10-01: TMI for now; the register keeps it)
+    if standout:                                                         # the single most over-represented ecosystem group, "name (N×)"
+        stub.append("Standout ecosystem group")
+        _nm = dc.efg_display_names()                                     # a register written before the names resolved carries raster stems
+        cells.append([("—" if (pd.isna(q) or not str(g).strip() or str(g) == "nan") else f"{textwrap.fill(_nm.get(str(g), str(g)), 22)} ({q:.1f}×)")
+                      for g, q in zip(body.standout_group, body.standout_quotient.astype(float))])
+    bear = STYLE.get("conseq_bear_row", True) and ("bear_groups_n" in body or "bear_programs_mean" in body)
+    if bear:                                                             # placed BEFORE Carbon (Ethan 2026-10-01: the hierarchy's order -- Communities precedes Address climate change)
+        mode = STYLE.get("conseq_bear_mode", "mean")                     # "mean" (Ethan 2026-10-01: back to the average count) | "divisions" | "total"
+        if mode == "mean" and "bear_programs_mean" in body:              # the cell-weighted mean count over recorded divisions (v2.1)
+            bear_cells = [("none recorded" if pd.isna(v) else f"{v:.1f}") for v in body.bear_programs_mean.astype(float)]
+        elif mode == "divisions" and "bear_by_division" in body:        # EACH overlapped division with a record, "N (P%)", largest overlap first
+            bear_cells = [("none recorded" if (not isinstance(d, str) or not d.strip()) else textwrap.fill(d.replace("; ", ", "), 24))
+                          for d in body.bear_by_division]                           # "3 (40%), 1 (25%), ..." -- number and share only, no names
+        elif "bear_groups_n" in body:
+            bear_cells = [("none recorded (0%)" if (pd.isna(n) or int(n) == 0) else f"{int(n)} group{'s' if int(n) != 1 else ''} ({p:.0f}%)")
+                          for n, p in zip(body.bear_groups_n.astype(float), body.bear_recorded_pct.astype(float))]
+        else:                                                            # a register from before v2.2
+            bear_cells = [("—" if pd.isna(v) else f"{v:.1f}") for v in body.bear_programs_mean.astype(float)]
+        k_bear = stub.index(cap("carbon")) if cap("carbon") in stub else len(stub)
+        stub.insert(k_bear, "Bear coexistence programs*"); cells.insert(k_bear, bear_cells)
     # package spec v1.14 reading guard: a high carbon ratio can mean uniformly carbon-rich or ordinary-with-a-hotspot, so the
     # concentration reading (share of the area inside the soil-carbon theta-tail, T-D1's driver attribution) sits beside it
     tail_col = "driver_m_soc theta-tail"
@@ -1171,6 +1230,10 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
         stub.insert(k, "  of which in the soil-carbon tail (% of area)")
         cells.insert(k, [("—" if pd.isna(v) else f"{v:.0f}%") for v in tail_vals])
     numeric = [[True] * len(cols) for _ in stub]
+    if standout:
+        numeric[stub.index("Standout ecosystem group")] = [False] * len(cols)          # a text row: no fill, left-set
+    if bear:                                                             # right-set like the number rows (Ethan 2026-10-01); the per-polygon list stays left-set
+        numeric[stub.index("Bear coexistence programs*")] = [STYLE.get("conseq_bear_mode", "mean") == "mean"] * len(cols)
     # fills per ratio ROW over the columns in scope (STYLE["conseq_scale_rows"]): "row" mode (Laura / Ethan 2026-09-21) runs the ramp from
     # the row's lowest value to its highest, no hinge; "hinge" mode (the 2026-09-14 rule) centres it on 1.0x. The ramp is a colour-blind-safe
     # diverging pair (STYLE["conseq_cmap"], default RdBu: red = lowest, blue = highest), blended toward the mat by STYLE["conseq_tint"].
@@ -1178,11 +1241,11 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
     all_cols = STYLE["conseq_scale_rows"] == "all"
     scope = np.arange(len(body)) if all_cols else np.arange(nclu)         # "clusters": scaled AND filled over the cluster columns only
     fills = [[None] * len(cols) for _ in stub]
-    axis_rows = {a: stub.index(cap(a)) for a in dc.STAR_AXES}          # row index per ratio axis (the tail row, if shown, is untinted)
+    axis_rows = {a: stub.index(cap(a) + (REP_MARK if a == "representativeness" else "")) for a in dc.STAR_AXES}   # row index per ratio axis
     filled = [(axis_rows[a], np.log(body[f"ratio_{a}"].astype(float).values)) for a in dc.STAR_AXES]
     if STYLE.get("conseq_fill_area", True):                               # the Area row on the same ramp (log area, lowest -> highest)
         filled.insert(0, (stub.index("Area (km²)"), np.log(body.area_km2.astype(float).values)))
-    if bear:                                                             # the count row on the same low -> high ramp (linear; NaN unfilled)
+    if bear and STYLE.get("conseq_bear_mode", "mean") == "mean" and STYLE.get("conseq_bear_fill", True):   # the mean count on the same ramp (linear; "none recorded" unfilled)
         filled.append((stub.index("Bear coexistence programs*"), body.bear_programs_mean.astype(float).values))
     for r, x in filled:
         lo, hi = np.nanmin(x[scope]), np.nanmax(x[scope])
@@ -1199,16 +1262,25 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
             if np.isnan(v):
                 continue
             fills[r][j] = tuple(mat * (1 - tint) + np.array(cmap(float(np.clip(t, 0, 1)))[:3]) * tint)
-    spec_table_png(path, stub, cols, cells, label=label, title=title if STYLE["titles"] else None, groups=groups, numeric=numeric, fills=fills,
-                   units="Ratios: mean value inside the area ÷ mean over allocatable (unprotected) land · 1.0× = the average allocatable cell",
-                   notes=[("Note", "Blocks combine their layers with the block weights (carbon 74 / 26 by mass); representativeness = ecosystem "
-                                   "classes present per cell; naturalness = 1 − human modification. "
+    key = None
+    if STYLE.get("conseq_ramp_key", True):
+        key = dict(colors=[tuple(mat * (1 - tint) + np.array(cmap(t)[:3]) * tint) for t in np.linspace(0, 1, 9)],
+                   lo="lowest in row", hi="highest in row", label="colour = rank within each row across the clusters")
+    spec_table_png(path, stub, cols, cells, label=label, title=title if STYLE["titles"] else None, groups=groups, numeric=numeric, fills=fills, head_ha="left", ramp=key,
+                   units="Ratios: mean value inside the area ÷ mean over allocatable (unprotected) land · 1.0× = the average allocatable cell · ratios use the untransformed layers",
+                   notes=[*([("Note", "Blocks combine their layers with the block weights (carbon 74 / 26 by mass); naturalness = 1 − human modification. "
                                    + (("Colour runs red → blue across each row from its lowest value to its highest" + (" over the cluster columns" if not all_cols else "") + "; a row whose values all round to the same figure is left neutral.") if STYLE.get("conseq_mode", "row") == "row"
-                                      else "Colour runs across each row with 1.0× as the hinge and each side scaled to the row's own extreme.")),
-                          *([("*", "Bear coexistence programs: not a ratio — the mean number of active bear coexistence groups recorded in the census divisions / "
-                                     "counties the area overlaps (Y2Y Communities & Conservation, July 2026), cell-weighted; divisions with no recorded group are left out; "
-                                     "— = none recorded in any overlapped division.")] if bear else []),
-                          ("Source", source or SOURCE_NOTE)])
+                                      else "Colour runs across each row with 1.0× as the hinge and each side scaled to the row's own extreme."))] if STYLE.get("conseq_general_note", False) else []),   # off (Ethan 2026-10-01)
+                          (REP_MARK or "Note", "Representativeness: average, across the 20 ecosystem groups, of the area's share of the group's unprotected extent relative to its "
+                                "share of unprotected land. " + ("Standout = the group where that share is highest, with its value. " if standout else "")
+                                + ("‡ on-extent footprints and total land: a protected area has no unprotected extent." if ext_rows.any() else "")),
+                          *([("*", (f"Mean number of bear coexistence programs recorded for the census division or county each {unit_word} cell falls in "
+                                      "(divisions with none recorded excluded). Not used in the model.") if STYLE.get("conseq_bear_mode", "mean") == "mean" else
+                                     ("Bear coexistence programs: one entry per census division / county the area overlaps that has a record (Y2Y Communities & "
+                                      "Conservation, July 2026) — the number of active groups recorded there and, in brackets, the share of the area lying in that "
+                                      "division; divisions holding under 1% of the area are omitted. Coverage reflects division geography, not distance to a "
+                                      "group, and northern divisions are sparsely recorded. Not a ratio."))] if bear else []),
+                          *([("Source", source or SOURCE_NOTE)] if STYLE.get("conseq_source_note", False) else [])])   # off (Ethan 2026-10-01)
 
 
 def values_table_spec(C, path, title="Y2Y Objectives Hierarchy", rows=None, metrics=None, label=None, units=None):
@@ -1283,15 +1355,43 @@ def _inset_window(C, number, aspect_hw, act="Act 1"):
     return (float(px0), float(px1), float(pyt), float(pyb)), p
 
 
+def _fit_page(fig, pad_in=0.1):
+    """Centre the drawn content block VERTICALLY on the slide before saving (Ethan 2026-10-02, "the .png outputs are cropped
+    wrong": the insets ended 15% from the top while the key's caption ran off the page bottom). Measures the tight box, then
+    lifts every axes, figure-level text and figure legend by one offset so the block (insets + key + legend + frame) is centred
+    with at least `pad_in` above and below; a block taller than the page is pinned to the bottom pad instead. Horizontal
+    placement is untouched. Off with STYLE["wide_fit_page"] = False. Returns the shift in figure fraction."""
+    if not STYLE.get("wide_fit_page", True):
+        return 0.0
+    from matplotlib.transforms import Bbox
+    tb = fig.get_tightbbox(fig.canvas.get_renderer()).padded(pad_in)              # inches
+    H = fig.get_figheight(); h = tb.y1 - tb.y0
+    target_y0 = max(0.0, (H - h) / 2)
+    dy = (target_y0 - tb.y0) / H
+    if abs(dy) < 1e-4:
+        return 0.0
+    for ax in fig.axes:
+        p = ax.get_position(original=True); ax.set_position([p.x0, p.y0 + dy, p.width, p.height])
+    for t in fig.texts:
+        if t.get_transform() == fig.transFigure:
+            x, y = t.get_position(); t.set_position((x, y + dy))
+    for leg in fig.legends:
+        bb = leg.get_bbox_to_anchor().transformed(fig.transFigure.inverted())
+        leg.set_bbox_to_anchor(Bbox.from_bounds(bb.x0, bb.y0 + dy, bb.width, bb.height), transform=fig.transFigure)
+    return dy
+
+
 def _common_crop(fig, tight=None):
     """ONE export box for every wide-layout map (Ethan 2026-09-30: the Act 1 and Act 2 left-hand frames must be the same): the
     tight box's left and top (the frame's left edge and the inset titles, identical on both layouts) with the page's full width
     and bottom, so a three-inset Act 2 map and a two-inset Act 1 map crop to the same page and the frame lands at the same size."""
     from matplotlib.transforms import Bbox
+    if STYLE.get("wide_export_page", "full") == "full":                  # Ethan 2026-10-02 ("the figures/maps are exporting cropped"): the WHOLE
+        return Bbox.from_extents(0.0, 0.0, fig.get_figwidth(), fig.get_figheight())   # 13.33 x 7.5 in slide, 4000 x 2250 px at 300 dpi -- one box trivially
     tb = tight if tight is not None else fig.get_tightbbox(fig.canvas.get_renderer()).padded(0.1)
     if not STYLE.get("wide_common_crop", True):
         return tb
-    return Bbox.from_extents(tb.x0, 0.0, fig.get_figwidth(), tb.y1)
+    return Bbox.from_extents(tb.x0, 0.0, fig.get_figwidth(), tb.y1)                  # "common": the 2026-09-30 box (frame left + inset top, full width + page bottom)
 
 
 def _equalize_windows(wins):
@@ -1348,7 +1448,8 @@ def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None
     dcl = STYLE.get("inset_declutter", True)                                                   # False = every name (the northern insets, 2026-09-28)
     taken = dc.label_areas_px(ax, C.G, pan, "PA_Name", win, top_n=STYLE["inset_pa_names"], color="0.25", fs=fs, taken=taken, declutter=dcl)
     if with_ipca_names:
-        dc.label_areas_px(ax, C.G, C.IP.gdf, "name", win, top_n=STYLE.get("inset_ipca_names", 3), color="#a04a00", fs=fs, taken=taken, declutter=dcl)
+        _ipg = C.IP.gdf[~C.IP.gdf["name"].isin(skip_areas)] if (len(skip_areas) and "name" in C.IP.gdf.columns) else C.IP.gdf   # skip_areas covers the overlay names too (Alberta 16, Ethan 2026-10-01)
+        dc.label_areas_px(ax, C.G, _ipg, "name", win, top_n=STYLE.get("inset_ipca_names", 3), color="#a04a00", fs=fs, taken=taken, declutter=dcl)
     ax.set_xlim(px0, px1); ax.set_ylim(pyb, pyt); ax.set_aspect("equal")
     ax.set_xticks([]); ax.set_yticks([])
     for sp in ax.spines.values():
@@ -1376,7 +1477,7 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
     S_ = surface or _f_surface(C)
     with plt.rc_context(SPEC_RC):
         fig = plt.figure(figsize=(13.33, 7.5))
-        ax = fig.add_axes([0.03, 0.04, 0.215, 0.84]); ax.set_anchor("E")      # the frame hugs inset A
+        ax = fig.add_axes(STYLE.get("frame_rect") or [0.03, 0.04, 0.215, 0.84]); ax.set_anchor(STYLE.get("frame_anchor") or "E")      # the frame hugs inset A
         im_main = ax.imshow(S_["img"], cmap=S_["cmap"], norm=S_["norm"], interpolation="nearest", zorder=0.5, alpha=S_.get("alpha", 1.0))   # a surface may carry an alpha (the northern maps: 0.85, so the admin lines show through)
         axes_all, ims = [ax], [im_main]
         if S_.get("ctx") is not None:                                                  # the context analysis beyond the focus PU, muted, under the focus surface
@@ -1396,10 +1497,12 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             iax = fig.add_axes(rect); STYLE["_fs_scale"] = STYLE["inset_number_fs"] / STYLE["cluster_number_fs"]; STYLE["_lw_scale"] = STYLE["cluster_lw_inset_scale"]
             STYLE["_surface_alpha"] = S_.get("alpha", 1.0)
             try:
+                if STYLE.get("inset_own_number_only", False):                    # this inset numbers only its own cluster; the others keep their outlines (Alberta 16, Ethan 2026-10-01)
+                    STYLE["_only_number"] = str(num)
                 _draw_inset(C, iax, win, draw, tag, with_ipca_names, codes=STYLE["inset_codes"].get(tag), skip_towns=STYLE["inset_town_skip"].get(tag, ()),
                             img=S_["img"], cmap=S_["cmap"], norm=S_["norm"], post_draw=post_draw, ctx=S_.get("ctx"))
             finally:
-                STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE.pop("_surface_alpha", None)
+                STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE.pop("_surface_alpha", None); STYLE.pop("_only_number", None)
             axes_all.append(iax); ims.append(iax.images[0])                             # the inset's surface image is its first
             px0, px1, pyt, pyb = win                                                   # the window on the frame, tagged
             ax.add_patch(Rectangle((px0, pyt), px1 - px0, pyb - pyt, fill=False, edgecolor="#333333", lw=1.0, zorder=7))
@@ -1407,28 +1510,52 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
                     bbox=dict(boxstyle="square,pad=0.15", facecolor="#333333", edgecolor="none"))
         C.place_cluster_numbers(ax, C.WINDOW)                                                  # the frame's discs, now that the inset tags (A / B) are on the axes too
         cax_rect = [0.27 + 0.015, 0.12, 0.335 - 0.03, 0.04]                                     # inset A's full width; bar + ticks + caption centred in the strip below it
-        cax = fig.add_axes(cax_rect)
-        _wide_ramp(cax, S_, cbar_label, end_words=(STYLE.get("ramp_end_labels") if surface is None else S_.get("end_words")))
-        leg = fig.legend(handles=handles, loc=STYLE.get("wide_legend_loc", "center"), bbox_to_anchor=(0.635 + 0.335 / 2, STYLE.get("wide_legend_y", 0.103)), fontsize=STYLE["wide_legend_fs"],
-                         frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.6, handleheight=1.3, borderpad=0.7, labelspacing=0.6,
-                         handler_map=cluster_handler_map(*handles))   # centred under inset B; the cluster entry = four colour swatches
-        if STYLE.get("wide_legend_between", False):                      # the northern package (Ethan 2026-09-28): centre the box between inset B's bottom edge and
-            r = fig.canvas.get_renderer(); inv = fig.transFigure.inverted()   # the bottom of the ramp block under A (= the page bottom once the figure is trimmed)
-            top = rects[-1][1]; bottom = cax.get_tightbbox(r).transformed(inv).y0
-            if STYLE.get("wide_legend_floor", "ramp") == "frame":                  # the FRAME's bottom edge as the floor (Alberta, Ethan 2026-09-30); "ramp" = the ramp block's (north)
-                bottom = min(bottom, ax.get_position().y0)
-            h = leg.get_window_extent(r).transformed(inv).height; pad = 0.012
-            if STYLE.get("wide_legend_fit", False):                          # wolverine (Ethan 2026-09-29): size the items so the box fits the gap
-                fs_ = float(STYLE["wide_legend_fs"]); fs_min = float(STYLE.get("wide_legend_fs_min", 9))
-                while h > (top - bottom) - 2 * pad and fs_ - 0.5 >= fs_min:
-                    fs_ -= 0.5; leg.remove()
-                    leg = fig.legend(handles=handles, loc="center", bbox_to_anchor=(0.635 + 0.335 / 2, 0.5 * (top + bottom)), fontsize=fs_,
-                                     frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=2.6, handleheight=1.3, borderpad=0.7, labelspacing=0.6,
-                                     handler_map=cluster_handler_map(*handles))
-                    h = leg.get_window_extent(r).transformed(inv).height
-                STYLE["_wide_legend_fs_used"] = fs_                           # read back by the caller (printed for the record)
-            y_leg = min(0.5 * (top + bottom), top - pad - h / 2)       # centred in the gap; a legend taller than the gap hangs from B's bottom edge instead
-            leg.set_loc("center"); leg.set_bbox_to_anchor((0.635 + 0.335 / 2, y_leg), transform=fig.transFigure)
+        cax = fig.add_axes(cax_rect) if S_.get("ramp", True) else None             # ramp=False: a categorical surface keyed in the legend instead (core_map_land)
+        if cax is not None:
+            _wide_ramp(cax, S_, cbar_label, end_words=(STYLE.get("ramp_end_labels") if surface is None else S_.get("end_words")))
+        if S_.get("legend_act2", False):                                  # the Act 2 map's legend construction: columns centred under BOTH insets, the LARGEST type that fits the gap (core_map_land)
+            gap_top, gap_bot = rects[0][1], S_.get("legend_floor", 0.04); x_mid = 0.5 * (rects[0][0] + rects[-1][0] + rects[-1][2]); r_ = fig.canvas.get_renderer()
+            kw = dict(handlelength=1.8, handleheight=1.0, borderpad=0.45, labelspacing=0.3, columnspacing=1.2)
+            avail_h, avail_w = (gap_top - gap_bot) - 0.02, (rects[-1][0] + rects[-1][2]) - rects[0][0]; best = None
+            for nc in S_.get("legend_ncols", (2,)):
+                f = float(S_.get("legend_fs", STYLE["scenario_legend_fs"]))
+                while f >= 9:
+                    lg = fig.legend(handles=handles, loc="center", bbox_to_anchor=(x_mid, 0.5 * (gap_top + gap_bot)), ncol=nc, fontsize=f, frameon=True, framealpha=0.92,
+                                    edgecolor="#9a9a9a", handler_map=cluster_handler_map(*handles), **kw)
+                    bb = lg.get_window_extent(r_); fits = bb.height / fig.bbox.height <= avail_h and bb.width / fig.bbox.width <= avail_w; lg.remove()
+                    if fits:
+                        if best is None or f > best[0]:
+                            best = (f, nc)
+                        break
+                    f -= 0.5
+            f, nc = best or (9.0, max(S_.get("legend_ncols", (2,))))
+            leg = fig.legend(handles=handles, loc="center", bbox_to_anchor=(x_mid, 0.5 * (gap_top + gap_bot)), ncol=nc, fontsize=f, frameon=True, framealpha=0.92,
+                             edgecolor="#9a9a9a", handler_map=cluster_handler_map(*handles), **kw)
+        else:
+            leg = fig.legend(handles=handles, loc=STYLE.get("wide_legend_loc", "center"), bbox_to_anchor=(0.635 + 0.335 / 2, STYLE.get("wide_legend_y", 0.103)), fontsize=STYLE["wide_legend_fs"],
+                             frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=STYLE.get("wide_legend_handlelength", 2.6), handleheight=1.3, borderpad=0.7, labelspacing=STYLE.get("wide_legend_labelspacing", 0.6),
+                             handler_map=cluster_handler_map(*handles))   # centred under inset B; the cluster entry = four colour swatches
+            if STYLE.get("wide_legend_between", False):                      # the northern package (Ethan 2026-09-28): centre the box between inset B's bottom edge and
+                r = fig.canvas.get_renderer(); inv = fig.transFigure.inverted()   # the bottom of the ramp block under A (= the page bottom once the figure is trimmed)
+                top = rects[-1][1]; bottom = cax.get_tightbbox(r).transformed(inv).y0 if cax is not None else ax.get_position().y0
+                h = leg.get_window_extent(r).transformed(inv).height; pad = 0.012
+                if STYLE.get("wide_legend_floor", "ramp") == "frame":                  # the FRAME's bottom edge as the floor (Alberta, Ethan 2026-09-30); "ramp" = the ramp block's (north)
+                    bottom = min(bottom, ax.get_position().y0)
+                elif STYLE.get("wide_legend_floor") == "page":                          # the PAGE's bottom edge (figure fraction): the whole strip under inset B (communities, Ethan 2026-10-03)
+                    bottom = STYLE.get("wide_legend_page_floor", 0.015)
+                    axes_all[-1].apply_aspect(); top = axes_all[-1].get_position(original=False).y0   # inset B's DRAWN bottom edge (the aspect-fitted axes sit above the rect's)
+                h = leg.get_window_extent(r).transformed(inv).height; pad = 0.012
+                if STYLE.get("wide_legend_fit", False):                          # wolverine (Ethan 2026-09-29): size the items so the box fits the gap
+                    fs_ = float(STYLE["wide_legend_fs"]); fs_min = float(STYLE.get("wide_legend_fs_min", 9))
+                    while h > (top - bottom) - 2 * pad and fs_ - 0.5 >= fs_min:
+                        fs_ -= 0.5; leg.remove()
+                        leg = fig.legend(handles=handles, loc="center", bbox_to_anchor=(0.635 + 0.335 / 2, 0.5 * (top + bottom)), fontsize=fs_,
+                                         frameon=True, framealpha=0.92, edgecolor="#9a9a9a", handlelength=STYLE.get("wide_legend_handlelength", 2.6), handleheight=1.3, borderpad=0.7, labelspacing=STYLE.get("wide_legend_labelspacing", 0.6),
+                                         handler_map=cluster_handler_map(*handles))
+                        h = leg.get_window_extent(r).transformed(inv).height
+                    STYLE["_wide_legend_fs_used"] = fs_                           # read back by the caller (printed for the record)
+                y_leg = min(0.5 * (top + bottom), top - pad - h / 2)       # centred in the gap; a legend taller than the gap hangs from B's bottom edge instead
+                leg.set_loc("center"); leg.set_bbox_to_anchor((0.635 + 0.335 / 2, y_leg), transform=fig.transFigure)
         if STYLE["titles"]:
             fig.suptitle(title, fontsize=STYLE["map_suptitle_fs"], y=0.995, color=TABLE["ink"], fontweight=600)
         cap = fig.text(0.27, 0.955, (caption or "") if (STYLE.get("frames_caption", False) or not keep) else "", fontsize=STYLE["frames_caption_fs"],
@@ -1439,6 +1566,7 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             if cap is not None:
                 cap.set_visible(False)
             cax.remove(); cax = fig.add_axes(cax_rect)                          # measure with the Act 1 maps' own F ramp (its end-words row sets the bottom edge)
+            _fit_page(fig)                                                      # centre the block on the page first (2026-10-02)
             _wide_ramp(cax, _f_surface(C), None, end_words=STYLE.get("ramp_end_labels"))
             crop = _common_crop(fig)                                         # = the Act 1 maps' export box
             cax.remove(); cax = fig.add_axes(cax_rect)                          # then put this frame's own ramp back
@@ -1451,6 +1579,8 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             return W
         if STYLE.get("export_pdf"):                                                       # a vector twin beside the PNG (the northern package's §3a export rule)
             fig.savefig(pathlib.Path(path).with_suffix(".pdf"), bbox_inches="tight")
+        if not keep:
+            _fit_page(fig)                                                                      # centre the block on the page (2026-10-02)
         STYLE["_act1_crop"] = _common_crop(fig)                                             # the box every wide map is saved with (frame left + inset top, full width + page bottom)
         fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches=STYLE["_act1_crop"]); plt.show()
 
@@ -1459,8 +1589,11 @@ wide_map = _wide_map     # the public name: corridors_director draws the norther
 
 
 def _frames_dpi(W):
-    """The dpi that makes a frame exactly STYLE["frames_width_px"] wide over its crop box (the Act 1 maps' tight box): the canvas
-    truncates width x dpi to an integer, so aim half a pixel over."""
+    """The frames' export dpi. Default (STYLE["frames_match_maps"], Ethan 2026-10-02): the Act 1 maps' own export dpi, so a frame and a
+    map are the SAME pixel size on the same page box. Otherwise the dpi that makes a frame exactly STYLE["frames_width_px"] wide over
+    its crop box (the canvas truncates width x dpi to an integer, so aim half a pixel over)."""
+    if STYLE.get("frames_match_maps", True):
+        return STYLE["export_dpi"]
     return (STYLE["frames_width_px"] + 0.5) / W.crop.width
 
 
@@ -1599,6 +1732,88 @@ def core_map_F(C, path, title=None, basis=None):
     _act1_map(C, path, title or (f"{core_sentence(C)}\n"
                                  f"core = {core_km2:,} km² (F ≥ 0.70) · no value theme left more than 5% behind"),
               draw=lambda ax: C.draw_ipca(ax), handles=C.BASE_HANDLES[:1] + C.IPCA_HANDLES, with_ipca_names=True)
+
+
+def core_map_land(C, path, land2d, groups, title=None, outline=None, inset_clusters=None, unknown_label="unclassified", callouts=(), overlay=True):
+    """Act 1 (c): a land-status underlay -- e.g. Alberta's tenure classes, public vs private -- on the wide layout (frame + the same insets
+    A / B), with THE CORE (F >= 0.70) drawn as an OUTLINE like the clusters so the land shows underneath, PAs grey on top, the overlay
+    outlines, and an Act 2-style legend (two columns under both insets): the core entry, each land class with its share of the core, the PAs,
+    the overlays. `land2d` = an integer raster on the grid; `groups` = [(name, [codes], colour), ...]. The core is drawn as the numbered CORE
+    CLUSTERS (their outlines and discs, as the clusters map) unless `outline` = (colour, lw) asks for the plain F >= 0.70 edge instead;
+    `inset_clusters` = this map's own insets (e.g. (1, 4)), the nudges off, leaving the other Act 1 maps untouched (Alberta 16, Ethan 2026-10-02).
+    `callouts` = [(cluster number, text or None, (dx, dy)), ...]: an arrowed note on each INSET that holds the cluster, the text box at (dx, dy)
+    window-fractions from the cluster's centre; None = the cluster's private share from the register, "60% private (52% ranchland)"."""
+    from matplotlib.lines import Line2D
+    G = C.G; land = np.asarray(land2d); core2d = dc.to_grid(G, (C.Fg >= dc.FREQ_THR) & G.disc, fill=False, dtype=bool)
+    core_km2 = int(core2d.sum()) * G.cell_km2
+    shares = {name: float((np.isin(land, codes) & core2d).sum() / max(core2d.sum(), 1)) for name, codes, _ in groups}
+    img = np.full(G.shape, np.nan, np.float32); colors, labels = [], []
+    for k, (name, codes, col) in enumerate(groups):                        # every PU cell by its land class (the core keeps its land colour)
+        img[np.isin(land, codes) & G.pu] = k; colors.append(col); labels.append(f"{name[0].upper()}{name[1:]} · {100 * shares[name]:.0f}% of core")   # short, so the legend type can be large
+    S = dict(img=img, cmap=ListedColormap(colors), norm=BoundaryNorm(np.arange(-0.5, len(groups) + 0.5, 1), len(groups)), extend="neither",
+             ticks=None, ticklabels=None, label="", end_words=None, ramp=False, legend_act2=True,
+             legend_ncols=(2, 3), legend_floor=0.015, legend_fs=20)        # the legend as large as the gap allows, 2 or 3 columns, down to the page bottom (Ethan 2026-10-02: bigger)
+    if outline is not None:                                                # the plain core edge, one line
+        col, lw = outline
+        def draw(ax):
+            if overlay: C.draw_ipca(ax)
+            lw_ = lw * STYLE.get("_lw_scale", 1.0)
+            cs = ax.contour(core2d.astype(np.uint8), levels=[0.5], colors=[col], linewidths=lw_, zorder=4)
+            if STYLE["cluster_halo"]:
+                cs.set_path_effects([pe.withStroke(linewidth=lw_ + 1.4, foreground="white", alpha=0.85)])
+        handles = [Line2D([0], [0], color=col, lw=2.2, label=f"Core (F ≥ {dc.FREQ_THR:.2f}) · {core_km2:,.0f} km²")]
+    else:                                                                  # the numbered core clusters, as the clusters map draws them
+        numbers = C.picks_for("Act 1")
+        def draw(ax):
+            if overlay: C.draw_ipca(ax)
+            C.draw_clusters(ax, "act1", numbers, fs=STYLE["cluster_number_fs"] * STYLE.get("_fs_scale", 1.0), lw=STYLE["cluster_lw"])
+        handles = [cluster_handle("Core clusters", n=len(C.numbered("Act 1")))]
+    # the legend: classes holding >= 2% of the core (a sliver class stays drawn, unlabelled), short PA / overlay words -- so the type can be large (Ethan 2026-10-02)
+    handles += [Patch(facecolor=c, edgecolor="#9a9a9a", linewidth=0.4, label=l) for c, l, (n_, _, _) in zip(colors, labels, groups) if shares[n_] >= STYLE.get("land_legend_min_share", 0.02)]
+    short = lambda h: Patch(facecolor=h.get_facecolor(), edgecolor=h.get_edgecolor(), ls=h.get_linestyle(),
+                            label=str(h.get_label()).replace(" (locked in)", "").replace(" sub-regional plan area", " plan area"))
+    print("core by land status: " + " · ".join(f"{n} {100 * v:.0f}%" for n, v in shares.items()) + f" (core {core_km2:,.0f} km²)")
+    _saved = {k: STYLE.get(k) for k in ("inset_clusters", "inset_shift_km", "inset_windows")}
+    if inset_clusters is not None:
+        # this map's own insets at the OTHER Act 1 maps' size and scale (Ethan 2026-10-02): the standard windows (the notebook's inset_clusters, same-scale
+        # fit, nudges) are computed first; an inset on a standard cluster takes that window as is, any other cluster gets a window of the same size on its own centre
+        _r = WIDE_RECTS[min(len(STYLE["inset_clusters"]), 2)][0]; _asp = (_r[3] * 7.5) / (_r[2] * 13.33)
+        _std = _act1_windows(C, _asp); _w = _std[0][1] - _std[0][0]; _h = _std[0][3] - _std[0][2]
+        _wins = {}
+        for _tag, _num in zip("ABCDEF", inset_clusters):
+            if _num in STYLE["inset_clusters"]:
+                _wins[_tag] = _std[list(STYLE["inset_clusters"]).index(_num)]
+            else:
+                _x0, _x1, _yt, _yb = _inset_window(C, _num, _asp)[0]; _cx, _cy = 0.5 * (_x0 + _x1), 0.5 * (_yt + _yb)
+                _wins[_tag] = (_cx - _w / 2, _cx + _w / 2, _cy - _h / 2, _cy + _h / 2)
+        STYLE["inset_clusters"] = tuple(inset_clusters); STYLE["inset_windows"] = _wins; STYLE["inset_shift_km"] = {}
+    def post_draw(ax, win):                                                # the callouts, on the insets that hold the cluster (not the frame)
+        x0, x1, yt, yb = win; fw = (C.WINDOW[1] - C.WINDOW[0]) if C.WINDOW is not None else G.shape[1]
+        if (x1 - x0) >= 0.9 * fw:
+            return
+        for num, text, (dx, dy) in callouts:
+            rows = C.numbered("Act 1"); r_ = rows[rows.number == int(num)]
+            if not len(r_):
+                continue
+            r_ = r_.iloc[0]
+            if text is None:
+                priv = 100 - float(r_.get("pct_crown", np.nan)); ranch = float(r_.get("pct_private_ranchland", np.nan))
+                text = f"{priv:.0f}% private ({ranch:.0f}% ranchland)"
+            pk = C.PICKS[(C.PICKS.act == "Act 1") & (C.PICKS.number.astype(str) == str(num))].iloc[0]
+            g = C.CL["act1"]; cen = g[g.cid.isin([int(c) for c in str(pk.cids).split(";")])].geometry.union_all().centroid
+            cx, cy = dc.xy_to_px(G, cen.x, cen.y)
+            if not (x0 < cx < x1 and yt < cy < yb):
+                continue
+            ax.annotate(text, xy=(cx, cy), xytext=(cx + dx * (x1 - x0), cy + dy * (yb - yt)), fontsize=STYLE["inset_fs"], fontweight=600, color=TABLE["ink"],
+                        ha="center", va="center", zorder=9, bbox=dict(boxstyle="round,pad=0.35", fc="white", ec="#555555", lw=0.8, alpha=0.95),
+                        arrowprops=dict(arrowstyle="-|>", color="#333333", lw=1.2, shrinkB=6, mutation_scale=14))
+    try:
+        _wide_map(C, path, title or f"{core_sentence(C)}\ncore = {core_km2:,.0f} km² over the land-status classes",
+                  draw=draw, handles=handles + [short(h) for h in C.BASE_HANDLES[:1] + (C.IPCA_HANDLES if overlay else [])], with_ipca_names=overlay,
+                  surface=S, post_draw=post_draw)                           # overlay=False: no Upper Smoky outlines, names or legend entries (Ethan 2026-10-02)
+    finally:
+        STYLE.update(_saved)
+    return shares
 
 
 def core_map_clusters(C, path, title=None, basis=None):
@@ -1825,8 +2040,9 @@ VALUES_SIMPLE = [
     *([("CONNECT — wildlife corridors connect core habitats", "Structural connectivity", ["Habitat connectivity"]),
        ("", "Climate corridors", ["Climate corridors"])] if dc.VP.version == "v4"
       else [("CONNECT — wildlife corridors connect core habitats", "Quality of connectivity", ["Climate corridors", "Habitat connectivity"])]),
+    ("NATURE-FOCUSED COMMUNITIES", "Coexistence with wildlife", ["Bear coexistence programs"]),
     ("ADDRESS CLIMATE CHANGE — keep carbon out of the air", "Carbon", ["Irrecoverable carbon (biomass)", "Irrecoverable carbon (mineral soil)"]),
-    ("NOT IN THIS ANALYSIS", "Communities · Water · Cost", ["—"]),
+    ("NOT IN THIS ANALYSIS", "Water · Cost", ["—"]),
 ]
 
 
@@ -1879,7 +2095,7 @@ def scenario_map(C, path, title=None):
     handles += [Patch(facecolor=PA_COLOR, label="Protected areas (locked in)")] + C.IPCA_HANDLES + ([C.CONTEXT_HANDLE] if (cls_ctx is not None and C.CONTEXT_HANDLE is not None) else [])
     with plt.rc_context(SPEC_RC):
         fig = plt.figure(figsize=(13.33, 7.5))
-        ax = fig.add_axes([0.03, 0.04, 0.215, 0.84]); ax.set_anchor("E")
+        ax = fig.add_axes(STYLE.get("frame_rect") or [0.03, 0.04, 0.215, 0.84]); ax.set_anchor(STYLE.get("frame_anchor") or "E")
         ax.imshow(cls, cmap=cmap, norm=norm, interpolation="nearest", zorder=0.5)
         if cls_ctx is not None:
             ax.imshow(cls_ctx, cmap=cmap, norm=norm, interpolation="nearest", zorder=0.45, alpha=STYLE["context_alpha"])
@@ -1892,8 +2108,9 @@ def scenario_map(C, path, title=None):
         keys = STYLE["inset_clusters"] if as_act1 else STYLE["scenario_insets"]
         n = len(keys); gap = 0.02; x0, x1 = 0.27, 0.985; w = (x1 - x0 - gap * (n - 1)) / n
         rects = [(x0 + i * (w + gap), 0.25, w, 0.60) for i in range(n)]
-        if as_act1:                                                                # the Act 1 maps' own panel rectangles (and their footprint for the export crop)
+        if as_act1 and STYLE.get("scenario_panels_as_act1", False):          # the Act 1 maps' own panel rectangles: same aspect, so the inset BOXES on the frame are identical (Ethan 2026-10-01)
             rects = list(WIDE_RECTS[min(n, 2)]); x0, x1 = rects[0][0], rects[-1][0] + rects[-1][2]
+            aspect_hw = (rects[0][3] * 7.5) / (rects[0][2] * 13.33)
         aspect_hw = (rects[0][3] * 7.5) / (rects[0][2] * 13.33)
         if as_act1:
             _r1 = WIDE_RECTS[min(len(STYLE["inset_clusters"]), 2)][0]; _a1 = (_r1[3] * 7.5) / (_r1[2] * 13.33)
@@ -1924,16 +2141,36 @@ def scenario_map(C, path, title=None):
         kw = dict(handlelength=2.2, handleheight=1.2, borderpad=0.7, labelspacing=0.55, columnspacing=1.6)
         if tight:
             kw = dict(handlelength=1.8, handleheight=1.0, borderpad=0.45, labelspacing=0.3, columnspacing=1.2)
-        for _ in range(12):
-            leg = fig.legend(handles=handles, loc="center", bbox_to_anchor=((x0 + x1) / 2, y_leg2), ncol=2, fontsize=fs_,
+        if STYLE.get("scenario_legend_fit", False):                # the LARGEST type that fits the gap in width AND height, over 2-3 columns (Alberta 16, Ethan 2026-09-30: "tiny")
+            r_ = fig.canvas.get_renderer(); floor = STYLE.get("scenario_legend_floor", 0.04); pad = 0.012
+            avail_h, avail_w = (gap_top - floor) - 2 * pad, (x1 - x0); y_mid = 0.5 * (gap_top + floor); best = None
+            for nc in STYLE.get("scenario_legend_ncols", (2, 3)):
+                f = float(STYLE["scenario_legend_fs"])
+                while f >= 9:
+                    lg = fig.legend(handles=handles, loc="center", bbox_to_anchor=((x0 + x1) / 2, y_mid), ncol=nc, fontsize=f,
+                                    frameon=True, framealpha=0.92, edgecolor="#9a9a9a", **kw)
+                    bb = lg.get_window_extent(r_); fits = bb.height / fig.bbox.height <= avail_h and bb.width / fig.bbox.width <= avail_w; lg.remove()
+                    if fits:
+                        if best is None or f > best[0]:
+                            best = (f, nc)
+                        break
+                    f -= 0.5
+            f, nc = best or (9.0, max(STYLE.get("scenario_legend_ncols", (2, 3))))
+            leg = fig.legend(handles=handles, loc="center", bbox_to_anchor=((x0 + x1) / 2, y_mid), ncol=nc, fontsize=f,
                              frameon=True, framealpha=0.92, edgecolor="#9a9a9a", **kw)
-            if not tight:
-                break
-            h_frac = leg.get_window_extent(fig.canvas.get_renderer()).height / fig.bbox.height
-            if h_frac <= (gap_top - gap_bot) - 0.02 or fs_ <= 9:
-                break
-            leg.remove(); fs_ -= 1
+            STYLE["_scenario_legend_used"] = (f, nc)                  # read back for the record
+        else:
+            for _ in range(12):
+                leg = fig.legend(handles=handles, loc="center", bbox_to_anchor=((x0 + x1) / 2, y_leg2), ncol=2, fontsize=fs_,
+                                 frameon=True, framealpha=0.92, edgecolor="#9a9a9a", **kw)
+                if not tight:
+                    break
+                h_frac = leg.get_window_extent(fig.canvas.get_renderer()).height / fig.bbox.height
+                if h_frac <= (gap_top - gap_bot) - 0.02 or fs_ <= 9:
+                    break
+                leg.remove(); fs_ -= 1
         if STYLE["titles"]:
             fig.suptitle(title or "Act 2 — what each value-forward position adds to the core", fontsize=STYLE["map_suptitle_fs"], y=0.995, color=TABLE["ink"], fontweight=600)
-        _crop = _common_crop(fig)                                   # the same export box as the Act 1 maps, so the left-hand frame lands at the same size and place (Ethan 2026-09-30)
+        _fit_page(fig)                                                                       # centre the block on the page (2026-10-02)
+        _crop = (STYLE.get("_act1_crop") if (as_act1 and STYLE.get("_act1_crop") is not None) else _common_crop(fig))   # the Act 1 maps' OWN export box when the panels are theirs (exact, to the pixel; Ethan 2026-10-01), else this figure's common crop
         fig.savefig(path, dpi=STYLE["export_dpi"], bbox_inches=_crop); plt.show()

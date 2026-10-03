@@ -212,6 +212,11 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
 
 ## 7. v2.5 — the two-layer product: complexes by post-processing, the network RE-ROUTED between them (run spec v3 §1a, revised by Ethan 2026-09-29)
 
+- **M7.23 Locators without the A / B titles (2026-10-03, with the northern M5.35).**
+- **M7.22 Candara everywhere (Ethan 2026-10-02, presentation):** `corridors_mapstyle.FONT_FAMILY` = ["Candara", "DejaVu Sans"] (was Noto Sans), so the §3a record figures draw in the same typeface as the curated outputs, which already took it through `director_plot.SPEC_RC` (y2y M4.40 addendum); Candara's Bold face serves the 600-weight roles; Noto stays registered for the earlier record. The §3a contract's typeface line is superseded. Nothing measured changes.
+- **M7.21 Star titles "Option N" + area (2026-10-02, with the northern M5.33):** the link name dropped from the 06 · 05 star titles; area line kept (knob `option_star_area`).
+  **M7.19 addendum (2026-10-02, later):** the wide maps are centred on the page before saving (shared `director_plot._fit_page`); inherited.
+- **M7.20 Wording (Ethan 2026-10-02, presentation):** every legend, caption, table header and key that said "Proposed IPCAs" (or "Proposed IPCAs / PAs") now says "Proposed conservation areas" — `corridors_mapstyle.AREA['ipca']`, the wide-layout labels, the option / consequences tables, the W11 status words, `config.CORRIDORS` anchor label; the y2y package made the same change in `director_plot` the same day. Named reference columns (Dene Kʼéh Kusān) and every data key are unchanged; nothing measured changes.
 - **M7.1 Scope and provenance (REVISED 2026-09-29):** the deliverable due 2026-09-29 derives the refugia COMPLEXES from `v2_run001`
   (tag `v2_run001`, commit 6c79be6 — the tree that produced and classified the run) and RE-RUNS THE ROUTING between them (run spec v3
   §3 stages 3–4 and §4, pulled into §1a by Ethan the same day); the v2 patch-to-patch links are used only to derive the complexes and
@@ -337,6 +342,30 @@ Companion documents: **`results_log.md`** (the RESULTS register, same rule); `wo
   narrowing (8) and only viable (7), never in options / last affordable. Classes 72 / 15 / 24 / 19, sum 130 (G23). Strips: 21 with an
   all-intact direct route, 19 crossing cost 10. The parked 133-front artefacts were regenerated the same way (97 open / 36 cut; crossing
   class 117 at 1, 16 at 10; sum check passes).
+- **M7.19 Full-page map export + plain option headers (2026-10-02, with the northern M5.31):** 06's wide maps export the whole slide via the
+  shared `wide_export_page` default; the consequences table's column headers read "Option N" alone.
+- **M7.18 Route-option consequences table = the y2y package-spec v2.2 rule (2026-10-01, with the northern M5.30):** `option_profiles_y2y`
+  computes representativeness as the mean representation quotient (Banff on extent ‡, options + the IPCA reference on unprotected cells),
+  adds the standout-group and bear-coexistence rows and the v2.2 register columns via the shared `director_core.rep_extras` /
+  `bear_programs`; `_reference_masks` now returns the layer kind. Not exercised at build time (the northern twin was, on run003).
+  **M7.18 addendum (2026-10-01, later):** the y2y step-back (bear row = mean count, standout row off, quotient kept) is inherited through the
+  shared `director_plot.consequences_table` STYLE defaults; the bear note reads "each option cell" (`unit_word`); the bear row before Carbon,
+  right-set, on the row ramp (y2y, later the same day) likewise inherited; row headers kept as before (`conseq_rep_mark` = "", no †). No
+  other wolverine change.
+- **M7.17 Thinner route-option outlines (2026-10-01, with the northern M5.29; presentation):** `WIDE_STYLE["option_lw"]` 0.8 pt + `option_halo`
+  0.8 pt on 06 · 04 and the 05b locators (were 1.44 / +1.4). Nothing measured changes.
+- **M7.16 PNG only (2026-10-01, Ethan, with the northern M5.28; presentation):** `WIDE_STYLE["export_pdf"] = False` and the shared
+  `corridors_mapstyle.export` writes PNG 300 dpi only; the package's PDFs on disk deleted. Nothing drawn changes.
+- **M7.15 Package folder structure = the y2y / Alberta convention (2026-10-01, Ethan, mirroring the northern M5.27; presentation /
+  provenance only):** the director package moves from `output_data/corridors_wolverine/<run>/director_package/` (gitignored, one per
+  run) to **`analyses/wolverine_refugia_connectivity/director_package/`** with the y2y layout — `geotiffs/` (the GIS export, formerly
+  `gis/`), `tables/`, `figures/` (04, the record), `director_outputs/` (06, the curated few) + `summary.json` (tracked by the existing
+  `analyses/*/director_package/**` rule's exception): run, run_config git record, cutoff + detour km, node / link / class counts, already-
+  connected counts, H8, build time. One package holds one run — `package()` moves another run's contents to `_superseded_<run>/` first
+  (`corridors_director._supersede_other_run`). `wd.PKG_DIR`; `package(out=)` overrides. run001's package relocated on disk (128 MB);
+  `director_outputs/` still holds the pre-M7.14 numbering's files (02_where_choices, 03_route_options, 04_protected_land, 04_/04b_ stars +
+  locators, 05_consequences, 02_complexes_and_corridors) beside the current 01–06 set — stale, Ethan's to delete. 05_postprocess is
+  unchanged (`<run>/postprocess/` is run output, not the package). No methods, numbers or figures change.
 - **M7.14 Presentation set, 06 (Ethan 2026-09-29, five rulings, all knobs, nothing measured changes):** (i) 03 draws the route options as
   coloured bands only — no numbered circles / leader lines, no cluster-swatch legend row (the y2y cluster construction; the stars and
   consequences carry the number + colour) — `option_markers=False`, `option_legend="none"`; (ii) the legend box is centred between

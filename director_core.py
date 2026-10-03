@@ -691,19 +691,48 @@ def absorb_complexes(G, lab, gp, cx, link_km=PICK_LINK_KM, reg=None, speck_km=SP
 RATIO_SOURCE = {"transboundary_connectivity": config.HANDOFF_DIR} if VP.version == "v4" else {}
 
 
+def efg_display_names():
+    """Raster stem -> the class's name (the curation table of the v3 block; merged stems join their parts' names)."""
+    try:
+        cur = pd.read_csv(config.y2y_paths("v3").records / "efg_curation_v3.csv")
+    except Exception:
+        return {}
+    names = dict(zip(cur.code.astype(str), cur.name.astype(str)))
+    out = {}
+    for p in lc.efg_paths():
+        codes = p.stem.split(".web")[0].split("_")
+        out[p.stem] = " + ".join(names.get(c, c) for c in codes)
+    return out
+
+
 class ValueRatios:
     """Consequences tables (Ethan 2026-09-14): mean raw value inside a cluster / mean raw value over ALLOCATABLE
     (discretionary) land, per star axis -- "2.3x" = 2.3 times the average unprotected cell. Blocks combine their
-    members' ratios with the BLOCK_AXES weights; representativeness = ecosystem classes present per cell;
-    naturalness = 1 - gHM. Raw layers (RATIO_SOURCE): structural connectivity in amperes, not the I^2 the optimizer saw."""
+    members' ratios with the BLOCK_AXES weights; naturalness = 1 - gHM. Raw layers (RATIO_SOURCE): structural
+    connectivity in amperes, not the I^2 the optimizer saw.
+    REPRESENTATIVENESS (package spec v2.2, 2026-10-01): per cell = sum over the curated EFG rasters present (any value > 0) of
+    1 / that class's footprint in cells; ratio = area mean / landscape mean. That equals the MEAN over the groups of the representation
+    quotient (the area's share of the group's extent / the area's share of land) -- the flat class count of v2.1 rewarded mosaics, not
+    rarity. Two footprint bases: "allocatable" (footprints and land on unprotected cells; clusters, IPCA unprotected parts) and
+    "extent" (on-extent footprints and total land; locked areas such as Banff, for which "unprotected extent" is undefined).
+    `quotients()` gives the per-group values and `standout()` the most over-represented group."""
     def __init__(self, G, P):
         self.G = G
         self.raw = {f: np.nan_to_num(lc._read(RATIO_SOURCE.get(f, config.Y2Y_STACK_DIR) / f"{f}.tif")[G.pu], nan=0.0) for d in BLOCK_AXES.values() for f in d}
         self.raw["__efg_count"] = P.efg_count.astype(np.float32)
         self.base = {k: float(v[G.disc].mean()) for k, v in self.raw.items()}
-    def of(self, mask1d, weights=None):
+        self.efg = P.efg; self.efg_names = list(P.efg_names); self.labels = efg_display_names()
+        self.F = {"allocatable": P.efg[:, G.disc].sum(axis=1).astype(np.float64), "extent": P.efg.sum(axis=1).astype(np.float64)}
+        self.N = {"allocatable": float(G.disc.sum()), "extent": float(G.n_pu)}
+        self.rep = {}; self.rep_base = {}
+        for b in ("allocatable", "extent"):
+            Fb = np.where(self.F[b] > 0, self.F[b], np.inf)
+            v = (P.efg.astype(np.float32) / Fb[:, None].astype(np.float32)).sum(axis=0)       # sum over present classes of 1 / footprint
+            self.rep[b] = v; self.rep_base[b] = float(v[G.disc].mean() if b == "allocatable" else v.mean())
+    def of(self, mask1d, weights=None, basis="allocatable"):
         """Ratios for a boolean PU mask, or -- `weights` (1-D over PU cells, e.g. a 300 m mask's fractional cover per 1 km cell,
-        the northern corridors' M6.5 rule) -- the cover-weighted mean instead of the plain mean; the denominator is unchanged."""
+        the northern corridors' M6.5 rule) -- the cover-weighted mean instead of the plain mean; the denominator is unchanged.
+        `basis` = the representativeness footprint basis ("allocatable" | "extent")."""
         if weights is not None:
             w = np.asarray(weights, dtype=np.float64); mean = lambda v: float((w * v).sum() / w.sum())
         else:
@@ -711,12 +740,93 @@ class ValueRatios:
         out = {}
         for ax, members in BLOCK_AXES.items():
             out[ax] = float(sum(wt * (mean(self.raw[f]) / self.base[f]) for f, wt in members.items()))
-        out["representativeness"] = float(mean(self.raw["__efg_count"]) / self.base["__efg_count"])
+        out["representativeness"] = float(mean(self.rep[basis]) / self.rep_base[basis])
         return {a: out[a] for a in STAR_AXES}
+    def flat_count_ratio(self, mask1d=None, weights=None):
+        """The v2.1 statistic (ecosystem classes present per cell, ratio to allocatable land), kept for the register.
+        `weights` (1-D over PU, fractional cover) instead of a mask, as in `of` (the corridor packages, M6.5)."""
+        if weights is not None:
+            w = np.asarray(weights, dtype=np.float64)
+            return float((w * self.raw["__efg_count"]).sum() / w.sum() / self.base["__efg_count"])
+        return float(self.raw["__efg_count"][mask1d].mean() / self.base["__efg_count"])
+    def quotients(self, mask1d=None, basis="allocatable", weights=None):
+        """Per-group representation quotient: (area's share of the group's footprint) / (area's share of land), on `basis`.
+        With `weights` (fractional cover per PU cell) the cell counts are cover-weighted sums (area-conserving, M6.5)."""
+        if weights is not None:
+            w = np.asarray(weights, dtype=np.float64); n_c = float(w.sum())
+            n_gc = (self.efg.astype(np.float64) * w[None, :]).sum(axis=1) if n_c > 0 else None
+        else:
+            n_c = float(mask1d.sum())
+            n_gc = self.efg[:, mask1d].sum(axis=1).astype(np.float64) if n_c > 0 else None
+        if n_c == 0:
+            return {}
+        with np.errstate(divide="ignore", invalid="ignore"):
+            q = (n_gc / self.F[basis]) / (n_c / self.N[basis])
+        return {nm: (float(v) if np.isfinite(v) else np.nan) for nm, v in zip(self.efg_names, q)}
+    def standout(self, mask1d=None, basis="allocatable", weights=None):
+        """The single most over-represented group for the area: (display name, quotient)."""
+        q = {k: v for k, v in self.quotients(mask1d, basis, weights=weights).items() if np.isfinite(v)}
+        if not q:
+            return "", np.nan
+        k = max(q, key=q.get)
+        return self.labels.get(k, k), q[k]
 
 
 def star_profile(P, mask1d):
     return {ax: float(P.axes[ax][mask1d].mean()) for ax in STAR_AXES}
+
+
+def rep_extras(VR, basis, mask1d=None, weights=None):
+    """The package-spec v2.2 representativeness register columns beside `ratio_representativeness` (M4.42): the basis
+    ("allocatable" | "extent"), the v2.1 flat-count ratio, the standout group + its quotient, and every group's quotient
+    under both footprints. Mask or fractional-cover `weights` (the corridor packages). Shared by y2y 19's `_rep_cols` logic
+    and `corridors_director.option_profiles_y2y` / `wolverine_director.option_profiles_y2y` (2026-10-01)."""
+    so = VR.standout(mask1d, basis, weights=weights)
+    return dict(rep_basis=basis, ratio_representativeness_flatcount=VR.flat_count_ratio(mask1d, weights=weights),
+                standout_group=so[0], standout_quotient=so[1],
+                **{f"rq_alloc_{k}": v for k, v in VR.quotients(mask1d, "allocatable", weights=weights).items()},
+                **{f"rq_extent_{k}": v for k, v in VR.quotients(mask1d, "extent", weights=weights).items()})
+
+
+BEAR_MIN_SHARE_PCT = 1.0        # a division is listed in the bear cell only if it holds >= this share of the area (Ethan 2026-10-01)
+BEAR_QA = ROOT / "analyses" / "communities" / "audit" / "bear_coexistence_label_qa.csv"
+BEAR_COLS = ("bear_programs_mean", "bear_units_overlapped", "bear_groups_n", "bear_recorded_pct", "bear_suspect_units",
+             "bear_by_division", "bear_by_division_named")
+
+
+def bear_programs(COEX, G, mask2d=None, weights1d=None, min_share_pct=BEAR_MIN_SHARE_PCT):
+    """The bear-coexistence consequences columns (package spec v2.2 + the M4.42 addenda; the y2y 19 `bear_programs` semantics,
+    shared so the corridor packages' tables match): per census division / county the area overlaps -- its recorded count
+    `n_groups` and the share of the area's cells (or fractional cover, `weights1d` over PU cells) lying in it, largest first,
+    divisions under `min_share_pct` dropped; NA counts are unrecorded, never zero (the 2026-09-16 rule). Returns a dict over
+    BEAR_COLS (all NaN / empty when the coexistence layer is absent)."""
+    if COEX is None:
+        return dict(zip(BEAR_COLS, (np.nan, 0, np.nan, np.nan, "", "", "")))
+    ng = np.full(len(COEX.gdf) + 1, np.nan); ng[1:] = pd.to_numeric(COEX.gdf["n_groups"], errors="coerce").values
+    unit = np.array([""] + COEX.gdf["MappingUnit"].astype(str).tolist(), dtype=object)
+    suspect_set = set()
+    if BEAR_QA.exists():
+        qa = pd.read_csv(BEAR_QA)
+        if "name_collision" in qa:
+            suspect_set = set(qa.MappingUnit[qa.name_collision.astype(bool)])
+    if weights1d is not None:
+        w = np.asarray(weights1d, dtype=np.float64); z = COEX.zones[G.pu]
+        tot = float(w.sum())
+    else:
+        z = COEX.zones[mask2d]; w = np.ones(z.shape, dtype=np.float64); tot = float(len(z))
+    if tot <= 0:
+        return dict(zip(BEAR_COLS, (np.nan, 0, np.nan, np.nan, "", "", "")))
+    v = ng[z]; ok = np.isfinite(v) & (w > 0)
+    ids = np.unique(z[(z > 0) & (w > 0)])
+    share = {int(i): 100.0 * float(w[z == i].sum()) / tot for i in ids}
+    rec = sorted([int(i) for i in ids if np.isfinite(ng[i]) and share[int(i)] >= min_share_pct], key=lambda i: -share[i])
+    n_groups = int(round(sum(float(ng[i]) for i in rec)))
+    pct = 100.0 * float(w[ok].sum()) / tot
+    suspect = "; ".join(sorted({unit[i] for i in ids if unit[i] in suspect_set}))
+    per_div = "; ".join(f"{int(round(ng[i]))} ({share[i]:.0f}%)" for i in rec)
+    per_div_named = "; ".join(f"{unit[i]} [fid {i}]: {int(round(ng[i]))} ({share[i]:.0f}%)" for i in rec)
+    mean = float((w[ok] * v[ok]).sum() / w[ok].sum()) if ok.any() else np.nan
+    return dict(zip(BEAR_COLS, (mean, int(len(ids)), n_groups, pct, suspect, per_div, per_div_named)))
 
 
 def efg_classes_present(P, mask1d):
@@ -901,7 +1011,7 @@ def e17_shifts(G, version=None):
 
 
 # ---- star grid + deck --------------------------------------------------------------------------
-STAR_GRID = dict(panel_w=5.8, panel_h=5.2, wspace=1.05, hspace=0.6, top=0.68, bottom=0.10)   # top 0.82 -> 0.68 (2026-09-21): three-line titles "Cluster N / (Region) / km2" sit above the outward axis words   # shared by the locator maps (same geometry)
+STAR_GRID = dict(panel_w=5.8, panel_h=5.6, wspace=1.05, hspace=0.6, top=0.63, bottom=0.10)   # panel_h 5.2 -> 5.6, top 0.68 -> 0.63 (2026-10-02): the larger Candara titles were clipped at the top   # top 0.82 -> 0.68 (2026-09-21): three-line titles "Cluster N / (Region) / km2" sit above the outward axis words   # shared by the locator maps (same geometry)
 
 
 def plot_star_grid(profiles, path, title, ncols=4, rmax=1.0, ref=0.5, fs_axis=11, fs_title=13, fs_tick=9, fs_suptitle=15, lw=2.0, footnote=True, tight=True, label_pad=8, dpi=200, labels=None):

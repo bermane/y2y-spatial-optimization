@@ -131,7 +131,7 @@ bit-exact by GW4 and by a toy-grid test (`methods_log.md` M5.2). The north's cac
 (the RECORD, slimmed 2026-09-28: tables T0 nodes / T3 every link / T2 no-alternative / T4 already connected / T1 examples as CSV
 (+ PNG when ≤ 30 rows), `gis/` GeoPackages + `style.json`, the results-log numbers; the Y2Y-scale contract figures W0–W4 and the
 engine record maps are functions drawn ON DEMAND only — never shared, so never rendered by default) and
-`director_package/director_outputs/` (the curated set, 05 — reads the run directly; nothing in 05 depends on 04). Package spec: `06_wolverine_director_package_spec.md`.
+`director_package/director_outputs/` (the curated set, 05 — reads the run directly; nothing in 05 depends on 04). Package spec: `06_wolverine_director_package_spec.md`. **Since 2026-10-01 the package folder is `analyses/wolverine_refugia_connectivity/director_package/` (the y2y / Alberta layout; `gis/` → `geotiffs/`; `summary.json` names the run; M7.15), not the run dir.**
 
 **Run sequence (Ethan, numeric order):** 01 (warps, nodes → check stop 1; variant → check stop 2; timing
 probe) → 02 (run dir on the variant, CWD, inherited cutoff, network, GW4, G15, priority, write_run) →

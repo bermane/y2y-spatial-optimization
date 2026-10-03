@@ -1,0 +1,30 @@
+{
+  "analysis": "wolverine_refugia_connectivity",
+  "run": "v2_run001",
+  "run_dir": "output_data/corridors_wolverine/v2_run001",
+  "run_git": {
+    "sha": "9003dfd00ca1d787615fce6584204b68aac02cb5",
+    "dirty": true
+  },
+  "cutoff": 13.622951589524746,
+  "cutoff_detour_km": 4.086885476857423,
+  "n_nodes": 130,
+  "n_links": 170,
+  "contracted": false,
+  "classified": true,
+  "classes": {
+    "both": 0,
+    "edge": 4,
+    "squeezed": 15,
+    "securing": 21
+  },
+  "link_geometry": null,
+  "corridor_km2": null,
+  "h8_open": false,
+  "already_connected": {
+    "pa": 26,
+    "ipca": 23
+  },
+  "layout": "analyses/wolverine_refugia_connectivity/director_package/{geotiffs,tables,figures,director_outputs} (y2y convention, 2026-10-01)",
+  "built": "2026-10-01 12:25"
+}

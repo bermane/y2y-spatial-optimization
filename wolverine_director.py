@@ -36,6 +36,12 @@ import corridors_director as cd
 import director_core as dc
 
 PKG_SUB = "director_package"
+# 2026-10-01 (Ethan, mirroring the northern change of the same day): the package lives beside the notebooks in the
+# y2y / Alberta folder structure -- analyses/wolverine_refugia_connectivity/director_package/{geotiffs, tables, figures,
+# director_outputs} + summary.json (the tracked index naming the run) -- not inside the gitignored run dir.
+# `package(..., out=)` overrides. One package holds ONE run: building from another run first moves the previous
+# contents to `_superseded_<run>/` (corridors_director._supersede_other_run, the y2y convention).
+PKG_DIR = config.PROJECT_DIR / "analyses" / "wolverine_refugia_connectivity" / PKG_SUB
 HILLSHADE = config.INPUT_DIR / "basemap" / "hillshade_y2y_300m.tif"
 
 # ---- every knob a notebook may turn (Ethan's asset rule) ---------------------------------
@@ -56,13 +62,13 @@ STYLE = dict(
     towns_full=["Whitehorse", "Fort St. John", "Prince George", "Calgary", "Missoula", "Jackson"],
     withheld_colours={"elevation_gt_2300_m": "#1B9E77", "slope_gt_30_deg": "#7570B3", "glacier": "#80B1D3"},
     endpoint_protected_frac=0.5,                            # a node counts as 'protected' when PAs cover >= this share
-    # W11 -- how protected land (existing PAs + proposed IPCAs, taken as given) enters the maps:
+    # W11 -- how protected land (existing PAs + proposed conservation areas, taken as given) enters the maps:
     #   "overlay":          draw every corridor band in full; hatch the protected land on top; links already
     #                       connected within protected land ('satisfied') drawn muted and labelled
     #   "unprotected_only": draw only the corridor land still to secure; satisfied links omitted
     protected_mode="overlay",
     satisfied_alpha=0.45,                                   # fill alpha for satisfied links in overlay mode
-    satisfied_outline={"pa": "#4D4D4D", "ipca": "#3E6F70"}, # outline colour of a satisfied link: by existing PAs / by proposed IPCAs
+    satisfied_outline={"pa": "#4D4D4D", "ipca": "#3E6F70"}, # outline colour of a satisfied link: by existing PAs / by proposed conservation areas
     protected_hatch={"pa": "///", "ipca": "\\\\"},             # PA hatch vs IPCA hatch over the bands
     protected_hatch_colour={"pa": "#4D4D4D", "ipca": "#3E6F70"}, protected_hatch_lw=0.5,
     draw_near_contiguous=True,                              # v2: hatched grey under the classes; v2.5 sets False (D-W6)
@@ -85,12 +91,12 @@ STYLE.update(option_markers=False,                           # 04: the old leade
              surface_alpha=0.85,                               # the corridor-pressure surface + its key at this alpha so the boundary lines show through (Ethan 2026-09-29)
              cost_surface_alpha=0.70,                          # 01's cost surface (Ethan 2026-09-29: more see-through than 02/04 so the boundaries read); None = follow surface_alpha
              protection_surface_alpha=0.65,                    # 03's pressure surface over the grey: lower still, so band-over-protected-land reads (Ethan 2026-09-29); None = surface_alpha
-             protection_fill="#8f8f8f", protection_alpha=0.85, # 06 · 03: existing PAs AND proposed IPCAs / PAs in the y2y layout's PA grey (director_plot.PA_COLOR) at 85%
+             protection_fill="#8f8f8f", protection_alpha=0.85, # 06 · 03: existing PAs AND proposed conservation areas in the y2y layout's PA grey (director_plot.PA_COLOR) at 85%
              protection_fill_pa=None, protection_fill_ipca=None,   # set BOTH to split the kinds into two neutrals (two legend rows); None = protection_fill for both
-             protection_label_pa="Existing protected areas", protection_label_ipca="Proposed IPCAs / PAs",
+             protection_label_pa="Existing protected areas", protection_label_ipca="Proposed conservation areas",
              protection_zorder=0.45,                           # ... drawn UNDER the corridor-pressure surface (0.5); 1.0 puts the grey over the bands
-             protection_label="Existing PAs and proposed IPCAs",     # short: the box must stay inside inset B's width
-             protection_pa_names=4, protection_ipca_names=3,   # 06 · 03 (Ethan 2026-09-29): the largest PAs / proposed IPCAs named in each inset (0 = none)
+             protection_label="Existing PAs and proposed conservation areas",     # short: the box must stay inside inset B's width
+             protection_pa_names=4, protection_ipca_names=3,   # 06 · 03 (Ethan 2026-09-29): the largest PAs / proposed conservation areas named in each inset (0 = none)
              protection_pa_min_km2=100,                        # PAs below this are never named there
              protection_ipca_suffix=", proposed",             # appended to a proposed area's name (both kinds share the one grey)
              protection_frame_names=False,                     # names on the Y2Y frame panel too (default: insets only)
@@ -172,8 +178,9 @@ def package(R, out=None, picks=None):
     pressure classes, the owner partition, the node table with names and PA overlap, the
     refugia classes, the PA context, jurisdictions, acts and the example selection."""
     assert getattr(R, "refugia", None) is not None, "this run has no refugia classes -- not a raster-node run"
-    P = SimpleNamespace(R=R, out=pathlib.Path(out) if out else R.run_dir / PKG_SUB)
-    P.fig, P.tab, P.gis = P.out / "figures", P.out / "tables", P.out / "gis"
+    P = SimpleNamespace(R=R, out=pathlib.Path(out) if out else PKG_DIR)
+    cd._supersede_other_run(P.out, R.run_id)
+    P.fig, P.tab, P.gis = P.out / "figures", P.out / "tables", P.out / "geotiffs"      # geotiffs/ (was gis/ until 2026-10-01)
     for d in (P.fig, P.tab, P.gis):
         d.mkdir(parents=True, exist_ok=True)
     e, classes = cc._routing_classes(R)
@@ -227,8 +234,34 @@ def package(R, out=None, picks=None):
     print(f"wolverine package: classes -> only viable {n.get('both', 0)} · last affordable {n.get('edge', 0)} · narrowing {n.get('squeezed', 0)} "
           f"· options {n.get('securing', 0)}{geo} | {len(P.nodes)} nodes | {len(P.examples)} examples | "
           f"H8 {'OPEN -- squeezed withheld' if P.h8_open else 'closed'} | already connected: {int((P.secured_by == 'pa').sum())} "
-          f"within existing PAs, {int((P.secured_by == 'ipca').sum())} only with the proposed IPCAs (mode '{STYLE['protected_mode']}')")
+          f"within existing PAs, {int((P.secured_by == 'ipca').sum())} only with the proposed conservation areas (mode '{STYLE['protected_mode']}')")
+    write_summary(P)                                                   # the tracked index: which run this package holds
+    try:
+        print(f"package -> {P.out.relative_to(config.PROJECT_DIR)}  (run {R.run_id})")
+    except ValueError:
+        print(f"package -> {P.out}  (run {R.run_id})")
     return P
+
+
+def write_summary(P):
+    """The package's tracked index (gitignore keeps summary.json + deck_outline.md): which run it was built
+    from and the headline counts, so a commit still says what the package contained."""
+    R, e = P.R, P.edges
+    cls = P.cls[~P.cls.isin(["adjacency"])] if hasattr(P, "cls") else pd.Series(dtype=str)
+    s = dict(
+        analysis="wolverine_refugia_connectivity", run=R.run_id, run_dir=str(R.run_dir.relative_to(config.PROJECT_DIR)),
+        run_git=R.rec.get("git"), cutoff=R.cutoff, cutoff_detour_km=R.cfg.get("cutoff_detour_km"),
+        n_nodes=int(len(P.nodes)), n_links=int(len(e)), contracted=bool(P.contracted), classified=bool(P.classified),
+        classes={k: int((cls == k).sum()) for k in ("both", "edge", "squeezed", "securing")},
+        link_geometry=({str(k): int(v) for k, v in e["link_geometry"].value_counts().items()}
+                       if "link_geometry" in e.columns else None),
+        corridor_km2=R.summary.get("corridor_area_km2", R.summary.get("corridor_km2")), h8_open=bool(P.h8_open),
+        already_connected=dict(pa=int((P.secured_by == "pa").sum()), ipca=int((P.secured_by == "ipca").sum())),
+        layout="analyses/wolverine_refugia_connectivity/director_package/{geotiffs,tables,figures,director_outputs} (y2y convention, 2026-10-01)",
+        built=pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
+    )
+    (P.out / "summary.json").write_text(json.dumps(s, indent=2, ensure_ascii=False, default=str))
+    return s
 
 
 def _complex_table(R):
@@ -661,7 +694,7 @@ def _node_key(P, ax):
         col, row = divmod(i, per_col)
         y = 0.93 - row * (0.90 / per_col)
         ax.text(0.02 + 0.5 * col, y, f"{int(r.node_id):>2}  {str(r.short)[:22]}", fontsize=size, color=ms.TYPE["legend"][3],
-                ha="left", va="top", family="monospace")
+                ha="left", va="top")                                   # the package font (Candara), not monospace (Ethan 2026-10-02)
 
 
 def _qa_hexes():
@@ -809,15 +842,15 @@ def _protection_legend(P, counts):
         rows.append((Patch(facecolor=ms.CLASS["securing"][0], alpha=STYLE["satisfied_alpha"], edgecolor=STYLE["satisfied_outline"]["pa"], linewidth=0.7),
                      f"Already connected within existing protected areas  [{n_pa}]"))
         rows.append((Patch(facecolor=ms.CLASS["securing"][0], alpha=STYLE["satisfied_alpha"], edgecolor=STYLE["satisfied_outline"]["ipca"], linewidth=0.7),
-                     f"Already connected once the proposed IPCAs are realized  [{n_ip}]"))
+                     f"Already connected once the proposed conservation areas are realized  [{n_ip}]"))
         rows.append((Patch(facecolor="none", edgecolor=STYLE["protected_hatch_colour"]["pa"], hatch=STYLE["protected_hatch"]["pa"], linewidth=0.5),
                      "Existing protected areas"))
         rows.append((Patch(facecolor="none", edgecolor=STYLE["protected_hatch_colour"]["ipca"], hatch=STYLE["protected_hatch"]["ipca"], linewidth=0.5),
-                     "Proposed IPCAs / PAs (taken as given)"))
+                     "Proposed conservation areas (taken as given)"))
     else:
         rows.append((Patch(facecolor="white", edgecolor=ms.AREA["pa_outline"]["edge"], linewidth=0.5),
                      f"Corridor land inside protected areas is not drawn; omitted links already connected: {n_pa} within existing PAs, "
-                     f"{n_ip} once the proposed IPCAs are realized"))
+                     f"{n_ip} once the proposed conservation areas are realized"))
     return rows
 
 
@@ -856,7 +889,7 @@ def figure_w1(P, run_tag=None):
            f"{len(P.edges)} links: {n_nc} join adjacent patches (no corridor to design), {n_un} too short for the width test and "
            f"classed on the alternative-link sense alone; {n_irr} corridor links with no affordable alternative; the top class also "
            f"requires the corridor to be below its barrier-free width. Already connected: {n_pa} within existing PAs, {n_ip} once the "
-           f"proposed IPCAs are realized; {unp:,.0f} of {tot:,.0f} km² of corridor land lies outside PAs and proposed IPCAs. "
+           f"proposed conservation areas are realized; {unp:,.0f} of {tot:,.0f} km² of corridor land lies outside PAs and proposed conservation areas. "
            + ("Squeezed class pending the counterfactual (H8 open). " if P.h8_open else "")
            + "Basemap: Natural Earth, Copernicus GLO-90 hillshade.")
     return _finish(P, fig, ns, "W1", "where the options are closing", cap, run_tag)
@@ -971,7 +1004,7 @@ def _link_rows(P, ids, nums=None):
         cpf = r.get("centreline_protected_frac", np.nan); cpa = r.get("centreline_pa_frac", np.nan); cpi = r.get("centreline_ipca_frac", np.nan)
         by = P.secured_by.get(eid, "")
         status = ("already connected within existing PAs" if by == "pa" else
-                  "already connected once the proposed IPCAs are realized" if by == "ipca" else
+                  "already connected once the proposed conservation areas are realized" if by == "ipca" else
                   ("partly protected" if pd.notna(cpf) and cpf > 0 else "unprotected"))
         geo = ("adjacent — barrier between" if c == "near_contiguous_barrier" else "adjacent — no corridor needed" if c == "near_contiguous"
                else ("width not assessable (too short)" if bool(r.get("width_not_assessable", False)) else "corridor link"))
@@ -988,7 +1021,7 @@ def _link_rows(P, ids, nums=None):
             "Narrowest tenth (p10 width ratio)": (f"{float(w10):.2f}" if pd.notna(w10) else "—"),
             "Protection status": status,
             "Route inside existing PAs (%)": (f"{100*cpa:.0f}" if pd.notna(cpa) else "—"),
-            "Route inside proposed IPCAs only (%)": (f"{100*cpi:.0f}" if pd.notna(cpi) else "—"),
+            "Route inside proposed conservation areas only (%)": (f"{100*cpi:.0f}" if pd.notna(cpi) else "—"),
             "Corridor land to secure (km²)": round(float(bu) if pd.notna(bu := r.get("band_unprotected_km2", np.nan)) else band - prot),
             "Room to move (route branches)": (int(nb) if pd.notna(nb := r.get("n_branches", np.nan)) else "—"),   # D25: near-contiguous links have no decomposition
             "Cheapest alternative (× link cost)": ("none ≤ β" if pd.isna(br) or br is None else f"{float(br):.1f}×"),
@@ -1089,7 +1122,7 @@ def export_gis(P, out=None):
                      hillshade=str(HILLSHADE) + " (multiply, 18% opacity)",
                      admin_lines=str(ms.BASEMAP_DIR / "ne_10m_admin_1_states_provinces_lines.shp"),
                      y2y_boundary=str(config.CORRIDOR_REF)),
-        fonts="Noto Sans (input_data/basemap/fonts)", type=ms.TYPE,
+        fonts=f"{ms.font_in_use()} (system; DejaVu Sans fallback)", type=ms.TYPE,
     )
     (out / "style.json").write_text(json.dumps(style, indent=2, ensure_ascii=False))
     print(f"GIS export -> {out}: corridor_pressure.gpkg ({len(pressure)} links), refugia.gpkg, nodes.gpkg ({len(nd)}), "
@@ -1119,7 +1152,7 @@ def qa_report(P):
 # and northern packages); colours and words = `corridors_mapstyle` (ONE source). Differences here: the frame is the WHOLE
 # Y2Y (drawn at 600 m -- the frame panel is ~2.9 in for 1,286 km, so one 300 dpi pixel is ~1.5 km and the 300 m grid gains
 # nothing), the layout's grey layer is the existing PAs (context), the overlay in the IPCA role is the REFUGIA NODES (filled
-# in the §3a core tone, outlined, named in the insets), and the proposed IPCAs are a second fill drawn OVER the corridor land
+# in the §3a core tone, outlined, named in the insets), and the proposed conservation areas are a second fill drawn OVER the corridor land
 # -- so corridor land inside PAs / IPCAs reads as already satisfied by the overlay (Ethan 2026-09-28, W11 overlay mode).
 WIDE_STYLE = dict(
     map_layout="wide", inset_clusters=(1, 2), inset_windows=None,
@@ -1128,7 +1161,9 @@ WIDE_STYLE = dict(
     inset_town_skip={}, main_skip_codes=("CA",),                          # the y2y frame's own skips; inset windows are ours
     wide_main_towns=(), wide_main_names="abbrev",                          # the frame panel: postal codes only, no towns
     pa_layer_min_km2=300, inset_pa_names=4, window_scale_km=250,           # named PAs in the insets; a 250 km bar on the Y2Y frame
-    hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=True,
+    hillshade=True, water=True, titles=False, export_dpi=300, export_pdf=False,   # PNG only (Ethan 2026-10-01: no PDF twin)
+    option_lw=0.8, option_halo=0.8,                # route-option outlines (04 + the 05b locators), pt on the frame (Ethan 2026-10-01: thinner, with the north)
+    conseq_rep_mark="",                            # 06: row headers as before (no † on Representativeness; with the north, Ethan 2026-10-01)
     wide_legend_between=True, wide_legend_fit=True, wide_legend_fs_min=9,   # Ethan 2026-09-29: the legend box centred between inset B's bottom and the page bottom, its
                                                                              # items shrunk (font units) until the box fits the gap
     pa_alpha=0.85,                                                           # the layout's PA grey at 85% (the northern maps' value); inert here -- every frame is built without the PA layer
@@ -1139,7 +1174,7 @@ WIDE_INSET_KM = 350            # inset windows floor (each side), before the asp
 NODE_WIDE_LABEL = "Core wolverine refugia (the nodes)"
 WIDE_TOWNS = {**dc.Y2Y_TOWNS, "Fort Liard": (60.24, -123.47), "Nahanni Butte": (61.03, -123.38),   # added for inset A (Ethan 2026-09-29) -- both fell off its east
               "Lower Post": (59.92, -128.49)}                                                       # edge after the window moved; Lower Post (Ethan's pick) sits on its west edge
-IPCA_WIDE_LABEL = "Proposed IPCAs / PAs"
+IPCA_WIDE_LABEL = "Proposed conservation areas"
 PA_WIDE_LABEL = "Existing protected areas"
 
 
@@ -1257,7 +1292,7 @@ def _base_overlay(F, P):
 
 def _wide_overlay(F, P=None):
     """The overlay callback for the wide layout: the near-contiguous bands first (D25, with `P`), then the refugia nodes filled
-    in the §3a core tone (opaque, like the layout's PA grey, so the two kinds read alike) + outlined, and the proposed IPCAs
+    in the §3a core tone (opaque, like the layout's PA grey, so the two kinds read alike) + outlined, and the proposed conservation areas
     filled in the §3a IPCA tone OVER the corridor land (already satisfied) + dashed outlines. Called on the frame and on every inset."""
     import director_plot as dp
     core, ip = ms.AREA["refugia_core"], ms.AREA["ipca"]
@@ -1523,7 +1558,7 @@ def figure_choices_wide(P, path, insets="examples"):
     print("links per class: " + " · ".join(f"{c} {n}" for c, n in counts.items())
           + f" | adjacent {sum(n_nc.values())} ({', '.join(f'{k.split(chr(95))[-1]} {v}' for k, v in n_nc.items())})"
           + (" | H8 OPEN -- squeezed folded into securing" if P.h8_open else "")
-          + f" | already connected: {n_pa} within existing PAs, {n_ip} once the proposed IPCAs are realized"
+          + f" | already connected: {n_pa} within existing PAs, {n_ip} once the proposed conservation areas are realized"
           + f" | band = about {P.R.cutoff * P.R.cell_km:.1f} km of extra travel on open ground")
     return _wide(P, path, S_, insets)
 
@@ -1561,10 +1596,10 @@ def _options_overlay(P, F, nums=None):
     def draw(ax):
         fr_draw(ax); base_draw(ax)
         if STYLE.get("option_style", "outline") == "outline":
-            lw = dp.STYLE["cluster_lw"] * 1.6 * dp.STYLE.get("_lw_scale", 1.0)
+            lw = dp.STYLE.get("option_lw", 0.8) * dp.STYLE.get("_lw_scale", 1.0)          # thinner (Ethan 2026-10-01, with the north; was cluster_lw × 1.6)
             for m, col in layers:
                 mf = m.astype(np.float32)
-                ax.contour(mf, levels=[0.5], colors=["white"], linewidths=lw + 1.4, zorder=3.55)
+                ax.contour(mf, levels=[0.5], colors=["white"], linewidths=lw + dp.STYLE.get("option_halo", 0.8), zorder=3.55)
                 ax.contour(mf, levels=[0.5], colors=[col], linewidths=lw, zorder=3.6)
         else:                                                                  # "fill": the band in its colour (the first wolverine 03)
             for m, col in layers:
@@ -1634,7 +1669,7 @@ def _reference_masks(P):
         if not len(g):
             print(f"  reference {name!r}: not found in the {layer} layer -- column skipped"); continue
         m = rasterize(((geom, 1) for geom in g.geometry), out_shape=R.shape, transform=R.transform, fill=0, dtype="uint8").astype(bool)
-        out.append((name, m))
+        out.append((layer, name, m))                                       # (layer "pa" | "ipca", column name, 300 m mask)
     return out
 
 
@@ -1650,16 +1685,27 @@ def option_profiles_y2y(P, nums=None):
         return cache[key]
     R = P.R
     G = dc.grid(); B = dc.block_percentiles(G); VR = dc.ValueRatios(G, B)
+    COEX = dc.coexistence_layer(G)                                        # the bear-coexistence row (package spec v2.2); None -> empty cells
     items = [("option", n, t, m) for n, t, m, _ in cd._option_masks(P) if n in nums]
-    items += [("reference", "", name, m) for name, m in _reference_masks(P)]
+    items += [(f"reference_{layer}", "", name, m) for layer, name, m in _reference_masks(P)]
     rows = []
     for kind, num, name, m in items:
         w1 = cc._to_audit_frac(R, m)[G.pu]
         assert w1.sum() > 0, f"{kind} {num or name}: no 1 km cover"
         pct = {ax: float((w1 * B.axes[ax]).sum() / w1.sum()) for ax in dc.STAR_AXES}
-        rat = VR.of(None, weights=w1)
-        rows.append(dict(kind=kind, number=str(num), name=str(name).replace("\n", " — "), area_km2=int(m.sum()) * R.cell_km2,
-                         **{f"pct_{a}": v for a, v in pct.items()}, **{f"ratio_{a}": v for a, v in rat.items()}))
+        # the y2y consequences rule, package spec v2.2 (M4.42; with the northern option_profiles_y2y, 2026-10-01): representativeness = the
+        # mean representation quotient -- a locked reference (Banff) on on-extent footprints + total land ("extent", footnoted); an option
+        # band or an IPCA on its unprotected part with the allocatable basis; the other rows on the whole footprint
+        basis = "extent" if kind == "reference_pa" else "allocatable"
+        w_rep = w1 if basis == "extent" else w1 * G.disc
+        rat = VR.of(None, weights=w1, basis=basis)
+        if basis == "allocatable":
+            rat["representativeness"] = VR.of(None, weights=w_rep, basis=basis)["representativeness"] if w_rep.sum() > 0 else np.nan
+        extras = dc.rep_extras(VR, basis, weights=(w_rep if w_rep.sum() > 0 else w1))
+        bear = dc.bear_programs(COEX, G, weights1d=w1)
+        rows.append(dict(kind=("reference" if kind.startswith("reference") else kind), number=str(num), name=str(name).replace("\n", " — "),
+                         area_km2=int(m.sum()) * R.cell_km2, pct_protected=100.0 * float((w1 * G.locked).sum() / w1.sum()),
+                         **{f"pct_{a}": v for a, v in pct.items()}, **{f"ratio_{a}": v for a, v in rat.items()}, **extras, **bear))
     df = pd.DataFrame(rows)
     cache[key] = df; P._y2y_profiles = cache
     return df
@@ -1669,7 +1715,7 @@ def option_stars(P, path, nums=None):
     """05 · 04 -- star plots of the route options on the y2y asset (director_plot.star_grid, one star per option in its colour)."""
     import director_plot as dp
     df = option_profiles_y2y(P, nums)
-    prof = [dict(title=f"Option {int(r.number)}\n({r['name']})\n{r.area_km2:,.0f} km²", values={a: float(r[f"pct_{a}"]) for a in dc.STAR_AXES},
+    prof = [dict(title=("Option " + str(int(r.number)) + (f"\n{r.area_km2:,.0f} km²" if dp.STYLE.get("option_star_area", True) else "")), values={a: float(r[f"pct_{a}"]) for a in dc.STAR_AXES},
                  color=cd.option_color(int(r.number))) for _, r in df[df.kind == "option"].iterrows()]
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     dp.star_grid(prof, path, "Route options — value profile (percentile vs the allocatable landscape)")
@@ -1705,7 +1751,8 @@ def option_locators(P, path, nums=None, insets="examples", panel_px=None):
         try:
             for ax, tag in zip(axes, tags):
                 win = dp._fit_window(F, wins[tag], 1.0)
-                dp._draw_inset(F, ax, win, draw, tag, (STYLE.get("complex_labels", "none") != "none"), towns=STYLE_["locator_towns"], codes=None, img=S2["img"], cmap=S2["cmap"], norm=S2["norm"])
+                # no A / B title on the locator panels: the y2y locators carry none (Ethan 2026-10-03, with the north)
+                dp._draw_inset(F, ax, win, draw, "", (STYLE.get("complex_labels", "none") != "none"), towns=STYLE_["locator_towns"], codes=None, img=S2["img"], cmap=S2["cmap"], norm=S2["norm"])
         finally:
             STYLE_.pop("_fs_scale", None); STYLE_.pop("_lw_scale", None); STYLE_["inset_fs"] = fs0; STYLE_["inset_pa_names"] = pa0
         path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
@@ -1731,7 +1778,7 @@ def option_consequences(P, path, nums=None):
     P.tab.mkdir(parents=True, exist_ok=True); df.to_csv(P.tab / "route_option_consequences.csv", index=False, encoding="utf-8-sig")
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     dp.consequences_table(F, rows, path, "ROUTE OPTIONS  ·  CONSEQUENCES", "What the route options hold", ref=ref,
-                          col_label=lambda r, wrap=18: f"Option {int(r.number)}\n({textwrap.fill(str(r.name), wrap)})", group_label="Route options",
+                          col_label=lambda r, wrap=18: f"Option {int(r.number)}", group_label="Route options", unit_word="option",      # the link name dropped (Ethan 2026-10-02, with the north)
                           source=f"Y2Y wolverine refugia corridors ({P.R.run_id}, least-cost network on the withheld-terrain surface); "
                                  f"values on the Y2Y director construction (manifest {dc.VP.version} layers).")
     return df
@@ -1803,7 +1850,7 @@ def _front_overlay(F, P):
 
 def _complex_overlay(F, P):
     """The v3 network map's overlay: complexes filled in the refugia tone with an alpha step by their share inside existing
-    PAs (protection shading), outlined; the proposed IPCAs filled over corridor land (W11); the p10 pinch marked on every
+    PAs (protection shading), outlined; the proposed conservation areas filled over corridor land (W11); the p10 pinch marked on every
     corridor link. No near-contiguous bands (D-W6). Returns (draw, handles)."""
     import director_plot as dp
     pins = _pinch_points(P) if STYLE.get("pinch_marker", True) else []
@@ -1929,7 +1976,7 @@ def figure_network_wide(P, path, insets="fixed"):
     handles = handles + fr_handles + _boundary_handles()
     n_f = int(sum(1 for k in P.cls.index if P.kind.get(k) == "front")); n_pa, n_ip = int((P.secured_by == "pa").sum()), int((P.secured_by == "ipca").sum())
     print("strips per class: " + " · ".join(f"{c} {n}" for c, n in counts.items()) + f" | fronts {n_f} | {len(P.nodes)} nodes"
-          + f" | already connected: {n_pa} within existing PAs, {n_ip} once the proposed IPCAs are realized | band = about {P.R.cutoff * P.R.cell_km:.1f} km of extra travel on open ground")
+          + f" | already connected: {n_pa} within existing PAs, {n_ip} once the proposed conservation areas are realized | band = about {P.R.cutoff * P.R.cell_km:.1f} km of extra travel on open ground")
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     dp.wide_map(F, path, "", draw, handles, with_ipca_names=(STYLE.get("complex_labels", "none") != "none"), surface=S_)
     _legend_note()
@@ -2067,7 +2114,7 @@ def figure_protection_wide(P, path, insets="fixed"):
     """06 · 03 -- the network by corridor pressure (02's surface and key) over protected land: existing PAs and the proposed
     IPCAs / PAs as ONE grey layer (director_plot.PA_COLOR #8f8f8f at 85%) UNDER the bands, the refugia as on 01, the largest PAs and
     proposed areas NAMED in each inset with no text overlapping (STYLE protection_pa_names / protection_ipca_names; the proposed
-    ones carry protection_ipca_suffix). Prints the corridor land inside existing PAs / inside the proposed IPCAs only / outside both."""
+    ones carry protection_ipca_suffix). Prints the corridor land inside existing PAs / inside the proposed conservation areas only / outside both."""
     import director_plot as dp
     F = director_frame(P)                                                      # the default no-PA frame: the grey and the names are this map's
     S_, counts = _strips_surface(P)
@@ -2084,7 +2131,7 @@ def figure_protection_wide(P, path, insets="fixed"):
     pa = np.asarray(R.protected_pa, bool) if getattr(R, "protected_pa", None) is not None else P.pa_mask300
     ip = np.asarray(R.protected_ipca, bool) if getattr(R, "protected_ipca", None) is not None else np.zeros(R.shape, bool)
     a_ = R.cell_km2; k_pa, k_ip, k_out = (corr & pa).sum() * a_, (corr & ip & ~pa).sum() * a_, (corr & ~pa & ~ip).sum() * a_
-    print(f"corridor land {corr.sum() * a_:,.0f} km²: inside existing PAs {k_pa:,.0f} ({k_pa / (corr.sum() * a_):.0%}) · inside the proposed IPCAs / PAs only "
+    print(f"corridor land {corr.sum() * a_:,.0f} km²: inside existing PAs {k_pa:,.0f} ({k_pa / (corr.sum() * a_):.0%}) · inside the proposed conservation areas only "
           f"{k_ip:,.0f} ({k_ip / (corr.sum() * a_):.0%}) · outside both {k_out:,.0f} ({k_out / (corr.sum() * a_):.0%})"
           + f" | links already connected: {int((P.secured_by == 'pa').sum())} within existing PAs, {int((P.secured_by == 'ipca').sum())} once the IPCAs are realized")
     path = pathlib.Path(path); path.parent.mkdir(parents=True, exist_ok=True)
@@ -2101,7 +2148,7 @@ def table_complexes(P):
         "Complex": g["node_id"], "Name": g["name"], "Patches": g["n_patches"], "Patch ids": g["patch_ids"] if "patch_ids" in g.columns else "",
         "Area (km²)": g["area_km2"].round(0).astype(int),
         "Inside existing PAs (%)": (100 * g["pa_overlap_frac"]).round(0).astype("Int64"),
-        "Added by proposed IPCAs (%)": (100 * g["ipca_added_share"]).round(0).astype("Int64") if "ipca_added_share" in g.columns else 0,
+        "Added by proposed conservation areas (%)": (100 * g["ipca_added_share"]).round(0).astype("Int64") if "ipca_added_share" in g.columns else 0,
         "In the prioritizr core (%)": (100 * g["core_share"]).round(0).astype("Int64") if "core_share" in g.columns else np.nan,
         "Outside PAs, IPCAs and core (%)": (100 * g["outside_all_share"]).round(0).astype("Int64") if "outside_all_share" in g.columns else np.nan,
         "Within-complex slivers": g["n_slivers"], "Slivers with a cost-100/1000 feature": g["n_slivers_with_feature"],
@@ -2179,7 +2226,7 @@ def table_corridors(P):
                      "Route branches": (int(r["n_branches"]) if pd.notna(r.get("n_branches")) else np.nan),
                      "Band land (km², dissolved per link; links overlap)": round(band), "Outside PAs and IPCAs (km²)": round(unp),
                      "Crosses unprotected land": bool(unp > 0),
-                     "Already connected": {"pa": "within existing PAs", "ipca": "once the proposed IPCAs are realized", "": "no"}.get(by, by),
+                     "Already connected": {"pa": "within existing PAs", "ipca": "once the proposed conservation areas are realized", "": "no"}.get(by, by),
                      "Complex i inside PAs (%)": int(round(100 * float(prot.loc[ci, "pa_overlap_frac"]))) if ci in prot.index else np.nan,
                      "Complex j inside PAs (%)": int(round(100 * float(prot.loc[cj, "pa_overlap_frac"]))) if cj in prot.index else np.nan,
                      "Path (km)": round(float(r.get("lcp_len_cells", np.nan)) * R.cell_km, 1) if pd.notna(r.get("lcp_len_cells")) else np.nan,
@@ -2279,13 +2326,13 @@ def _node_act(P, nid):
 
 
 def table_nodes_v25(P):
-    """§5 Nodes table: one row per refugia patch -- area, share in existing PAs, incremental share from proposed IPCAs, share in the
+    """§5 Nodes table: one row per refugia patch -- area, share in existing PAs, incremental share from proposed conservation areas, share in the
     prioritizr core, mean gHM (the 300 m human proxy), act, and its links by kind and class."""
     g = P.nodes
     df = pd.DataFrame({
         "Node": g["node_id"], "Name": g["name"], "Area (km²)": g["area_km2"].round(0).astype("Int64"),
         "Inside existing PAs (%)": (100 * g["pa_share"]).round(0).astype("Int64"),
-        "Added by proposed IPCAs (%)": (100 * g["ipca_added_share"]).round(0).astype("Int64"),
+        "Added by proposed conservation areas (%)": (100 * g["ipca_added_share"]).round(0).astype("Int64"),
         "In the prioritizr core (%)": (100 * g["core_share"]).round(0).astype("Int64"),
         "Outside PAs, IPCAs and core (%)": (100 * g["outside_all_share"]).round(0).astype("Int64"),
         "Mean human modification (gHM, 90 m max in cell)": g["mean_ghm90max"].round(3) if "mean_ghm90max" in g.columns else np.nan,
@@ -2316,7 +2363,7 @@ def table_links_v25(P):
                      "Front cut (narrower than half the barrier-free width)": bool(r.get("front_cut", False)) if P.kind.get(k) == "front" else pd.NA,
                      "Band land (km², dissolved per link; links overlap)": round(float(r.get("band_new_km2", np.nan))) if pd.notna(r.get("band_new_km2")) else pd.NA,
                      "Outside PAs and IPCAs (km²)": round(float(r.get("band_unprotected_km2", np.nan))) if pd.notna(r.get("band_unprotected_km2")) else pd.NA,
-                     "Already connected": {"pa": "within existing PAs", "ipca": "once the proposed IPCAs are realized", "": "no"}.get(P.secured_by.get(k, ""), ""),
+                     "Already connected": {"pa": "within existing PAs", "ipca": "once the proposed conservation areas are realized", "": "no"}.get(P.secured_by.get(k, ""), ""),
                      "In the minimum network": bool(r.get("in_mst", False)), "Path (km)": round(float(r.get("lcp_len_cells", np.nan)) * R.cell_km, 1) if pd.notna(r.get("lcp_len_cells")) else pd.NA,
                      "Act": P.acts.get(k, "")})
     df = pd.DataFrame(rows)

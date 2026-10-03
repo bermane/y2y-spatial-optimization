@@ -437,7 +437,7 @@ ANALYSES = {
         "feature_weight_multipliers": {},
     },
     "northern_ipcas": {
-        # Connect the NORTHERN proposed IPCAs (northern BC + Yukon): crop to their convex hull,
+        # Connect the NORTHERN proposed conservation areas (northern BC + Yukon): crop to their convex hull,
         # lock them in as anchors alongside existing PAs, and up-weight connectivity so the solve
         # fills the best land linking them. SUPERSEDES the old 4-IPCA "north_bc" analysis.
         "results_subdir": "iter6_northern_ipcas",
@@ -450,7 +450,7 @@ ANALYSES = {
         # Northern subset only -- "everything north of the polygons we were previously using,
         # nothing further south". A clean data gap at 54.05-56.26N makes 55 unambiguous.
         "source_filter": {"min_lat": 55.0},
-        # Lock BOTH existing PAs and the proposed IPCAs (drafts treated as effectively protected
+        # Lock BOTH existing PAs and the proposed conservation areas (drafts treated as effectively protected
         # since they are likely to be designated) -> 196,195 cells = 40.7% of the window.
         # budget 0.43 = that 40.7% + ~11,200 cells of NEW connective corridor. TRIMMED from 0.46
         # (~25,700) so the solve spends its area only on the best connective land -- a leaner
@@ -587,9 +587,9 @@ RESULTS_04 = {
                       "source_filter": {"min_lat": 55.0}, "top_n": 6},
         "benchmark_title": "Proposed IPCA anchors",
         "manual_area": None,
-        # maps draw existing PAs (grey) and the locked proposed IPCAs (teal) as separate layers;
+        # maps draw existing PAs (grey) and the locked proposed conservation areas (teal) as separate layers;
         # this labels the teal one.
-        "anchor_label": "proposed IPCAs (committed)",
+        "anchor_label": "proposed conservation areas (committed)",
         "outline_label": "analysis window (IPCA hull + 25 km)",
         # show the Y2Y corridor boundary for geographic context, and zoom out 25% so there is
         # breathing room around the window. Framing to the FULL corridor ("context") would shrink
@@ -767,7 +767,7 @@ CORRIDORS = {
         },
 
         # ---- nodes to connect ----------------------------------------------------------
-        # The northern proposed IPCAs + existing PAs above a size in the region.
+        # The northern proposed conservation areas + existing PAs above a size in the region.
         # dedupe_overlap_frac: merge two nodes when their rasterized masks share at least this
         # fraction of the SMALLER node -- the same place entered twice under nesting designations
         # (Teetł'it Gwinjik inside the Peel Watershed SMA/WA; Fishing Branch Wilderness Preserve

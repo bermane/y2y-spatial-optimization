@@ -951,3 +951,26 @@ unprotected land (the ensemble core of 37,879 km² lies 100.0% inside it; Jaccar
 from the balanced result, they never add). Five regional clusters north → south by the registered procedure: Yukon 2,232 km² (mean
 f 0.77), Stikine 11,888 (0.82), Kootenays/Columbia 18,347 (0.84), Central Idaho / Salmon–Bitterroot 11,252 (0.84), Greater Yellowstone
 3,075 (0.85) — the fifth is new relative to the ensemble core. Act 2 tiers against the balanced core (zero-solve, measured 2026-09-23 on the v4 guarded record; identical on Ethan's run): frequent-minus-core climate refugia forward 25,899 km² / structural connectivity forward 37,333 / climate corridors forward 552 / mammal + bird richness forward 914 / biomass + soil carbon forward 22,688; by owner (highest f; 2+ its own class) 23,512 / 33,764 / 12 / 58 / 17,917 and 5,898 km² under two or more; union of the named tiers 81,161 km² (7.5% of allocatable land); opportunity 919,251 km² (85.0%); never 29,893 km² (2.8%). **Balanced-core land each lean gives up** (core cells not frequent under the lean): climate refugia 13,877 km² (27% of the core), structural connectivity 14,912 (29%), climate corridors 27,367 (53%), mammal + bird richness 19,709 (38%), biomass + soil carbon 16,818 (33%) — the corridors lean gives up the most core while owning almost nothing of its own. Climate-conditional core: 40,930 km² frequent under BOTH refugia futures, 12,369 only under SSP585, 19,367 only under SSP245 (per-level tiers 53,299 / 60,297 km²). Clusters: 2,211 components, 93 ≥ 100 km² (46,674 km²); adequacy pins 0 of 170 register rows. Sensitivity: 0.60 → 71,440 km² tier (114 kept), 0.70 → 51,580 (93). T-D1 and the v3.1 survival table → Ethan's run.
+
+**R11.5 (2026-10-01) — representativeness as the mean representation quotient (spec v2.2; zero-solve on the v4 record, identical on
+Ethan's run).** Core clusters north → south: Yukon 0.32× (flat count 0.67×; standout aerobic caves + underground streams 2.4×), Stikine 1.4×
+(standout ice sheets / glaciers / perennial snowfields 9.7×), Kootenays / Columbia Mountains 0.99× (polar/alpine cliffs, screes, outcrops
+5.0×), Central Idaho 1.6× (young rocky pavements, lava flows and screes 9.0×). References: Banff 1.1× on the on-extent basis (flat 1.3×;
+glaciers 7.8×); Dene Kʼéh Kusān's unprotected part 0.52× (polar tundra and deserts 2.4×); all PAs 1.05× (on-extent); the IPCAs' unprotected
+part 0.55×. Reading: the quotient re-orders the clusters relative to the flat count — the Yukon and Stikine cores sit on few but rare
+groups (glaciers, caves), the southern cores on many common ones.
+
+**R11.6 (2026-10-01) — bear-coexistence cells (spec v2.2) and the transform / tail checks on the consequences table (zero-solve on the v4
+record; identical on Ethan's run).** Bear row, per overlapped polygon "N (P%)" (amended the same day): Yukon, Stikine and Dene Kʼéh Kusān none recorded (0%);
+Kootenays / Columbia Mountains — East Kootenay 3 (40%), Columbia-Shuswap 1 (25%), Fraser-Fort George 1 (10%), Alberta Division 9 1 (8%),
+Central Kootenay 4 (7%), Alberta Division 15 3 (2%); Central Idaho — Beaverhead 2 (3%), Missoula 4 (3%), Powell 2 (1%), Madison (MT-
+labelled, QA-flagged copy) 2 (0%); Banff — Alberta Division 15 3 (100%), Division 9 1 (0%), East Kootenay 3 (0%). Totals kept in T-D1
+(`bear_groups_n` / `bear_recorded_pct`: Kootenays 13 / 92%, Central Idaho 10 / 7%, Banff 7 / 100%). **Transforms:** the connectivity row reads the RAW current (`director_core.RATIO_SOURCE`, since 2026-09-23) and the
+refugia row the floored 1/v (byte-identical to the base layer: the floor binds no cell) — the units line now says "ratios use the
+untransformed layers". **Refugia tail check (the spec's one-time mean-vs-median flag, T-D7_mean_vs_median_check):** NOT tail-driven — on
+every core cluster the refugia MEDIAN ratio exceeds the mean (Stikine 3.29× mean vs 4.28× median; Kootenays 3.24 vs 3.74; Central Idaho
+2.91 vs 3.00; Yukon 0.52 vs 0.69), i.e. the mean is pulled DOWN by low-residence-time cells, not up by a tail; no core-cluster refugia or
+connectivity pair crosses the 1.5× flag. The flags that DO fire are the carbon rows on nearly every unit (mean 0.2–0.6× the median: the
+soil-carbon density is right-skewed within clusters, the mean sits below the typical cell) and Banff's structural connectivity (mean 0.86×,
+median 0.32× — a few high-current valleys inside a mostly low-current park); representativeness flags on the small / Act 2 units are the
+discrete class count (medians at 0.67 / 1.0 / 1.33). Disclosed, not corrected: the mean is the quantity the optimizer saw.

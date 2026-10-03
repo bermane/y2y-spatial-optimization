@@ -759,6 +759,22 @@ the lookup's own VET note asked for a per-cluster word inside Division 15. Propo
 Mountain natural region (subalpine 1,306 / alpine 276 / montane 46 km²) against 117 km² of Upper Foothills — the front ranges east of the park
 boundary (Bighorn backcountry, White Goat, Siffleur, Kootenay Plains) — so its word is "Alberta Rockies" (Ethan 2026-09-30: Rockies, not foothills; no qualifier). The region word is presentation; nothing measured changes.
 
+**M20.12 Consequences table re-pinned to the parent's package spec v2.2 (parent M4.42 + addenda, 2026-10-01; Ethan: "re do the consequences table
+to match the y2y analysis").** 15 now writes what the parent's 19 writes: (a) REPRESENTATIVENESS = the mean representation quotient — per cell Σ over
+the curated EFG rasters present of 1 ÷ that class's footprint on Alberta's allocatable land; ratio = area mean ÷ allocatable mean (`director_core.ValueRatios`,
+shared; the footprints and land are ALBERTA's, per the package's denominator rule) — with `rep_basis`, the v2.1 flat-count ratio kept
+(`ratio_representativeness_flatcount`), the STANDOUT group (`standout_group` / `standout_quotient`, a second table row "name (N×)") and every
+group's quotient under both footprints (`rq_alloc_<stem>`, `rq_extent_<stem>`; 13 stems on Alberta); locked reference areas (all existing PAs;
+Willmore; Peter Lougheed) on the EXTENT basis (on-extent footprints + total land, ‡ in the render), the Upper Smoky unprotected parts on the
+allocatable basis. (b) THE BEAR ROW = one entry per overlapped census division / county with a record, "N (P%)" (its count; its share of the area's
+cells), largest overlap first, polygons under 1% of the area omitted (`BEAR_MIN_SHARE_PCT`), no name-based dedup — the namesake-copy flag stays in
+the register (`bear_suspect_units` from the communities QA); `bear_groups_n` / `bear_recorded_pct` / `bear_by_division` / `bear_by_division_named`
+beside the v2.1 mean. The render (shared `director_plot.consequences_table`: † representativeness note, ‡ locked references, * bear note, general
+Note and Source lines off) is the parent's. Presentation only; nothing measured changes. The parked 12 is NOT re-pinned (its T-D7 stays v2.1
+until the Alberta run's package is next rebuilt). **Step-back the same hour (parent M4.42 addendum, Ethan): the deck table shows the bear row as the
+cell-weighted MEAN count again (`STYLE["conseq_bear_mode"] = "mean"`) and the standout-group row is OFF (`conseq_standout_row`); the v2.2 representativeness
+quotient stays the row's statistic. Both are shared defaults, so 16 follows with no change; 15's register keeps every v2.2 column, as the parent's 19 does.**
+
 ### M20 — PENDING RE-PIN: parent package spec v2.1 / study plan v0.20.1 (2026-09-23)
 The parent redefined the director-facing core as the BALANCED scenario's guarded frequent tier (f_S0 averaged over the two climate
 levels, ≥ 0.70) with the ensemble F kept as the paper's estimand in the appendix, Act 2 tiers relative to the balanced core, and new

@@ -180,6 +180,60 @@ rule; quantitative outcomes live there, methods decisions here);
   and the 07 maps (`_near_contiguous_wide`); legend rows after the four. Approximate run002 read (area/length width): ~11 of
   45 links near-contiguous (T’akú Tlatsini ↔ Mount Edziza / Stikine, Dene ↔ Liard River Corridor, Tatonduk ↔ Fishing Branch,
   Wędzih Yiné' ↔ Chase, …), 0 below the width floor, 8 below the length floor (R10, to be measured properly on run003).
+- **M5.35 Locators without the A / B titles (2026-10-03, Ethan; presentation):** 07 · 04b's panels drop the tag letter, as the y2y cluster
+  locators (`cluster_locators` passes an empty title). The panel files keep their `_A` / `_B` suffixes. Wolverine 06 · 05b the same.
+- **M5.34 Candara everywhere (Ethan 2026-10-02, presentation):** `corridors_mapstyle.FONT_FAMILY` = ["Candara", "DejaVu Sans"] (was Noto Sans), so the §3a record figures draw in the same typeface as the curated outputs, which already took it through `director_plot.SPEC_RC` (y2y M4.40 addendum); Candara's Bold face serves the 600-weight roles; Noto stays registered for the earlier record. The §3a contract's typeface line is superseded. Nothing measured changes.
+- **M5.33 Star titles "Option N" + area (2026-10-02, Ethan; presentation):** the 07 · 04 star titles drop the link name ("Option 1 / 3,682 km²");
+  the area line stays as on the y2y cluster stars (`WIDE_STYLE["option_star_area"]` = False removes it). Wolverine 06 · 05 the same.
+  **M5.31 addendum (2026-10-02, later; "the .png outputs are cropped wrong"):** the full-page export had left the block low on the canvas — a blank
+  band above the insets, the cost key's caption off the bottom. The shared asset now centres the drawn block vertically before saving
+  (`director_plot._fit_page`, y2y M4.40 addendum); 07's maps inherit it. Re-render 07.
+- **M5.32 Wording (Ethan 2026-10-02, presentation):** every legend, caption, table header and key that said "Proposed IPCAs" (or "Proposed IPCAs / PAs") now says "Proposed conservation areas" — `corridors_mapstyle.AREA['ipca']`, the wide-layout labels, the option / consequences tables, the W11 status words, `config.CORRIDORS` anchor label; the y2y package made the same change in `director_plot` the same day. Named reference columns (Dene Kʼéh Kusān) and every data key are unchanged; nothing measured changes.
+- **M5.31 Full-page map export + plain option headers (2026-10-02, Ethan; presentation):** the 07 wide maps export the whole 13.33 × 7.5 in
+  slide (`director_plot.STYLE["wide_export_page"] = "full"`, shared with y2y; the 09-30 trimmed box had read as cropped); the 05
+  consequences table's column headers read "Option N" alone — the link name under each is dropped (stars keep it).
+- **M5.30 Route-option consequences table = the y2y package-spec v2.2 rule (2026-10-01, Ethan: "match the new updates to the y2y-wide
+  consequence table"; presentation / register):** `option_profiles_y2y` now computes the representativeness row as the MEAN REPRESENTATION
+  QUOTIENT over the 20 curated ecosystem groups (y2y M4.42; `director_core.ValueRatios`, cover-weighted — `quotients` / `standout` /
+  `flat_count_ratio` gained `weights=`): option bands and the IPCA reference (Dene Kʼéh Kusān) on their UNPROTECTED cells with the allocatable
+  basis, the locked reference (Nahanni National Park Reserve) on on-extent footprints + total land (`rep_basis` = extent, ‡ in the table);
+  the other rows stay on the whole footprint. New rows: "Standout ecosystem group (N×)" and "Bear coexistence programs*" (one entry per
+  overlapped census division / county with a record, "N (P%)", cover-weighted shares, divisions under 1% dropped; `director_core.bear_programs`
+  = the y2y 19 semantics as a shared helper); the register (`tables/route_option_consequences.csv`) gains `pct_protected`, `rep_basis`,
+  `ratio_representativeness_flatcount` (the v2.1 statistic), `standout_group` / `standout_quotient`, `rq_alloc_*` / `rq_extent_*` (40
+  columns) and the seven bear columns. Measured on run003 (zero render): representativeness options 0.27 / 0.50 / 0.46 / 1.06×
+  (flat count 0.89 / 1.24 / 0.91 / 1.19×), Nahanni 0.62× on extent, Dene 0.52×; standouts = temperate alpine grasslands (1), caves +
+  underground streams (2), groundwater ecosystems (3, 4). Star axes unchanged (percentile of the flat count).
+  **M5.30 addendum (2026-10-01, later): the y2y deck tables stepped back the same day** (y2y M4.42 addendum: bear row = the cell-weighted MEAN
+  count, `STYLE["conseq_bear_mode"] = "mean"`; standout-group row OFF, `conseq_standout_row = False`; the representativeness quotient KEPT).
+  The route-option table follows without a code change: `option_profiles_y2y` writes every v2.2 column (mean, per-division list, standout)
+  and the shared `director_plot.consequences_table` chooses what to show by the y2y STYLE defaults, which `WIDE_STYLE` does not override.
+  Rendered rows = area, the seven ratios (representativeness as the quotient, Nahanni ‡), bear mean count*. Register unchanged.
+  The y2y bear note ("Mean number of bear coexistence programs recorded for the census division or county each cluster cell falls in
+  (divisions with none recorded excluded). Not used in the model.") is shared; its noun is now the asset's `unit_word` argument, "option"
+  from both corridor tables (y2y default "cluster"). Same wording otherwise. Later the same day the y2y asset moved the bear row BEFORE
+  Carbon (the objectives hierarchy's order), right-set and on the row ramp with "none recorded" cells unfilled (`conseq_bear_fill`) —
+  inherited unchanged; on run003 only option 3 carries a record (1.0), so that row renders neutral with three "none recorded" cells.
+  **Headers as before (Ethan 2026-10-01):** the row header stays "Representativeness" without the y2y † mark (`WIDE_STYLE["conseq_rep_mark"]`
+  = ""; the shared asset then labels the definition note "Note"); the ‡ on the locked reference's cell and its sentence stay; column
+  headers, spanners and title were never changed.
+- **M5.29 Thinner route-option outlines (2026-10-01, Ethan; presentation):** on 07 · 03 and the 04b locators the option rings draw at
+  `WIDE_STYLE["option_lw"]` = 0.8 pt on the frame with a halo `option_halo` = 0.8 pt wider (were cluster_lw × 1.6 = 1.44 pt and +1.4 pt);
+  the inset scale still multiplies on insets and locators. Nothing measured changes.
+- **M5.28 PNG only (2026-10-01, Ethan; presentation):** every map and figure exports as PNG at 300 dpi and nothing else — the §3a PDF twin
+  (06 record figures via `corridors_mapstyle.export`, now `EXPORT_FORMATS = (("png", 300 dpi),)`; QA item 7 counts the formats) and the
+  07 wide-layout twin (`WIDE_STYLE["export_pdf"] = False`) are retired; the PDFs already written in both corridor packages were deleted.
+  Nothing drawn changes.
+- **M5.27 Package folder structure = the y2y / Alberta convention (2026-10-01, Ethan; presentation / provenance only):**
+  the director package moves from `output_data/corridors_north/<run>/director_package/` (gitignored, one per run) to
+  **`analyses/northern_connectivity/director_package/`** with the y2y layout — `geotiffs/` (the GIS export, formerly `gis/`),
+  `tables/`, `figures/` (06, the record), `director_outputs/` (07, the curated few), `deck_outline.md` + `summary.json` (tracked
+  by the existing `analyses/*/director_package/**` gitignore rule's two exceptions). `summary.json` is the run pointer the
+  layout would otherwise lose: `run`, the run_config git record, cutoff + detour km, link / class / geometry counts, corridor
+  km², H8 state, build time. One package holds one run: `package()` moves a different run's contents to `_superseded_<run>/`
+  before writing (y2y `_superseded_*` convention). `corridors_director.PKG_DIR`; `package(out=)` overrides; `export_gis`
+  default → `P.gis`. run003's package relocated on disk (22 MB); run002's stays in its run dir (historical, `_preD23_frozen/`).
+  06 `RUN` set to v2_run003 (only run003 is re-run under D25c, M4.12). No methods, numbers or figures change.
 - **M5.26 Pressure palette "sand" (2026-09-29, Ethan: the cividis yellow on the dominant Minimum class was rejected on sight;
   presentation):** `CLASS_PALETTE = "sand"` — four BrBG steps #ead59f / #cfa256 / #a5691b / #6e4007 (pale sand → tan → brown →
   dark umber) for Minimum → Maximum: light → dark like 01's cost swatches, a muted low end (L* 86, chroma < 32, so the 31-link

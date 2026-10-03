@@ -4,7 +4,7 @@ No figure sets a colour, font, line weight, extent or export setting inline: eve
 from here. If a figure needs something this module lacks, extend the module and log it.
 Layer order (bottom -> top), identical on every map and inset:
   ocean -> land -> (cost swatches, context figure only) -> hillshade -> water -> existing PAs
-  -> proposed IPCAs -> corridor classes (options first, only-viable last) -> boundaries
+  -> proposed conservation areas -> corridor classes (options first, only-viable last) -> boundaries
   -> inset boxes -> labels (jurisdiction, then PA/IPCA, then towns, then annotations).
 Lives at repo root (engine-module convention; `figures/` is gitignored in this repo).
 """
@@ -70,7 +70,7 @@ def set_class_palette(name):
     CLASS_PALETTE = name
     for c in CLASS_WORDS:
         CLASS[c] = (CLASS_PALETTES[name][c], None, None, CLASS_WORDS[c])
-AREA = {"ipca": dict(fill="#5BA699", alpha=0.85, edge="#2F5F55", lw=0.3, label="Proposed IPCAs"),   # Ethan 2026-09-29 (was #5F9EA0 @55%, edge #3E6F70 0.5 pt)
+AREA = {"ipca": dict(fill="#5BA699", alpha=0.85, edge="#2F5F55", lw=0.3, label="Proposed conservation areas"),   # Ethan 2026-09-29 (was #5F9EA0 @55%, edge #3E6F70 0.5 pt)
         "pa":   dict(fill="#9A9A9A", alpha=0.55, edge="#6E6E6E", lw=0.5, label="Existing Protected Areas"),
         # wolverine package (2026-09-28): refugia fills + outline-only PA context. Chosen by a grid search
         # (36 hues x saturation x value, rendered over the land tone at their alphas) maximising the worst
@@ -81,7 +81,7 @@ AREA = {"ipca": dict(fill="#5BA699", alpha=0.85, edge="#2F5F55", lw=0.3, label="
         "refugia_core":     dict(fill="#4D4DBF", alpha=0.85, edge=None, lw=0, label="Wolverine climate refugia: core"),
         "refugia_marginal": dict(fill="#8585CC", alpha=0.70, edge=None, lw=0, label="Wolverine climate refugia: marginal"),
         "pa_outline":       dict(fill=None, alpha=0.0, edge="#6E6E6E", lw=0.5, label="Existing protected areas (context)"),
-        "ipca_outline":     dict(fill=None, alpha=0.0, edge="#3E6F70", lw=0.7, label="Proposed IPCAs / PAs (taken as given; context)")}
+        "ipca_outline":     dict(fill=None, alpha=0.0, edge="#3E6F70", lw=0.7, label="Proposed conservation areas (taken as given; context)")}
 NODE = dict(edge="#1A1A1A", lw=0.6, chip_fs=6.5, chip_fc="white", chip_ec="#1A1A1A")   # numbered node outlines + chips
 BASE = dict(land="#F7F7F5", water="#CFE0EA", ocean="#E4EEF3", coast=("#9CB3C0", 0.3),
             admin=("#7A7A7A", 0.6, (4, 2)), sector=("#333333", 1.0), y2y=("#333333", 0.8, (6, 3)),
@@ -120,13 +120,14 @@ TYPE = {  # role: (size, weight, style, colour, halo)
     "legend":       (8.5, 400, "normal", "#2B2B2B", None),
     "caption":      (8, 400, "normal", "#555555", None),
 }
-FONT_FAMILY = ["Noto Sans", "DejaVu Sans"]
+FONT_FAMILY = ["Candara", "DejaVu Sans"]   # Candara everywhere (Ethan 2026-10-02, matching the y2y package's director_plot.TABLE_FONT); was Noto Sans
 _fonts_registered = False
 
 
 def apply():
-    """rcParams for every figure: Noto Sans (registered from input_data/basemap/fonts) with
-    DejaVu Sans fallback (both cover Łł ǫ ë ū á), TrueType embedding in PDF, no auto styling."""
+    """rcParams for every figure: Candara (system font, the y2y package typeface since 2026-10-02) with DejaVu Sans
+    fallback for any glyph it lacks (Łł ǫ ë ū á), TrueType embedding in PDF, no auto styling. Noto Sans (input_data/basemap/fonts)
+    stays registered for the record figures made before the switch."""
     global _fonts_registered
     if not _fonts_registered:
         for f in sorted((BASEMAP_DIR / "fonts").glob("NotoSans-*.ttf")):
@@ -134,7 +135,7 @@ def apply():
         _fonts_registered = True
     import logging
     lg = logging.getLogger("matplotlib.font_manager")
-    if not any(getattr(f, "_weight_fallback", False) for f in lg.filters):        # Noto Sans has 400/600 faces only (DejaVu 400/700):
+    if not any(getattr(f, "_weight_fallback", False) for f in lg.filters):        # Candara has 400/700 faces (the 600 headings take Bold), DejaVu 400/700:
         flt = logging.Filter(); flt.filter = lambda rec: "Failed to find font weight" not in rec.getMessage(); flt._weight_fallback = True
         lg.addFilter(flt)                                                            # the nearest-weight substitution is intended; drop the log line
     mpl.rcParams.update({"font.family": "sans-serif", "font.sans-serif": FONT_FAMILY,
@@ -144,7 +145,7 @@ def apply():
 
 def font_in_use():
     names = {f.name for f in fm.fontManager.ttflist}
-    return "Noto Sans" if "Noto Sans" in names else "DejaVu Sans"
+    return FONT_FAMILY[0] if FONT_FAMILY[0] in names else "DejaVu Sans"
 
 
 # ================= §1.3 layout templates =================
@@ -329,7 +330,7 @@ def draw_water(ax, R, XL, YL, river_rank=9, z=None):
 
 
 def draw_areas(ax, R, names=None, kind_of=None):
-    """Existing PAs and proposed IPCAs from the node polygons, 55% fills with outlines.
+    """Existing PAs and proposed conservation areas from the node polygons, 55% fills with outlines.
     `kind_of(name_label) -> AREA key` overrides the IPCA-prefix rule (default = the north)."""
     if names is None:
         names = gpd.read_file(R.run_dir / "node_parts.gpkg").to_crs(R.crs).dissolve(by="name_label").reset_index()
@@ -610,10 +611,14 @@ def inset(fig, ns, inset_id, centre, width_km, rect, draw, labels=(), scale_km=2
 
 
 # ================= export =================
+EXPORT_FORMATS = (("png", dict(dpi=300)),)       # PNG 300 dpi only (Ethan 2026-10-01: "only the png outputs, not pdf");
+                                                   # the §3a PDF twin was (("png", dict(dpi=300)), ("pdf", dict())) until then
+
+
 def export(fig, fig_id, run_tag, out_dir):
     out_dir = pathlib.Path(out_dir); out_dir.mkdir(parents=True, exist_ok=True)
     paths = []
-    for ext, kw in (("png", dict(dpi=300)), ("pdf", dict())):
+    for ext, kw in EXPORT_FORMATS:
         p = out_dir / f"{fig_id}_{run_tag}.{ext}"
         fig.savefig(p, facecolor="white", **kw); paths.append(p)
     return paths
@@ -700,7 +705,7 @@ def qa(fig, ns, paths, message, expected_message, hexes=None):
         "4 class colours separable (deuteranopia / protanopia)": (all(v["ok"] for v in cls.values()), cls),
         "5 only palette hues": (True, "by construction: every colour comes from corridors_mapstyle"),
         "6 layer order": (True, "by construction: Z table"),
-        "7 export PDF + PNG, fonts embedded": (len(paths) == 2 and mpl.rcParams["pdf.fonttype"] == 42, [p.name for p in paths]),
+        "7 export PNG 300 dpi (PDF twin retired 2026-10-01), fonts embedded": (len(paths) == len(EXPORT_FORMATS) and mpl.rcParams["pdf.fonttype"] == 42, [p.name for p in paths]),
         "8 three-second message": (message == expected_message, dict(figure=message, spec=expected_message)),
     }
     for k, (ok, detail) in res.items():

@@ -1,8 +1,30 @@
 # Northern corridors — Director Package Spec
 
-**Status:** v1.2.17 (2026-09-28) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_tables_and_figures.ipynb`, the record — renamed from `06_director_package` on 2026-09-28 — plus `07_director_outputs.ipynb`, the curated set on the y2y Act 1 wide layout; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
+**Status:** v1.2.28 (2026-10-02) — BUILT 2026-09-03, trimmed 2026-09-10 (maps M0–M3, star plots, two alternatives tables) (`corridors_director.py` + `06_tables_and_figures.ipynb`, the record — renamed from `06_director_package` on 2026-09-28 — plus `07_director_outputs.ipynb`, the curated set on the y2y Act 1 wide layout; see §8). Originally v1.1 build spec for Claude Code. Subordinate to `05_corridors_v2_addendum_run_and_alternatives.md` (methods live there; presentation decisions live here; ambiguous items logged in both — same rule as `director_package_spec.md` v1.1 for the Y2Y-wide analysis). **Key difference from the Y2Y-wide package: proposed IPCAs are taken as given here — seed nodes with the same treatment as existing PAs — so the alignment-only IPCA language from that package does not apply; see §1 guardrail.** Source artifacts: **v2_run002** (v2_run001 was an aborted pass, deleted) baseline + ensemble, `branches.*`, `alternatives_branches.csv`, `ensemble_attribution.tif`, axis C leave-one-out results, `multipart_review.csv`. All maps ESRI:102008, CVD-checked palette, existing PAs and proposed IPCAs as distinct layers on every map. Zero new solves.
 
 ## Changelog
+- v1.2.28 (2026-10-02, Ethan) — Candara everywhere: the §3a typeface is Candara (DejaVu Sans fallback per glyph), matching the y2y
+  wide layout; Noto Sans retired from the record figures (M5.34). §3a.1 / §3a.4 type lines amended in place.
+- v1.2.27 (2026-10-02, Ethan) — full-page map export (`wide_export_page`), "Option N" table headers, and "Proposed conservation areas"
+  wording everywhere "Proposed IPCAs" was rendered (M5.31–M5.32).
+- v1.2.26 (2026-10-01, Ethan) — 07 · 05 consequences table follows the y2y package spec v2.2: representativeness = mean representation
+  quotient (locked reference on extent, ‡; options + the IPCA on unprotected cells), + "Standout ecosystem group" and "Bear coexistence
+  programs*" rows with the y2y notes; register columns added. M5.30. Same day, the y2y deck stepped back (bear row = mean count, standout
+  row off, quotient kept) — inherited through the shared asset's STYLE defaults, nothing northern changed (M5.30 addendum).
+- v1.2.25 (2026-10-01, Ethan) — route-option outlines thinner on 03 and the 04b locators: `WIDE_STYLE["option_lw"]` 0.8 pt, halo
+  `option_halo` 0.8 pt (were 1.44 / +1.4); M5.29.
+- v1.2.24 (2026-10-01, Ethan: "only the png outputs for the maps and figures, not pdf") — PNG 300 dpi is the only export, record
+  figures (`ms.export`, `EXPORT_FORMATS`; QA item 7 follows) and the 07 wide maps (`WIDE_STYLE["export_pdf"] = False`) alike; the §3a
+  export rule and QA item 7 amended; the 19 PDFs already on disk in both corridor packages deleted. M5.28.
+- v1.2.23 (2026-10-01, Ethan: "put the director package outputs in the same folder structure as the y2y-wide analysis") —
+  the package moves out of the gitignored run dir into **`analyses/northern_connectivity/director_package/`** with the y2y /
+  Alberta layout: `geotiffs/` (the GIS export; was `gis/`), `tables/`, `figures/` (06, the record), `director_outputs/` (07, the
+  curated few), `deck_outline.md` + `summary.json` (the two tracked indexes; `summary.json` names the run — `run`, run git
+  record, cutoff, link and class counts, geometry counts, corridor km², H8). `corridors_director.PKG_DIR` is the default
+  (`package(..., out=)` overrides); one package holds ONE run — building from another run first moves the previous contents to
+  `_superseded_<run>/` (`_supersede_other_run`, the y2y `_superseded_*` convention). run003's package moved on disk; run002's
+  (historical, with `_preD23_frozen/`) stays in `output_data/corridors_north/v2_run002/director_package/`. 06 `RUN` → v2_run003.
+  Methods unchanged (M5.27).
 - v1.2.22 (2026-09-29) — fronts are corridor land (05 D25c; the patch labels this v1.2.14, a stale number). Adjacent-areas
   legend rows removed; fronts classed and coloured on the common pressure scale; a `#8A8A8A` 0.4 pt dotted outline marks
   fronts on M2 (display, `corridors_director.FRONT_OUTLINE`); N-slot rule by width (`width_new_km`, ties attribution then
@@ -379,7 +401,7 @@ No colourbar; four swatches in the legend. Percentages go in the caption, not th
 
 #### 3a.1.2 Type
 
-One family with full diacritic coverage for Indigenous place names (Łł, ǫ, ë, ū, á): **Noto
+One family with full diacritic coverage for Indigenous place names (Łł, ǫ, ë, ū, á) — **Candara since 2026-10-02 (v1.2.28), DejaVu Sans per-glyph fallback; the original choice was Noto
 Sans** (fallback DejaVu Sans, which also covers them; verify glyphs render before sign-off).
 Sizes are fixed at the slide scale (figure width 13.33 in):
 
@@ -411,8 +433,8 @@ gap; a label that still collides is dropped, not shrunk. Halo on every label ove
 - Scale bar: `matplotlib-scalebar`, 100 km, two segments, `#2B2B2B`, bottom of furniture
   column. North indicator: single line-arrow with "N", same colour, beside it. Graticule:
   none on slides; 2° hairlines `#C8C8C8` 0.2 pt on report figures only.
-- Export: PDF (vector, fonts embedded) + PNG 300 dpi, both, every figure, from the same
-  call. Filenames as the figure ids (M1, M2 …) plus the run tag.
+- Export: PNG 300 dpi, every figure, from the same call (the PDF twin was retired 2026-10-01, v1.2.24 — Ethan: PNG only,
+  maps and figures; `corridors_mapstyle.EXPORT_FORMATS`). Filenames as the figure ids (M1, M2 …) plus the run tag.
 
 #### 3a.1.4 Legend policy
 
@@ -471,7 +493,7 @@ Insets get their own rows beneath (id, parent, centre, width km, ≤ 6 labels, m
 4. Class colours separable in deuteranopia and protanopia simulations; only-viable hatch visible at 100% and at 50% zoom.
 5. No saturated hue outside the analysis palette; basemap greys + one blue only.
 6. Layer order matches §1.6 (spot-check: a class swath is never under a PA fill).
-7. Export produced both PDF and PNG; fonts embedded.
+7. Export produced the PNG (PDF twin retired 2026-10-01); fonts embedded.
 8. The three-second message: describe in one sentence what the figure shows at a glance and compare to the spec row. Report any mismatch rather than fixing the message.
 
 Report the checklist result with the figure. A figure that fails any item is not shown.
@@ -505,7 +527,7 @@ Prompt to Claude Code (verbatim is fine):
   margin (`input_data/basemap/hillshade_300m.tif`; cartographic use only, never an analysis
   input — H5 stands). Water: Natural Earth 10 m lakes + rivers (+ North America supplements)
   instead of the HydroSHEDS layers the contract names (not on disk; swap when acquired).
-- Type: Noto Sans downloaded to `input_data/basemap/fonts/` and registered at import; DejaVu
+- Type: Candara (system) since 2026-10-02; Noto Sans downloaded to `input_data/basemap/fonts/` stays registered; DejaVu
   Sans fallback. Letter-spacing (+0.08 em tracking) is not supported by matplotlib; jurisdiction
   names are plain caps.
 - Built first: **M0b** (Ethan's order, ahead of §3a.4's "M1 first"): `corridors_director.figure_m0b`
@@ -591,7 +613,8 @@ Prompt to Claude Code (verbatim is fine):
   `link_profiles` (framing-1 profiles of every link → percentile chips), `map_m1..m4`,
   `profile_pages`, `table_t1`, `table_t2`, `build_deck` (via `director_core.build_deck`).
 - **`06_director_package.ipynb`** (→ `06_tables_and_figures.ipynb`, 2026-09-28): read-only; outputs → `<run>/director_package/{figures,tables}`
-  + `north_director_deck.pptx` + `deck_outline.md`.
+  + `north_director_deck.pptx` + `deck_outline.md` (→ `analyses/northern_connectivity/director_package/{figures,tables,geotiffs}` +
+  `summary.json` since 2026-10-01, v1.2.23).
 - Smoke-run on `v2_run002` (H8 open at the time): classes both 4 / edge 3 / squeezed 5 (analytic,
   withheld) / securing 33; examples N1, N2 = Liard River Corridor ↔ Nahanni (2 routes, spans
   BC/Yukon/NWT), N3 = Dene Kʼéh Kusān ↔ Liard River Corridor (2 routes), S1 Gwillim Lake ↔ Pine
