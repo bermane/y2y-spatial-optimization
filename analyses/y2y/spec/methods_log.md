@@ -1483,3 +1483,30 @@ clipped; the locators follow the same geometry. Legend wording "Proposed conserv
 **M4.42 addendum (Ethan, 2026-10-02): consequences fills = ColorBrewer BrBG** (brown = lowest in the row, teal = highest, over the cluster
 columns; `STYLE["conseq_cmap"]`, was RdBu) **with a colour key under the table** (`conseq_ramp_key`; `spec_table_png(ramp=)` draws a bar with
 "lowest in row" / "highest in row" and the caption "colour = rank within each row across the clusters").
+**M4.42 addendum (Ethan, 2026-10-07): the ‡ footnote spelled out** — "A protected area has no unprotected land, so the clusters' definition would
+give it 0× for every group. For it the same ratio is taken over the whole region instead — its share of each group's total extent relative to
+its share of all land — so it reads 'how representative a sample of the region's ecosystems is this park', not 'how much of what remains
+unprotected would it secure'."
+**M4.42 addendum (Ethan, 2026-10-07): no ‡ footnote in the presentation** — a locked reference's (Banff's) representativeness cell shows its on-extent value
+with no mark and no note (`STYLE["conseq_extent_rep"] = "plain"`; "mark" restores the value‡ + note for the record, "blank" shows "—");
+the basis is recorded in T-D1/T-D7 (`rep_basis = extent`).
+**M4.40 addendum (Ethan, 2026-10-07): the timelapse frame = the deck tool's rendering of the Act 1 slide, pixel for pixel.** The deck tool
+trims the slide image to its content (the tight box, aspect 1.84) and fits it to a 2578 × 1216 slot by height with black pillarboxes
+(content at columns 170–2406, rows 1–1214 — measured on the pasted screenshot); the video's frames are now composited the same way
+(`STYLE["frames_letterbox"]`: the tight box scaled to 2237 × 1214 on a black 2578 × 1216 canvas at that offset), so the map frames land
+in the same place as the slide's. Video only; the Act 1 PNGs are unchanged.
+**M4.40 addendum correction (2026-10-07): the video canvas is ANCHORED ON INSET A.** The deck tool's screenshot of the Act 1 slide
+(2578 × 1216, black pillarboxes) was measured: inset A's frame lines at columns 677–1471 and rows 54–934, content columns 170–2406.
+`STYLE["frames_letterbox"]` carries those pixels; each frame is exported at the implied scale (177.8 px per figure inch, uniform) from a
+canvas origin derived from inset A's DRAWN position (the equal-aspect fit moves the inset 0.30 in above its layout rectangle), then the
+pillarboxes are painted black. Verified: every inset frame line lands within 1 px of the screenshot's. Video only.
+**M4.40 addendum (Laura via Ethan, 2026-10-07): the objectives tables carry "Mean on unprotected land"** — for each performance measure, the mean
+over allocatable cells in the layer's native units (the consequences tables' 1.0× reference; `director_plot.allocatable_means`, from
+`ValueRatios.base` on the raw layers): climate refugia 0.40 yr/km, naturalness 0.94, mammal richness 34 and bird richness 67 species per km²,
+3.0 ecosystem classes present per km², structural connectivity 1.86 A (raw current density), climate corridors 6.7 (centrality index),
+bear coexistence 1.9 programs per division (recorded divisions = 20% of unprotected land), biomass carbon 22 and mineral-soil carbon
+59 t C/ha; "—" for the budget, water and cost. Written to `tables/T-D0_values_means.csv`. Table notes wrap with a 3.5% safety margin
+(Candara's measured widths run narrow).
+**M4.40 addendum (Ethan, 2026-10-07): the representativeness mean in the objectives tables is the quotient's own unit** — the share of each
+ecosystem group's unprotected extent one unit of land holds, which over all unprotected land equals 1 ÷ unprotected km² = 0.09% of each
+group's unprotected extent per 1,000 km² (option 1; the consequences row's 1.0×). The class count (3.0 per km²) stays the star-plot axis.

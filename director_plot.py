@@ -579,6 +579,9 @@ STYLE = dict(
     # ---- "the optimization behind the map": frames for a timelapse (Ethan 2026-09-21; method_frames) ----
     frames_reference_members=50, frames_sample_per_cell=10,   # every member of the reference cell; a fixed-seed sample of the other 13
     frames_fps=2, frames_hold_s=2.5, frames_seed=0,           # members per second (4 -> 2, half speed, Ethan 2026-10-01); hold on each surface frame
+    frames_letterbox=dict(width=2578, height=1216, inset_a_px=(677, 1471, 54, 934), bars=(170, 2406), fill="black"),   # the deck tool's rendering of the Act 1
+    # slide (measured on Ethan's screenshot 2026-10-07: inset A's frame lines + the black pillarboxes) -- the video's frames anchor on inset A so every map
+    # panel lands where the slide's does; None = the plain page frames
     frames_match_maps=True,    # frames at the Act 1 maps' export dpi + page box = identical pixel size (Ethan 2026-10-02); False = frames_width_px wide
     frames_width_px=1920,                                     # frame width; the dpi is derived (13.33 x 7.5 in -> 1920 x 1080, an even HD size H.264 accepts); saved WITHOUT tight bbox so every frame is the same size
     frames_plan_color="#5BA699",   # sea green (Ethan 2026-10-01: yellow had too little contrast on the light basemap; yellow stays the core on the next map); was #ffd93b
@@ -591,6 +594,7 @@ STYLE = dict(
     frames_plans_only=True,        # ONLY the near-optimal plan frames (Ethan 2026-09-23: "the 100 balanced scenario frames, nothing else") -- no value maps, anchor, f or core frames
     frames_assemble=True, frames_video_fps=30,   # assemble method_timelapse.mp4 from the frames with the venv's bundled ffmpeg (imageio-ffmpeg; Ethan 2026-09-23)
     frames_video_max_mb=20, frames_video_crf=18,  # size cap (Ethan 2026-09-23): CRF 18 / preset slow first; if the file is over the cap, a two-pass encode at the bitrate that fits
+    frames_crop_bars=True,                     # assemble_timelapse crops the letterbox bars out of the video; the PNG frames keep them (Ethan 2026-10-07)
     inset_codes={"A": dict(skip=["WA"]), "B": dict(skip=["WA"])},                     # the wide-map insets: no WA; AK no longer forced on A (a sliver since the window moved east, 2026-09-21)
     inset_town_skip={"A": ("Iskut", "Telegraph Creek"), "B": ("Jasper", "Banff")},   # towns left off a wide-map inset (Ethan 2026-09-15)
     # Act 2 tiers by owning scenario. Dark2 failed a colour-vision check (2026-09-21: core-habitat green vs carbon magenta dE 6 under deuteranopia;
@@ -623,6 +627,7 @@ STYLE = dict(
     conseq_ramp_key=True,                                                 # a small colour key under the table (Ethan 2026-10-02)
     conseq_fill_area=True,                                              # the Area row takes the same low -> high ramp (Ethan 2026-09-23)
     conseq_bear_mode="mean", conseq_standout_row=False,   # bear row = the mean count (Ethan 2026-10-01; "divisions" = per-polygon "N (P%)"); standout group row off
+    conseq_extent_rep="plain", # Banff-type references in the representativeness row: "plain" (the on-extent value, no mark, no note; Ethan 2026-10-07) | "mark" (value‡ + note) | "blank" (—)
     conseq_rep_mark="†",       # the representativeness row's note mark; the locked-reference mark is ‡ and the bear row's *
     conseq_general_note=False, # the general "Note" line (block weights, colour rule) under the consequences tables: off (Ethan 2026-10-01); the + and * notes stay
     conseq_source_note=False,  # the Source line under the consequences tables: off (Ethan 2026-10-01)
@@ -1046,7 +1051,7 @@ def spec_table_png(path, stub, cols, cells, *, label=None, title=None, units=Non
     Ht = h_span + h_head + sum(row_h)
     # ---- card height: label / title / units / table / notes ----
     Wc_inner = max(Wt, _text_w(title or "", f_title, 600), _text_w(units or "", f_body))
-    note_lines = [(k, _wrap_to(v, Wc_inner - _text_w(k + "  ", f_note, 600), f_note)) for k, v in notes]
+    note_lines = [(k, _wrap_to(v, 0.965 * (Wc_inner - _text_w(k + "  ", f_note, 600)), f_note)) for k, v in notes]   # 3.5% safety: Candara's measured widths run a little narrow
     h_top = (lh(f_label) + gap if label else 0) + (lh(f_title) + 0.25 * u if title else 0) + (lh(f_body) + gap if units else 0)
     h_notes = (gap + sum(len(v.split("\n")) * lh(f_note) + 0.15 * u for _, v in note_lines)) if note_lines else 0
     if ramp:                                                             # its own strip above the notes: bar + end words + caption
@@ -1197,9 +1202,13 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
     cells = [[f"{v:,.0f}" for v in body.area_km2]]
     cells += [[ratio_fmt(v) for v in body[f"ratio_{a}"]] for a in dc.STAR_AXES]
     ext_rows = body.get("rep_basis", pd.Series([""] * len(body))).astype(str).eq("extent").values if "rep_basis" in body else np.zeros(len(body), bool)
-    if ext_rows.any():                                                   # spec v2.2: a locked reference (Banff) on on-extent footprints + total land, footnoted
+    ext_mode = STYLE.get("conseq_extent_rep", "blank")                  # a locked reference's (Banff's) representativeness: "blank" = "—" (Ethan 2026-10-07: the table
+    if ext_rows.any():                                                   # describes multiples of average UNPROTECTED land, which a park cannot have) | "mark" = value‡ + note | "plain"
         r_rep = stub.index(cap("representativeness") + REP_MARK)
-        cells[r_rep] = [c + ("‡" if e else "") for c, e in zip(cells[r_rep], ext_rows)]
+        if ext_mode == "blank":
+            cells[r_rep] = [("—" if e else c) for c, e in zip(cells[r_rep], ext_rows)]
+        elif ext_mode == "mark":
+            cells[r_rep] = [c + ("‡" if e else "") for c, e in zip(cells[r_rep], ext_rows)]
     standout = STYLE.get("conseq_standout_row", False) and "standout_group" in body     # off (Ethan 2026-10-01: TMI for now; the register keeps it)
     if standout:                                                         # the single most over-represented ecosystem group, "name (N×)"
         stub.append("Standout ecosystem group")
@@ -1267,13 +1276,16 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
         key = dict(colors=[tuple(mat * (1 - tint) + np.array(cmap(t)[:3]) * tint) for t in np.linspace(0, 1, 9)],
                    lo="lowest in row", hi="highest in row", label="colour = rank within each row across the clusters")
     spec_table_png(path, stub, cols, cells, label=label, title=title if STYLE["titles"] else None, groups=groups, numeric=numeric, fills=fills, head_ha="left", ramp=key,
-                   units="Ratios: mean value inside the area ÷ mean over allocatable (unprotected) land · 1.0× = the average allocatable cell · ratios use the untransformed layers",
+                   units="Ratios: mean value inside the area ÷ mean over allocatable (unprotected) land · 1.0× = the average allocatable cell · ratios use the untransformed layers · climate refugia under SSP5-8.5, 2071–2100",
                    notes=[*([("Note", "Blocks combine their layers with the block weights (carbon 74 / 26 by mass); naturalness = 1 − human modification. "
                                    + (("Colour runs red → blue across each row from its lowest value to its highest" + (" over the cluster columns" if not all_cols else "") + "; a row whose values all round to the same figure is left neutral.") if STYLE.get("conseq_mode", "row") == "row"
                                       else "Colour runs across each row with 1.0× as the hinge and each side scaled to the row's own extreme."))] if STYLE.get("conseq_general_note", False) else []),   # off (Ethan 2026-10-01)
                           (REP_MARK or "Note", "Representativeness: average, across the 20 ecosystem groups, of the area's share of the group's unprotected extent relative to its "
                                 "share of unprotected land. " + ("Standout = the group where that share is highest, with its value. " if standout else "")
-                                + ("‡ on-extent footprints and total land: a protected area has no unprotected extent." if ext_rows.any() else "")),
+                                + ("‡ A protected area has no unprotected land, so the clusters' definition would give it 0× for every group. For it "
+                                   "the same ratio is taken over the whole region instead — its share of each group's total extent relative to its "
+                                   "share of all land — so it reads 'how representative a sample of the region's ecosystems is this park', not "
+                                   "'how much of what remains unprotected would it secure'." if (ext_rows.any() and ext_mode == "mark") else "")),
                           *([("*", (f"Mean number of bear coexistence programs recorded for the census division or county each {unit_word} cell falls in "
                                       "(divisions with none recorded excluded). Not used in the model.") if STYLE.get("conseq_bear_mode", "mean") == "mean" else
                                      ("Bear coexistence programs: one entry per census division / county the area overlaps that has a record (Y2Y Communities & "
@@ -1283,30 +1295,67 @@ def consequences_table(C, rows, path, label, title, ref=None, col_label=None, gr
                           *([("Source", source or SOURCE_NOTE)] if STYLE.get("conseq_source_note", False) else [])])   # off (Ethan 2026-10-01)
 
 
+def allocatable_means(C):
+    """Laura (2026-10-07): the mean of each performance measure over UNPROTECTED (allocatable) land, in the native units the consequences
+    tables divide by (their 1.0x reference). Keyed by a word in the measure text; '—' where no mean exists (the budget, water, cost)."""
+    if getattr(C, "_VR", None) is None:
+        C._VR = dc.ValueRatios(C.G, dc.block_percentiles(C.G))
+    b = C._VR.base
+    bear = np.nan; rec = np.nan
+    try:
+        CX = dc.coexistence_layer(C.G)
+        ng = np.full(len(CX.gdf) + 1, np.nan); ng[1:] = pd.to_numeric(CX.gdf["n_groups"], errors="coerce").values
+        v = ng[CX.zones][C.G.pu][C.G.disc]; bear = float(np.nanmean(v)); rec = float(np.isfinite(v).mean())
+    except Exception:
+        pass
+    return [("Protected land", "—"),
+            ("Climate refugia", f"{b['climate_type_macrorefugia']:.2f} yr/km (1 ÷ climate velocity; SSP5-8.5, 2071–2100)"),   # the stack's main realization, not the two-future average (option 1, Ethan 2026-10-07)
+            ("Naturalness", f"{b['human_modification']:.2f} (0–1, 1 − human modification)"),
+            ("Mammal", f"{b['aoh_richness_mammals']:.0f} species per km²"),
+            ("Bird", f"{b['aoh_richness_birds']:.0f} species per km²"),
+            ("cosystem functional groups", f"{100 * 1000 / C.G.n_disc:.2f}% of each group's unprotected extent per 1,000 km²"),   # the quotient's own unit: 1 / unprotected km² (option 1, Ethan 2026-10-07)
+            ("connectivity", f"{b['transboundary_connectivity']:.2f} A (current density)"),
+            ("Climate corridors", f"{b['climate_corridors']:.1f} (current-flow centrality index)"),
+            ("Bear coexistence", (f"{bear:.1f} programs recorded for the division a cell falls in (recorded divisions cover {100 * rec:.0f}% of unprotected land)" if np.isfinite(bear) else "—")),
+            ("biomass", f"{b['irrecoverable_carbon_biomass']:.0f} t C/ha"),
+            ("mineral soil", f"{b['irrecoverable_carbon_m_soc']:.0f} t C/ha"),
+            ("Water", "—"), ("—", "—")]
+
+
+def _mean_for(C, measure_text):
+    for key, val in allocatable_means(C):
+        if key.lower() in str(measure_text).lower():
+            return val
+    return "—"
+
+
 def values_table_spec(C, path, title="Y2Y Objectives Hierarchy", rows=None, metrics=None, label=None, units=None):
     """The objectives hierarchy to the table spec: stub = fundamental objective (first row of each group), then the
     sub-objective as a column-head group (heading → accent metric line → measure), the source in fine print, and how the
     layer enters the analysis. One frame separator after the stub; rules between rows; notes below."""
     rows = list(rows) if rows is not None else values_rows(C); metrics = list(metrics) if metrics is not None else values_metrics(C)
     B = STYLE["table_base_px"]; u = B * _PX; pt = B * 0.75; f_body = 0.87 * pt; pad_h = 0.47 * u
-    col_w = [4.4 * u * 6.25, 2.9 * u * 6.25, 4.2 * u * 6.25]                   # inches at base 16: 4.4 / 2.9 / 4.2
+    col_w = [4.4 * u * 6.25, 2.4 * u * 6.25, 2.9 * u * 6.25, 3.9 * u * 6.25]   # inches at base 16: measure / mean on unprotected land / source / how it enters
     stub_w = 2.5 * u * 6.25
     wrap = lambda t, w, wt=400: _wrap_to(t, w - 2 * pad_h, f_body, wt)
     stub = [wrap(r[0], stub_w, 600) if r[0] else "" for r in rows]
     cells, numeric = [], []
     for r, m in zip(rows, metrics):
         cells.append([[(r[1], "head"), (m, "metric"), (wrap(r[2], col_w[0]), "body")],
-                      [(wrap(r[3], col_w[1]), "fine")],
-                      [(wrap(r[4], col_w[2]), "body")]])
-        numeric.append([False, False, False])
+                      [(wrap(_mean_for(C, r[2]), col_w[1]), "body")],
+                      [(wrap(r[3], col_w[2]), "fine")],
+                      [(wrap(r[4], col_w[3]), "body")]])
+        numeric.append([False, False, False, False])
     # stub rendered in ink 600: pass through the head style by prefixing the stub as a run (spec_table_png draws stubs in cap 400)
-    spec_table_png(path, stub, ["Sub-objective and performance measure", "Source", "How it enters the analysis"], cells,
+    pd.DataFrame([(r[2], _mean_for(C, r[2])) for r in rows], columns=["performance_measure", "mean_on_unprotected_land"]).to_csv(C.TAB / "T-D0_values_means.csv", index=False)
+    spec_table_png(path, stub, ["Sub-objective and performance measure", "Mean on unprotected land", "Source", "How it enters the analysis"], cells,
                    label=label or "Y2Y SPATIAL DECISION TOOL  ·  PROACT OBJECTIVES", title=title if STYLE["titles"] else None,
                    units=units or "How each objective is measured, and how it enters the optimization",
                    stub_head="Fundamental objective", col_w=col_w, stub_w=stub_w, numeric=numeric, stub_sep=True,
                    notes=[("Note", "Shares are of the objective's influence in the balanced position; each forward position doubles one "
                                    "theme's share. Targets are fractions of the regional total. Naturalness and representativeness enter "
-                                   "outside the four weighted themes."),
+                                   "outside the four weighted themes. Mean on unprotected land = the average cell of allocatable land in the "
+                                   "layer's native units — the 1.0× reference of the consequences tables."),
                           ("Source", SOURCE_NOTE)])
 
 
@@ -1568,12 +1617,22 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
             cax.remove(); cax = fig.add_axes(cax_rect)                          # measure with the Act 1 maps' own F ramp (its end-words row sets the bottom edge)
             _fit_page(fig)                                                      # centre the block on the page first (2026-10-02)
             _wide_ramp(cax, _f_surface(C), None, end_words=STYLE.get("ramp_end_labels"))
-            crop = _common_crop(fig)                                         # = the Act 1 maps' export box
+            tight = fig.get_tightbbox(fig.canvas.get_renderer())            # the content's own box (no pad)
+            crop = _common_crop(fig, tight.padded(0.1))                      # = the Act 1 maps' export box
+            # the SLIDE's ink box (figure inches), measured now with the Act 1 F ramp in place: what a deck tool that trims white
+            # margins shows of the Act 1 slide; every frame is cut to THIS box so its maps land where the slide's do (2026-10-07)
+            import io as _io; from PIL import Image as _Image; from matplotlib.transforms import Bbox as _Bbox
+            _D = 150.0; _pad = tight.padded(0.15); _buf = _io.BytesIO()
+            fig.savefig(_buf, dpi=_D, bbox_inches=_pad, facecolor="white"); _buf.seek(0)
+            _ink = (np.asarray(_Image.open(_buf).convert("RGB")).astype(int) < 250).any(-1); _ys, _xs = np.nonzero(_ink)
+            ink = _Bbox.from_extents(_pad.x0 + _xs.min() / _D, _pad.y1 - (_ys.max() + 1) / _D, _pad.x0 + (_xs.max() + 1) / _D, _pad.y1 - _ys.min() / _D)
             cax.remove(); cax = fig.add_axes(cax_rect)                          # then put this frame's own ramp back
             _wide_ramp(cax, S_, cbar_label, end_words=S_.get("end_words"))
             if cap is not None:
                 cap.set_visible(True)
-            W = SimpleNamespace(fig=fig, axes=axes_all, ims=ims, cax=cax, cax_rect=cax_rect, cap=cap, crop=crop)
+            fig.canvas.draw(); _b = axes_all[1].get_position().bounds        # inset A as DRAWN (the equal-aspect fit moves the box inside its rect)
+            rectA_in = (_b[0] * fig.get_figwidth(), _b[1] * fig.get_figheight(), _b[2] * fig.get_figwidth(), _b[3] * fig.get_figheight())
+            W = SimpleNamespace(fig=fig, axes=axes_all, ims=ims, cax=cax, cax_rect=cax_rect, cap=cap, crop=crop, tight=tight, ink=ink, rectA_in=rectA_in)
             if path is not None:
                 fig.savefig(path, dpi=_frames_dpi(W), bbox_inches=crop)
             return W
@@ -1621,7 +1680,28 @@ def _wide_frame_save(W, S_, caption, path, cbar_label=None):
         W.cax.remove(); W.cax = W.fig.add_axes(W.cax_rect)
         _wide_ramp(W.cax, S_, cbar_label, end_words=S_.get("end_words"))
         W.cap.set_text(caption if STYLE.get("frames_caption", False) else "")
-        W.fig.savefig(path, dpi=_frames_dpi(W), bbox_inches=W.crop)   # the Act 1 maps' crop; an exact width (1920) for the video encoder
+        LB = STYLE.get("frames_letterbox")
+        if LB:                                                           # Ethan 2026-10-07: the video's frame = the slide image EXACTLY as the deck tool shows it --
+            from PIL import Image as _Image                              # the content (tight box) scaled into a fixed window on a fixed canvas, black elsewhere
+            import io as _io
+            # anchored on INSET A: its frame sits at LB["inset_a_px"] = (x0, x1, y_top, y_bottom) on the deck tool's canvas, so the scale
+            # (px per figure inch) and the canvas origin follow from the inset's known figure position -- uniform, no stretch
+            from matplotlib.transforms import Bbox as _Bbox
+            xa0, xa1, ya0, ya1 = LB["inset_a_px"]; rx, ry, rw, rh = W.rectA_in
+            sc = 0.5 * ((xa1 - xa0) / rw + (ya1 - ya0) / rh)                 # px per inch (the two estimates agree to <1%)
+            ox = rx - xa0 / sc; oy_top = (ry + rh) + ya0 / sc                 # canvas left / top in figure inches
+            box = _Bbox.from_extents(ox, oy_top - LB["height"] / sc, ox + LB["width"] / sc, oy_top)
+            buf = _io.BytesIO(); W.fig.savefig(buf, dpi=sc, bbox_inches=box, facecolor="white"); buf.seek(0)
+            canvas = _Image.open(buf).convert("RGB")
+            if canvas.size != (LB["width"], LB["height"]):
+                canvas = canvas.resize((LB["width"], LB["height"]), _Image.LANCZOS)
+            if LB.get("bars"):                                               # the pillarboxes, as the deck tool paints them
+                from PIL import ImageDraw as _Draw
+                d = _Draw.Draw(canvas); b0, b1 = LB["bars"]
+                d.rectangle([0, 0, b0 - 1, LB["height"]], fill=LB.get("fill", "black")); d.rectangle([b1 + 1, 0, LB["width"], LB["height"]], fill=LB.get("fill", "black"))
+            canvas.save(path)
+        else:
+            W.fig.savefig(path, dpi=_frames_dpi(W), bbox_inches=W.crop)   # the Act 1 maps' crop
 
 
 def _act1_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=False, surface=None):
@@ -2011,8 +2091,12 @@ def assemble_timelapse(out_dir, name="method_timelapse.mp4"):
     except Exception as e:                                                          # no bundled binary: leave the frames + the command
         print(f"no ffmpeg available ({e}); frames and concat.txt are in {out_dir}"); return None
     out_dir = pathlib.Path(out_dir); video = out_dir / name
+    LB = STYLE.get("frames_letterbox"); crop = ""
+    if LB and LB.get("bars") and STYLE.get("frames_crop_bars", True):             # the video drops the pillarbox bars the frames carry (Ethan 2026-10-07):
+        x0, x1 = LB["bars"]                                                         # same pixel scale as the deck's Act 1 slide, just the map strip
+        crop = f"crop={x1 - x0}:{LB['height']}:{x0}:0,"
     base = [exe, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(out_dir / "concat.txt"),
-            "-vf", f"fps={STYLE.get('frames_video_fps', 30)},scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p",   # even dimensions for H.264
+            "-vf", f"fps={STYLE.get('frames_video_fps', 30)},{crop}scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p",   # even dimensions for H.264
             "-c:v", "libx264", "-preset", "slow", "-movflags", "+faststart"]
     subprocess.run(base + ["-crf", str(STYLE.get("frames_video_crf", 18)), str(video)], check=True, cwd=str(out_dir))
     mb = video.stat().st_size / 1e6; cap = STYLE.get("frames_video_max_mb")
@@ -2051,11 +2135,12 @@ def values_table_simple(C, path, title="Y2Y Objectives Hierarchy"):
     B = STYLE["table_base_px"]; u = B * _PX; pt = B * 0.75; f_body = 0.87 * pt; pad_h = 0.47 * u
     stub_w = 2.6 * u * 6.25
     stub = [_wrap_to(f, stub_w - 2 * pad_h, f_body) if f else "" for f, _, _ in VALUES_SIMPLE]
-    cells = [[[(sub, "head")], [("\n".join(meas), "body")]] for _, sub, meas in VALUES_SIMPLE]
-    numeric = [[False, False] for _ in VALUES_SIMPLE]
-    spec_table_png(path, stub, ["Sub-objective", "Performance measure"], cells, label="Y2Y SPATIAL DECISION TOOL  ·  PROACT OBJECTIVES",
+    cells = [[[(sub, "head")], [("\n".join(meas), "body")], [("\n".join(_mean_for(C, m) for m in meas), "body")]] for _, sub, meas in VALUES_SIMPLE]
+    numeric = [[False, False, False] for _ in VALUES_SIMPLE]
+    spec_table_png(path, stub, ["Sub-objective", "Performance measure", "Mean on unprotected land"], cells, label="Y2Y SPATIAL DECISION TOOL  ·  PROACT OBJECTIVES",
                    title=title if STYLE["titles"] else None, stub_head="Fundamental objective", stub_w=stub_w, numeric=numeric, stub_sep=True,
-                   notes=[("Source", SOURCE_NOTE)])
+                   notes=[("Note", "Mean on unprotected land = the average cell of allocatable land, in the layer's native units (the 1.0× reference of the consequences tables)."),
+                          ("Source", SOURCE_NOTE)])
 
 
 def scenario_map(C, path, title=None):
