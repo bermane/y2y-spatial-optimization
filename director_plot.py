@@ -595,6 +595,7 @@ STYLE = dict(
     frames_assemble=True, frames_video_fps=30,   # assemble method_timelapse.mp4 from the frames with the venv's bundled ffmpeg (imageio-ffmpeg; Ethan 2026-09-23)
     frames_video_max_mb=20, frames_video_crf=18,  # size cap (Ethan 2026-09-23): CRF 18 / preset slow first; if the file is over the cap, a two-pass encode at the bitrate that fits
     frames_crop_bars=True,                     # assemble_timelapse crops the letterbox bars out of the video; the PNG frames keep them (Ethan 2026-10-07)
+    inset_area_skip={}, inset_area_at={},   # per-inset area-name skips {tag: (names,)} and hand pins {tag: {name fragment: (lon, lat)}} (the northern 07, 2026-10-16)
     inset_codes={"A": dict(skip=["WA"]), "B": dict(skip=["WA"])},                     # the wide-map insets: no WA; AK no longer forced on A (a sliver since the window moved east, 2026-09-21)
     inset_town_skip={"A": ("Iskut", "Telegraph Creek"), "B": ("Jasper", "Banff")},   # towns left off a wide-map inset (Ethan 2026-09-15)
     # Act 2 tiers by owning scenario. Dark2 failed a colour-vision check (2026-09-21: core-habitat green vs carbon magenta dE 6 under deuteranopia;
@@ -1477,7 +1478,7 @@ def _fit_window(C, win_px, aspect_hw):
     return (float(cx - w / 2), float(cx + w / 2), float(cy - h / 2), float(cy + h / 2))
 
 
-def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None, skip_towns=(), img=None, cmap=None, norm=None, skip_areas=(), post_draw=None, ctx=None):
+def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None, skip_towns=(), img=None, cmap=None, norm=None, skip_areas=(), post_draw=None, ctx=None, area_at=None):
     px0, px1, pyt, pyb = win
     ax.imshow(_f_1km(C) if img is None else img, cmap=cmap or C.FCMAP, norm=norm or C.FNORM, interpolation="nearest", zorder=0.5, alpha=STYLE.get("_surface_alpha", 1.0))
     ctx = getattr(C, "CTX_F", None) if (ctx is None and img is None) else ctx     # the context surface beyond the focus PU (the f default follows the F surface)
@@ -1495,10 +1496,10 @@ def _draw_inset(C, ax, win, draw, title, with_ipca_names, towns=True, codes=None
         taken = dc.label_jurisdictions_window(ax, C.G, C.BM, win, fs=STYLE["inset_abbrev_fs"] * (fs / 11.5), **(codes or {}))
     pan = C.PAN[~C.PAN["PA_Name"].isin(skip_areas)] if len(skip_areas) else C.PAN     # per-window name skips (a label the window edge would clip)
     dcl = STYLE.get("inset_declutter", True)                                                   # False = every name (the northern insets, 2026-09-28)
-    taken = dc.label_areas_px(ax, C.G, pan, "PA_Name", win, top_n=STYLE["inset_pa_names"], color="0.25", fs=fs, taken=taken, declutter=dcl)
+    taken = dc.label_areas_px(ax, C.G, pan, "PA_Name", win, top_n=STYLE["inset_pa_names"], color="0.25", fs=fs, taken=taken, declutter=dcl, at=area_at)
     if with_ipca_names:
         _ipg = C.IP.gdf[~C.IP.gdf["name"].isin(skip_areas)] if (len(skip_areas) and "name" in C.IP.gdf.columns) else C.IP.gdf   # skip_areas covers the overlay names too (Alberta 16, Ethan 2026-10-01)
-        dc.label_areas_px(ax, C.G, _ipg, "name", win, top_n=STYLE.get("inset_ipca_names", 3), color="#a04a00", fs=fs, taken=taken, declutter=dcl)
+        dc.label_areas_px(ax, C.G, _ipg, "name", win, top_n=STYLE.get("inset_ipca_names", 3), color="#a04a00", fs=fs, taken=taken, declutter=dcl, at=area_at)
     ax.set_xlim(px0, px1); ax.set_ylim(pyb, pyt); ax.set_aspect("equal")
     ax.set_xticks([]); ax.set_yticks([])
     for sp in ax.spines.values():
@@ -1549,7 +1550,8 @@ def _wide_map(C, path, title, draw, handles, cbar_label=None, with_ipca_names=Fa
                 if STYLE.get("inset_own_number_only", False):                    # this inset numbers only its own cluster; the others keep their outlines (Alberta 16, Ethan 2026-10-01)
                     STYLE["_only_number"] = str(num)
                 _draw_inset(C, iax, win, draw, tag, with_ipca_names, codes=STYLE["inset_codes"].get(tag), skip_towns=STYLE["inset_town_skip"].get(tag, ()),
-                            img=S_["img"], cmap=S_["cmap"], norm=S_["norm"], post_draw=post_draw, ctx=S_.get("ctx"))
+                            img=S_["img"], cmap=S_["cmap"], norm=S_["norm"], post_draw=post_draw, ctx=S_.get("ctx"),
+                            skip_areas=STYLE.get("inset_area_skip", {}).get(tag, ()), area_at=STYLE.get("inset_area_at", {}).get(tag))   # per-inset name skips + hand pins (2026-10-16)
             finally:
                 STYLE.pop("_fs_scale", None); STYLE.pop("_lw_scale", None); STYLE.pop("_surface_alpha", None); STYLE.pop("_only_number", None)
             axes_all.append(iax); ims.append(iax.images[0])                             # the inset's surface image is its first

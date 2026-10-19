@@ -1380,9 +1380,11 @@ def read_hillshade_window(G, window, scale=3, path=HILLSHADE_PATH):
                         resampling=Resampling.average, boundless=True, fill_value=255)
 
 
-def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, taken=None, declutter=True):
+def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, taken=None, declutter=True, at=None):
     """Label the biggest named areas intersecting a pixel window (italic, white halo), greedy declutter on a 45 km grid
-    (`declutter=False` labels every one of the top_n -- the northern insets name every network node, 2026-09-28)."""
+    (`declutter=False` labels every one of the top_n -- the northern insets name every network node, 2026-09-28).
+    `at` = {name fragment: (lon, lat)}: a hand-placed label (the northern inset A's Liard River Corridor, Ethan 2026-10-16);
+    still clamped inside the window, exempt from the declutter test."""
     import matplotlib.patheffects as _pe
     px0, px1, py0, py1 = window
     x0 = G.transform.c + px0 * G.transform.a; x1 = G.transform.c + px1 * G.transform.a
@@ -1397,8 +1399,13 @@ def label_areas_px(ax, G, gdf, name_col, window, top_n=5, color="0.25", fs=7.5, 
     import textwrap as _tw
     span = px1 - px0
     for _, r in g.iterrows():
-        pt = r.geometry.representative_point(); px, py = xy_to_px(G, pt.x, pt.y)
-        if declutter and any(abs(px - tx) < 16 * fs * ppk and abs(py - ty) < 3.3 * fs * ppk for tx, ty in taken):
+        pin = next((v for k, v in (at or {}).items() if k in str(r[name_col])), None)
+        if pin is not None:                                                       # hand-placed (lon, lat)
+            import pyproj as _pp
+            xx, yy = _pp.Transformer.from_crs("EPSG:4326", G.crs, always_xy=True).transform(*pin); px, py = xy_to_px(G, xx, yy)
+        else:
+            pt = r.geometry.representative_point(); px, py = xy_to_px(G, pt.x, pt.y)
+        if pin is None and declutter and any(abs(px - tx) < 16 * fs * ppk and abs(py - ty) < 3.3 * fs * ppk for tx, ty in taken):
             continue
         ax_w_in = ax.get_position(original=True).width * ax.figure.get_figwidth()                      # the axes box width in inches (before aspect)
         px_per_in = span / max(ax_w_in, 1e-6)                                                             # data px per inch

@@ -180,6 +180,14 @@ rule; quantitative outcomes live there, methods decisions here);
   and the 07 maps (`_near_contiguous_wide`); legend rows after the four. Approximate run002 read (area/length width): ~11 of
   45 links near-contiguous (T’akú Tlatsini ↔ Mount Edziza / Stikine, Dene ↔ Liard River Corridor, Tatonduk ↔ Fishing Branch,
   Wędzih Yiné' ↔ Chase, …), 0 below the width floor, 8 below the length floor (R10, to be measured properly on run003).
+- **M5.37 Inset A names (2026-10-16, Ethan; presentation):** Muncho Lake Park is not named on inset A (`WIDE_STYLE["inset_area_skip"]`) and
+  the Liard River Corridor label is hand-pinned east at 124.53 °W 59.52 °N (x ≈ 0.70, y ≈ 0.08 of the window), clear of the scale bar
+  (`inset_area_at` → `director_core.label_areas_px(at=)`, a new per-name pin; the y2y defaults are empty, so no other package changes).
+- **M5.36 Inset jurisdiction codes (2026-10-16, Ethan; presentation):** on 07 · 01–03, inset A carries YT (forced) and BC, both placed on
+  their parts inside the Y2Y region rather than on the open land outside it (`WIDE_STYLE["inset_codes"]` → `dc.label_jurisdictions_window`
+  `inside` / `force`, the wolverine 2026-09-29 mechanism); inset B carries no BC. Locators unchanged (no codes). Then pinned EAST, clear
+  of the corridor bands (Ethan, same day; `at` lon/lat): YT at 124.60 °W 60.45 °N (window x ≈ 0.88, y ≈ 0.55), BC at 124.30 °W 59.85 °N
+  (x ≈ 0.88, y ≈ 0.19), both inside the Y2Y part of the window.
 - **M5.35 Locators without the A / B titles (2026-10-03, Ethan; presentation):** 07 · 04b's panels drop the tag letter, as the y2y cluster
   locators (`cluster_locators` passes an empty title). The panel files keep their `_A` / `_B` suffixes. Wolverine 06 · 05b the same.
 - **M5.34 Candara everywhere (Ethan 2026-10-02, presentation):** `corridors_mapstyle.FONT_FAMILY` = ["Candara", "DejaVu Sans"] (was Noto Sans), so the §3a record figures draw in the same typeface as the curated outputs, which already took it through `director_plot.SPEC_RC` (y2y M4.40 addendum); Candara's Bold face serves the 600-weight roles; Noto stays registered for the earlier record. The §3a contract's typeface line is superseded. Nothing measured changes.

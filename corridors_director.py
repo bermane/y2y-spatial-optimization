@@ -1829,7 +1829,12 @@ def build_deck(P, path=None):
 WIDE_STYLE = dict(
     map_layout="wide", inset_clusters=(1, 2),      # two insets, A and B: windows from inset_windows() (interim) or the numbered clusters
     inset_windows=None,                            # set per figure by _wide()
-    inset_codes={}, inset_town_skip={}, main_skip_codes=(),          # the y2y skips (WA / CA, Jasper / Banff) do not apply on this frame
+    inset_codes={"A": dict(force=["YT"], inside=["BC", "YT"],        # 01-03 insets (Ethan 2026-10-16): A carries YT (forced) and BC, both on their parts INSIDE
+                           at={"YT": (-124.60, 60.45), "BC": (-124.30, 59.85)}),   # pinned EAST, clear of the corridor bands (Ethan 2026-10-16): ~88% across the window, YT mid-height, BC in the lower right, both inside Y2Y
+                 "B": dict(skip=["BC"])},                            # the Y2Y region (dc.label_jurisdictions_window `inside`); B carries no BC
+    inset_area_skip={"A": ("Muncho Lake Park",)},                   # inset A names no Muncho Lake Park (Ethan 2026-10-16)
+    inset_area_at={"A": {"Liard River Corridor": (-124.53, 59.52)}},   # its label pinned EAST, off the scale bar (x ≈ 0.70, y ≈ 0.08 of the window; Ethan 2026-10-16)
+    inset_town_skip={}, main_skip_codes=(),                          # the y2y skips (WA / CA, Jasper / Banff) do not apply on this frame
     wide_main_towns=(), wide_main_names="abbrev",                    # the frame panel: postal codes only, no towns (as on the y2y Act 1 panel)
     pa_layer_min_km2=300, window_scale_km=100,                       # the y2y values; the scale bar on the (windowed) frame
     inset_pa_names=99, inset_ipca_names=99, inset_declutter=False, locator_pa_names=99,   # Ethan 2026-09-28: EVERY PA and IPCA node named in the insets + locators (F.PAN = the network's PA nodes)
